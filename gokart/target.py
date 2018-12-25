@@ -61,6 +61,7 @@ class ModelTarget(TargetOnKart):
         return model
 
     def dump(self, obj) -> None:
+        self._make_temporary_directory()
         self._save_function(obj, self._model_path())
         make_target(self._load_function_path()).dump(self._load_function)
         self._zip_client.make_archive()
