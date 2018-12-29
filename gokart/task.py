@@ -26,9 +26,13 @@ class TaskOnKart(luigi.Task):
     local_temporary_directory = luigi.Parameter(
         default='./resources/tmp/', description='A directory to save temporary files.')  # type: str
     rerun = luigi.BoolParameter(
-        default=False, description='If this is true, this task will run even if all output files exist.')
+        default=False,
+        description='If this is true, this task will run even if all output files exist.',
+        significant=False)
     strict_check = luigi.BoolParameter(
-        default=False, description='If this is true, this task will not run only if all input and output files exits.')
+        default=False,
+        description='If this is true, this task will not run only if all input and output files exits.',
+        significant=False)
 
     def complete(self) -> bool:
         if self.rerun:
