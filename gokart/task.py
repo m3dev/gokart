@@ -33,6 +33,22 @@ class TaskOnKart(luigi.Task):
         default=False,
         description='If this is true, this task will not run only if all input and output files exits.',
         significant=False)
+    
+    def __init__(self, *args, **kwargs):
+        self._add_configuration(kwargs, self.get_task_family())
+        self._add_configuration(kwargs, 'TaskOnKart')
+        super(TaskOnKart, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def _add_configuration(cls, kwargs, section):
+        config = luigi.configuration.get_config()
+        class_variables = dict(cls.__dict__)
+
+        if section not in config:
+            return
+        for key, value in dict(config[section]).items():
+            if key not in kwargs and key not in class_variables:
+                kwargs[key] = value
 
     def complete(self) -> bool:
         if self.rerun:
