@@ -8,5 +8,5 @@ class TaskInstanceParameter(luigi.Parameter):
         return task_register.Register.get_task_cls(values['type'])(**values['params'])
 
     def serialize(self, x):
-        values = dict(type=x.get_task_family(), params=x.to_str_params())
+        values = dict(type=x.get_task_family(), params=x.to_str_params(only_significant=True))
         return luigi.DictParameter().serialize(values)

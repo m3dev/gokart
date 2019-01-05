@@ -33,7 +33,12 @@ class TaskOnKart(luigi.Task):
         default=False,
         description='If this is true, this task will not run only if all input and output files exits.',
         significant=False)
-    
+    modification_time_check = luigi.BoolParameter(
+        default=False,
+        description='If this is true, this task will not run only if all input and output files exits,'
+                    ' and all input files are modified before output file are modified.',
+        significant=False)
+
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -57,9 +62,16 @@ class TaskOnKart(luigi.Task):
 
         targets = luigi.task.flatten(self.output())
 
-        if self.strict_check:
+        if self.strict_check or self.modification_time_check:
             targets += luigi.task.flatten(self.input())
-        return all([t.exists() for t in targets])
+        
+        exists_all = all([t.exists() for t in targets])
+        if not self.modification_time_check or not exists_all or not self.input():
+            return exists_all
+        
+        input_modification_time = max([target.last_modification_time() for target in luigi.task.flatten(self.input())])
+        output_modification_time = min([target.last_modification_time() for target in luigi.task.flatten(self.output())])
+        return input_modification_time < output_modification_time
 
     def make_target(self, relative_file_path: str, use_unique_id: bool = True) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)

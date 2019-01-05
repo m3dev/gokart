@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+from datetime import datetime
 
 import boto3
 import pandas as pd
@@ -14,7 +15,7 @@ def _get_temporary_directory():
 
 class LocalTargetTest(unittest.TestCase):
     def tearDown(self):
-        shutil.rmtree(_get_temporary_directory())
+        shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 
     def test_save_and_load_pickle_file(self):
         obj = 1
@@ -66,6 +67,21 @@ class LocalTargetTest(unittest.TestCase):
 
         pd.testing.assert_frame_equal(loaded, obj)
 
+    def test_last_modified_time(self):
+        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        file_path = os.path.join(_get_temporary_directory(), 'test.csv')
+
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        t = target.last_modification_time()
+        self.assertIsInstance(t, datetime)
+
+    def test_last_modified_time_without_file(self):
+        file_path = os.path.join(_get_temporary_directory(), 'test.csv')
+        target = make_target(file_path=file_path, unique_id=None)
+        with self.assertRaises(FileNotFoundError):
+            target.last_modification_time()
+
 
 class S3TargetTest(unittest.TestCase):
     @mock_s3
@@ -81,6 +97,29 @@ class S3TargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, obj)
+
+    @mock_s3
+    def test_last_modified_time(self):
+        conn = boto3.resource('s3', region_name='us-east-1')
+        conn.create_bucket(Bucket='test')
+
+        obj = 1
+        file_path = os.path.join('s3://test/', 'test.pkl')
+
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        t = target.last_modification_time()
+        self.assertIsInstance(t, datetime)
+
+    @mock_s3
+    def test_last_modified_time_without_file(self):
+        conn = boto3.resource('s3', region_name='us-east-1')
+        conn.create_bucket(Bucket='test')
+
+        file_path = os.path.join('s3://test/', 'test.pkl')
+        target = make_target(file_path=file_path, unique_id=None)
+        with self.assertRaises(FileNotFoundError):
+            target.last_modification_time()
 
 
 class ModelTargetTest(unittest.TestCase):
