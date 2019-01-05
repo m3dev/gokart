@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import luigi
@@ -37,6 +38,25 @@ class TaskTest(unittest.TestCase):
 
         # make a task check its inputs.
         task.strict_check = True
+        self.assertFalse(task.complete())
+
+    def test_complete_with_modified_input(self):
+        input_target = MagicMock(spec=TargetOnKart)
+        input_target.exists.return_value = True
+        input_target.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
+        output_target = MagicMock(spec=TargetOnKart)
+        output_target.exists.return_value = True
+        output_target.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
+
+        # depends on an uncompleted target.
+        task = _DummyTask()
+        task.modification_time_check = False
+        task.input = MagicMock(return_value=input_target)
+        task.output = MagicMock(return_value=output_target)
+        self.assertTrue(task.complete(), msg='task does not care modified time')
+
+        # make a task check its inputs.
+        task.modification_time_check = True
         self.assertFalse(task.complete())
 
     def test_make_target(self):

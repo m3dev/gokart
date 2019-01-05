@@ -18,6 +18,12 @@ class ZipClient(object):
     def unpack_archive(self) -> None:
         pass
 
+    @property
+    @abstractmethod
+    def path(self) -> str:
+        pass
+
+
 
 class LocalZipClient(ZipClient):
     def __init__(self, file_path: str, temporary_directory: str) -> None:
@@ -33,6 +39,10 @@ class LocalZipClient(ZipClient):
 
     def unpack_archive(self) -> None:
         shutil.unpack_archive(filename=self._file_path, extract_dir=self._temporary_directory)
+
+    @property
+    def path(self) -> str:
+        return self._file_path
 
 
 class S3ZipClient(ZipClient):
@@ -53,6 +63,10 @@ class S3ZipClient(ZipClient):
     def unpack_archive(self) -> None:
         self._client.get(self._file_path, self._temporary_file_path())
         shutil.unpack_archive(filename=self._temporary_file_path(), extract_dir=self._temporary_directory)
+
+    @property
+    def path(self) -> str:
+        return self._file_path
 
     def _temporary_file_path(self):
         extension = os.path.splitext(self._file_path)[1]

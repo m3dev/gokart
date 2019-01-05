@@ -2,6 +2,7 @@ import hashlib
 import os
 import shutil
 from abc import abstractmethod
+from datetime import datetime
 from typing import Any, Optional
 
 import luigi
@@ -25,6 +26,10 @@ class TargetOnKart(luigi.Target):
     def dump(self, obj) -> None:
         pass
 
+    @abstractmethod
+    def last_modification_time(self) -> datetime:
+        pass
+
 
 class SingleFileTarget(TargetOnKart):
     def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor):
@@ -41,6 +46,9 @@ class SingleFileTarget(TargetOnKart):
     def dump(self, obj) -> None:
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
+
+    def last_modification_time(self) -> datetime:
+        return _get_last_modification_time(self._target.path)
 
 
 class ModelTarget(TargetOnKart):
@@ -67,6 +75,9 @@ class ModelTarget(TargetOnKart):
         self._zip_client.make_archive()
         self._remove_temporary_directory()
 
+    def last_modification_time(self) -> datetime:
+        return _get_last_modification_time(self._zip_client.path)
+
     def _model_path(self):
         return os.path.join(self._temporary_directory, 'model.pkl')
 
@@ -92,6 +103,14 @@ def _make_file_path(original_path: str, unique_id: Optional[str] = None) -> str:
         [base, extension] = os.path.splitext(original_path)
         return base + '_' + unique_id + extension
     return original_path
+
+
+def _get_last_modification_time(path: str) -> datetime:
+    if path.startswith('s3://'):
+        if WorkspaceConfig().get_s3_client().exists(path):
+            return WorkspaceConfig().get_s3_client().get_key(path).last_modified
+        raise FileNotFoundError(f'No such file or directory: {path}')
+    return datetime.fromtimestamp(os.path.getmtime(path))
 
 
 def make_target(file_path: str, unique_id: Optional[str] = None) -> TargetOnKart:
