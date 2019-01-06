@@ -4,16 +4,20 @@ import shutil
 from abc import abstractmethod
 from datetime import datetime
 from glob import glob
+from logging import getLogger
 from typing import Any, Optional
 
 import luigi
 import luigi.contrib.s3
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.workspace_config import WorkspaceConfig
 from gokart.zip_client import make_zip_client
+
+logger = getLogger(__name__)
 
 
 class TargetOnKart(luigi.Target):
@@ -102,12 +106,14 @@ class LargeDataFrameProcessor(object):
         split_size = df.values.nbytes // self.max_byte + 1
         dir_path = os.path.dirname(file_path)
         os.makedirs(dir_path, exist_ok=True)
-        for i, idx in enumerate(np.array_split(df.index, split_size)):
-            df.loc[idx].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
+        logger.info(f'saving a large pdDataFrame with split_size={split_size}')
+        for i, idx in tqdm(list(enumerate(np.array_split(range(df.shape[0]), split_size)))):
+            df.iloc[idx[0]:idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
 
     @staticmethod
     def load(file_path: str) -> pd.DataFrame:
         dir_path = os.path.dirname(file_path)
+
         return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, 'data_*.pkl'))])
 
 

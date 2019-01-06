@@ -78,7 +78,7 @@ class TaskOnKart(luigi.Task):
         unique_id = self._make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id)
 
-    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**30)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self._make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
