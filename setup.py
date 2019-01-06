@@ -14,6 +14,7 @@ install_requires = [
     'boto3',
     'luigi',
     'pandas',
+    'numpy',
     'moto',
 ]
 
