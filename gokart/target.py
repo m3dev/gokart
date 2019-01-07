@@ -34,6 +34,10 @@ class TargetOnKart(luigi.Target):
         pass
 
     @abstractmethod
+    def remove(self) -> None:
+        pass
+
+    @abstractmethod
     def last_modification_time(self) -> datetime:
         pass
 
@@ -53,6 +57,10 @@ class SingleFileTarget(TargetOnKart):
     def dump(self, obj) -> None:
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
+
+    def remove(self) -> None:
+        if self._target.exists():
+            self._target.remove()
 
     def last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._target.path)
@@ -81,6 +89,9 @@ class ModelTarget(TargetOnKart):
         make_target(self._load_function_path()).dump(self._load_function)
         self._zip_client.make_archive()
         self._remove_temporary_directory()
+
+    def remove(self) -> None:
+        self._zip_client.remove()
 
     def last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._zip_client.path)

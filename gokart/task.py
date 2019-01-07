@@ -57,18 +57,20 @@ class TaskOnKart(luigi.Task):
 
     def complete(self) -> bool:
         if self.rerun:
+            for target in luigi.task.flatten(self.output()):
+                target.remove()
             self.rerun = False
             return False
 
-        targets = luigi.task.flatten(self.output())
+        is_completed = all([t.exists() for t in luigi.task.flatten(self.output())])
 
         if self.strict_check or self.modification_time_check:
-            targets += luigi.task.flatten(self.input())
-        
-        exists_all = all([t.exists() for t in targets])
-        if not self.modification_time_check or not exists_all or not self.input():
-            return exists_all
-        
+            requirements = luigi.task.flatten(self.requires())
+            is_completed = is_completed and all([task.complete() for task in requirements])
+
+        if not self.modification_time_check or not is_completed or not self.input():
+            return is_completed
+
         input_modification_time = max([target.last_modification_time() for target in luigi.task.flatten(self.input())])
         output_modification_time = min([target.last_modification_time() for target in luigi.task.flatten(self.output())])
         return input_modification_time < output_modification_time
