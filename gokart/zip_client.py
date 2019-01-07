@@ -18,11 +18,14 @@ class ZipClient(object):
     def unpack_archive(self) -> None:
         pass
 
+    @abstractmethod
+    def remove(self) -> None:
+        pass
+
     @property
     @abstractmethod
     def path(self) -> str:
         pass
-
 
 
 class LocalZipClient(ZipClient):
@@ -39,6 +42,9 @@ class LocalZipClient(ZipClient):
 
     def unpack_archive(self) -> None:
         shutil.unpack_archive(filename=self._file_path, extract_dir=self._temporary_directory)
+
+    def remove(self) -> None:
+        shutil.rmtree(self._file_path, ignore_errors=True)
 
     @property
     def path(self) -> str:
@@ -63,6 +69,9 @@ class S3ZipClient(ZipClient):
     def unpack_archive(self) -> None:
         self._client.get(self._file_path, self._temporary_file_path())
         shutil.unpack_archive(filename=self._temporary_file_path(), extract_dir=self._temporary_directory)
+
+    def remove(self) -> None:
+        self._client.remove(self._file_path)
 
     @property
     def path(self) -> str:

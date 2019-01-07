@@ -16,6 +16,7 @@ install_requires = [
     'pandas',
     'numpy',
     'moto',
+    'tqdm',
 ]
 
 setup(
