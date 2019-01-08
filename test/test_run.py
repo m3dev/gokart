@@ -8,6 +8,7 @@ import gokart
 
 
 class _DummyTask(gokart.TaskOnKart):
+    task_namespace = __name__
     param = luigi.Parameter()
 
 
@@ -16,7 +17,7 @@ class RunTest(unittest.TestCase):
         luigi.configuration.LuigiConfigParser._instance = None
         os.environ.clear()
 
-    @patch('sys.argv', new=['main', '_DummyTask', '--log-level=CRITICAL', '--local-scheduler'])
+    @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler'])
     def test_run(self):
         config_file_path = os.path.join(os.path.dirname(__name__), 'test_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
@@ -25,12 +26,13 @@ class RunTest(unittest.TestCase):
             gokart.run()
         self.assertEqual(exit_code.exception.code, 0)
 
-    @patch('sys.argv', new=['main', '_DummyTask', '--log-level=CRITICAL', '--local-scheduler'])
+    @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--log-level=CRITICAL', '--local-scheduler'])
     def test_run_with_undefined_environ(self):
         config_file_path = os.path.join(os.path.dirname(__name__), 'test_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
-        with self.assertRaises(luigi.parameter.MissingParameterException) as missing_parameter:
-            gokart.run()
+        with self.assertRaises(SystemExit) as exit_code:
+            with self.assertRaises(luigi.parameter.MissingParameterException) as missing_parameter:
+                gokart.run()
 
 
 if __name__ == '__main__':

@@ -66,7 +66,8 @@ class TaskOnKart(luigi.Task):
 
         if self.strict_check or self.modification_time_check:
             requirements = luigi.task.flatten(self.requires())
-            is_completed = is_completed and all([task.complete() for task in requirements])
+            inputs = luigi.task.flatten(self.input())
+            is_completed = is_completed and all([task.complete() for task in requirements]) and all([i.exists() for i in inputs])
 
         if not self.modification_time_check or not is_completed or not self.input():
             return is_completed

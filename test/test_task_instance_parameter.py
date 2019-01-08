@@ -7,6 +7,7 @@ from gokart import TaskOnKart
 
 
 class _DummyTask(TaskOnKart):
+    task_namespace = __name__
     param = luigi.IntParameter()
 
 
@@ -18,7 +19,7 @@ class TaskInstanceParameterTest(unittest.TestCase):
         original = _DummyTask(param=2)
         s = gokart.TaskInstanceParameter().serialize(original)
         parsed = gokart.TaskInstanceParameter().parse(s)
-        self.assertEqual(parsed, original)
+        self.assertEqual(parsed.task_id, original.task_id)
 
 
 if __name__ == '__main__':
