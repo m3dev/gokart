@@ -10,6 +10,7 @@ from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
 
 
 class _DummyTask(gokart.TaskOnKart):
+    task_namespace = __name__
     param = luigi.IntParameter(default=1)
 
 
