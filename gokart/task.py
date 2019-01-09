@@ -74,7 +74,8 @@ class TaskOnKart(luigi.Task):
 
         input_modification_time = max([target.last_modification_time() for target in luigi.task.flatten(self.input())])
         output_modification_time = min([target.last_modification_time() for target in luigi.task.flatten(self.output())])
-        return input_modification_time < output_modification_time
+        # "=" must be required in the following statements, because some tasks use input targets as output targets.
+        return input_modification_time <= output_modification_time
 
     def make_target(self, relative_file_path: str, use_unique_id: bool = True) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
