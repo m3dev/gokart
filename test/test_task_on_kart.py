@@ -60,6 +60,23 @@ class TaskTest(unittest.TestCase):
         task.modification_time_check = True
         self.assertFalse(task.complete())
 
+    def test_complete_when_modification_time_equals_output(self):
+        """ Test the case that modification time of input equals that of output.
+        The case is occurred when input and output targets are same.
+        """
+        input_target = MagicMock(spec=TargetOnKart)
+        input_target.exists.return_value = True
+        input_target.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
+        output_target = MagicMock(spec=TargetOnKart)
+        output_target.exists.return_value = True
+        output_target.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
+
+        task = _DummyTask()
+        task.modification_time_check = True
+        task.input = MagicMock(return_value=input_target)
+        task.output = MagicMock(return_value=output_target)
+        self.assertTrue(task.complete())
+
     def test_make_target(self):
         task = _DummyTask()
         target = task.make_target('test.txt')
