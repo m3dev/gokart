@@ -181,7 +181,7 @@ class TaskOnKart(luigi.Task):
         return params_str
 
     def _get_task_log_target(self):
-        return self.make_target(f'log/task_log/{type(self).__name__}_{self.make_unique_id()}.pkl')
+        return self.make_target(f'log/task_log/{type(self).__name__}.pkl')
 
     def get_task_log(self) -> Dict:
         target = self._get_task_log_target()
@@ -196,7 +196,7 @@ class TaskOnKart(luigi.Task):
         self.dump(self.task_log, self._get_task_log_target())
 
     def _get_task_params_target(self):
-        return self.make_target(f'log/task_params/{type(self).__name__}_{self.make_unique_id()}.pkl')
+        return self.make_target(f'log/task_params/{type(self).__name__}.pkl')
 
     def get_task_params(self) -> Dict:
         target = self._get_task_log_target()
@@ -209,7 +209,7 @@ class TaskOnKart(luigi.Task):
         self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
 
     def _get_processing_time_target(self):
-        return self.make_target(f'log/processing_time/{type(self).__name__}_{self.make_unique_id()}.pkl')
+        return self.make_target(f'log/processing_time/{type(self).__name__}.pkl')
 
     def get_processing_time(self) -> str:
         target = self._get_processing_time_target()
@@ -220,3 +220,8 @@ class TaskOnKart(luigi.Task):
     @luigi.Task.event_handler(luigi.Event.PROCESSING_TIME)
     def _dump_processing_time(self, processing_time):
         self.dump(processing_time, self._get_processing_time_target())
+
+    @classmethod
+    def restore(cls, unique_id):
+        params = TaskOnKart().make_target(f'log/task_params/{cls.__name__}_{unique_id}.pkl', use_unique_id=False).load()
+        return cls.from_str_params(params)
