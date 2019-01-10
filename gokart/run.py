@@ -6,6 +6,9 @@ from configparser import ConfigParser
 import luigi
 import luigi.cmdline
 import luigi.retcodes
+from luigi.cmdline_parser import CmdlineParser
+
+import gokart
 
 
 def _read_environ():
@@ -33,4 +36,15 @@ def run(set_retcode=True):
 
     _read_environ()
     _check_config()
-    luigi.cmdline.luigi_run(sys.argv[1:])
+
+    cmdline_args = sys.argv[1:]
+
+    if cmdline_args[0] == '--tree-info':
+        with CmdlineParser.global_instance(cmdline_args[1:]) as cp:
+            return gokart.make_tree_info(cp.get_task_obj(), details=False)
+
+    if cmdline_args[0] == '--tree-info-all':
+        with CmdlineParser.global_instance(cmdline_args[1:]) as cp:
+            return gokart.make_tree_info(cp.get_task_obj(), details=True)
+
+    luigi.cmdline.luigi_run(cmdline_args)

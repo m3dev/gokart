@@ -34,6 +34,14 @@ class RunTest(unittest.TestCase):
             with self.assertRaises(luigi.parameter.MissingParameterException) as missing_parameter:
                 gokart.run()
 
+    @patch('sys.argv', new=['main', '--tree-info', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler'])
+    def test_run_tree_info(self):
+        config_file_path = os.path.join(os.path.dirname(__name__), 'test_config.ini')
+        luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
+        os.environ.setdefault('test_param', 'test')
+        tree = gokart.run()
+        self.assertTrue(gokart.make_tree_info(_DummyTask(param='test')), tree)
+
 
 if __name__ == '__main__':
     unittest.main()

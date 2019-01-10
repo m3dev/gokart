@@ -41,6 +41,10 @@ class TargetOnKart(luigi.Target):
     def last_modification_time(self) -> datetime:
         pass
 
+    @abstractmethod
+    def path(self) -> str:
+        pass
+
 
 class SingleFileTarget(TargetOnKart):
     def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor):
@@ -64,6 +68,9 @@ class SingleFileTarget(TargetOnKart):
 
     def last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._target.path)
+
+    def path(self) -> str:
+        return self._target.path
 
 
 class ModelTarget(TargetOnKart):
@@ -95,6 +102,9 @@ class ModelTarget(TargetOnKart):
 
     def last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._zip_client.path)
+
+    def path(self) -> str:
+        return self._zip_client.path
 
     def _model_path(self):
         return os.path.join(self._temporary_directory, 'model.pkl')
