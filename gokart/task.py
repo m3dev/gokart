@@ -1,6 +1,6 @@
 import hashlib
 import os
-from typing import Union, List, Any, Callable, Set, Optional
+from typing import Union, List, Any, Callable, Set, Optional, Dict
 
 import luigi
 import pandas as pd
@@ -42,6 +42,8 @@ class TaskOnKart(luigi.Task):
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
         self._add_configuration(kwargs, 'TaskOnKart')
+        # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
+        self.task_log = dict()
         super(TaskOnKart, self).__init__(*args, **kwargs)
 
     @classmethod
@@ -79,12 +81,12 @@ class TaskOnKart(luigi.Task):
 
     def make_target(self, relative_file_path: str, use_unique_id: bool = True) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
-        unique_id = self._make_unique_id() if use_unique_id else None
+        unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id)
 
     def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
-        unique_id = self._make_unique_id() if use_unique_id else None
+        unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
             file_path=file_path,
             temporary_directory=self.local_temporary_directory,
@@ -106,7 +108,7 @@ class TaskOnKart(luigi.Task):
         :param use_unique_id: If this is true, add an unique id to a file base name.  
         """
         file_path = os.path.join(self.workspace_directory, relative_file_path)
-        unique_id = self._make_unique_id() if use_unique_id else None
+        unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
             file_path=file_path,
             temporary_directory=self.local_temporary_directory,
@@ -142,10 +144,10 @@ class TaskOnKart(luigi.Task):
     def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
         self._get_output_target(target).dump(obj)
 
-    def _make_unique_id(self):
+    def make_unique_id(self):
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
-                return str(task._make_unique_id())
+                return str(task.make_unique_id())
             return task.to_str_params(only_significant=True)
 
         dependencies = [_to_str_params(task) for task in luigi.task.flatten(self.requires())]
@@ -166,3 +168,55 @@ class TaskOnKart(luigi.Task):
         if isinstance(target, str):
             return self.output()[target]
         return target
+
+    def get_info(self, only_significant=False):
+        params_str = {}
+        params = dict(self.get_params())
+        for param_name, param_value in self.param_kwargs.items():
+            if (not only_significant) or params[param_name].significant:
+                if type(params[param_name]) == gokart.TaskInstanceParameter:
+                    params_str[param_name] = type(param_value).__name__ + '-' + param_value.make_unique_id()
+                else:
+                    params_str[param_name] = params[param_name].serialize(param_value)
+        return params_str
+
+    def _get_task_log_target(self):
+        return self.make_target(f'log/task_log/{type(self).__name__}_{self.make_unique_id()}.pkl')
+
+    def get_task_log(self) -> Dict:
+        target = self._get_task_log_target()
+        if self.task_log:
+            return self.task_log
+        if target.exists():
+            return self.load(target)
+        return dict()
+
+    @luigi.Task.event_handler(luigi.Event.SUCCESS)
+    def _dump_task_log(self):
+        self.dump(self.task_log, self._get_task_log_target())
+
+    def _get_task_params_target(self):
+        return self.make_target(f'log/task_params/{type(self).__name__}_{self.make_unique_id()}.pkl')
+
+    def get_task_params(self) -> Dict:
+        target = self._get_task_log_target()
+        if target.exists():
+            return self.load(target)
+        return dict()
+
+    @luigi.Task.event_handler(luigi.Event.START)
+    def _dump_task_params(self):
+        self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
+
+    def _get_processing_time_target(self):
+        return self.make_target(f'log/processing_time/{type(self).__name__}_{self.make_unique_id()}.pkl')
+
+    def get_processing_time(self) -> str:
+        target = self._get_processing_time_target()
+        if target.exists():
+            return self.load(target)
+        return 'unknown'
+
+    @luigi.Task.event_handler(luigi.Event.PROCESSING_TIME)
+    def _dump_processing_time(self, processing_time):
+        self.dump(processing_time, self._get_processing_time_target())
