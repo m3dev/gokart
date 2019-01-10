@@ -1,0 +1,15 @@
+language: python
+python: 3.6.4
+
+env:
+  - BOTO_CONFIG=/dev/null
+
+install:
+  - pip install coveralls
+
+script:
+  - python setup.py develop
+  - coverage run --include=./gokart/* -m unittest discover -v -s ./test/
+
+after_success:
+  - coveralls
