@@ -5,15 +5,31 @@
 
 Welcome to gokart's documentation!
 ==================================
+Getting Started
+----------------
+
+Run ``pip instgall gokart`` to install the latest version from PyPI.
+`Documentation: <https://gokart.readthedocs.io/en/latest/>`_ for the latest release is hosted on readthedocs.
+
+Table of Contents
+-----------------
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
+   task_on_kart
+
+
+API References
+--------------
+.. toctree::
+   :maxdepth: 2
+
+   gokart
 
 
 Indices and tables
-==================
+-------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
