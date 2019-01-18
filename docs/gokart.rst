@@ -36,6 +36,14 @@ gokart.run module
     :undoc-members:
     :show-inheritance:
 
+gokart.s3\_config module
+------------------------
+
+.. automodule:: gokart.s3_config
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 gokart.target module
 --------------------
 
@@ -48,14 +56,6 @@ gokart.task module
 ------------------
 
 .. automodule:: gokart.task
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-gokart.workspace\_config module
--------------------------------
-
-.. automodule:: gokart.workspace_config
     :members:
     :undoc-members:
     :show-inheritance:

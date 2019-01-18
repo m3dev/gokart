@@ -49,12 +49,13 @@ class TaskOnKart(luigi.Task):
     @classmethod
     def _add_configuration(cls, kwargs, section):
         config = luigi.configuration.get_config()
-        class_variables = dict(cls.__dict__)
+        class_variables = dict(TaskOnKart.__dict__)
+        class_variables.update(dict(cls.__dict__))
 
         if section not in config:
             return
         for key, value in dict(config[section]).items():
-            if key not in kwargs and key not in class_variables:
+            if key not in kwargs and key in class_variables:
                 kwargs[key] = value
 
     def complete(self) -> bool:

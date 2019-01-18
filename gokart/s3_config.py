@@ -3,7 +3,7 @@ import luigi
 import luigi.contrib.s3
 
 
-class WorkspaceConfig(luigi.Config):
+class S3Config(luigi.Config):
     aws_access_key_id_name = luigi.Parameter(
         default='AWS_ACCESS_KEY_ID', description='AWS access key id environment variable.')
     aws_secret_access_key_name = luigi.Parameter(
