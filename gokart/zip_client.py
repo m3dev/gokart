@@ -2,7 +2,7 @@ import os
 import shutil
 from abc import abstractmethod
 
-from gokart.workspace_config import WorkspaceConfig
+from gokart.s3_config import S3Config
 
 
 class ZipClient(object):
@@ -55,7 +55,7 @@ class S3ZipClient(ZipClient):
     def __init__(self, file_path: str, temporary_directory: str) -> None:
         self._file_path = file_path
         self._temporary_directory = temporary_directory
-        self._client = WorkspaceConfig().get_s3_client()
+        self._client = S3Config().get_s3_client()
 
     def exists(self) -> bool:
         return self._client.exists(self._file_path)

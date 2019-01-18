@@ -18,6 +18,8 @@ Table of Contents
    :maxdepth: 2
 
    task_on_kart
+   task_information
+   task_settings
 
 
 API References
