@@ -1,4 +1,7 @@
 # gokart
+
+[![Build Status](https://travis-ci.org/m3dev/gokart.svg)](https://travis-ci.org/m3dev/gokart)
+
 A wrapper of the data pipeline library "luigi".
 
 
