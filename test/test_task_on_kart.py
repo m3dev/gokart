@@ -93,7 +93,7 @@ class TaskTest(unittest.TestCase):
 
     def test_make_model_target(self):
         task = _DummyTask()
-        target = task.make_model_target('test.txt', save_function=MagicMock(), load_function=MagicMock())
+        target = task.make_model_target('test.zip', save_function=MagicMock(), load_function=MagicMock())
         self.assertIsInstance(target, ModelTarget)
 
     def test_load_with_single_target(self):
