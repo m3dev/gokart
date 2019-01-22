@@ -1,11 +1,15 @@
 import hashlib
 import os
+from logging import getLogger
 from typing import Union, List, Any, Callable, Set, Optional, Dict
 
 import luigi
 import pandas as pd
+
 import gokart
 from gokart.target import TargetOnKart
+
+logger = getLogger(__name__)
 
 
 class TaskOnKart(luigi.Task):
@@ -226,3 +230,7 @@ class TaskOnKart(luigi.Task):
     def restore(cls, unique_id):
         params = TaskOnKart().make_target(f'log/task_params/{cls.__name__}_{unique_id}.pkl', use_unique_id=False).load()
         return cls.from_str_params(params)
+
+    @luigi.Task.event_handler(luigi.Event.FAILURE)
+    def _log_unique_id(self):
+        logger.info(f'FAILURE:\n    task name={type(self).__name__}\n    unique id={self.make_unique_id()}')
