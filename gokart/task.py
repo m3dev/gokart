@@ -232,5 +232,5 @@ class TaskOnKart(luigi.Task):
         return cls.from_str_params(params)
 
     @luigi.Task.event_handler(luigi.Event.FAILURE)
-    def _log_unique_id(self):
+    def _log_unique_id(self, exception):
         logger.info(f'FAILURE:\n    task name={type(self).__name__}\n    unique id={self.make_unique_id()}')
