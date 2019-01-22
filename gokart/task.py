@@ -109,6 +109,7 @@ class TaskOnKart(luigi.Task):
         :param use_unique_id: If this is true, add an unique id to a file base name.  
         """
         file_path = os.path.join(self.workspace_directory, relative_file_path)
+        assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
             file_path=file_path,
