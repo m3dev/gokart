@@ -26,9 +26,11 @@ class TaskOnKart(luigi.Task):
 
     workspace_directory = luigi.Parameter(
         default='./resources/',
-        description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.')  # type: str
+        description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.',
+        significant=False)  # type: str
     local_temporary_directory = luigi.Parameter(
-        default='./resources/tmp/', description='A directory to save temporary files.')  # type: str
+        default='./resources/tmp/', description='A directory to save temporary files.',
+        significant=False)  # type: str
     rerun = luigi.BoolParameter(
         default=False,
         description='If this is true, this task will run even if all output files exist.',
