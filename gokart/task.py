@@ -44,6 +44,10 @@ class TaskOnKart(luigi.Task):
         description='If this is true, this task will not run only if all input and output files exits,'
                     ' and all input files are modified before output file are modified.',
         significant=False)
+    delete_unnecessary_output_files = luigi.BoolParameter(
+        default=False,
+        description='If this is true, delete unnecessary output files.',
+        significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())

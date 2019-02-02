@@ -41,7 +41,7 @@ class RunTest(unittest.TestCase):
         config_file_path = os.path.join(os.path.dirname(__name__), 'test_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
         os.environ.setdefault('test_param', 'test')
-        tree_info = gokart.info.tree_info(mode='simple', output_path='tree.txt')
+        tree_info = gokart.tree_info(mode='simple', output_path='tree.txt')
         with self.assertRaises(SystemExit):
             gokart.run()
         self.assertTrue(gokart.make_tree_info(_DummyTask(param='test')), tree_info.output().load())
