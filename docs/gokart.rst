@@ -60,6 +60,14 @@ gokart.task module
     :undoc-members:
     :show-inheritance:
 
+gokart.workspace\_management module
+-----------------------------------
+
+.. automodule:: gokart.workspace_management
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 gokart.zip\_client module
 -------------------------
 

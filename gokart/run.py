@@ -3,6 +3,7 @@ import os
 import sys
 from configparser import ConfigParser
 from logging import getLogger
+from typing import List
 
 import luigi
 import luigi.cmdline
@@ -31,13 +32,13 @@ def _check_config():
 
 def _run_tree_info(cmdline_args, details):
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        gokart.info.tree_info().output().dump(gokart.make_tree_info(cp.get_task_obj(), details=details))
+        gokart.tree_info().output().dump(gokart.make_tree_info(cp.get_task_obj(), details=details))
 
 
-def _try_task_info(cmdline_args):
+def _try_tree_info(cmdline_args):
     with CmdlineParser.global_instance(cmdline_args):
-        mode = gokart.info.tree_info().mode
-        output_path = gokart.info.tree_info().output().path()
+        mode = gokart.tree_info().mode
+        output_path = gokart.tree_info().output().path()
 
     # do nothing if `mode` is empty.
     if mode == '':
@@ -54,6 +55,17 @@ def _try_task_info(cmdline_args):
     exit()
 
 
+def _try_delete_unnecessary_output_file(cmdline_args: List[str]):
+    with CmdlineParser.global_instance(cmdline_args) as cp:
+        task = cp.get_task_obj()  # type: gokart.TaskOnKart
+        if task.delete_unnecessary_output_files:
+            if task.workspace_directory.startswith('s3://'):
+                logger.info('delete-unnecessary-output-files is not support s3.')
+            else:
+                gokart.delete_local_unnecessary_outputs(task)
+            exit()
+
+
 def run(cmdline_args=None, set_retcode=True):
     cmdline_args = cmdline_args or sys.argv[1:]
 
@@ -66,7 +78,8 @@ def run(cmdline_args=None, set_retcode=True):
 
     _read_environ()
     _check_config()
-    _try_task_info(cmdline_args)
+    _try_tree_info(cmdline_args)
+    _try_delete_unnecessary_output_file(cmdline_args)
 
     luigi.cmdline.luigi_run(cmdline_args)
 
