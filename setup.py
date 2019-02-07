@@ -14,6 +14,7 @@ install_requires = [
     'boto3==1.7.84',
     'botocore== 1.10.84',
     'moto==1.3.6',
+    'slackclient==1.3.0',
     'luigi',
     'pandas',
     'numpy',
