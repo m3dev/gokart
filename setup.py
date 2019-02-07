@@ -15,6 +15,7 @@ install_requires = [
     'botocore== 1.10.84',
     'moto==1.3.6',
     'slackclient==1.3.0',
+    'python-dateutil==2.7.5',
     'luigi',
     'pandas',
     'numpy',
