@@ -30,8 +30,7 @@ class TaskOnKart(luigi.Task):
         description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.',
         significant=False)  # type: str
     local_temporary_directory = luigi.Parameter(
-        default='./resources/tmp/', description='A directory to save temporary files.',
-        significant=False)  # type: str
+        default='./resources/tmp/', description='A directory to save temporary files.', significant=False)  # type: str
     rerun = luigi.BoolParameter(
         default=False,
         description='If this is true, this task will run even if all output files exist.',
@@ -43,12 +42,10 @@ class TaskOnKart(luigi.Task):
     modification_time_check = luigi.BoolParameter(
         default=False,
         description='If this is true, this task will not run only if all input and output files exits,'
-                    ' and all input files are modified before output file are modified.',
+        ' and all input files are modified before output file are modified.',
         significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(
-        default=False,
-        description='If this is true, delete unnecessary output files.',
-        significant=False)
+        default=False, description='If this is true, delete unnecessary output files.', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
@@ -66,7 +63,7 @@ class TaskOnKart(luigi.Task):
             return
         for key, value in dict(config[section]).items():
             if key not in kwargs and key in class_variables:
-                kwargs[key] = json.loads(value)
+                kwargs[key] = class_variables[key].parse(value)
 
     def complete(self) -> bool:
         if self.rerun:
@@ -80,13 +77,15 @@ class TaskOnKart(luigi.Task):
         if self.strict_check or self.modification_time_check:
             requirements = luigi.task.flatten(self.requires())
             inputs = luigi.task.flatten(self.input())
-            is_completed = is_completed and all([task.complete() for task in requirements]) and all([i.exists() for i in inputs])
+            is_completed = is_completed and all([task.complete()
+                                                 for task in requirements]) and all([i.exists() for i in inputs])
 
         if not self.modification_time_check or not is_completed or not self.input():
             return is_completed
 
         input_modification_time = max([target.last_modification_time() for target in luigi.task.flatten(self.input())])
-        output_modification_time = min([target.last_modification_time() for target in luigi.task.flatten(self.output())])
+        output_modification_time = min(
+            [target.last_modification_time() for target in luigi.task.flatten(self.output())])
         # "=" must be required in the following statements, because some tasks use input targets as output targets.
         return input_modification_time <= output_modification_time
 
@@ -95,7 +94,8 @@ class TaskOnKart(luigi.Task):
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id)
 
-    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True,
+                                     max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
