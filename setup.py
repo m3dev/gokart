@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 readme_note = """\
 .. note::
@@ -24,13 +24,13 @@ install_requires = [
 
 setup(
     name='gokart',
-    version='0.1.5',
+    version='0.1.6',
     description='A wrapper of luigi. This make it easy to define tasks.',
     long_description=long_description,
     author='M3, inc.',
     url='https://github.com/m3dev/gokart',
     license='MIT License',
-    packages=['gokart'],
+    packages=find_packages(),
     install_requires=install_requires,
     classifiers=[
         'Programming Language :: Python :: 3.7',
