@@ -1,7 +1,7 @@
 import os
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import luigi
 
@@ -12,6 +12,7 @@ from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
 class _DummyTask(gokart.TaskOnKart):
     task_namespace = __name__
     param = luigi.IntParameter(default=1)
+    list_param = luigi.ListParameter(default=['a', 'b'])
 
 
 class TaskTest(unittest.TestCase):
@@ -137,6 +138,13 @@ class TaskTest(unittest.TestCase):
 
         task.dump(1)
         target.dump.assert_called_once()
+
+    @patch('luigi.configuration.get_config')
+    def test_add_configuration(self, mock_config: MagicMock):
+        mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]'}}
+        kwargs = dict()
+        _DummyTask._add_configuration(kwargs, '_DummyTask')
+        self.assertEqual(['c', 'd'], list(kwargs['list_param']))
 
 
 if __name__ == '__main__':

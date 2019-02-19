@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 from logging import getLogger
 from typing import Union, List, Any, Callable, Set, Optional, Dict
@@ -61,12 +62,11 @@ class TaskOnKart(luigi.Task):
         config = luigi.configuration.get_config()
         class_variables = dict(TaskOnKart.__dict__)
         class_variables.update(dict(cls.__dict__))
-
         if section not in config:
             return
         for key, value in dict(config[section]).items():
             if key not in kwargs and key in class_variables:
-                kwargs[key] = value
+                kwargs[key] = json.loads(value)
 
     def complete(self) -> bool:
         if self.rerun:
