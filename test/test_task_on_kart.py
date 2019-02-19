@@ -13,6 +13,7 @@ class _DummyTask(gokart.TaskOnKart):
     task_namespace = __name__
     param = luigi.IntParameter(default=1)
     list_param = luigi.ListParameter(default=['a', 'b'])
+    bool_param = luigi.BoolParameter()
 
 
 class TaskTest(unittest.TestCase):
@@ -141,10 +142,12 @@ class TaskTest(unittest.TestCase):
 
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: MagicMock):
-        mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]'}}
+        mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
         kwargs = dict()
         _DummyTask._add_configuration(kwargs, '_DummyTask')
+        self.assertEqual(3, kwargs['param'])
         self.assertEqual(['c', 'd'], list(kwargs['list_param']))
+        self.assertEqual(True, kwargs['bool_param'])
 
 
 if __name__ == '__main__':
