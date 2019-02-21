@@ -3,12 +3,17 @@ import unittest
 import luigi
 
 import gokart
-from gokart import TaskOnKart
+from gokart import TaskOnKart, TaskInstanceParameter
+
+
+class _DummySubTask(TaskOnKart):
+    pass
 
 
 class _DummyTask(TaskOnKart):
     task_namespace = __name__
     param = luigi.IntParameter()
+    task = TaskInstanceParameter(default=_DummySubTask())
 
 
 class TaskInstanceParameterTest(unittest.TestCase):
