@@ -1,15 +1,18 @@
 language: python
-python: 3.6.4
-
+python: 3.6.7
 env:
-  - BOTO_CONFIG=/dev/null
-
+- BOTO_CONFIG=/dev/null
 install:
-  - pip install coveralls
-
+- pip install pipenv
 script:
-  - python setup.py develop
-  - coverage run --include=./gokart/* -m unittest discover -v -s ./test/
-
+- pipenv install --dev
+- pipenv run coverage run --include=./gokart/* -m unittest discover -v -s ./test/
 after_success:
-  - coveralls
+- coveralls
+deploy:
+  provider: pypi
+  user: nishiba
+  password:
+    secure: VVFMOcBGjWz7dlXURzjjR8hiq8pN1C/DxgU/Iikp7DD2fb2+xt1GwwCHo6fUO8LnCDyhWtmNQxFaBkuFrmFd6TXDAlh7vRVCYJUSgn0mLda/B/bMYl379i1quoX5TueiozwIrza3z2wa+zXEHHzo5IHxvkKfIKZRLy+m1K9ZYIk/3V3Wg7hn0Oa1vJURsHzVgcffcZcuiJ6S3znEXD5R8B2RjVEkhFa6JpX5JVR/t7EgAFP5PqaGBQDofee72pkpLoNWp85oJINfv22Cb4gcROJ+AQ+zslqJCFAOHmkcjvJo0wbL1K6374N9pqTV5oSP95crinIcbii9o3zmgETaeKcFVE/3soa07RiQZ6cgoGg0CCYDbGgjrjlj5sDfeSvqKSK78QDdwZANpZcLglRlGMOwEhEicGBEvdUvWk8MQs/TDo2e4I4aRFr/PMfHDtK8X6LWSz260u+P5qlNN3a+sN2Lk4g+K/RYQCdGN6hhPdHWjjRUmDT198tiLQzkaKPBGzeTeqQMtB1KadmTQSGw1sYPPThEi0VTIS2rmr3D+BFcx3YusaTfmhSsXlzNJsQoWeuR7U0uMx53QJd8j7GUCKi4FLAaox9mYzFQil7MO4bkTvVWjcjuUI7W3Zrva7qzJ8q3/PGC+4lQCkMFa2lcBMppKrIy4gw6o4jxtrZPCJ4=
+true:
+  tags: true
