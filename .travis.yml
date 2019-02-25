@@ -1,14 +1,14 @@
 language: python
 python: 3.6.7
 env:
-- BOTO_CONFIG=/dev/null
+  - BOTO_CONFIG=/dev/null
 install:
-- pip install coverage
+  - pip install --upgrade pip
+  - pip install coverage
 script:
-- python setup.py develop
-- coverage run --include=./gokart/* -m unittest discover -v -s ./test/
+  - coverage run --include=gokart setup.py test
 after_success:
-- coveralls
+  - coveralls
 deploy:
   provider: pypi
   user: nishiba
