@@ -13,9 +13,8 @@ with open('README.md') as f:
 install_requires = [
     'luigi',
     'python-dateutil==2.7.5',
-    'boto3',
-    'botocore',
-    'moto',
+    'boto3==1.7.84',
+    'botocore== 1.10.84',
     'slackclient',
     'pandas',
     'numpy',
@@ -32,6 +31,8 @@ setup(
     license='MIT License',
     packages=find_packages(),
     install_requires=install_requires,
+    tests_require=['moto==1.3.6'],
+    test_suite='test',
     classifiers=[
         'Programming Language :: Python :: 3.6.7',
     ],
