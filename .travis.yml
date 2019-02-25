@@ -3,7 +3,7 @@ python: 3.6.7
 env:
 - BOTO_CONFIG=/dev/null
 install:
-- pip install pipenv
+- pip install coverage
 script:
 - python setup.py develop
 - coverage run --include=./gokart/* -m unittest discover -v -s ./test/
