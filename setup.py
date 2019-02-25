@@ -22,6 +22,8 @@ install_requires = [
     'tqdm',
 ]
 
+test_requires = ['coverage']
+
 setup(
     name='gokart',
     version='0.1.10',
@@ -32,6 +34,7 @@ setup(
     license='MIT License',
     packages=find_packages(),
     install_requires=install_requires,
+    tests_require=test_requires,
     classifiers=[
         'Programming Language :: Python :: 3.7',
     ],
