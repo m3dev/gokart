@@ -5,8 +5,8 @@ env:
 install:
 - pip install pipenv
 script:
-- pipenv install --dev
-- pipenv run coverage run --include=./gokart/* -m unittest discover -v -s ./test/
+- python setup.py develop
+- coverage run --include=./gokart/* -m unittest discover -v -s ./test/
 after_success:
 - coveralls
 deploy:
