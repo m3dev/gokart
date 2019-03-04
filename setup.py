@@ -12,7 +12,7 @@ with open('README.md') as f:
 
 install_requires = [
     'luigi',
-    'python-dateutil',
+    'python-dateutil==2.7.5',
     'boto3',
     'slackclient',
     'pandas',
