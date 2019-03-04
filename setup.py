@@ -13,8 +13,7 @@ with open('README.md') as f:
 install_requires = [
     'luigi',
     'python-dateutil==2.7.5',
-    'boto3==1.7.84',
-    'botocore== 1.10.84',
+    'boto3',
     'slackclient',
     'pandas',
     'numpy',
