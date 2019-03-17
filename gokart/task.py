@@ -138,6 +138,19 @@ class TaskOnKart(luigi.Task):
 
         return _load(self._get_input_targets(target))
 
+    def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Any:
+        def _load(targets):
+            if isinstance(targets, list):
+                for t in targets:
+                    yield from _load(t)
+            elif isinstance(targets, dict):
+                for k, t in targets.items():
+                    yield from {k: _load(t)}
+            else:
+                yield targets.load()
+
+        return _load(self._get_input_targets(target))
+
     def load_data_frame(self,
                         target: Union[None, str, TargetOnKart] = None,
                         required_columns: Optional[Set[str]] = None) -> pd.DataFrame:
