@@ -117,7 +117,7 @@ For instance, an example implementation could be as follows:
 
 Usage is the same as `TaskOnKart.generator`.
 `load_generator` reads the divided file into iterations.
-It's effective when can't read all data in memory, because `load_generator` doesn't load all files at once.
+It's effective when can't read all data to memory, because `load_generator` doesn't load all files at once.
 
 
 TaskOnKart.dump
