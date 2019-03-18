@@ -132,6 +132,22 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(data['target_key_1'], 1)
         self.assertEqual(data['target_key_2'], 2)
 
+    def test_load_generator_with_single_target(self):
+        task = _DummyTask()
+        target = MagicMock(spec=TargetOnKart)
+        target.load.return_value = [1,2]
+        task.input = MagicMock(return_value=target)
+        data = [x for x in task.load_generator()]
+        self.assertEqual(data, [[1,2]])
+
+    def test_load_with_keyword(self):
+        task = _DummyTask()
+        target = MagicMock(spec=TargetOnKart)
+        target.load.return_value = [1,2]
+        task.input = MagicMock(return_value={'target_key': target})
+        data = [x for x in task.load_generator('target_key')]
+        self.assertEqual(data, [[1,2]])
+
     def test_dump(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
