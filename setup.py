@@ -22,7 +22,7 @@ install_requires = [
 
 setup(
     name='gokart',
-    version='0.1.14',
+    version='0.1.14.dev',
     description='A wrapper of luigi. This make it easy to define tasks.',
     long_description=long_description,
     author='M3, inc.',
