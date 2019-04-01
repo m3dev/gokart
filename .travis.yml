@@ -1,18 +1,18 @@
 language: python
 python: 3.6.7
 env:
-  - BOTO_CONFIG=/dev/null
+- BOTO_CONFIG=/dev/null
 install:
-  - pip install --upgrade pip
-  - pip install coverage
+- pip install --upgrade pip
+- pip install coverage
 script:
-  - coverage run --include=gokart setup.py test
+- coverage run --include=gokart setup.py test
 after_success:
-  - coveralls
+- coveralls
 deploy:
   on:
     tags: true
   provider: pypi
   user: nishiba
   password:
-    secure: VVFMOcBGjWz7dlXURzjjR8hiq8pN1C/DxgU/Iikp7DD2fb2+xt1GwwCHo6fUO8LnCDyhWtmNQxFaBkuFrmFd6TXDAlh7vRVCYJUSgn0mLda/B/bMYl379i1quoX5TueiozwIrza3z2wa+zXEHHzo5IHxvkKfIKZRLy+m1K9ZYIk/3V3Wg7hn0Oa1vJURsHzVgcffcZcuiJ6S3znEXD5R8B2RjVEkhFa6JpX5JVR/t7EgAFP5PqaGBQDofee72pkpLoNWp85oJINfv22Cb4gcROJ+AQ+zslqJCFAOHmkcjvJo0wbL1K6374N9pqTV5oSP95crinIcbii9o3zmgETaeKcFVE/3soa07RiQZ6cgoGg0CCYDbGgjrjlj5sDfeSvqKSK78QDdwZANpZcLglRlGMOwEhEicGBEvdUvWk8MQs/TDo2e4I4aRFr/PMfHDtK8X6LWSz260u+P5qlNN3a+sN2Lk4g+K/RYQCdGN6hhPdHWjjRUmDT198tiLQzkaKPBGzeTeqQMtB1KadmTQSGw1sYPPThEi0VTIS2rmr3D+BFcx3YusaTfmhSsXlzNJsQoWeuR7U0uMx53QJd8j7GUCKi4FLAaox9mYzFQil7MO4bkTvVWjcjuUI7W3Zrva7qzJ8q3/PGC+4lQCkMFa2lcBMppKrIy4gw6o4jxtrZPCJ4=
+    secure: tEYNJcqxO3N5MB8p7UKGr0eSpiE9TtNx0dM9++aZ+NdR8vKpN5xg7nPzBzUpSCEabcLmlHlXWtizHfXUARQ7iZ68h3O53PIETFSQpKZlYJnOoQ/Qny7Nz9p18KgDVqaNnDLnmYhWHtDCDpKqCqswcKHNkVqNqcmhIQIbnUiI3Z5cgjuNu2wirtTHihTmiXT5hO6fb09YOW8dCMeZxvCMFDkMgaV7yXt9hta1J+z0aWp8XVByQfbhPbm51Va9ONEegjK719R87O2Tvgiw7JIcuZQkmffSIOLAWB+Nf0wQ608VOd6n+TIMLarKhS04A0sUZxX+B7E8NeK7UREvH1KkIOXevo1axAfdzMAEUoa1p8dS1Mm6tHm6JthJL3LPw+BF0NT5JrcSBJr1fjpv+7t8yWYoj/cyWbWvwyF1YW2Va3O3ERUjh1Di0BcnEU2btot19czDZ8yLW9tap9jJL5TeKDJGNRIx0cj2HgG6M8Q+3XjRwp8I9bVxsU2zkR0bpLKo3tbTEmU6iEdQbkc9tCBtFe6icoevnTTFCc+PXKVVIzpI4cg0Eo8AvMvP3jY5DCLNPf9LeLZabqkgWuon9f3S5C0+BlmPkvNhBhh+nghBlCIMX+RIMZ1sgbRPegBu6zPHSAEhlg1cdYQ8gvMlVIcn9y6y633n4dyactBro9dGIyY=
