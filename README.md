@@ -6,7 +6,7 @@ A wrapper of the data pipeline library "luigi".
 
 
 ## Getting Started
-Run `pip instgall gokart` to install the latest version from PyPI. [Documentation](https://gokart.readthedocs.io/en/latest/) for the latest release is hosted on readthedocs.
+Run `pip install gokart` to install the latest version from PyPI. [Documentation](https://gokart.readthedocs.io/en/latest/) for the latest release is hosted on readthedocs.
 
 ## How to Use
 Please use gokart.TaskOnKart instead of luigi.Task to define your tasks.
