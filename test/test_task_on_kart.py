@@ -22,8 +22,7 @@ class TaskTest(unittest.TestCase):
 
     def test_complete_without_dependency(self):
         task = _DummyTask()
-        self.assertTrue(
-            task.complete(), msg='_DummyTask does not have any output files, so this always must be completed.')
+        self.assertTrue(task.complete(), msg='_DummyTask does not have any output files, so this always must be completed.')
 
     def test_complete_with_rerun_flag(self):
         task = _DummyTask(rerun=True)
@@ -118,6 +117,20 @@ class TaskTest(unittest.TestCase):
         target.load.assert_called_once()
         self.assertEqual(data, 1)
 
+    def test_load_tuple(self):
+        task = _DummyTask()
+        target1 = MagicMock(spec=TargetOnKart)
+        target1.load.return_value = 1
+        target2 = MagicMock(spec=TargetOnKart)
+        target2.load.return_value = 2
+        task.input = MagicMock(return_value=(target1, target2))
+
+        data = task.load()
+        target1.load.assert_called_once()
+        target2.load.assert_called_once()
+        self.assertEqual(data[0], 1)
+        self.assertEqual(data[1], 2)
+
     def test_load_dictionary_at_once(self):
         task = _DummyTask()
         target1 = MagicMock(spec=TargetOnKart)
@@ -135,18 +148,18 @@ class TaskTest(unittest.TestCase):
     def test_load_generator_with_single_target(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
-        target.load.return_value = [1,2]
+        target.load.return_value = [1, 2]
         task.input = MagicMock(return_value=target)
         data = [x for x in task.load_generator()]
-        self.assertEqual(data, [[1,2]])
+        self.assertEqual(data, [[1, 2]])
 
     def test_load_with_keyword(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
-        target.load.return_value = [1,2]
+        target.load.return_value = [1, 2]
         task.input = MagicMock(return_value={'target_key': target})
         data = [x for x in task.load_generator('target_key')]
-        self.assertEqual(data, [[1,2]])
+        self.assertEqual(data, [[1, 2]])
 
     def test_dump(self):
         task = _DummyTask()

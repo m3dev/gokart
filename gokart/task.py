@@ -119,7 +119,7 @@ class TaskOnKart(luigi.Task):
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
-            if isinstance(targets, list):
+            if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
             if isinstance(targets, dict):
                 return {k: _load(t) for k, t in targets.items()}
@@ -129,7 +129,7 @@ class TaskOnKart(luigi.Task):
 
     def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
-            if isinstance(targets, list):
+            if isinstance(targets, list) or isinstance(targets, tuple):
                 for t in targets:
                     yield from _load(t)
             elif isinstance(targets, dict):
