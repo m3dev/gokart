@@ -7,6 +7,7 @@ from gokart import TaskOnKart, TaskInstanceParameter
 
 
 class _DummySubTask(TaskOnKart):
+    task_namespace = __name__
     pass
 
 

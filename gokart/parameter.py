@@ -1,3 +1,5 @@
+import json
+
 import luigi
 from luigi import task_register
 
@@ -20,3 +22,19 @@ class TaskInstanceParameter(luigi.Parameter):
     def serialize(self, x):
         values = dict(type=x.get_task_family(), params=x.to_str_params(only_significant=True))
         return luigi.DictParameter().serialize(values)
+
+
+class _TaskInstanceEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, luigi.Task):
+            return TaskInstanceParameter().serialize(obj)
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
+
+class ListTaskInstanceParameter(luigi.Parameter):
+    def parse(self, s):
+        return [TaskInstanceParameter().parse(x) for x in list(json.loads(s))]
+
+    def serialize(self, x):
+        return json.dumps(x, cls=_TaskInstanceEncoder)
