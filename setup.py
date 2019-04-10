@@ -22,7 +22,7 @@ install_requires = [
 
 setup(
     name='gokart',
-    version='0.1.14.dev',
+    version='0.1.15',
     description='A wrapper of luigi. This make it easy to define tasks.',
     long_description=long_description,
     author='M3, inc.',
@@ -32,5 +32,5 @@ setup(
     install_requires=install_requires,
     tests_require=['moto==1.3.6'],
     test_suite='test',
-    classifiers=['Programming Language :: Python :: 3.6.7'],
+    classifiers=['Programming Language :: Python :: 3.6'],
 )
