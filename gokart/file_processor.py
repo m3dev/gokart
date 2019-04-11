@@ -160,6 +160,8 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.tsv': CsvFileProcessor(sep='\t'),
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
+        '.json': JsonFileProcessor(),
+        '.xml': XmlFileProcessor()
     }
 
     extension = os.path.splitext(file_path)[1]
