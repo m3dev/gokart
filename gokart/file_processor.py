@@ -2,6 +2,7 @@ import pickle
 import os
 from abc import abstractmethod
 from logging import getLogger
+import xml.etree.ElementTree as ET
 
 import luigi
 import luigi.contrib.s3
@@ -122,6 +123,36 @@ class GzipFileProcessor(FileProcessor):
             file.write(str(obj).encode())
 
 
+class JsonFileProcessor(FileProcessor):
+    def format(self):
+        return None
+
+    def load(self, file):
+        try:
+            return pd.read_json(file)
+        except pd.errors.EmptyDataError:
+            return pd.DataFrame()
+
+    def dump(self, obj, file):
+        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series), f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
+        obj.to_json(file, index=False)
+
+
+class XmlFileProcessor(FileProcessor):
+    def format(self):
+        return None
+
+    def load(self, file):
+        try:
+            return ET.parse(file)
+        except ET.ParseError:
+            return ET.ElementTree()
+
+    def dump(self, obj, file):
+        assert isinstance(obj, ET.ElementTree), f'requires ET.ElementTree, but {type(obj)} is passed.'
+        obj.write(file)
+
+
 def make_file_processor(file_path: str) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
@@ -129,6 +160,8 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.tsv': CsvFileProcessor(sep='\t'),
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
+        '.json': JsonFileProcessor(),
+        '.xml': XmlFileProcessor()
     }
 
     extension = os.path.splitext(file_path)[1]

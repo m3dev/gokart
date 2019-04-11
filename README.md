@@ -43,6 +43,8 @@ class BasicTask(gokart.TaskOnKart):
  - csv
  - tsv
  - gz
+ - json
+ - xml
 
 #### Make Target for models which generate multiple files in saving.
 `TaskOnKart.make_model_target` and `TaskOnKart.dump` are designed to save and load models like gensim.model.Word2vec. 
