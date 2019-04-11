@@ -122,6 +122,21 @@ class GzipFileProcessor(FileProcessor):
             file.write(str(obj).encode())
 
 
+class JsonFileProcessor(FileProcessor):
+    def format(self):
+        return None
+
+    def load(self, file):
+        try:
+            return pd.read_json(file)
+        except pd.errors.EmptyDataError:
+            return pd.DataFrame()
+
+    def dump(self, obj, file):
+        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series), f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
+        obj.to_json(file, index=False)
+
+
 def make_file_processor(file_path: str) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
