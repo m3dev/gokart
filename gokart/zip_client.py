@@ -1,8 +1,15 @@
 import os
 import shutil
+import zipfile
 from abc import abstractmethod
 
 from gokart.s3_config import S3Config
+
+
+def _unzip_file(filename: str, extract_dir: str) -> None:
+    zip_file = zipfile.ZipFile(filename)
+    zip_file.extractall(extract_dir)
+    zip_file.close()
 
 
 class ZipClient(object):
@@ -41,7 +48,7 @@ class LocalZipClient(ZipClient):
         shutil.make_archive(base_name=base, format=extension[1:], root_dir=self._temporary_directory)
 
     def unpack_archive(self) -> None:
-        shutil.unpack_archive(filename=self._file_path, extract_dir=self._temporary_directory)
+        _unzip_file(filename=self._file_path, extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         shutil.rmtree(self._file_path, ignore_errors=True)
@@ -62,13 +69,12 @@ class S3ZipClient(ZipClient):
 
     def make_archive(self) -> None:
         extension = os.path.splitext(self._file_path)[1]
-        shutil.make_archive(
-            base_name=self._temporary_directory, format=extension[1:], root_dir=self._temporary_directory)
+        shutil.make_archive(base_name=self._temporary_directory, format=extension[1:], root_dir=self._temporary_directory)
         self._client.put(self._temporary_file_path(), self._file_path)
 
     def unpack_archive(self) -> None:
         self._client.get(self._file_path, self._temporary_file_path())
-        shutil.unpack_archive(filename=self._temporary_file_path(), extract_dir=self._temporary_directory)
+        _unzip_file(filename=self._temporary_file_path(), extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         self._client.remove(self._file_path)
