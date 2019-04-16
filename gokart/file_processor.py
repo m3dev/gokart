@@ -134,7 +134,10 @@ class JsonFileProcessor(FileProcessor):
             return pd.DataFrame()
 
     def dump(self, obj, file):
-        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series), f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
+        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict), \
+           f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
+        if isinstance(obj, dict):
+            obj = pd.DataFrame.from_dict(obj)
         obj.to_json(file)
 
 
