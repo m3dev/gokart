@@ -140,10 +140,7 @@ class ModelTargetTest(unittest.TestCase):
         file_path = os.path.join(_get_temporary_directory(), 'test.zip')
 
         target = make_model_target(
-            file_path=file_path,
-            temporary_directory=_get_temporary_directory(),
-            save_function=self._save_function,
-            load_function=self._load_function)
+            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function)
 
         target.dump(obj)
         loaded = target.load()
@@ -159,10 +156,7 @@ class ModelTargetTest(unittest.TestCase):
         file_path = os.path.join('s3://test/', 'test.zip')
 
         target = make_model_target(
-            file_path=file_path,
-            temporary_directory=_get_temporary_directory(),
-            save_function=self._save_function,
-            load_function=self._load_function)
+            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function)
 
         target.dump(obj)
         loaded = target.load()
