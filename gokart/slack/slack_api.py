@@ -1,6 +1,7 @@
 from logging import getLogger
 
-from slackclient import SlackClient
+from slack import WebClient
+
 
 logger = getLogger(__name__)
 
@@ -19,7 +20,7 @@ class FileNotUploadedError(RuntimeError):
 
 class SlackAPI(object):
     def __init__(self, token, channel: str, to_user: str) -> None:
-        self._client = SlackClient(token=token)
+        self._client = WebClient(token=token)
         self._channel_id = self._get_channel_id(channel)
         self._to_user = to_user if to_user == '' or to_user.startswith('@') else '@' + to_user
 

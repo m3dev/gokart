@@ -9,7 +9,7 @@ logger = getLogger(__name__)
 
 
 class TestSlackAPI(unittest.TestCase):
-    @mock.patch('gokart.slack.slack_api.SlackClient')
+    @mock.patch('gokart.slack.slack_api.WebClient')
     def test_initialization_with_invalid_token(self, patch):
         def _channels_list(method):
             assert method == 'channels.list'
@@ -22,7 +22,7 @@ class TestSlackAPI(unittest.TestCase):
         with self.assertRaises(gokart.slack.slack_api.ChannelListNotLoadedError):
             gokart.slack.SlackAPI(token='invalid', channel='test', to_user='test user')
 
-    @mock.patch('gokart.slack.slack_api.SlackClient')
+    @mock.patch('gokart.slack.slack_api.WebClient')
     def test_invalid_channel(self, patch):
         def _channels_list(method):
             assert method == 'channels.list'
@@ -35,7 +35,7 @@ class TestSlackAPI(unittest.TestCase):
         with self.assertRaises(gokart.slack.slack_api.ChannelNotFoundError):
             gokart.slack.SlackAPI(token='valid', channel='invalid_channel', to_user='test user')
 
-    @mock.patch('gokart.slack.slack_api.SlackClient')
+    @mock.patch('gokart.slack.slack_api.WebClient')
     def test_send_snippet_with_invalid_token(self, patch):
         def _api_call(*args, **kwargs):
             if args[0] == 'channels.list':
@@ -52,7 +52,7 @@ class TestSlackAPI(unittest.TestCase):
             api = gokart.slack.SlackAPI(token='valid', channel='valid', to_user='test user')
             api.send_snippet(comment='test', title='title', content='content')
 
-    @mock.patch('gokart.slack.slack_api.SlackClient')
+    @mock.patch('gokart.slack.slack_api.WebClient')
     def test_send(self, patch):
         def _api_call(*args, **kwargs):
             if args[0] == 'channels.list':
