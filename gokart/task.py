@@ -1,5 +1,4 @@
 import hashlib
-import itertools
 import os
 from logging import getLogger
 from typing import Union, List, Any, Callable, Set, Optional, Dict
