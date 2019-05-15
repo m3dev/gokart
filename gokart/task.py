@@ -1,5 +1,5 @@
 import hashlib
-import json
+import itertools
 import os
 from logging import getLogger
 from typing import Union, List, Any, Callable, Set, Optional, Dict
@@ -143,7 +143,12 @@ class TaskOnKart(luigi.Task):
     def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None) -> pd.DataFrame:
         data = self.load(target=target)
         if isinstance(data, list):
-            data = pd.concat(data)
+            def _pd_concat(dfs):
+                if isinstance(dfs, list):
+                    return pd.concat([_pd_concat(df) for df in dfs])
+                else:
+                    return dfs
+            data = _pd_concat(data)
 
         required_columns = required_columns or set()
         if data.empty:
