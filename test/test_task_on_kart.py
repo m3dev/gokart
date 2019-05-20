@@ -2,7 +2,7 @@ import os
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
-
+import pandas as pd
 import luigi
 
 import gokart
@@ -177,6 +177,14 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(3, kwargs['param'])
         self.assertEqual(['c', 'd'], list(kwargs['list_param']))
         self.assertEqual(True, kwargs['bool_param'])
+
+    def test_load_list_of_list_pandas(self):
+        task = _DummyTask()
+        task.load = MagicMock(return_value=[pd.DataFrame(dict(a=[1])), [pd.DataFrame(dict(a=[2])), pd.DataFrame(dict(a=[3]))]])
+
+        df = task.load_data_frame()
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(3, df.shape[0])
 
 
 if __name__ == '__main__':
