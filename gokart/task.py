@@ -79,6 +79,22 @@ class TaskOnKart(luigi.Task):
         # "=" must be required in the following statements, because some tasks use input targets as output targets.
         return input_modification_time <= output_modification_time
 
+    def clone(self, cls=None, **kwargs):
+        if cls is None:
+            cls = self.__class__
+
+        new_k = {}
+        for param_name, param_class in cls.get_params():
+            if param_name in {'rerun', 'strict_check', 'modification_time_check'}:
+                continue
+
+            if param_name in kwargs:
+                new_k[param_name] = kwargs[param_name]
+            elif hasattr(self, param_name):
+                new_k[param_name] = getattr(self, param_name)
+
+        return cls(**new_k)
+
     def make_target(self, relative_file_path: str, use_unique_id: bool = True) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
