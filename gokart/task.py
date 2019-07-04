@@ -44,6 +44,7 @@ class TaskOnKart(luigi.Task):
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log = dict()
         super(TaskOnKart, self).__init__(*args, **kwargs)
+        self._rerun_state = self.rerun
 
     @classmethod
     def _add_configuration(cls, kwargs, section):
@@ -57,10 +58,10 @@ class TaskOnKart(luigi.Task):
                 kwargs[key] = class_variables[key].parse(value)
 
     def complete(self) -> bool:
-        if self.rerun:
+        if self._rerun_state:
             for target in luigi.task.flatten(self.output()):
                 target.remove()
-            self.rerun = False
+            self._rerun_state = False
             return False
 
         is_completed = all([t.exists() for t in luigi.task.flatten(self.output())])
@@ -77,6 +78,22 @@ class TaskOnKart(luigi.Task):
         output_modification_time = min([target.last_modification_time() for target in luigi.task.flatten(self.output())])
         # "=" must be required in the following statements, because some tasks use input targets as output targets.
         return input_modification_time <= output_modification_time
+
+    def clone(self, cls=None, **kwargs):
+        if cls is None:
+            cls = self.__class__
+
+        new_k = {}
+        for param_name, param_class in cls.get_params():
+            if param_name in {'rerun', 'strict_check', 'modification_time_check'}:
+                continue
+
+            if param_name in kwargs:
+                new_k[param_name] = kwargs[param_name]
+            elif hasattr(self, param_name):
+                new_k[param_name] = getattr(self, param_name)
+
+        return cls(**new_k)
 
     def make_target(self, relative_file_path: str, use_unique_id: bool = True) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
