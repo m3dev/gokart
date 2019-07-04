@@ -7,9 +7,6 @@ readme_note = """\
    `GitHub repository <https://github.com/m3dev/gokart>`_\n\n
 """
 
-with open('README.md') as f:
-    long_description = readme_note + f.read()
-
 install_requires = [
     'luigi',
     'python-dateutil==2.7.5',
@@ -25,7 +22,6 @@ setup(
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
     description='A wrapper of luigi. This make it easy to define tasks.',
-    long_description=long_description,
     author='M3, inc.',
     url='https://github.com/m3dev/gokart',
     license='MIT License',
