@@ -4,6 +4,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 import pandas as pd
 import luigi
+from luigi.util import inherits
 
 import gokart
 from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
@@ -16,9 +17,44 @@ class _DummyTask(gokart.TaskOnKart):
     bool_param = luigi.BoolParameter()
 
 
+class _DummyTaskA(gokart.TaskOnKart):
+    task_namespace = __name__
+
+
+class _DummyTaskBConfig(luigi.Config):
+    x = luigi.IntParameter(default=1)
+
+
+@inherits(_DummyTaskBConfig, _DummyTaskA)
+class _DummyTaskB(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def requires(self):
+        return self.clone(_DummyTaskA)
+
+
+@inherits(_DummyTaskB)
+class _DummyTaskC(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def requires(self):
+        return self.clone(_DummyTaskB)
+
+
+@inherits(_DummyTaskBConfig)
+class _DummyTaskD(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def requires(self):
+        return self.clone(_DummyTaskB)
+
+
 class TaskTest(unittest.TestCase):
     def setUp(self):
         _DummyTask.clear_instance_cache()
+        _DummyTaskA.clear_instance_cache()
+        _DummyTaskB.clear_instance_cache()
+        _DummyTaskC.clear_instance_cache()
 
     def test_complete_without_dependency(self):
         task = _DummyTask()
@@ -185,6 +221,32 @@ class TaskTest(unittest.TestCase):
         df = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(3, df.shape[0])
+
+    def test_use_rerun_with_inherits(self):
+        # All tasks are completed, because _DummyTaskC.rerun = False.
+        task_c = _DummyTaskC()
+        self.assertTrue(task_c.complete())
+        self.assertTrue(task_c.requires().complete())  # This is an instance of TaskB.
+        self.assertTrue(task_c.requires().requires().complete())  # This is an instance of TaskA.
+
+        # All tasks are completed, because _DummyTaskC.rerun = False. In this case "_DummyTaskB.rerun = True" is ignored
+        luigi.configuration.get_config().set(f'{__name__}._DummyTaskB', 'rerun', 'True')
+        task_c = _DummyTaskC()
+        self.assertTrue(task_c.complete())
+        self.assertTrue(task_c.requires().complete())  # This is an instance of _DummyTaskB.
+        self.assertTrue(task_c.requires().requires().complete())  # This is an instance of _DummyTaskA.
+
+        # All tasks are not completed, because _DummyTaskC.rerun = True.
+        task_c = _DummyTaskC(rerun=True)
+        self.assertFalse(task_c.complete())
+        self.assertFalse(task_c.requires().complete())  # This is an instance of _DummyTaskB.
+        self.assertFalse(task_c.requires().requires().complete())  # This is an instance of _DummyTaskA.
+
+        # _DummyTaskD is not completed, but _DummyB and _DummyA are completed, because _DummyTaskD does not inherit _DummyTaskB and _DummyTaskA.
+        task_d = _DummyTaskD(rerun=True)
+        self.assertFalse(task_d.complete())
+        self.assertTrue(task_d.requires().complete())  # This is an instance of _DummyTaskB.
+        self.assertTrue(task_d.requires().requires().complete())  # This is an instance of _DummyTaskA.
 
 
 if __name__ == '__main__':

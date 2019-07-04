@@ -44,6 +44,7 @@ class TaskOnKart(luigi.Task):
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log = dict()
         super(TaskOnKart, self).__init__(*args, **kwargs)
+        self._rerun_state = self.rerun
 
     @classmethod
     def _add_configuration(cls, kwargs, section):
@@ -57,10 +58,10 @@ class TaskOnKart(luigi.Task):
                 kwargs[key] = class_variables[key].parse(value)
 
     def complete(self) -> bool:
-        if self.rerun:
+        if self._rerun_state:
             for target in luigi.task.flatten(self.output()):
                 target.remove()
-            self.rerun = False
+            self._rerun_state = False
             return False
 
         is_completed = all([t.exists() for t in luigi.task.flatten(self.output())])
