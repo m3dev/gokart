@@ -7,6 +7,7 @@ import luigi
 from luigi.util import inherits
 
 import gokart
+from gokart.file_processor import FileProcessor, XmlFileProcessor
 from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
 
 
@@ -110,6 +111,13 @@ class TaskTest(unittest.TestCase):
     def test_make_target_without_id(self):
         path = _DummyTask().make_target('test.txt', use_unique_id=False)._target.path
         self.assertEqual(path, os.path.join(_DummyTask().workspace_directory, 'test.txt'))
+
+    def test_make_target_with_processor(self):
+        task = _DummyTask()
+        processor = XmlFileProcessor()
+        target = task.make_target('test.txt', processor=processor)
+        self.assertEqual(target._processor, processor)
+        self.assertIsInstance(target, SingleFileTarget)
 
     def test_compare_targets_of_different_tasks(self):
         path1 = _DummyTask(param=1).make_target('test.txt')._target.path
