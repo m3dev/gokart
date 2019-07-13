@@ -115,7 +115,7 @@ class TaskTest(unittest.TestCase):
     def test_make_target_with_processor(self):
         task = _DummyTask()
         processor = XmlFileProcessor()
-        target = task.make_target('test.txt', processor=processor)
+        target = task.make_target('test.dummy', processor=processor)
         self.assertEqual(target._processor, processor)
         self.assertIsInstance(target, SingleFileTarget)
 
