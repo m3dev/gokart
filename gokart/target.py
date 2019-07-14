@@ -124,9 +124,14 @@ class LargeDataFrameProcessor(object):
         self.max_byte = int(max_byte)
 
     def save(self, df: pd.DataFrame, file_path: str):
-        split_size = df.values.nbytes // self.max_byte + 1
         dir_path = os.path.dirname(file_path)
         os.makedirs(dir_path, exist_ok=True)
+
+        if df.empty:
+            df.to_pickle(os.path.join(dir_path, 'data_0.pkl'))
+            return
+
+        split_size = df.values.nbytes // self.max_byte + 1
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
         for i, idx in tqdm(list(enumerate(np.array_split(range(df.shape[0]), split_size)))):
             df.iloc[idx[0]:idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
