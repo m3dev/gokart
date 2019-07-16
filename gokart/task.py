@@ -7,6 +7,7 @@ import luigi
 import pandas as pd
 
 import gokart
+from gokart.file_processor import FileProcessor
 from gokart.target import TargetOnKart
 
 logger = getLogger(__name__)
@@ -95,10 +96,10 @@ class TaskOnKart(luigi.Task):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: str, use_unique_id: bool = True) -> TargetOnKart:
+    def make_target(self, relative_file_path: str, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        return gokart.target.make_target(file_path=file_path, unique_id=unique_id)
+        return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
 
     def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
