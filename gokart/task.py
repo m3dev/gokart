@@ -179,9 +179,10 @@ class TaskOnKart(luigi.Task):
         self._get_output_target(target).dump(obj)
 
     def make_unique_id(self):
-        if self.task_unique_id is not None:
-            return self.task_unique_id
+        self.task_unique_id = self.task_unique_id or self._make_unique_id()
+        return self.task_unique_id
 
+    def _make_unique_id(self):
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id())
@@ -190,8 +191,8 @@ class TaskOnKart(luigi.Task):
         dependencies = [_to_str_params(task) for task in luigi.task.flatten(self.requires())]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
-        self.task_unique_id = hashlib.md5(str(dependencies).encode()).hexdigest()
-        return self.task_unique_id
+        return hashlib.md5(str(dependencies).encode()).hexdigest()
+
 
     def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> Union[TargetOnKart, List[TargetOnKart]]:
         if target is None:
