@@ -119,7 +119,7 @@ class TaskOnKart(luigi.Task):
                           use_unique_id: bool = True):
         """
         Make target for models which generate multiple files in saving, e.g. gensim.Word2Vec, Tensorflow, and so on.
-        
+
         :param relative_file_path: A file path to save.
         :param save_function: A function to save a model. This takes a model object and a file path. 
         :param load_function: A function to load a model. This takes a file path and returns a model object.
@@ -179,10 +179,10 @@ class TaskOnKart(luigi.Task):
         self._get_output_target(target).dump(obj)
 
     def make_unique_id(self):
-        self.task_unique_id = self.task_unique_id or self._make_unique_id()
+        self.task_unique_id = self.task_unique_id or self._make_hash_id()
         return self.task_unique_id
 
-    def _make_unique_id(self):
+    def _make_hash_id(self):
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id())
@@ -192,7 +192,6 @@ class TaskOnKart(luigi.Task):
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
         return hashlib.md5(str(dependencies).encode()).hexdigest()
-
 
     def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> Union[TargetOnKart, List[TargetOnKart]]:
         if target is None:
