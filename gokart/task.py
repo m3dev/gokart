@@ -44,6 +44,7 @@ class TaskOnKart(luigi.Task):
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log = dict()
+        self.task_unique_id = None
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
 
@@ -178,6 +179,9 @@ class TaskOnKart(luigi.Task):
         self._get_output_target(target).dump(obj)
 
     def make_unique_id(self):
+        if self.task_unique_id is not None:
+            return self.task_unique_id
+
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id())
@@ -186,7 +190,8 @@ class TaskOnKart(luigi.Task):
         dependencies = [_to_str_params(task) for task in luigi.task.flatten(self.requires())]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
-        return hashlib.md5(str(dependencies).encode()).hexdigest()
+        self.task_unique_id = hashlib.md5(str(dependencies).encode()).hexdigest()
+        return self.task_unique_id
 
     def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> Union[TargetOnKart, List[TargetOnKart]]:
         if target is None:
