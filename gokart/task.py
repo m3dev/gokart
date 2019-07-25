@@ -44,6 +44,7 @@ class TaskOnKart(luigi.Task):
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log = dict()
+        self.task_unique_id = None
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
 
@@ -118,7 +119,7 @@ class TaskOnKart(luigi.Task):
                           use_unique_id: bool = True):
         """
         Make target for models which generate multiple files in saving, e.g. gensim.Word2Vec, Tensorflow, and so on.
-        
+
         :param relative_file_path: A file path to save.
         :param save_function: A function to save a model. This takes a model object and a file path. 
         :param load_function: A function to load a model. This takes a file path and returns a model object.
@@ -178,6 +179,10 @@ class TaskOnKart(luigi.Task):
         self._get_output_target(target).dump(obj)
 
     def make_unique_id(self):
+        self.task_unique_id = self.task_unique_id or self._make_hash_id()
+        return self.task_unique_id
+
+    def _make_hash_id(self):
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id())
