@@ -244,7 +244,9 @@ class TaskOnKart(luigi.Task):
 
     @luigi.Task.event_handler(luigi.Event.START)
     def _dump_task_params(self):
-        self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
+        dependencies = {task.__class__.__name__: task.to_str_params(only_significant=True) for task in luigi.task.flatten(self.requires())}
+        dependencies.update({self.__class__.__name__: self.to_str_params(only_significant=True)})
+        self.dump(dependencies, self._get_task_params_target())
 
     def _get_processing_time_target(self):
         return self.make_target(f'log/processing_time/{type(self).__name__}.pkl')
