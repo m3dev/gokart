@@ -83,6 +83,16 @@ class LocalTargetTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             target.last_modification_time()
 
+    def test_save_pandas_series(self):
+        obj = pd.Series(data=[1, 2], name='column_name')
+        file_path = os.path.join(_get_temporary_directory(), 'test.csv')
+
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        loaded = target.load()
+
+        pd.testing.assert_series_equal(loaded['column_name'], obj)
+
 
 class S3TargetTest(unittest.TestCase):
     @mock_s3
