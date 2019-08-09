@@ -166,6 +166,7 @@ def _get_last_modification_time(path: str) -> datetime:
 
 
 def make_target(file_path: str, unique_id: Optional[str] = None, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+    logger.info(f'saving file_path={file_path}')
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path)
     file_system_target = _make_file_system_target(file_path, processor=processor)
