@@ -99,6 +99,7 @@ class TaskOnKart(luigi.Task):
 
     def make_target(self, relative_file_path: str, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
+        self.task_log['file_path'] = file_path
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
 
