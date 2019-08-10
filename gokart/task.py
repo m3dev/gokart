@@ -100,21 +100,17 @@ class TaskOnKart(luigi.Task):
     def make_target(self, relative_file_path: str, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        target = gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
-        self.task_log['file_path'] = self.task_log.get('file_path', set()) | {target.path()}
-        return target
+        return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
 
     def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        target = gokart.target.make_model_target(
+        return gokart.target.make_model_target(
             file_path=file_path,
             temporary_directory=self.local_temporary_directory,
             unique_id=unique_id,
             save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
             load_function=gokart.target.LargeDataFrameProcessor.load)
-        self.task_log['file_path'] = self.task_log.get('file_path', set()) | {target.path()}
-        return target
 
     def make_model_target(self,
                           relative_file_path: str,
@@ -132,14 +128,12 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
-        target = gokart.target.make_model_target(
+        return gokart.target.make_model_target(
             file_path=file_path,
             temporary_directory=self.local_temporary_directory,
             unique_id=unique_id,
             save_function=save_function,
             load_function=load_function)
-        self.task_log['file_path'] = self.task_log.get('file_path', set()) | {target.path()}
-        return target
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
@@ -237,6 +231,7 @@ class TaskOnKart(luigi.Task):
 
     @luigi.Task.event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
+        self.task_log['file_path'] = [target.path() for target in luigi.task.flatten(self.output())]
         self.dump(self.task_log, self._get_task_log_target())
 
     def _get_task_params_target(self):
