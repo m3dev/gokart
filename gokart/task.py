@@ -231,6 +231,7 @@ class TaskOnKart(luigi.Task):
 
     @luigi.Task.event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
+        self.task_log['file_path'] = [target.path() for target in luigi.task.flatten(self.output())]
         self.dump(self.task_log, self._get_task_log_target())
 
     def _get_task_params_target(self):
