@@ -40,12 +40,11 @@ class SlackAPI(object):
         raise ChannelNotFoundError(f'Channel {channel_name} is not found in public channels.')
 
     def send_snippet(self, comment, title, content):
-        request_body = {
-            "channels": self._channel_id,
-            "initial_comment": f'<{self._to_user}> {comment}' if self._to_user else comment,
-            "content": content,
-            "title": title
-        }
+        request_body = dict(
+            channels=self._channel_id,
+            initial_comment=f'<{self._to_user}> {comment}' if self._to_user else comment,
+            content=content,
+            title=title)
         response = self._client.api_call('files.upload', data=request_body)
         if not response['ok']:
             raise FileNotUploadedError(f'Error while uploading file. The error reason is "{response["error"]}".')
