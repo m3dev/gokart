@@ -49,9 +49,11 @@ class ObjectStorage(object):
         if path.startswith('s3://'):
             return S3Config().get_s3_client().get_key(path).last_modified
         elif path.startswith('gs://'):
-            # return GCSConfig().get_gcs_client().get_key(path).last_modified
-            # TODO: gcs support
-            return datetime.now()
+            # for gcs object
+            # should PR to luigi
+            bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)
+            result = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
+            return result['updated']
         else:
             raise
 
