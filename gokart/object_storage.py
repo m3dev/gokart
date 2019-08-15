@@ -1,15 +1,19 @@
 from datetime import datetime
 
 import luigi
-from luigi.format import Format
+from luigi.format import Format, FileWrapper
 import luigi.contrib.s3
+import luigi.contrib.gcs
 from gokart.s3_config import S3Config
+from gokart.gcs_config import GCSConfig
 from gokart.s3_zip_client import S3ZipClient
+from gokart.gcs_zip_client import GCSZipClient
 from gokart.zip_client import ZipClient
 
 
 object_storage_path_prefix = [
-    's3://'
+    's3://',
+    'gs://'
 ]
 
 class ObjectStorage(object):
@@ -23,23 +27,49 @@ class ObjectStorage(object):
 
     @staticmethod
     def get_object_storage_target(path: str, format: Format) -> luigi.Target:
-        return luigi.contrib.s3.S3Target(path, client=S3Config().get_s3_client(), format=format)
+        if path.startswith('s3://'):
+            return luigi.contrib.s3.S3Target(path, client=S3Config().get_s3_client(), format=format)
+        elif path.startswith('gs://'):
+            return luigi.contrib.gcs.GCSTarget(path, client=GCSConfig().get_gcs_client(), format=format)
+        else:
+            raise
 
     @staticmethod
     def exists(path: str) -> bool:
-        return S3Config().get_s3_client().exists(path)
+        if path.startswith('s3://'):
+            return S3Config().get_s3_client().exists(path)
+        elif path.startswith('gs://'):
+            return GCSConfig().get_gcs_client().exists(path)
+        else:
+            raise
 
 
     @staticmethod
     def get_timestamp(path: str) -> datetime:
-        return S3Config().get_s3_client().get_key(path).last_modified
+        if path.startswith('s3://'):
+            return S3Config().get_s3_client().get_key(path).last_modified
+        elif path.startswith('gs://'):
+            # return GCSConfig().get_gcs_client().get_key(path).last_modified
+            # TODO: gcs support
+            return datetime.now()
+        else:
+            raise
 
 
     @staticmethod
     def get_zip_client(file_path: str, temporary_directory: str) -> ZipClient:
-        return S3ZipClient(file_path=file_path, temporary_directory=temporary_directory)
+        if file_path.startswith('s3://'):
+            return S3ZipClient(file_path=file_path, temporary_directory=temporary_directory)
+        elif file_path.startswith('gs://'):
+            return GCSZipClient(file_path=file_path, temporary_directory=temporary_directory)
+        else:
+            raise
 
 
     @staticmethod
     def is_readable_objectstorage_instance(file: object):
-        return isinstance(file, luigi.contrib.s3.ReadableS3File)
+        if isinstance(file, luigi.contrib.s3.ReadableS3File):
+            return True
+        else:
+            # for GCS object
+            return isinstance(file, FileWrapper)
