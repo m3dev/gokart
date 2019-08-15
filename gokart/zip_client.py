@@ -3,8 +3,6 @@ import shutil
 import zipfile
 from abc import abstractmethod
 
-import gokart.object_stroage
-
 
 def _unzip_file(filename: str, extract_dir: str) -> None:
     zip_file = zipfile.ZipFile(filename)
@@ -58,7 +56,3 @@ class LocalZipClient(ZipClient):
         return self._file_path
 
 
-def make_zip_client(file_path: str, temporary_directory: str) -> ZipClient:
-    if gokart.object_storage.if_object_storage_path(file_path):
-        return gokart.object_storage.get_zip_client(file_path=file_path, temporary_directory=temporary_directory)
-    return LocalZipClient(file_path=file_path, temporary_directory=temporary_directory)

@@ -12,7 +12,7 @@ from luigi.cmdline_parser import CmdlineParser
 
 import gokart
 import gokart.slack
-import gokart.object_stroage
+from gokart.object_storage import ObjectStorage
 
 logger = getLogger(__name__)
 
@@ -61,7 +61,7 @@ def _try_to_delete_unnecessary_output_file(cmdline_args: List[str]):
     with CmdlineParser.global_instance(cmdline_args) as cp:
         task = cp.get_task_obj()  # type: gokart.TaskOnKart
         if task.delete_unnecessary_output_files:
-            if gokart.object_stroage.if_object_storage_path(task.workspace_directory):
+            if ObjectStorage.if_object_storage_path(task.workspace_directory):
                 logger.info('delete-unnecessary-output-files is not support s3/gcs.')
             else:
                 gokart.delete_local_unnecessary_outputs(task)

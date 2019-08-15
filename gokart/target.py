@@ -13,8 +13,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.zip_client import make_zip_client
-import gokart.object_stroage
+from gokart.zip_client_util import make_zip_client
+from gokart.object_storage import ObjectStorage
 
 logger = getLogger(__name__)
 
@@ -144,8 +144,8 @@ class LargeDataFrameProcessor(object):
 
 def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
     processor = processor or make_file_processor(file_path)
-    if gokart.object_stroage.if_object_storage_path(file_path):
-        return gokart.object_stroage.get_object_storage_target(file_path, processor.format())
+    if ObjectStorage.if_object_storage_path(file_path):
+        return ObjectStorage.get_object_storage_target(file_path, processor.format())
     return luigi.LocalTarget(file_path, format=processor.format())
 
 
@@ -157,9 +157,9 @@ def _make_file_path(original_path: str, unique_id: Optional[str] = None) -> str:
 
 
 def _get_last_modification_time(path: str) -> datetime:
-    if gokart.object_stroage.if_object_storage_path(path):
-        if gokart.object_stroage.exists(path):
-            return gokart.object_stroage.get_timestamp(path)
+    if ObjectStorage.if_object_storage_path(path):
+        if ObjectStorage.exists(path):
+            return ObjectStorage.get_timestamp(path)
         raise FileNotFoundError(f'No such file or directory: {path}')
     return datetime.fromtimestamp(os.path.getmtime(path))
 

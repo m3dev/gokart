@@ -10,7 +10,7 @@ import luigi.format
 import pandas as pd
 import pandas.errors
 
-import gokart.object_storage
+from gokart.object_storage import ObjectStorage
 
 
 logger = getLogger(__name__)
@@ -57,7 +57,7 @@ class PickleFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        if gokart.object_storage.is_readable_objectstorage_instance(file):
+        if ObjectStorage.is_readable_objectstorage_instance(file):
             return pickle.loads(file.read())
         return pickle.load(_LargeLocalFileReader(file))
 
