@@ -1,11 +1,10 @@
 from setuptools import setup, find_packages
+from codecs import open
+from os import path
 
-readme_note = """\
-.. note::
+with open(path.join(path.abspath(path.dirname(__file__)), 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
-   For the latest source, discussion, etc, please visit the
-   `GitHub repository <https://github.com/m3dev/gokart>`_\n\n
-"""
 
 install_requires = [
     'luigi',
@@ -22,6 +21,8 @@ setup(
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
     description='A wrapper of luigi. This make it easy to define tasks.',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author='M3, inc.',
     url='https://github.com/m3dev/gokart',
     license='MIT License',
