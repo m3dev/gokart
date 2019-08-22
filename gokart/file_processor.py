@@ -1,16 +1,15 @@
-import io
-import pickle
 import os
+import pickle
+import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from logging import getLogger
-import xml.etree.ElementTree as ET
 
 import luigi
 import luigi.contrib.s3
 import luigi.format
+import numpy as np
 import pandas as pd
 import pandas.errors
-import numpy as np
 
 logger = getLogger(__name__)
 
