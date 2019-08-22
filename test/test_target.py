@@ -5,6 +5,8 @@ from datetime import datetime
 
 import boto3
 import pandas as pd
+import numpy as np
+import numpy.testing
 from moto import mock_s3
 
 from gokart.target import make_target, make_model_target
@@ -47,6 +49,15 @@ class LocalTargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, [str(obj)], msg='should save an object as List[str].')
+
+    def test_save_and_load_npz(self):
+        obj = np.ones(shape=10, dtype=np.float32)
+        file_path = os.path.join(_get_temporary_directory(), 'test.npz')
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        loaded = target.load()
+
+        np.testing.assert_almost_equal(obj, loaded)
 
     def test_save_and_load_csv(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))

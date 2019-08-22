@@ -1,12 +1,13 @@
-import pickle
 import os
+import pickle
+import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from logging import getLogger
-import xml.etree.ElementTree as ET
 
 import luigi
 import luigi.contrib.s3
 import luigi.format
+import numpy as np
 import pandas as pd
 import pandas.errors
 
@@ -157,6 +158,18 @@ class XmlFileProcessor(FileProcessor):
         obj.write(file)
 
 
+class NpzFileProcessor(FileProcessor):
+    def format(self):
+        return luigi.format.Nop
+
+    def load(self, file):
+        return np.load(file)['data']
+
+    def dump(self, obj, file):
+        assert isinstance(obj, np.ndarray), f'requires np.ndarray, but {type(obj)} is passed.'
+        np.savez_compressed(file, data=obj)
+
+
 def make_file_processor(file_path: str) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
@@ -165,7 +178,8 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
         '.json': JsonFileProcessor(),
-        '.xml': XmlFileProcessor()
+        '.xml': XmlFileProcessor(),
+        '.npz': NpzFileProcessor()
     }
 
     extension = os.path.splitext(file_path)[1]
