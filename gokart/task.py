@@ -31,10 +31,10 @@ class TaskOnKart(luigi.Task):
     local_temporary_directory = luigi.Parameter(default='./resources/tmp/', description='A directory to save temporary files.', significant=False)  # type: str
     rerun = luigi.BoolParameter(default=False, description='If this is true, this task will run even if all output files exist.', significant=False)
     strict_check = luigi.BoolParameter(
-        default=False, description='If this is true, this task will not run only if all input and output files exits.', significant=False)
+        default=False, description='If this is true, this task will not run only if all input and output files exist.', significant=False)
     modification_time_check = luigi.BoolParameter(
         default=False,
-        description='If this is true, this task will not run only if all input and output files exits,'
+        description='If this is true, this task will not run only if all input and output files exist,'
         ' and all input files are modified before output file are modified.',
         significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
