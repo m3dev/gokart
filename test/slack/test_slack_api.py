@@ -11,7 +11,7 @@ logger = getLogger(__name__)
 class TestSlackAPI(unittest.TestCase):
     @mock.patch('gokart.slack.slack_api.slack.WebClient')
     def test_initialization_with_invalid_token(self, patch):
-        def _channels_list(method):
+        def _channels_list(method, http_verb="POST", params={}):
             assert method == 'channels.list'
             return {'ok': False, 'error': 'error_reason'}
 
@@ -24,9 +24,9 @@ class TestSlackAPI(unittest.TestCase):
 
     @mock.patch('gokart.slack.slack_api.slack.WebClient')
     def test_invalid_channel(self, patch):
-        def _channels_list(method):
+        def _channels_list(method, http_verb="POST", params={}):
             assert method == 'channels.list'
-            return {'ok': True, 'channels': [{'name': 'valid', 'id': 'valid_id'}]}
+            return {'ok': True, 'channels': [{'name': 'valid', 'id': 'valid_id'}], 'response_metadata': {'next_cursor': ''}}
 
         mock_client = MagicMock()
         mock_client.api_call = MagicMock(side_effect=_channels_list)
@@ -39,7 +39,7 @@ class TestSlackAPI(unittest.TestCase):
     def test_send_snippet_with_invalid_token(self, patch):
         def _api_call(*args, **kwargs):
             if args[0] == 'channels.list':
-                return {'ok': True, 'channels': [{'name': 'valid', 'id': 'valid_id'}]}
+                return {'ok': True, 'channels': [{'name': 'valid', 'id': 'valid_id'}], 'response_metadata': {'next_cursor': ''}}
             if args[0] == 'files.upload':
                 return {'ok': False, 'error': 'error_reason'}
             assert False
@@ -56,7 +56,7 @@ class TestSlackAPI(unittest.TestCase):
     def test_send(self, patch):
         def _api_call(*args, **kwargs):
             if args[0] == 'channels.list':
-                return {'ok': True, 'channels': [{'name': 'valid', 'id': 'valid_id'}]}
+                return {'ok': True, 'channels': [{'name': 'valid', 'id': 'valid_id'}], 'response_metadata': {'next_cursor': ''}}
             if args[0] == 'files.upload':
                 return {'ok': True}
             assert False
