@@ -38,6 +38,10 @@ class TaskOnKart(luigi.Task):
         ' and all input files are modified before output file are modified.',
         significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
+    significant = luigi.BoolParameter(
+        default=True,
+        description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
+        significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
@@ -185,10 +189,11 @@ class TaskOnKart(luigi.Task):
     def _make_hash_id(self):
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
-                return str(task.make_unique_id())
+                return str(task.make_unique_id()) if task.significant else None
             return task.to_str_params(only_significant=True)
 
         dependencies = [_to_str_params(task) for task in luigi.task.flatten(self.requires())]
+        dependencies = [d for d in dependencies if d is not None]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
         return hashlib.md5(str(dependencies).encode()).hexdigest()
