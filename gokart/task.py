@@ -14,7 +14,6 @@ from gokart.target import TargetOnKart
 
 logger = getLogger(__name__)
 
-print('hogehoge')
 class TaskOnKart(luigi.Task):
     """
     This is a wrapper class of luigi.Task.
