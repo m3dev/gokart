@@ -1,0 +1,11 @@
+language: python
+python: 3.6.7
+env:
+- BOTO_CONFIG=/dev/null
+deploy:
+  on:
+    tags: true
+  provider: pypi
+  user: nishiba
+  password:
+    secure: tEYNJcqxO3N5MB8p7UKGr0eSpiE9TtNx0dM9++aZ+NdR8vKpN5xg7nPzBzUpSCEabcLmlHlXWtizHfXUARQ7iZ68h3O53PIETFSQpKZlYJnOoQ/Qny7Nz9p18KgDVqaNnDLnmYhWHtDCDpKqCqswcKHNkVqNqcmhIQIbnUiI3Z5cgjuNu2wirtTHihTmiXT5hO6fb09YOW8dCMeZxvCMFDkMgaV7yXt9hta1J+z0aWp8XVByQfbhPbm51Va9ONEegjK719R87O2Tvgiw7JIcuZQkmffSIOLAWB+Nf0wQ608VOd6n+TIMLarKhS04A0sUZxX+B7E8NeK7UREvH1KkIOXevo1axAfdzMAEUoa1p8dS1Mm6tHm6JthJL3LPw+BF0NT5JrcSBJr1fjpv+7t8yWYoj/cyWbWvwyF1YW2Va3O3ERUjh1Di0BcnEU2btot19czDZ8yLW9tap9jJL5TeKDJGNRIx0cj2HgG6M8Q+3XjRwp8I9bVxsU2zkR0bpLKo3tbTEmU6iEdQbkc9tCBtFe6icoevnTTFCc+PXKVVIzpI4cg0Eo8AvMvP3jY5DCLNPf9LeLZabqkgWuon9f3S5C0+BlmPkvNhBhh+nghBlCIMX+RIMZ1sgbRPegBu6zPHSAEhlg1cdYQ8gvMlVIcn9y6y633n4dyactBro9dGIyY=
