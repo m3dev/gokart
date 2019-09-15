@@ -48,7 +48,8 @@ class TaskTest(unittest.TestCase):
 
     def test_complete_without_dependency(self):
         task = _DummyTask()
-        self.assertTrue(task.complete(), msg='_DummyTask does not have any output files, so this always must be completed.')
+        self.assertTrue(task.complete(),
+                        msg='_DummyTask does not have any output files, so this always must be completed.')
 
     def test_complete_with_rerun_flag(self):
         task = _DummyTask(rerun=True)
@@ -213,7 +214,9 @@ class TaskTest(unittest.TestCase):
 
     def test_load_list_of_list_pandas(self):
         task = _DummyTask()
-        task.load = MagicMock(return_value=[pd.DataFrame(dict(a=[1])), [pd.DataFrame(dict(a=[2])), pd.DataFrame(dict(a=[3]))]])
+        task.load = MagicMock(
+            return_value=[pd.DataFrame(dict(a=[1])), [pd.DataFrame(dict(
+                a=[2])), pd.DataFrame(dict(a=[3]))]])
 
         df = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)

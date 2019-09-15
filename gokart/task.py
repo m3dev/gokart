@@ -26,18 +26,26 @@ class TaskOnKart(luigi.Task):
     """
 
     workspace_directory = luigi.Parameter(
-        default='./resources/', description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.',
+        default='./resources/',
+        description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.',
         significant=False)  # type: str
-    local_temporary_directory = luigi.Parameter(default='./resources/tmp/', description='A directory to save temporary files.', significant=False)  # type: str
-    rerun = luigi.BoolParameter(default=False, description='If this is true, this task will run even if all output files exist.', significant=False)
+    local_temporary_directory = luigi.Parameter(default='./resources/tmp/',
+                                                description='A directory to save temporary files.',
+                                                significant=False)  # type: str
+    rerun = luigi.BoolParameter(default=False,
+                                description='If this is true, this task will run even if all output files exist.',
+                                significant=False)
     strict_check = luigi.BoolParameter(
-        default=False, description='If this is true, this task will not run only if all input and output files exist.', significant=False)
+        default=False,
+        description='If this is true, this task will not run only if all input and output files exist.',
+        significant=False)
     modification_time_check = luigi.BoolParameter(
         default=False,
         description='If this is true, this task will not run only if all input and output files exist,'
         ' and all input files are modified before output file are modified.',
         significant=False)
-    delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
+    delete_unnecessary_output_files = luigi.BoolParameter(
+        default=False, description='If this is true, delete unnecessary output files.', significant=False)
     significant = luigi.BoolParameter(
         default=True,
         description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
@@ -75,13 +83,15 @@ class TaskOnKart(luigi.Task):
         if self.strict_check or self.modification_time_check:
             requirements = luigi.task.flatten(self.requires())
             inputs = luigi.task.flatten(self.input())
-            is_completed = is_completed and all([task.complete() for task in requirements]) and all([i.exists() for i in inputs])
+            is_completed = is_completed and all([task.complete()
+                                                 for task in requirements]) and all([i.exists() for i in inputs])
 
         if not self.modification_time_check or not is_completed or not self.input():
             return is_completed
 
         input_modification_time = max([target.last_modification_time() for target in luigi.task.flatten(self.input())])
-        output_modification_time = min([target.last_modification_time() for target in luigi.task.flatten(self.output())])
+        output_modification_time = min(
+            [target.last_modification_time() for target in luigi.task.flatten(self.output())])
         # "=" must be required in the following statements, because some tasks use input targets as output targets.
         return input_modification_time <= output_modification_time
 
@@ -101,12 +111,16 @@ class TaskOnKart(luigi.Task):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: str, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+    def make_target(self,
+                    relative_file_path: str,
+                    use_unique_id: bool = True,
+                    processor: Optional[FileProcessor] = None) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
 
-    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True,
+                                     max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
@@ -132,12 +146,11 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
-        return gokart.target.make_model_target(
-            file_path=file_path,
-            temporary_directory=self.local_temporary_directory,
-            unique_id=unique_id,
-            save_function=save_function,
-            load_function=load_function)
+        return gokart.target.make_model_target(file_path=file_path,
+                                               temporary_directory=self.local_temporary_directory,
+                                               unique_id=unique_id,
+                                               save_function=save_function,
+                                               load_function=load_function)
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
@@ -162,21 +175,26 @@ class TaskOnKart(luigi.Task):
 
         return _load(self._get_input_targets(target))
 
-    def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None) -> pd.DataFrame:
+    def load_data_frame(self,
+                        target: Union[None, str, TargetOnKart] = None,
+                        required_columns: Optional[Set[str]] = None) -> pd.DataFrame:
         data = self.load(target=target)
         if isinstance(data, list):
+
             def _pd_concat(dfs):
                 if isinstance(dfs, list):
                     return pd.concat([_pd_concat(df) for df in dfs])
                 else:
                     return dfs
+
             data = _pd_concat(data)
 
         required_columns = required_columns or set()
         if data.empty:
             return pd.DataFrame(columns=required_columns)
 
-        assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
+        assert required_columns.issubset(set(
+            data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
         return data
 
     def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:

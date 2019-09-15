@@ -10,4 +10,5 @@ class SampleTaskLog(gokart.TaskOnKart):
 if __name__ == '__main__':
     SampleTaskLog().run()
     tree_info()
-    gokart.run(['--tree-info-mode=all', '--tree-info-output-path=sample_task_log.txt', 'SampleTaskLog', '--local-scheduler'])
+    gokart.run(
+        ['--tree-info-mode=all', '--tree-info-output-path=sample_task_log.txt', 'SampleTaskLog', '--local-scheduler'])

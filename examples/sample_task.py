@@ -38,4 +38,5 @@ class TaskB(gokart.TaskOnKart):
 if __name__ == '__main__':
     # luigi.build([TaskB(param='Hello')], local_scheduler=True)
     # gokart.run(['--tree-info-mode=simple', '--tree-info-output-path=tree_simple.txt', 'TaskB', '--param=Hello', '--local-scheduler'])
-    gokart.run(['--tree-info-mode=all', '--tree-info-output-path=tree_all.txt', 'TaskB', '--param=Hello', '--local-scheduler'])
+    gokart.run(
+        ['--tree-info-mode=all', '--tree-info-output-path=tree_all.txt', 'TaskB', '--param=Hello', '--local-scheduler'])

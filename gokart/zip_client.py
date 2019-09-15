@@ -54,5 +54,3 @@ class LocalZipClient(ZipClient):
     @property
     def path(self) -> str:
         return self._file_path
-
-

@@ -142,7 +142,8 @@ class LargeDataFrameProcessor(object):
         return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, 'data_*.pkl'))])
 
 
-def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
+def _make_file_system_target(file_path: str,
+                             processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
     processor = processor or make_file_processor(file_path)
     if ObjectStorage.if_object_storage_path(file_path):
         return ObjectStorage.get_object_storage_target(file_path, processor.format())
@@ -164,7 +165,8 @@ def _get_last_modification_time(path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
-def make_target(file_path: str, unique_id: Optional[str] = None, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+def make_target(file_path: str, unique_id: Optional[str] = None,
+                processor: Optional[FileProcessor] = None) -> TargetOnKart:
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path)
     file_system_target = _make_file_system_target(file_path, processor=processor)
@@ -178,8 +180,7 @@ def make_model_target(file_path: str,
                       unique_id: Optional[str] = None) -> TargetOnKart:
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
-    return ModelTarget(
-        file_path=file_path,
-        temporary_directory=temporary_directory,
-        save_function=save_function,
-        load_function=load_function)
+    return ModelTarget(file_path=file_path,
+                       temporary_directory=temporary_directory,
+                       save_function=save_function,
+                       load_function=load_function)

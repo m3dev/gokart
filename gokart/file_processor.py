@@ -13,7 +13,6 @@ import pandas.errors
 
 from gokart.object_storage import ObjectStorage
 
-
 logger = getLogger(__name__)
 
 
