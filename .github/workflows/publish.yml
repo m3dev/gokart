@@ -1,8 +1,5 @@
 name: Upload Package to PyPI
-
-on:
-  release:
-    types: [created]
+on: [push]
 
 jobs:
   deploy:
