@@ -1,7 +1,3 @@
-language: python
-python: 3.6.7
-env:
-- BOTO_CONFIG=/dev/null
 deploy:
   on:
     tags: true
