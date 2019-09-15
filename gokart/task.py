@@ -2,6 +2,8 @@ import hashlib
 import os
 from logging import getLogger
 from typing import Union, List, Any, Callable, Set, Optional, Dict
+import inspect
+import re
 
 import luigi
 import pandas as pd
@@ -12,7 +14,7 @@ from gokart.target import TargetOnKart
 
 logger = getLogger(__name__)
 
-
+print('hogehoge')
 class TaskOnKart(luigi.Task):
     """
     This is a wrapper class of luigi.Task.
@@ -105,6 +107,12 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
+
+    def output(self):
+        directory_name = os.path.dirname(os.path.relpath(inspect.getfile(inspect.stack()[1][0].f_locals["self"].__class__), os.getcwd()))
+        class_name = self._camel2snake(inspect.stack()[1][0].f_locals["self"].__class__.__name__)
+        relative_file_path = os.path.join(directory_name, class_name, 'output.pkl')
+        return self.make_target(relative_file_path)
 
     def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
@@ -273,3 +281,8 @@ class TaskOnKart(luigi.Task):
     @luigi.Task.event_handler(luigi.Event.FAILURE)
     def _log_unique_id(self, exception):
         logger.info(f'FAILURE:\n    task name={type(self).__name__}\n    unique id={self.make_unique_id()}')
+
+    @staticmethod
+    def _camel2snake(name):
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
