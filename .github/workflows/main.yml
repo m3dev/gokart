@@ -18,7 +18,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install coverage
+        pip install coverage yapf
+    - name: Lint with yapf
+      run: |
+        diffs=$(yapf -dr --style=yapf.ini --exclude=examples/* --exclude=.eggs/* ./)
+        if [ -n "$diffs" ]; then
+          echo "failed yapf"
+          echo $diffs
+          exit 1
+        fi
+        echo "pass yapf"
     - name: Run test
       run: |
         coverage run --include=gokart setup.py test
