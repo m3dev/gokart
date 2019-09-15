@@ -1,9 +1,6 @@
 language: python
 python: 3.6.7
-env:
-- BOTO_CONFIG=/dev/null
-install:
-- pip install --upgrade pip
+script: true
 deploy:
   on:
     tags: true
