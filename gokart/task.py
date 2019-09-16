@@ -42,6 +42,7 @@ class TaskOnKart(luigi.Task):
         default=True,
         description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
         significant=False)
+    log_file_suffix = luigi.Parameter(default='pkl', description='File type of log files.', significant=False)  # type: str
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
@@ -224,7 +225,7 @@ class TaskOnKart(luigi.Task):
         return params_str
 
     def _get_task_log_target(self):
-        return self.make_target(f'log/task_log/{type(self).__name__}.pkl')
+        return self.make_target(f'log/task_log/{type(self).__name__}.{self.log_file_suffix}')
 
     def get_task_log(self) -> Dict:
         target = self._get_task_log_target()
@@ -240,7 +241,7 @@ class TaskOnKart(luigi.Task):
         self.dump(self.task_log, self._get_task_log_target())
 
     def _get_task_params_target(self):
-        return self.make_target(f'log/task_params/{type(self).__name__}.pkl')
+        return self.make_target(f'log/task_params/{type(self).__name__}.{self.log_file_suffix}')
 
     def get_task_params(self) -> Dict:
         target = self._get_task_log_target()
@@ -253,7 +254,7 @@ class TaskOnKart(luigi.Task):
         self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
 
     def _get_processing_time_target(self):
-        return self.make_target(f'log/processing_time/{type(self).__name__}.pkl')
+        return self.make_target(f'log/processing_time/{type(self).__name__}.{self.log_file_suffix}')
 
     def get_processing_time(self) -> str:
         target = self._get_processing_time_target()
