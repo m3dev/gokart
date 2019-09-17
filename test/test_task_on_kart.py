@@ -17,10 +17,12 @@ class _DummyTask(gokart.TaskOnKart):
     param = luigi.IntParameter(default=1)
     list_param = luigi.ListParameter(default=['a', 'b'])
     bool_param = luigi.BoolParameter()
+    use_default_output = luigi.BoolParameter(default=False)
 
 
 class _DummyTaskA(gokart.TaskOnKart):
     task_namespace = __name__
+    use_default_output = luigi.BoolParameter(default=False)
 
 
 @inherits(_DummyTaskA)

@@ -52,6 +52,14 @@ class TaskOnKart(luigi.Task):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
 
+        if self.output.__qualname__ == super(TaskOnKart, self).output.__qualname__:
+            if getattr(self, 'use_default_output', True):
+                self.output = self._default_target
+
+    def _default_target(self):
+        file_path = self.__module__.replace(".", "/")
+        return self.make_target(f"{file_path}/{type(self).__name__}.pkl")
+
     @classmethod
     def _add_configuration(cls, kwargs, section):
         config = luigi.configuration.get_config()
