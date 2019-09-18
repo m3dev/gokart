@@ -11,7 +11,7 @@ install_requires = [
     'python-dateutil==2.7.5',
     'boto3',
     'slackclient>=2.0.0',
-    'pandas<0.25.0',
+    'pandas',
     'numpy',
     'tqdm',
 ]
