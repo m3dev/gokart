@@ -17,12 +17,12 @@ class _DummyTask(gokart.TaskOnKart):
     param = luigi.IntParameter(default=1)
     list_param = luigi.ListParameter(default=['a', 'b'])
     bool_param = luigi.BoolParameter()
-    use_default_output = luigi.BoolParameter(default=False)
+    do_not_use_default_output = luigi.BoolParameter(default=True)
 
 
 class _DummyTaskA(gokart.TaskOnKart):
     task_namespace = __name__
-    use_default_output = luigi.BoolParameter(default=False)
+    do_not_use_default_output = luigi.BoolParameter(default=True)
 
 
 @inherits(_DummyTaskA)
@@ -105,6 +105,12 @@ class TaskTest(unittest.TestCase):
         task.input = MagicMock(return_value=input_target)
         task.output = MagicMock(return_value=output_target)
         self.assertTrue(task.complete())
+
+    def test_default_target(self):
+        task = _DummyTask(do_not_use_default_output=False)
+        default_target = task.output()
+        self.assertIsInstance(default_target, SingleFileTarget)
+        self.assertEqual(f'./resources/test/test_task_on_kart/_DummyTask_{task.task_unique_id}.pkl', default_target._target.path)
 
     def test_make_target(self):
         task = _DummyTask()
