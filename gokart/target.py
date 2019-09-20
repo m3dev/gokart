@@ -8,14 +8,13 @@ from logging import getLogger
 from typing import Any, Optional
 
 import luigi
-import luigi.contrib.s3
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.s3_config import S3Config
-from gokart.zip_client import make_zip_client
+from gokart.zip_client_util import make_zip_client
+from gokart.object_storage import ObjectStorage
 
 logger = getLogger(__name__)
 
@@ -145,8 +144,8 @@ class LargeDataFrameProcessor(object):
 
 def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
     processor = processor or make_file_processor(file_path)
-    if file_path.startswith('s3://'):
-        return luigi.contrib.s3.S3Target(file_path, client=S3Config().get_s3_client(), format=processor.format())
+    if ObjectStorage.if_object_storage_path(file_path):
+        return ObjectStorage.get_object_storage_target(file_path, processor.format())
     return luigi.LocalTarget(file_path, format=processor.format())
 
 
@@ -158,9 +157,9 @@ def _make_file_path(original_path: str, unique_id: Optional[str] = None) -> str:
 
 
 def _get_last_modification_time(path: str) -> datetime:
-    if path.startswith('s3://'):
-        if S3Config().get_s3_client().exists(path):
-            return S3Config().get_s3_client().get_key(path).last_modified
+    if ObjectStorage.if_object_storage_path(path):
+        if ObjectStorage.exists(path):
+            return ObjectStorage.get_timestamp(path)
         raise FileNotFoundError(f'No such file or directory: {path}')
     return datetime.fromtimestamp(os.path.getmtime(path))
 

@@ -5,7 +5,7 @@ import unittest
 import boto3
 from moto import mock_s3
 
-from gokart.zip_client import S3ZipClient
+from gokart.s3_zip_client import S3ZipClient
 
 
 def _get_temporary_directory():

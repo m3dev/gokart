@@ -24,14 +24,20 @@ class SlackAPI(object):
         self._channel_id = self._get_channel_id(channel)
         self._to_user = to_user if to_user == '' or to_user.startswith('@') else '@' + to_user
 
-    def _get_channels(self):
-        response = self._client.api_call('channels.list')
+    def _get_channels(self, channels=[], cursor=None):
+        params = {}
+        if cursor:
+            params['cursor'] = cursor
+        response = self._client.api_call('channels.list', http_verb="GET", params=params)
         if not response['ok']:
             raise ChannelListNotLoadedError(f'Error while loading channels. The error reason is "{response["error"]}".')
-        channels = response.get('channels', [])
+        channels += response.get('channels', [])
         if not channels:
             raise ChannelListNotLoadedError('Channel list is empty.')
-        return channels
+        if response['response_metadata']['next_cursor']:
+            return self._get_channels(channels, response['response_metadata']['next_cursor'])
+        else:
+            return channels
 
     def _get_channel_id(self, channel_name):
         for channel in self._get_channels():

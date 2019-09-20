@@ -2,12 +2,13 @@ import os
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
-import pandas as pd
+
 import luigi
+import pandas as pd
 from luigi.util import inherits
 
 import gokart
-from gokart.file_processor import FileProcessor, XmlFileProcessor
+from gokart.file_processor import XmlFileProcessor
 from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
 
 
@@ -236,6 +237,28 @@ class TaskTest(unittest.TestCase):
         self.assertFalse(task_c.complete())
         self.assertTrue(task_c.requires().complete())  # This is an instance of _DummyTaskB.
         self.assertTrue(task_c.requires().requires().complete())  # This is an instance of _DummyTaskA.
+
+    def test_significant_flag(self):
+        def _make_task(significant: bool, has_required_task: bool):
+            class _MyDummyTaskA(gokart.TaskOnKart):
+                task_namespace = __name__
+
+            class _MyDummyTaskB(gokart.TaskOnKart):
+                task_namespace = __name__
+
+                def requires(self):
+                    if has_required_task:
+                        return _MyDummyTaskA(significant=significant)
+                    return
+
+            return _MyDummyTaskB()
+
+        x_task = _make_task(significant=True, has_required_task=True)
+        y_task = _make_task(significant=False, has_required_task=True)
+        z_task = _make_task(significant=False, has_required_task=False)
+
+        self.assertNotEqual(x_task.make_unique_id(), y_task.make_unique_id())
+        self.assertEqual(y_task.make_unique_id(), z_task.make_unique_id())
 
 
 if __name__ == '__main__':
