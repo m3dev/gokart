@@ -112,11 +112,11 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
-           file_path=file_path,
-           temporary_directory=self.local_temporary_directory,
-           unique_id=unique_id,
-           save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
-           load_function=gokart.target.LargeDataFrameProcessor.load)
+            file_path=file_path,
+            temporary_directory=self.local_temporary_directory,
+            unique_id=unique_id,
+            save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
+            load_function=gokart.target.LargeDataFrameProcessor.load)
 
     def make_model_target(self,
                           relative_file_path: str,
@@ -135,11 +135,11 @@ class TaskOnKart(luigi.Task):
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
-           file_path=file_path,
-           temporary_directory=self.local_temporary_directory,
-           unique_id=unique_id,
-           save_function=save_function,
-           load_function=load_function)
+            file_path=file_path,
+            temporary_directory=self.local_temporary_directory,
+            unique_id=unique_id,
+            save_function=save_function,
+            load_function=load_function)
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
