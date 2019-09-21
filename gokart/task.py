@@ -1,5 +1,7 @@
 import hashlib
 import os
+import sys
+from importlib import import_module
 from logging import getLogger
 from typing import Union, List, Any, Callable, Set, Optional, Dict
 
@@ -273,3 +275,18 @@ class TaskOnKart(luigi.Task):
     @luigi.Task.event_handler(luigi.Event.FAILURE)
     def _log_unique_id(self, exception):
         logger.info(f'FAILURE:\n    task name={type(self).__name__}\n    unique id={self.make_unique_id()}')
+
+    @luigi.Task.event_handler(luigi.Event.START)
+    def _dump_module_versions(self):
+        self.dump(self._get_module_versions(), self._get_module_versions_target())
+
+    def _get_module_versions_target(self):
+        return self.make_target(f'log/module_versions/{type(self).__name__}.txt')
+
+    def _get_module_versions(self) -> str:
+        module_versions = []
+        for x in set([x.split('.')[0] for x in sys.modules.keys() if '_' not in x]):
+            module = import_module(x)
+            if '__version__' in dir(module):
+                module_versions.append(f'{x}=={module.__version__.split(" ")[0]}')
+        return '\n'.join(module_versions)
