@@ -34,7 +34,7 @@ class SlackAPI(object):
         channels += response.get('channels', [])
         if not channels:
             raise ChannelListNotLoadedError('Channel list is empty.')
-        if response['response_metadata']['next_cursor']:
+        if 'response_metadata' in response and response['response_metadata']['next_cursor']:
             return self._get_channels(channels, response['response_metadata']['next_cursor'])
         else:
             return channels
