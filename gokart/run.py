@@ -2,7 +2,7 @@ import configparser
 import os
 import sys
 from configparser import ConfigParser
-from logging import getLogger
+from logging import getLogger, config
 from typing import List, Optional
 
 import luigi
@@ -30,6 +30,17 @@ def _check_config():
             parser.items(section)
         except configparser.InterpolationMissingOptionError as e:
             raise luigi.parameter.MissingParameterException(f'Environment variable "{e.args[3]}" must be set.')
+
+
+def _load_logging_conf(cmdline_args):
+    parser = luigi.configuration.LuigiConfigParser.instance()
+    try:
+        items = parser.items('core')
+    except:
+        items = []
+    for item in items:
+        if item[0] == 'logging_conf_file':
+            config.fileConfig(item[1], disable_existing_loggers=False)
 
 
 def _run_tree_info(cmdline_args, details):
@@ -114,6 +125,7 @@ def run(cmdline_args=None, set_retcode=True):
 
     _read_environ()
     _check_config()
+    _load_logging_conf(cmdline_args)
     _try_tree_info(cmdline_args)
     _try_to_delete_unnecessary_output_file(cmdline_args)
 
