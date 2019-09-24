@@ -11,5 +11,5 @@ class S3Config(luigi.Config):
 
     def get_s3_client(self) -> luigi.contrib.s3.S3Client:
         return luigi.contrib.s3.S3Client(
-            aws_access_key_id=os.environ.get(self.aws_access_key_id_name),
-            aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name))
+            aws_access_key_id=os.getenv(self.aws_access_key_id_name, self.aws_access_key_id_name),
+            aws_secret_access_key=os.getenv(self.aws_secret_access_key_name, self.aws_secret_access_key_name))
