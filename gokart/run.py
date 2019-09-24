@@ -82,7 +82,7 @@ def _try_to_delete_unnecessary_output_file(cmdline_args: List[str]):
 def _try_get_slack_api(cmdline_args: List[str]) -> Optional[gokart.slack.SlackAPI]:
     with CmdlineParser.global_instance(cmdline_args):
         config = gokart.slack.SlackConfig()
-        token = config.token_name
+        token = os.getenv(config.token_name, config.token_name)
         channel = config.channel
         to_user = config.to_user
         if token and channel:
