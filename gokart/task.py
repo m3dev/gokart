@@ -289,7 +289,7 @@ class TaskOnKart(luigi.Task):
             module = import_module(x)
             if '__version__' in dir(module):
                 if type(module.__version__)==str:
-                    version = str(module.__version__.split(" ")[0])
+                    version = module.__version__.split(" ")[0]
                 else:
                     version = '.'.join([str(v) for v in module.__version__])
                 module_versions.append(f'{x}=={version}')
