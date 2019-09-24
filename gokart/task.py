@@ -288,5 +288,9 @@ class TaskOnKart(luigi.Task):
         for x in set([x.split('.')[0] for x in sys.modules.keys() if '_' not in x]):
             module = import_module(x)
             if '__version__' in dir(module):
-                module_versions.append(f'{x}=={module.__version__.split(" ")[0]}')
+                if type(module.__version__)==str:
+                    version = str(module.__version__.split(" ")[0])
+                else:
+                    version = '.'.join([str(v) for v in module.__version__])
+                module_versions.append(f'{x}=={version}')
         return '\n'.join(module_versions)
