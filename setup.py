@@ -8,7 +8,6 @@ with open(path.join(path.abspath(path.dirname(__file__)), 'README.md'), encoding
 
 install_requires = [
     'luigi',
-    'python-dateutil==2.7.5',
     'boto3',
     'slackclient>=2.0.0',
     'pandas',
