@@ -52,11 +52,10 @@ class TaskOnKart(luigi.Task):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
 
-        if self.output.__qualname__ == super(TaskOnKart, self).output.__qualname__:
-            if not getattr(self, 'do_not_use_default_output', False):
-                self.output = self._default_target
+    def output(self):
+        if getattr(self, 'do_not_use_default_output', False):
+            return []
 
-    def _default_target(self):
         file_path = self.__module__.replace(".", "/")
         return self.make_target(
             os.path.join(file_path, f"{type(self).__name__}.pkl")
