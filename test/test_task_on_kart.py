@@ -17,17 +17,21 @@ class _DummyTask(gokart.TaskOnKart):
     param = luigi.IntParameter(default=1)
     list_param = luigi.ListParameter(default=['a', 'b'])
     bool_param = luigi.BoolParameter()
-    do_not_use_default_output = luigi.BoolParameter(default=True)
+    def output(self):
+        return None
 
 
 class _DummyTaskA(gokart.TaskOnKart):
     task_namespace = __name__
-    do_not_use_default_output = luigi.BoolParameter(default=True)
+    def output(self):
+        return None
 
 
 @inherits(_DummyTaskA)
 class _DummyTaskB(gokart.TaskOnKart):
     task_namespace = __name__
+    def output(self):
+        return None
 
     def requires(self):
         return self.clone(_DummyTaskA)
@@ -36,10 +40,14 @@ class _DummyTaskB(gokart.TaskOnKart):
 @inherits(_DummyTaskB)
 class _DummyTaskC(gokart.TaskOnKart):
     task_namespace = __name__
+    def output(self):
+        return None
 
     def requires(self):
         return self.clone(_DummyTaskB)
 
+class _DummyTaskD(gokart.TaskOnKart):
+    task_namespace = __name__
 
 class TaskTest(unittest.TestCase):
     def setUp(self):
@@ -107,10 +115,10 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(task.complete())
 
     def test_default_target(self):
-        task = _DummyTask(do_not_use_default_output=False)
+        task = _DummyTaskD()
         default_target = task.output()
         self.assertIsInstance(default_target, SingleFileTarget)
-        self.assertEqual(f'./resources/test/test_task_on_kart/_DummyTask_{task.task_unique_id}.pkl', default_target._target.path)
+        self.assertEqual(f'./resources/test/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.pkl', default_target._target.path)
 
     def test_make_target(self):
         task = _DummyTask()
