@@ -41,6 +41,7 @@ def make_tree_info(task, indent='', last=True, details=False):
 class tree_info(gokart.TaskOnKart):
     mode = luigi.Parameter(default='', description='This must be in ["simple", "all"].')  # type: str
     output_path = luigi.Parameter(default='tree.txt', description='Output file path.')  # type: str
+    dump_after_run = luigi.BoolParameter(default=False, description='Set to True to dump after run.')  # type: bool
 
     def output(self):
         return self.make_target(self.output_path, use_unique_id=False)

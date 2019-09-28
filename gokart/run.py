@@ -37,13 +37,17 @@ def _run_tree_info(cmdline_args, details):
         gokart.tree_info().output().dump(gokart.make_tree_info(cp.get_task_obj(), details=details))
 
 
-def _try_tree_info(cmdline_args):
+def _try_tree_info(cmdline_args, is_after_run=False):
     with CmdlineParser.global_instance(cmdline_args):
         mode = gokart.tree_info().mode
         output_path = gokart.tree_info().output().path()
+        dump_after_run = gokart.tree_info().output().path()
 
     # do nothing if `mode` is empty.
     if mode == '':
+        return
+
+    if is_after_run != dump_after_run:
         return
 
     # output tree info and exit.
@@ -114,7 +118,7 @@ def run(cmdline_args=None, set_retcode=True):
 
     _read_environ()
     _check_config()
-    _try_tree_info(cmdline_args)
+    _try_tree_info(cmdline_args, is_after_run=False)
     _try_to_delete_unnecessary_output_file(cmdline_args)
 
     slack_api = _try_get_slack_api(cmdline_args)
@@ -124,4 +128,5 @@ def run(cmdline_args=None, set_retcode=True):
         luigi.cmdline.luigi_run(cmdline_args)
     except SystemExit as e:
         _try_to_send_event_summary_to_slack(slack_api, event_aggregator, cmdline_args)
+        _try_tree_info(cmdline_args, is_after_run=True)
         sys.exit(e.code)
