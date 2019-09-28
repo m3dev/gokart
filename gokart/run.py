@@ -41,7 +41,7 @@ def _try_tree_info(cmdline_args, is_after_run=False):
     with CmdlineParser.global_instance(cmdline_args):
         mode = gokart.tree_info().mode
         output_path = gokart.tree_info().output().path()
-        dump_after_run = gokart.tree_info().output().path()
+        dump_after_run = gokart.tree_info().dump_after_run
 
     # do nothing if `mode` is empty.
     if mode == '':
