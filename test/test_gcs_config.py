@@ -29,4 +29,4 @@ class TestGcfConfig(unittest.TestCase):
         with patch('luigi.contrib.gcs.GCSClient'):
             with patch('google.oauth2.service_account.Credentials.from_service_account_info', mock):
                 GCSConfig(gcs_credential_name='env_name').get_gcs_client()
-                self.assertEqual(json_str, mock.call_args[0][0])
+                self.assertEqual(dict(test=1), mock.call_args[0][0])

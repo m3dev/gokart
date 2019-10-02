@@ -1,3 +1,4 @@
+import json
 import os
 
 import luigi
@@ -20,4 +21,4 @@ class GCSConfig(luigi.Config):
         if os.path.isfile(json_str):
             return Credentials.from_service_account_file(json_str)
 
-        return Credentials.from_service_account_info(json_str.replace('\n', '   '))
+        return Credentials.from_service_account_info(json.loads(json_str))
