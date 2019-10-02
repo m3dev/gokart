@@ -14,6 +14,7 @@ install_requires = [
     'pandas',
     'numpy',
     'tqdm',
+    'google-auth'
 ]
 
 setup(
