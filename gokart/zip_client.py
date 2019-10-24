@@ -2,10 +2,11 @@ import os
 import shutil
 import zipfile
 from abc import abstractmethod
+from typing import Union, IO
 
 
-def _unzip_file(filename: str, extract_dir: str) -> None:
-    zip_file = zipfile.ZipFile(filename)
+def _unzip_file(fp: Union[str, IO, os.PathLike], extract_dir: str) -> None:
+    zip_file = zipfile.ZipFile(fp)
     zip_file.extractall(extract_dir)
     zip_file.close()
 
@@ -46,7 +47,7 @@ class LocalZipClient(ZipClient):
         shutil.make_archive(base_name=base, format=extension[1:], root_dir=self._temporary_directory)
 
     def unpack_archive(self) -> None:
-        _unzip_file(filename=self._file_path, extract_dir=self._temporary_directory)
+        _unzip_file(fp=self._file_path, extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         shutil.rmtree(self._file_path, ignore_errors=True)
@@ -54,5 +55,3 @@ class LocalZipClient(ZipClient):
     @property
     def path(self) -> str:
         return self._file_path
-
-
