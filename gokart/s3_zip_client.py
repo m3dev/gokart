@@ -22,7 +22,7 @@ class S3ZipClient(ZipClient):
     def unpack_archive(self) -> None:
         os.makedirs(self._temporary_directory, exist_ok=True)
         self._client.get(self._file_path, self._temporary_file_path())
-        _unzip_file(filename=self._temporary_file_path(), extract_dir=self._temporary_directory)
+        _unzip_file(fp=self._temporary_file_path(), extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         self._client.remove(self._file_path)

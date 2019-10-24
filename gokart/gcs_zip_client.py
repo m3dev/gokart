@@ -22,7 +22,7 @@ class GCSZipClient(ZipClient):
     def unpack_archive(self) -> None:
         os.makedirs(self._temporary_directory, exist_ok=True)
         file_pointer = self._client.download(self._file_path)
-        _unzip_file(filename=file_pointer, extract_dir=self._temporary_directory)
+        _unzip_file(fp=file_pointer, extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         self._client.remove(self._file_path)
