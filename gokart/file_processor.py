@@ -173,6 +173,26 @@ class NpzFileProcessor(FileProcessor):
         np.savez_compressed(file, data=obj)
 
 
+class ParquetFileProcessor(FileProcessor):
+    def __init__(self, engine='pyarrow', compression=None):
+        self._engine = engine
+        self._compression = compression
+        super(ParquetFileProcessor, self).__init__()
+
+    def format(self):
+        return None
+
+    def load(self, file):
+        # MEMO: read_parquet only supports a filepath as string (not a file handle)
+        return pd.read_parquet(file.name)
+
+    def dump(self, obj, file):
+        assert isinstance(obj, (pd.DataFrame)), \
+            f'requires pd.DataFrame, but {type(obj)} is passed.'
+        # MEMO: to_parquet only supports a filepath as string (not a file handle)
+        obj.to_parquet(file.name, index=False, compression=self._compression)
+
+
 def make_file_processor(file_path: str) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
@@ -182,7 +202,8 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.gz': GzipFileProcessor(),
         '.json': JsonFileProcessor(),
         '.xml': XmlFileProcessor(),
-        '.npz': NpzFileProcessor()
+        '.npz': NpzFileProcessor(),
+        '.parquet': ParquetFileProcessor(compression='gzip')
     }
 
     extension = os.path.splitext(file_path)[1]
