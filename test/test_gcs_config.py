@@ -14,10 +14,9 @@ class TestGcfConfig(unittest.TestCase):
         with open(f'{discover_path}', 'w') as f:
             f.write('{}')
         with patch('luigi.contrib.gcs.GCSClient', mock):
-            with patch('os.path.isfile', first=True, second=True, thrid=False):
-                with patch('fcntl.flock'):
-                   GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
-                   self.assertEqual(dict(oauth_credentials=None, descriptor='{}'), mock.call_args[1])
+            with patch('fcntl.flock'):
+               GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
+               self.assertEqual(dict(oauth_credentials=None, descriptor='{}'), mock.call_args[1])
 
     def test_get_gcs_client_with_file_path(self):
         mock = MagicMock()
@@ -43,6 +42,5 @@ class TestGcfConfig(unittest.TestCase):
             f.write('{}')
         with patch('luigi.contrib.gcs.GCSClient'):
             with patch('google.oauth2.service_account.Credentials.from_service_account_info', mock):
-                with patch('os.path.isfile', first=True, second=True, thrid=False):
-                   GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
-                   self.assertEqual(dict(test=1), mock.call_args[0][0])
+               GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
+               self.assertEqual(dict(test=1), mock.call_args[0][0])
