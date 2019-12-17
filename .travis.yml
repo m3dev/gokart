@@ -7,8 +7,6 @@ install:
 - pip install coverage
 script:
 - coverage run --include=gokart setup.py test
-after_success:
-- coveralls
 deploy:
   on:
     tags: true
