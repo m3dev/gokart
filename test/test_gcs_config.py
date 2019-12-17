@@ -11,12 +11,13 @@ class TestGcfConfig(unittest.TestCase):
         discover_path = 'discover_cache.json'
         os.environ['env_name'] = ''
         os.environ['discover_path'] = discover_path
+        with open(f'{discover_path}', 'w') as f:
+            f.write('{}')
         with patch('luigi.contrib.gcs.GCSClient', mock):
             with patch('os.path.isfile', first=True, second=True, thrid=False):
                 with patch('fcntl.flock'):
-                    with patch('__main__.open', mock_open(read_data='{}')):
-                        GCSConfig(gcs_credential_name='env_name', discover_cache_local_path='discover_path').get_gcs_client()
-                        self.assertEqual(dict(oauth_credentials=None, descriptor='{}'), mock.call_args[1])
+                   GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
+                   self.assertEqual(dict(oauth_credentials=None, descriptor='{}'), mock.call_args[1])
 
     def test_get_gcs_client_with_file_path(self):
         mock = MagicMock()
@@ -24,12 +25,13 @@ class TestGcfConfig(unittest.TestCase):
         discover_path = 'discover_cache.json'
         os.environ['env_name'] = file_path
         os.environ['discover_path'] = discover_path
+        with open(f'{discover_path}', 'w') as f:
+            f.write('{}')
         with patch('luigi.contrib.gcs.GCSClient'):
             with patch('google.oauth2.service_account.Credentials.from_service_account_file', mock):
                 with patch('os.path.isfile', return_value=True):
-                    with patch('__main__.open', mock_open(read_data='{}')):
-                        GCSConfig(gcs_credential_name='env_name', discover_cache_local_path='discover_path').get_gcs_client()
-                        self.assertEqual(file_path, mock.call_args[0][0])
+                   GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
+                   self.assertEqual(file_path, mock.call_args[0][0])
 
     def test_get_gcs_client_with_json(self):
         mock = MagicMock()
@@ -37,9 +39,10 @@ class TestGcfConfig(unittest.TestCase):
         discover_path = 'discover_cache.json'
         os.environ['env_name'] = json_str
         os.environ['discover_path'] = discover_path
+        with open(f'{discover_path}', 'w') as f:
+            f.write('{}')
         with patch('luigi.contrib.gcs.GCSClient'):
             with patch('google.oauth2.service_account.Credentials.from_service_account_info', mock):
                 with patch('os.path.isfile', return_value=True):
-                    with patch('__main__.open', mock_open(read_data='{}')):
-                        GCSConfig(gcs_credential_name='env_name', discover_cache_local_path='discover_path').get_gcs_client()
-                        self.assertEqual(dict(test=1), mock.call_args[0][0])
+                   GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
+                   self.assertEqual(dict(test=1), mock.call_args[0][0])
