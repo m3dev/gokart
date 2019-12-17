@@ -43,6 +43,6 @@ class TestGcfConfig(unittest.TestCase):
             f.write('{}')
         with patch('luigi.contrib.gcs.GCSClient'):
             with patch('google.oauth2.service_account.Credentials.from_service_account_info', mock):
-                with patch('os.path.isfile', return_value=True):
+                with patch('os.path.isfile', first=True, second=True, thrid=False):
                    GCSConfig(gcs_credential_name='env_name', discover_cache_local_path=discover_path).get_gcs_client()
                    self.assertEqual(dict(test=1), mock.call_args[0][0])
