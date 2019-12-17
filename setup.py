@@ -15,7 +15,9 @@ install_requires = [
     'numpy',
     'tqdm',
     'google-auth',
-    'pyarrow'
+    'pyarrow',
+    'uritemplate',
+    'google-api-python-client'
 ]
 
 setup(
