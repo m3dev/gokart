@@ -1,4 +1,6 @@
+import io
 import unittest
+from unittest.mock import patch
 
 import luigi
 import pandas as pd
@@ -15,7 +17,7 @@ class DummyModel:
 
 
 class DummyModelTask(gokart.TaskOnKart):
-    task_namespace = __name__
+    task_namespace = f'{__name__}.dummy'
     rerun = True
 
     def run(self):
@@ -62,14 +64,25 @@ class DummyWorkFlowWithoutError(gokart.TaskOnKart):
 
 
 class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
-    def test_run_without_error(self):
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_run_without_error(self, mock_stdout: io.StringIO):
         argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
         with self.assertRaises(SystemExit) as exit_code:
             gokart.run(argv)
         self.assertEqual(exit_code.exception.code, 0)
 
-    def test_run_with_error(self):
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_run_with_error(self, mock_stdout: io.StringIO):
         argv = [f'{__name__}.DummyWorkFlowWithError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
         with self.assertRaises(SystemExit) as exit_code:
             gokart.run(argv)
         self.assertEqual(exit_code.exception.code, 1)
+
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_run_with_namespace(self, mock_stdout: io.StringIO):
+        argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', f'--test-run-namespace={__name__}', '--log-level=CRITICAL',
+                '--no-lock']
+        with self.assertRaises(SystemExit) as exit_code:
+            gokart.run(argv)
+        self.assertEqual(exit_code.exception.code, 0)
+        self.assertTrue('DummyModelTask' not in mock_stdout.getvalue())

@@ -1,6 +1,6 @@
 from logging import getLogger
 from time import sleep
-from typing import List
+from typing import List, Optional
 
 import luigi
 import pandas as pd
@@ -13,17 +13,19 @@ logger = getLogger(__name__)
 
 class test_run(gokart.TaskOnKart):
     pandas: bool = luigi.BoolParameter()
+    namespace: Optional[str] = luigi.OptionalParameter(default=None)
 
 
 class _TestStatus:
     def __init__(self, task: gokart.TaskOnKart) -> None:
-        self.name = type(task)
+        self.namespace = task.task_namespace
+        self.name = type(task).__name__
         self.task_id = task.task_unique_id
         self.status = 'OK'
         self.message = None
 
     def format(self) -> str:
-        s = f'status={self.status}; name={self.name}; id={self.task_id};'
+        s = f'status={self.status}; namespace={self.namespace}; name={self.name}; id={self.task_id};'
         if self.message:
             s += f' message={type(self.message)}: {", ".join(map(str, self.message.args))}'
         return s
@@ -32,7 +34,7 @@ class _TestStatus:
         return self.status != 'OK'
 
 
-def _get_all_tasks(task: gokart.TaskOnKart):
+def _get_all_tasks(task: gokart.TaskOnKart) -> List[gokart.TaskOnKart]:
     return luigi.task.flatten([_get_all_tasks(o) for o in luigi.task.flatten(task.requires()) if isinstance(o, gokart.TaskOnKart)] + [task])
 
 
@@ -46,7 +48,7 @@ def _run_with_test_status(task: gokart.TaskOnKart):
     return test_message
 
 
-def _test_run_with_empty_data_frame(cmdline_args: List[str]):
+def _test_run_with_empty_data_frame(cmdline_args: List[str], test_run_params: test_run):
     from unittest.mock import patch
 
     try:
@@ -56,9 +58,13 @@ def _test_run_with_empty_data_frame(cmdline_args: List[str]):
 
     with CmdlineParser.global_instance(cmdline_args) as cp:
         all_tasks = _get_all_tasks(cp.get_task_obj())
-        with patch('gokart.TaskOnKart.load_data_frame', new=lambda *args, required_columns=None, **kwargs: pd.DataFrame(columns=required_columns)):
-            with patch('gokart.TaskOnKart.dump', new=lambda *args, **kwargs: None):
-                test_status_list = [_run_with_test_status(t) for t in all_tasks]
+
+    if test_run_params.namespace is not None:
+        all_tasks = [t for t in all_tasks if t.task_namespace == test_run_params.namespace]
+
+    with patch('gokart.TaskOnKart.load_data_frame', new=lambda *args, required_columns=None, **kwargs: pd.DataFrame(columns=required_columns)):
+        with patch('gokart.TaskOnKart.dump', new=lambda *args, **kwargs: None):
+            test_status_list = [_run_with_test_status(t) for t in all_tasks]
 
     print('\n'.join(s.format() for s in test_status_list))
     if any(s.fail() for s in test_status_list):
@@ -67,9 +73,9 @@ def _test_run_with_empty_data_frame(cmdline_args: List[str]):
 
 def try_to_run_test_for_empty_data_frame(cmdline_args: List[str]):
     with CmdlineParser.global_instance(cmdline_args):
-        test_run_pandas = test_run().pandas
+        test_run_params = test_run()
 
-    if test_run_pandas:
+    if test_run_params.pandas:
         cmdline_args = [a for a in cmdline_args if not a.startswith('--test-run-')]
-        _test_run_with_empty_data_frame(cmdline_args=cmdline_args)
+        _test_run_with_empty_data_frame(cmdline_args=cmdline_args, test_run_params=test_run_params)
         exit(0)
