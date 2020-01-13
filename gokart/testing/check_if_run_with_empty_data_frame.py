@@ -20,7 +20,7 @@ class _TestStatus:
     def __init__(self, task: gokart.TaskOnKart) -> None:
         self.namespace = task.task_namespace
         self.name = type(task).__name__
-        self.task_id = task.task_unique_id
+        self.task_id = task.make_unique_id()
         self.status = 'OK'
         self.message = None
 

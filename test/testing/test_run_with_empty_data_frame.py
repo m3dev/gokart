@@ -64,8 +64,8 @@ class DummyWorkFlowWithoutError(gokart.TaskOnKart):
 
 
 class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
-    @patch('sys.stdout', new_callable=io.StringIO)
-    def test_run_without_error(self, mock_stdout: io.StringIO):
+    # @patch('sys.stdout', new_callable=io.StringIO)
+    def test_run_without_error(self, *args):
         argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
         with self.assertRaises(SystemExit) as exit_code:
             gokart.run(argv)
