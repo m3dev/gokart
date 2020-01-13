@@ -20,28 +20,46 @@ logger = getLogger(__name__)
 
 
 class TargetOnKart(luigi.Target):
-    @abstractmethod
     def exists(self) -> bool:
-        pass
+        return self._exists()
 
-    @abstractmethod
     def load(self) -> Any:
-        pass
+        return self._load()
 
-    @abstractmethod
     def dump(self, obj) -> None:
-        pass
+        self._dump(obj)
 
-    @abstractmethod
     def remove(self) -> None:
-        pass
+        self._remove()
 
-    @abstractmethod
     def last_modification_time(self) -> datetime:
+        return self._last_modification_time()
+
+    def path(self) -> str:
+        return self._path()
+
+    @abstractmethod
+    def _exists(self) -> bool:
         pass
 
     @abstractmethod
-    def path(self) -> str:
+    def _load(self) -> Any:
+        pass
+
+    @abstractmethod
+    def _dump(self, obj) -> None:
+        pass
+
+    @abstractmethod
+    def _remove(self) -> None:
+        pass
+
+    @abstractmethod
+    def _last_modification_time(self) -> datetime:
+        pass
+
+    @abstractmethod
+    def _path(self) -> str:
         pass
 
 
@@ -50,25 +68,25 @@ class SingleFileTarget(TargetOnKart):
         self._target = target
         self._processor = processor
 
-    def exists(self) -> bool:
+    def _exists(self) -> bool:
         return self._target.exists()
 
-    def load(self) -> Any:
+    def _load(self) -> Any:
         with self._target.open('r') as f:
             return self._processor.load(f)
 
-    def dump(self, obj) -> None:
+    def _dump(self, obj) -> None:
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
 
-    def remove(self) -> None:
+    def _remove(self) -> None:
         if self._target.exists():
             self._target.remove()
 
-    def last_modification_time(self) -> datetime:
+    def _last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._target.path)
 
-    def path(self) -> str:
+    def _path(self) -> str:
         return self._target.path
 
 
@@ -79,30 +97,30 @@ class ModelTarget(TargetOnKart):
         self._save_function = save_function
         self._load_function = load_function
 
-    def exists(self) -> bool:
+    def _exists(self) -> bool:
         return self._zip_client.exists()
 
-    def load(self) -> Any:
+    def _load(self) -> Any:
         self._zip_client.unpack_archive()
         self._load_function = self._load_function or make_target(self._load_function_path()).load()
         model = self._load_function(self._model_path())
         self._remove_temporary_directory()
         return model
 
-    def dump(self, obj) -> None:
+    def _dump(self, obj) -> None:
         self._make_temporary_directory()
         self._save_function(obj, self._model_path())
         make_target(self._load_function_path()).dump(self._load_function)
         self._zip_client.make_archive()
         self._remove_temporary_directory()
 
-    def remove(self) -> None:
+    def _remove(self) -> None:
         self._zip_client.remove()
 
-    def last_modification_time(self) -> datetime:
+    def _last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._zip_client.path)
 
-    def path(self) -> str:
+    def _path(self) -> str:
         return self._zip_client.path
 
     def _model_path(self):

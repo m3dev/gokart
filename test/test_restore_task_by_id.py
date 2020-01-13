@@ -1,11 +1,8 @@
 import unittest
-from ast import literal_eval
 from unittest.mock import patch
 
 import luigi
 import luigi.mock
-from luigi.cmdline_parser import CmdlineParser
-from luigi.task_register import Register
 
 import gokart
 
