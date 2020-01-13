@@ -1,5 +1,4 @@
 from logging import getLogger
-from time import sleep
 from typing import List, Optional
 
 import luigi
@@ -13,7 +12,8 @@ logger = getLogger(__name__)
 
 class test_run(gokart.TaskOnKart):
     pandas: bool = luigi.BoolParameter()
-    namespace: Optional[str] = luigi.OptionalParameter(default=None)
+    namespace: Optional[str] = luigi.OptionalParameter(default=None,
+                                                       description='When task namespace is not defined explicitly, please use "__not_user_specified".')
 
 
 class _TestStatus:
