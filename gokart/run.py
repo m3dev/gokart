@@ -116,6 +116,7 @@ def run(cmdline_args=None, set_retcode=True):
     _check_config()
     _try_tree_info(cmdline_args)
     _try_to_delete_unnecessary_output_file(cmdline_args)
+    gokart.testing.try_to_run_test_for_empty_data_frame(cmdline_args)
 
     slack_api = _try_get_slack_api(cmdline_args)
     event_aggregator = gokart.slack.EventAggregator()
