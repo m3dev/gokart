@@ -1,4 +1,4 @@
-from logging import getLogger
+import logging
 from typing import List, Optional
 
 import luigi
@@ -7,7 +7,9 @@ from luigi.cmdline_parser import CmdlineParser
 
 import gokart
 
-logger = getLogger(__name__)
+test_logger = logging.getLogger(__name__)
+test_logger.addHandler(logging.StreamHandler())
+test_logger.setLevel(logging.INFO)
 
 
 class test_run(gokart.TaskOnKart):
@@ -66,7 +68,7 @@ def _test_run_with_empty_data_frame(cmdline_args: List[str], test_run_params: te
         with patch('gokart.TaskOnKart.dump', new=lambda *args, **kwargs: None):
             test_status_list = [_run_with_test_status(t) for t in all_tasks]
 
-    print('\n'.join(s.format() for s in test_status_list))
+    test_logger.info('gokart test results:\n' + '\n'.join(s.format() for s in test_status_list))
     if any(s.fail() for s in test_status_list):
         exit(1)
 

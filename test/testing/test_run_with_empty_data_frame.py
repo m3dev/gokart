@@ -1,4 +1,4 @@
-import io
+import logging
 import unittest
 from unittest.mock import patch
 
@@ -64,25 +64,33 @@ class DummyWorkFlowWithoutError(gokart.TaskOnKart):
 
 
 class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
-    # @patch('sys.stdout', new_callable=io.StringIO)
-    def test_run_without_error(self, *args):
+    def test_run_without_error(self):
         argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
-        with self.assertRaises(SystemExit) as exit_code:
-            gokart.run(argv)
+        logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')
+        with patch.object(logger, 'info') as mock_debug:
+            with self.assertRaises(SystemExit) as exit_code:
+                gokart.run(argv)
+        log_str = mock_debug.call_args[0][0]
         self.assertEqual(exit_code.exception.code, 0)
+        self.assertTrue('DummyModelTask' in log_str)
 
-    @patch('sys.stdout', new_callable=io.StringIO)
-    def test_run_with_error(self, mock_stdout: io.StringIO):
+    def test_run_with_error(self):
         argv = [f'{__name__}.DummyWorkFlowWithError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
-        with self.assertRaises(SystemExit) as exit_code:
-            gokart.run(argv)
+        logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')
+        with patch.object(logger, 'info') as mock_debug:
+            with self.assertRaises(SystemExit) as exit_code:
+                gokart.run(argv)
+        log_str = mock_debug.call_args[0][0]
         self.assertEqual(exit_code.exception.code, 1)
+        self.assertTrue('DummyModelTask' in log_str)
 
-    @patch('sys.stdout', new_callable=io.StringIO)
-    def test_run_with_namespace(self, mock_stdout: io.StringIO):
+    def test_run_with_namespace(self):
         argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', f'--test-run-namespace={__name__}', '--log-level=CRITICAL',
                 '--no-lock']
-        with self.assertRaises(SystemExit) as exit_code:
-            gokart.run(argv)
+        logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')
+        with patch.object(logger, 'info') as mock_debug:
+            with self.assertRaises(SystemExit) as exit_code:
+                gokart.run(argv)
+        log_str = mock_debug.call_args[0][0]
         self.assertEqual(exit_code.exception.code, 0)
-        self.assertTrue('DummyModelTask' not in mock_stdout.getvalue())
+        self.assertTrue('DummyModelTask' not in log_str)
