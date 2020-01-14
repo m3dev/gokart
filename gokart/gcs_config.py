@@ -9,4 +9,4 @@ class GCSConfig(luigi.Config):
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
         return luigi.contrib.gcs.GCSClient(
-            oauth_credentials=os.environ.get(self.gcs_credential_name))
+            oauth_credentials=os.getenv(self.gcs_credential_name, self.gcs_credential_name))
