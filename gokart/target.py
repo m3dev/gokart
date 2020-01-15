@@ -140,7 +140,13 @@ class LargeDataFrameProcessor(object):
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
 
-    def save(self, df: pd.DataFrame, file_path: str):
+    def save(self, target_object: object, file_path: str):
+        if isinstance(target_object, pd.DataFrame):
+            self._save_dataframe(target_object, file_path=file_path)
+        else:
+            raise ValueError('target_object must be DataFrame')
+
+    def _save_dataframe(self, df: pd.DataFrame, file_path: str):
         dir_path = os.path.dirname(file_path)
         os.makedirs(dir_path, exist_ok=True)
 
