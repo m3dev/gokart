@@ -174,7 +174,6 @@ class LargeDataFrameProcessor(object):
         dir_path = pathlib.Path(file_path).parent
         return LargeDataFrameProcessor.load_recursively(dir_path=dir_path)
 
-
     @staticmethod
     def load_recursively(dir_path: pathlib.Path):
         print(f'load: {dir_path}')
@@ -184,22 +183,25 @@ class LargeDataFrameProcessor(object):
 
             return pd.concat([pd.read_pickle(str(file_path)) for file_path in dir_path.glob('data_*.pkl')])
         elif (dir_path / '0').exists():
+
             def _load_list():
                 i = 0
                 while (dir_path / str(i)).exists():
                     yield LargeDataFrameProcessor.load_recursively(dir_path / str(i))
                     i += 1
+
             return list(_load_list())
         else:
+
             def _load_dict():
                 for path in dir_path.iterdir():
                     assert path.is_dir()
                     yield path.name, LargeDataFrameProcessor.load_recursively(path)
+
             return dict(_load_dict())
 
 
-def _make_file_system_target(file_path: str,
-                             processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
+def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
     processor = processor or make_file_processor(file_path)
     if ObjectStorage.if_object_storage_path(file_path):
         return ObjectStorage.get_object_storage_target(file_path, processor.format())
@@ -221,23 +223,14 @@ def _get_last_modification_time(path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
-def make_target(file_path: str, unique_id: Optional[str] = None,
-                processor: Optional[FileProcessor] = None) -> TargetOnKart:
+def make_target(file_path: str, unique_id: Optional[str] = None, processor: Optional[FileProcessor] = None) -> TargetOnKart:
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path)
     file_system_target = _make_file_system_target(file_path, processor=processor)
     return SingleFileTarget(target=file_system_target, processor=processor)
 
 
-def make_model_target(file_path: str,
-                      temporary_directory: str,
-                      save_function,
-                      load_function,
-                      unique_id: Optional[str] = None) -> TargetOnKart:
+def make_model_target(file_path: str, temporary_directory: str, save_function, load_function, unique_id: Optional[str] = None) -> TargetOnKart:
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
-    return ModelTarget(
-        file_path=file_path,
-        temporary_directory=temporary_directory,
-        save_function=save_function,
-        load_function=load_function)
+    return ModelTarget(file_path=file_path, temporary_directory=temporary_directory, save_function=save_function, load_function=load_function)
