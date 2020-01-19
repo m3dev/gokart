@@ -1,5 +1,6 @@
 import hashlib
 import os
+import pathlib
 import shutil
 from abc import abstractmethod
 from datetime import datetime
@@ -141,32 +142,64 @@ class LargeDataFrameProcessor(object):
         self.max_byte = int(max_byte)
 
     def save(self, target_object: object, file_path: str):
+        dir_path: pathlib.Path = pathlib.Path(file_path).parent
+        self.save_recursively(target_object, dir_path)
+
+    def save_recursively(self, target_object: object, file_path: pathlib.Path):
         if isinstance(target_object, pd.DataFrame):
-            self._save_dataframe(target_object, file_path=file_path)
+            self._save_dataframe(target_object, dir_path=file_path)
+        elif isinstance(target_object, list):
+            for i, target_object_each in enumerate(target_object):
+                self.save_recursively(target_object_each, file_path=file_path / str(i))
+        elif isinstance(target_object, dict):
+            for key, target_object_each in target_object.items():
+                assert type(key) == str, ValueError('LargeDataFrameProcessor cannot handle dict with not string typed keys.')
+                self.save_recursively(target_object_each, file_path=file_path / key)
         else:
-            raise ValueError('target_object must be DataFrame')
+            raise ValueError('target_object must be DataFrame or list or dict.')
 
-    def _save_dataframe(self, df: pd.DataFrame, file_path: str):
-        dir_path = os.path.dirname(file_path)
-        os.makedirs(dir_path, exist_ok=True)
-
+    def _save_dataframe(self, df: pd.DataFrame, dir_path: pathlib.Path):
+        dir_path.mkdir(exist_ok=True, parents=True)
         if df.empty:
-            df.to_pickle(os.path.join(dir_path, 'data_0.pkl'))
+            df.to_pickle(str(dir_path / 'data_0.pkl'))
             return
 
         split_size = df.values.nbytes // self.max_byte + 1
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
         for i, idx in tqdm(list(enumerate(np.array_split(range(df.shape[0]), split_size)))):
-            df.iloc[idx[0]:idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
+            df.iloc[idx[0]:idx[-1] + 1].to_pickle((dir_path / f'data_{i}.pkl'))
 
     @staticmethod
-    def load(file_path: str) -> pd.DataFrame:
-        dir_path = os.path.dirname(file_path)
+    def load(file_path: str) -> object:
+        dir_path = pathlib.Path(file_path).parent
+        return LargeDataFrameProcessor.load_recursively(dir_path=dir_path)
 
-        return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, 'data_*.pkl'))])
+
+    @staticmethod
+    def load_recursively(dir_path: pathlib.Path):
+        print(f'load: {dir_path}')
+        if (dir_path / 'data_0.pkl').exists():
+            for file_path in dir_path.glob('data_*.pkl'):
+                print(f'load_pickle: {file_path}')
+
+            return pd.concat([pd.read_pickle(str(file_path)) for file_path in dir_path.glob('data_*.pkl')])
+        elif (dir_path / '0').exists():
+            def _load_list():
+                i = 0
+                while (dir_path / str(i)).exists():
+                    yield LargeDataFrameProcessor.load_recursively(dir_path / str(i))
+                    i += 1
+            return list(_load_list())
+        else:
+            def _load_dict():
+                for path in dir_path.iterdir():
+                    assert path.is_dir()
+                    yield path.name, LargeDataFrameProcessor.load_recursively(path)
+            return dict(_load_dict())
 
 
-def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
+def _make_file_system_target(file_path: str,
+                             processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
     processor = processor or make_file_processor(file_path)
     if ObjectStorage.if_object_storage_path(file_path):
         return ObjectStorage.get_object_storage_target(file_path, processor.format())
@@ -188,7 +221,8 @@ def _get_last_modification_time(path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
-def make_target(file_path: str, unique_id: Optional[str] = None, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+def make_target(file_path: str, unique_id: Optional[str] = None,
+                processor: Optional[FileProcessor] = None) -> TargetOnKart:
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path)
     file_system_target = _make_file_system_target(file_path, processor=processor)
