@@ -176,11 +176,7 @@ class LargeDataFrameProcessor(object):
 
     @staticmethod
     def load_recursively(dir_path: pathlib.Path):
-        print(f'load: {dir_path}')
         if (dir_path / 'data_0.pkl').exists():
-            for file_path in dir_path.glob('data_*.pkl'):
-                print(f'load_pickle: {file_path}')
-
             return pd.concat([pd.read_pickle(str(file_path)) for file_path in dir_path.glob('data_*.pkl')])
         elif (dir_path / '0').exists():
 
