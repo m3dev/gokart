@@ -37,7 +37,7 @@ class TaskOnKart(luigi.Task):
     modification_time_check = luigi.BoolParameter(
         default=False,
         description='If this is true, this task will not run only if all input and output files exist,'
-        ' and all input files are modified before output file are modified.',
+                    ' and all input files are modified before output file are modified.',
         significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
     significant = luigi.BoolParameter(
@@ -112,7 +112,7 @@ class TaskOnKart(luigi.Task):
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
 
-    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2 ** 26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(
@@ -168,7 +168,8 @@ class TaskOnKart(luigi.Task):
 
         return _load(self._get_input_targets(target))
 
-    def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None) -> pd.DataFrame:
+    def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None,
+                        drop_columns: bool = False) -> pd.DataFrame:
         data = self.load(target=target)
         if isinstance(data, list):
             def _pd_concat(dfs):
@@ -176,6 +177,7 @@ class TaskOnKart(luigi.Task):
                     return pd.concat([_pd_concat(df) for df in dfs])
                 else:
                     return dfs
+
             data = _pd_concat(data)
 
         required_columns = required_columns or set()
@@ -183,6 +185,8 @@ class TaskOnKart(luigi.Task):
             return pd.DataFrame(columns=required_columns)
 
         assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
+        if drop_columns:
+            data = data[required_columns]
         return data
 
     def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
@@ -292,7 +296,7 @@ class TaskOnKart(luigi.Task):
         for x in set([x.split('.')[0] for x in sys.modules.keys() if '_' not in x]):
             module = import_module(x)
             if '__version__' in dir(module):
-                if type(module.__version__)==str:
+                if type(module.__version__) == str:
                     version = module.__version__.split(" ")[0]
                 else:
                     version = '.'.join([str(v) for v in module.__version__])

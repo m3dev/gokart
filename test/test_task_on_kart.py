@@ -235,6 +235,15 @@ class TaskTest(unittest.TestCase):
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(3, df.shape[0])
 
+    def test_load_data_frame_drop_columns(self):
+        task = _DummyTask()
+        task.load = MagicMock(return_value=pd.DataFrame(dict(a=[1], b=[2], c=[3])))
+
+        df = task.load_data_frame(required_columns={'a', 'c'}, drop_columns=True)
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(1, df.shape[0])
+        self.assertSetEqual({'a', 'c'}, set(df.columns))
+
     def test_use_rerun_with_inherits(self):
         # All tasks are completed.
         task_c = _DummyTaskC()
