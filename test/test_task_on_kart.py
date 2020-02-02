@@ -17,12 +17,14 @@ class _DummyTask(gokart.TaskOnKart):
     param = luigi.IntParameter(default=1)
     list_param = luigi.ListParameter(default=['a', 'b'])
     bool_param = luigi.BoolParameter()
+
     def output(self):
         return None
 
 
 class _DummyTaskA(gokart.TaskOnKart):
     task_namespace = __name__
+
     def output(self):
         return None
 
@@ -30,6 +32,7 @@ class _DummyTaskA(gokart.TaskOnKart):
 @inherits(_DummyTaskA)
 class _DummyTaskB(gokart.TaskOnKart):
     task_namespace = __name__
+
     def output(self):
         return None
 
@@ -40,14 +43,17 @@ class _DummyTaskB(gokart.TaskOnKart):
 @inherits(_DummyTaskB)
 class _DummyTaskC(gokart.TaskOnKart):
     task_namespace = __name__
+
     def output(self):
         return None
 
     def requires(self):
         return self.clone(_DummyTaskB)
 
+
 class _DummyTaskD(gokart.TaskOnKart):
     task_namespace = __name__
+
 
 class TaskTest(unittest.TestCase):
     def setUp(self):
@@ -266,10 +272,10 @@ class TaskTest(unittest.TestCase):
     def test_significant_flag(self):
         def _make_task(significant: bool, has_required_task: bool):
             class _MyDummyTaskA(gokart.TaskOnKart):
-                task_namespace = __name__
+                task_namespace = f'{__name__}_{significant}_{has_required_task}'
 
             class _MyDummyTaskB(gokart.TaskOnKart):
-                task_namespace = __name__
+                task_namespace = f'{__name__}_{significant}_{has_required_task}'
 
                 def requires(self):
                     if has_required_task:

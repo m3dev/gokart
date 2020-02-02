@@ -3,7 +3,7 @@ from logging import getLogger
 from typing import Dict, Any
 
 import pandas as pd
-from luigi.mock import MockTarget
+from luigi.mock import MockTarget, MockFileSystem
 from mock import patch
 
 import gokart
@@ -14,6 +14,7 @@ logger = getLogger(__name__)
 
 class TestPandasTypeConfig(PandasTypeConfig):
     task_namespace = 'test_pandas_type_check_framework'
+
     @classmethod
     def type_dict(cls) -> Dict[str, Any]:
         return {'system_cd': int}
@@ -56,6 +57,9 @@ class _DummySuccessTask(gokart.TaskOnKart):
 
 
 class TestPandasTypeCheckFramework(unittest.TestCase):
+    def setUp(self) -> None:
+        MockFileSystem().clear()
+
     @patch('sys.argv', new=['main', 'test_pandas_type_check_framework._DummyFailTask', '--log-level=CRITICAL', '--local-scheduler', '--no-lock'])
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
     def test_fail(self):
@@ -76,4 +80,3 @@ class TestPandasTypeCheckFramework(unittest.TestCase):
         with self.assertRaises(SystemExit) as exit_code:
             gokart.run()
         self.assertEqual(exit_code.exception.code, 0)
-

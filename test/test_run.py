@@ -16,6 +16,7 @@ class _DummyTask(gokart.TaskOnKart):
 class RunTest(unittest.TestCase):
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
+        luigi.mock.MockFileSystem().clear()
         os.environ.clear()
 
     @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler'])
