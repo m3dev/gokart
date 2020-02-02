@@ -85,7 +85,7 @@ class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
         self.assertTrue('DummyModelTask' in log_str)
 
     def test_run_with_namespace(self):
-        argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', f'--test-run-namespace={__name__}', '--log-level=CRITICAL',
+        argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', f'--test-run-namespace={__name__}',
                 '--no-lock']
         logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')
         with patch.object(logger, 'info') as mock_debug:
