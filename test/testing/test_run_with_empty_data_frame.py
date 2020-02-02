@@ -65,7 +65,7 @@ class DummyWorkFlowWithoutError(gokart.TaskOnKart):
 
 class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
     def test_run_without_error(self):
-        argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', '--no-lock']
+        argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
         logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')
         with patch.object(logger, 'info') as mock_debug:
             with self.assertRaises(SystemExit) as exit_code:
@@ -75,7 +75,7 @@ class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
         self.assertTrue('DummyModelTask' in log_str)
 
     def test_run_with_error(self):
-        argv = [f'{__name__}.DummyWorkFlowWithError', '--local-scheduler', '--test-run-pandas', '--no-lock']
+        argv = [f'{__name__}.DummyWorkFlowWithError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
         logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')
         with patch.object(logger, 'info') as mock_debug:
             with self.assertRaises(SystemExit) as exit_code:
@@ -85,7 +85,7 @@ class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
         self.assertTrue('DummyModelTask' in log_str)
 
     def test_run_with_namespace(self):
-        argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', f'--test-run-namespace={__name__}',
+        argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', f'--test-run-namespace={__name__}', '--log-level=CRITICAL',
                 '--no-lock']
         logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')
         with patch.object(logger, 'info') as mock_debug:
