@@ -7,9 +7,11 @@ from typing import Union, List, Any, Callable, Set, Optional, Dict
 
 import luigi
 import pandas as pd
+from luigi.task_register import Register
 
 import gokart
 from gokart.file_processor import FileProcessor
+from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.target import TargetOnKart
 
 logger = getLogger(__name__)
@@ -190,6 +192,7 @@ class TaskOnKart(luigi.Task):
         return data
 
     def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
+        PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         self._get_output_target(target).dump(obj)
 
     def make_unique_id(self):

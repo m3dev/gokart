@@ -13,6 +13,7 @@ from luigi.cmdline_parser import CmdlineParser
 import gokart
 import gokart.slack
 from gokart.object_storage import ObjectStorage
+from gokart.pandas_type_config import PandasTypeConfigMap
 
 logger = getLogger(__name__)
 
