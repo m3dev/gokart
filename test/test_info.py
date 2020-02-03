@@ -1,8 +1,11 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import luigi
 import luigi.mock
+from luigi.mock import MockFileSystem, MockTarget
+from luigi.task_register import Register
+
 import gokart
 import gokart.info
 
@@ -34,8 +37,11 @@ class _Task(gokart.TaskOnKart):
 
 
 class TestInfo(unittest.TestCase):
-    @patch('luigi.LocalTarget', new=lambda path, **kwargs: luigi.mock.MockTarget(path, **kwargs))
-    def test_make_tree_info(self):
+    def setUp(self) -> None:
+        MockFileSystem().clear()
+
+    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    def test_make_tree_info_pending(self):
         task = _Task(param=1, sub=_SubTask(param=2))
 
         # check before running
@@ -45,8 +51,12 @@ class TestInfo(unittest.TestCase):
    └─-\(PENDING\) _SubTask\[[a-z0-9]*\]"""
         self.assertRegex(tree, expected)
 
+    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    def test_make_tree_info_complete(self):
+        task = _Task(param=1, sub=_SubTask(param=2))
+
         # check after sub task runs
-        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
+        luigi.build([task], local_scheduler=True)
         tree = gokart.info.make_tree_info(task)
         expected = r"""
 └─-\(COMPLETE\) _Task\[[a-z0-9]*\]

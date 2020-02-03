@@ -23,8 +23,11 @@ class _DummyTask(gokart.TaskOnKart):
         self.dump('test')
 
 
-@patch('luigi.LocalTarget', new=lambda path, **kwargs: luigi.mock.MockTarget(path, **kwargs))
 class RestoreTaskByIDTest(unittest.TestCase):
+    def setUp(self) -> None:
+        luigi.mock.MockFileSystem().clear()
+
+    @patch('luigi.LocalTarget', new=lambda path, **kwargs: luigi.mock.MockTarget(path, **kwargs))
     def test(self):
         task = _DummyTask(sub_task=_SubDummyTask(param=10))
         luigi.build([task], local_scheduler=True, log_level="CRITICAL")

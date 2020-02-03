@@ -16,11 +16,12 @@ class _DummyTask(gokart.TaskOnKart):
 class RunTest(unittest.TestCase):
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
+        luigi.mock.MockFileSystem().clear()
         os.environ.clear()
 
     @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler'])
     def test_run(self):
-        config_file_path = os.path.join(os.path.dirname(__name__), 'test_config.ini')
+        config_file_path = os.path.join(os.path.dirname(__name__), 'config', 'test_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
         os.environ.setdefault('test_param', 'test')
         with self.assertRaises(SystemExit) as exit_code:
@@ -29,7 +30,7 @@ class RunTest(unittest.TestCase):
 
     @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--log-level=CRITICAL', '--local-scheduler'])
     def test_run_with_undefined_environ(self):
-        config_file_path = os.path.join(os.path.dirname(__name__), 'test_config.ini')
+        config_file_path = os.path.join(os.path.dirname(__name__), 'config', 'test_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
         with self.assertRaises(luigi.parameter.MissingParameterException) as missing_parameter:
             gokart.run()
@@ -37,7 +38,7 @@ class RunTest(unittest.TestCase):
     @patch('sys.argv', new=['main', '--tree-info-mode=simple', '--tree-info-output-path=tree.txt', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler'])
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: luigi.mock.MockTarget(path, **kwargs))
     def test_run_tree_info(self):
-        config_file_path = os.path.join(os.path.dirname(__name__), 'test_config.ini')
+        config_file_path = os.path.join(os.path.dirname(__name__), 'config', 'test_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
         os.environ.setdefault('test_param', 'test')
         tree_info = gokart.tree_info(mode='simple', output_path='tree.txt')
