@@ -60,6 +60,10 @@ class TaskOnKart(luigi.Task):
         file_path = self.__module__.replace(".", "/")
         return self.make_target(os.path.join(file_path, f"{type(self).__name__}.pkl"))
 
+    def requires(self):
+        tasks = {key[:-5]: var for key, var in vars(self).items() if key.endswith('_task') and isinstance(var, TaskOnKart)}
+        return tasks or []  # when tasks is empty dict, then this returns empty list.
+
     @classmethod
     def _add_configuration(cls, kwargs, section):
         config = luigi.configuration.get_config()
