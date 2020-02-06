@@ -61,8 +61,11 @@ class TaskOnKart(luigi.Task):
         return self.make_target(os.path.join(file_path, f"{type(self).__name__}.pkl"))
 
     def requires(self):
-        tasks = {key[:-5]: var for key, var in vars(self).items() if key.endswith('_task') and isinstance(var, TaskOnKart)}
+        tasks = self.make_task_instance_dictionary()
         return tasks or []  # when tasks is empty dict, then this returns empty list.
+
+    def make_task_instance_dictionary(self) -> Dict[str, 'TaskOnKart']:
+        return {key[:-5]: var for key, var in vars(self).items() if key.endswith('_task') and isinstance(var, TaskOnKart)}
 
     @classmethod
     def _add_configuration(cls, kwargs, section):
