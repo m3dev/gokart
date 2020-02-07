@@ -31,7 +31,7 @@ class FileProcessor(object):
         pass
 
 
-class _LargeLocalFileReader(object):
+class _ChunkedLargeFileReader(object):
     def __init__(self, file) -> None:
         self._file = file
 
@@ -58,9 +58,9 @@ class PickleFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        if ObjectStorage.is_readable_objectstorage_instance(file):
+        if not ObjectStorage.is_buffered_reader(file):
             return pickle.loads(file.read())
-        return pickle.load(_LargeLocalFileReader(file))
+        return pickle.load(_ChunkedLargeFileReader(file))
 
     def dump(self, obj, file):
         self._write(pickle.dumps(obj, protocol=4), file)

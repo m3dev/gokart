@@ -6,7 +6,7 @@ from datetime import datetime
 import boto3
 import numpy as np
 import pandas as pd
-from gokart.file_processor import _LargeLocalFileReader
+from gokart.file_processor import _ChunkedLargeFileReader
 from moto import mock_s3
 
 from gokart.target import make_target, make_model_target
@@ -26,7 +26,7 @@ class LocalTargetTest(unittest.TestCase):
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
-        with unittest.mock.patch('gokart.file_processor._LargeLocalFileReader', wraps=_LargeLocalFileReader) as monkey:
+        with unittest.mock.patch('gokart.file_processor._ChunkedLargeFileReader', wraps=_ChunkedLargeFileReader) as monkey:
             loaded = target.load()
             monkey.assert_called()
 

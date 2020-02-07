@@ -62,5 +62,5 @@ class ObjectStorage(object):
             raise
 
     @staticmethod
-    def is_readable_objectstorage_instance(file: object):
-        return isinstance(file, luigi.contrib.s3.ReadableS3File)
+    def is_buffered_reader(file: object):
+        return not isinstance(file, luigi.contrib.s3.ReadableS3File)
