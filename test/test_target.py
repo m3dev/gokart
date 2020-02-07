@@ -6,6 +6,7 @@ from datetime import datetime
 import boto3
 import numpy as np
 import pandas as pd
+from gokart.file_processor import _LargeLocalFileReader
 from moto import mock_s3
 
 from gokart.target import make_target, make_model_target
@@ -25,7 +26,9 @@ class LocalTargetTest(unittest.TestCase):
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
-        loaded = target.load()
+        with unittest.mock.patch('gokart.file_processor._LargeLocalFileReader', wraps=_LargeLocalFileReader) as monkey:
+            loaded = target.load()
+            monkey.assert_called()
 
         self.assertEqual(loaded, obj)
 
@@ -169,8 +172,10 @@ class ModelTargetTest(unittest.TestCase):
         obj = 1
         file_path = os.path.join(_get_temporary_directory(), 'test.zip')
 
-        target = make_model_target(
-            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function)
+        target = make_model_target(file_path=file_path,
+                                   temporary_directory=_get_temporary_directory(),
+                                   save_function=self._save_function,
+                                   load_function=self._load_function)
 
         target.dump(obj)
         loaded = target.load()
@@ -185,8 +190,10 @@ class ModelTargetTest(unittest.TestCase):
         obj = 1
         file_path = os.path.join('s3://test/', 'test.zip')
 
-        target = make_model_target(
-            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function)
+        target = make_model_target(file_path=file_path,
+                                   temporary_directory=_get_temporary_directory(),
+                                   save_function=self._save_function,
+                                   load_function=self._load_function)
 
         target.dump(obj)
         loaded = target.load()
