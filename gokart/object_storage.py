@@ -70,8 +70,4 @@ class ObjectStorage(object):
 
     @staticmethod
     def is_readable_objectstorage_instance(file: object):
-        if isinstance(file, luigi.contrib.s3.ReadableS3File):
-            return True
-        else:
-            # for GCS object
-            return isinstance(file, FileWrapper)
+        return isinstance(file, luigi.contrib.s3.ReadableS3File)
