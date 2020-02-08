@@ -303,7 +303,7 @@ class TaskTest(unittest.TestCase):
         self.assertListEqual(without_task.requires(), [])
 
         with_task = _WithTaskInstanceParameter(a_task=without_task)
-        self.assertEqual(with_task.requires()['a'], without_task)
+        self.assertEqual(with_task.requires()['a_task'], without_task)
 
 
 if __name__ == '__main__':

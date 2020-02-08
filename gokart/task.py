@@ -7,7 +7,6 @@ from typing import Union, List, Any, Callable, Set, Optional, Dict
 
 import luigi
 import pandas as pd
-from luigi.task_register import Register
 
 import gokart
 from gokart.file_processor import FileProcessor
@@ -65,7 +64,7 @@ class TaskOnKart(luigi.Task):
         return tasks or []  # when tasks is empty dict, then this returns empty list.
 
     def make_task_instance_dictionary(self) -> Dict[str, 'TaskOnKart']:
-        return {key[:-5]: var for key, var in vars(self).items() if key.endswith('_task') and isinstance(var, TaskOnKart)}
+        return {key: var for key, var in vars(self).items() if isinstance(var, TaskOnKart)}
 
     @classmethod
     def _add_configuration(cls, kwargs, section):
