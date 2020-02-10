@@ -4,9 +4,8 @@ import unittest
 from datetime import datetime
 
 import boto3
-import pandas as pd
 import numpy as np
-import numpy.testing
+import pandas as pd
 from moto import mock_s3
 
 from gokart.target import make_target, make_model_target

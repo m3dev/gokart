@@ -291,6 +291,20 @@ class TaskTest(unittest.TestCase):
         self.assertNotEqual(x_task.make_unique_id(), y_task.make_unique_id())
         self.assertEqual(y_task.make_unique_id(), z_task.make_unique_id())
 
+    def test_default_requires(self):
+        class _WithoutTaskInstanceParameter(gokart.TaskOnKart):
+            task_namespace = __name__
+
+        class _WithTaskInstanceParameter(gokart.TaskOnKart):
+            task_namespace = __name__
+            a_task = gokart.TaskInstanceParameter()
+
+        without_task = _WithoutTaskInstanceParameter()
+        self.assertListEqual(without_task.requires(), [])
+
+        with_task = _WithTaskInstanceParameter(a_task=without_task)
+        self.assertEqual(with_task.requires()['a_task'], without_task)
+
 
 if __name__ == '__main__':
     unittest.main()
