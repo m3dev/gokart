@@ -58,8 +58,8 @@ class PickleFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        # if ObjectStorage.is_readable_objectstorage_instance(file):
-        #     return pickle.loads(file.read())
+        if ObjectStorage.is_readable_objectstorage_instance(file):
+            return pickle.loads(file.read())
         return pickle.load(_LargeLocalFileReader(file))
 
     def dump(self, obj, file):
