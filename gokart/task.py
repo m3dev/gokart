@@ -11,6 +11,7 @@ import pandas as pd
 import gokart
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
+from gokart.parameter import TaskInstanceParameter, ListTaskInstanceParameter
 from gokart.target import TargetOnKart
 
 logger = getLogger(__name__)
@@ -311,3 +312,29 @@ class TaskOnKart(luigi.Task):
                     version = '.'.join([str(v) for v in module.__version__])
                 module_versions.append(f'{x}=={version}')
         return '\n'.join(module_versions)
+
+    def __repr__(self):
+        """
+        Build a task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
+        """
+        params = self.get_params()
+        param_values = self.get_param_values(params, [], self.param_kwargs)
+
+        # Build up task id
+        repr_parts = []
+        param_objs = dict(params)
+        for param_name, param_value in param_values:
+            param_obj = param_objs[param_name]
+            if param_obj.significant:
+                repr_parts.append(f'{param_name}={self._make_representation(param_obj, param_value)}')
+
+        task_str = f'{self.get_task_family()}({", ".join(repr_parts)})'
+        return task_str
+
+    def _make_representation(self, param_obj: luigi.Parameter, param_value):
+        if isinstance(param_obj, TaskInstanceParameter):
+            return f'{param_value.get_task_family()}({param_value.make_unique_id()})'
+        if isinstance(param_obj, ListTaskInstanceParameter):
+            return f"[{', '.join(f'{v.get_task_family()}({v.make_unique_id()})' for v in param_value)}]"
+        return param_obj.serialize(param_value)
+

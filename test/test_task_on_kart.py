@@ -8,6 +8,7 @@ import pandas as pd
 from luigi.util import inherits
 
 import gokart
+from gokart.parameter import TaskInstanceParameter, ListTaskInstanceParameter
 from gokart.file_processor import XmlFileProcessor
 from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
 
@@ -304,6 +305,22 @@ class TaskTest(unittest.TestCase):
 
         with_task = _WithTaskInstanceParameter(a_task=without_task)
         self.assertEqual(with_task.requires()['a_task'], without_task)
+
+    def test_repr(self):
+        class _SubTask(gokart.TaskOnKart):
+            task_namespace = __name__
+
+        class _Task(gokart.TaskOnKart):
+            task_namespace = __name__
+            int_param = luigi.IntParameter()
+            task_param = TaskInstanceParameter()
+            list_task_param = ListTaskInstanceParameter()
+
+        task = _Task(int_param=1, task_param=_SubTask(), list_task_param=[_SubTask(), _SubTask()])
+        sub_task_id = _SubTask().make_unique_id()
+        expected = f'test_task_on_kart._Task(int_param=1, task_param=test_task_on_kart._SubTask({sub_task_id}), ' \
+            f'list_task_param=[test_task_on_kart._SubTask({sub_task_id}), test_task_on_kart._SubTask({sub_task_id})])'
+        self.assertEqual(expected, str(task))
 
 
 if __name__ == '__main__':
