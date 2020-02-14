@@ -10,11 +10,8 @@ from gokart.s3_zip_client import S3ZipClient
 from gokart.gcs_zip_client import GCSZipClient
 from gokart.zip_client import ZipClient
 
+object_storage_path_prefix = ['s3://', 'gs://']
 
-object_storage_path_prefix = [
-    's3://',
-    'gs://'
-]
 
 class ObjectStorage(object):
     @staticmethod
@@ -23,7 +20,6 @@ class ObjectStorage(object):
             if path.startswith(prefix):
                 return True
         return False
-
 
     @staticmethod
     def get_object_storage_target(path: str, format: Format) -> luigi.Target:
@@ -43,7 +39,6 @@ class ObjectStorage(object):
         else:
             raise
 
-
     @staticmethod
     def get_timestamp(path: str) -> datetime:
         if path.startswith('s3://'):
@@ -57,7 +52,6 @@ class ObjectStorage(object):
         else:
             raise
 
-
     @staticmethod
     def get_zip_client(file_path: str, temporary_directory: str) -> ZipClient:
         if file_path.startswith('s3://'):
@@ -67,11 +61,6 @@ class ObjectStorage(object):
         else:
             raise
 
-
     @staticmethod
-    def is_readable_objectstorage_instance(file: object):
-        if isinstance(file, luigi.contrib.s3.ReadableS3File):
-            return True
-        else:
-            # for GCS object
-            return isinstance(file, FileWrapper)
+    def is_buffered_reader(file: object):
+        return not isinstance(file, luigi.contrib.s3.ReadableS3File)
