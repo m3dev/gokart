@@ -99,7 +99,7 @@ def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAP
         os.linesep,
     ])
     if options.send_tree_info:
-        content += os.linesep.join(['==== Tree Info ====', tree_info])
+        content = os.linesep.join([content, '==== Tree Info ====', tree_info])
     slack_api.send_snippet(comment=comment, title='event.txt', content=content)
 
 
