@@ -7,4 +7,4 @@ class SlackConfig(luigi.Config):
     to_user = luigi.Parameter(default='', description='Optional; user name who is supposed to be mentioned.')
     send_tree_info = luigi.BoolParameter(default=True,
                                          description='When this option is true, the dependency tree of tasks is included in send messeage.'
-                                                     'When notification takes long times, it is recommended to set false to this option.')
+                                                     'It is recommended to set false to this option when notification takes long time.')
