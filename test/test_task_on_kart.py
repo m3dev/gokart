@@ -121,6 +121,32 @@ class TaskTest(unittest.TestCase):
         task.output = MagicMock(return_value=output_target)
         self.assertTrue(task.complete())
 
+    def test_complete_when_input_and_output_equal(self):
+        target1 = MagicMock(spec=TargetOnKart)
+        target1.exists.return_value = True
+        target1.path.return_value = 'path1.pkl'
+        target1.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
+
+        target2 = MagicMock(spec=TargetOnKart)
+        target2.exists.return_value = True
+        target2.path.return_value = 'path2.pkl'
+        target2.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
+
+        target3 = MagicMock(spec=TargetOnKart)
+        target3.exists.return_value = True
+        target3.path.return_value = 'path3.pkl'
+        target3.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
+
+        task = _DummyTask()
+        task.modification_time_check = True
+        task.input = MagicMock(return_value=[target1, target2])
+        task.output = MagicMock(return_value=[target1, target2])
+        self.assertTrue(task.complete())
+
+        task.input = MagicMock(return_value=[target1, target2])
+        task.output = MagicMock(return_value=[target2, target3])
+        self.assertFalse(task.complete())
+
     def test_default_target(self):
         task = _DummyTaskD()
         default_target = task.output()

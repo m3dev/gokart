@@ -95,8 +95,19 @@ class TaskOnKart(luigi.Task):
         if not self.modification_time_check or not is_completed or not self.input():
             return is_completed
 
-        input_modification_time = max([target.last_modification_time() for target in luigi.task.flatten(self.input())])
-        output_modification_time = min([target.last_modification_time() for target in luigi.task.flatten(self.output())])
+        return self._check_modification_time()
+
+    def _check_modification_time(self):
+        common_path = set(t.path() for t in luigi.task.flatten(self.input())) & set(t.path() for t in luigi.task.flatten(self.output()))
+        input_tasks = [t for t in luigi.task.flatten(self.input()) if t.path() not in common_path]
+        output_tasks = [t for t in luigi.task.flatten(self.output()) if t.path() not in common_path]
+
+        input_modification_time = max([target.last_modification_time() for target in input_tasks]) if input_tasks else None
+        output_modification_time = min([target.last_modification_time() for target in output_tasks]) if output_tasks else None
+
+        if input_modification_time is None or output_modification_time is None:
+            return True
+
         # "=" must be required in the following statements, because some tasks use input targets as output targets.
         return input_modification_time <= output_modification_time
 
@@ -337,4 +348,3 @@ class TaskOnKart(luigi.Task):
         if isinstance(param_obj, ListTaskInstanceParameter):
             return f"[{', '.join(f'{v.get_task_family()}({v.make_unique_id()})' for v in param_value)}]"
         return param_obj.serialize(param_value)
-
