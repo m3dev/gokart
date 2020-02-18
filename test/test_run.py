@@ -72,7 +72,12 @@ class RunTest(unittest.TestCase):
         cmdline_args = [f'{__name__}._DummyTask', '--param', 'test']
         with patch('gokart.slack.SlackConfig.send_tree_info', False):
             _try_to_send_event_summary_to_slack(slack_api_mock, event_aggregator_mock, cmdline_args)
-        expects = os.linesep.join(['===== Event List ====', event_aggregator_mock.get_event_list(), os.linesep])
+        expects = os.linesep.join([
+            '===== Event List ====',
+            event_aggregator_mock.get_event_list(),
+            os.linesep,
+            '==== Tree Info ====',
+            'Please add SlackConfig.send_tree_info to include tree-info'])
 
         results = self.output
         self.assertEqual(expects, results)
