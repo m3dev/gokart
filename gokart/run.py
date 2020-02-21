@@ -86,9 +86,10 @@ def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAP
     if slack_api is None:
         # do nothing
         return
+    options = gokart.slack.SlackConfig()
     with CmdlineParser.global_instance(cmdline_args) as cp:
         task = cp.get_task_obj()
-        tree_info = gokart.make_tree_info(task, details=True)
+        tree_info = gokart.make_tree_info(task, details=True) if options.send_tree_info else 'Please add SlackConfig.send_tree_info to include tree-info'
         task_name = type(task).__name__
 
     comment = f'Report of {task_name}' + os.linesep + event_aggregator.get_summary()
@@ -97,7 +98,7 @@ def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAP
         event_aggregator.get_event_list(),
         os.linesep,
         '==== Tree Info ====',
-        tree_info,
+        tree_info
     ])
     slack_api.send_snippet(comment=comment, title='event.txt', content=content)
 
