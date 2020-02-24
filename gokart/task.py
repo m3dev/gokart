@@ -1,5 +1,6 @@
 import hashlib
 import os
+import random
 import sys
 from importlib import import_module
 from logging import getLogger
@@ -7,6 +8,7 @@ from typing import Union, List, Any, Callable, Set, Optional, Dict
 
 import luigi
 import pandas as pd
+import numpy as np
 
 import gokart
 from gokart.file_processor import FileProcessor
@@ -29,23 +31,22 @@ class TaskOnKart(luigi.Task):
     * :py:meth:`dump` - this save a object as output of this task.
     """
 
-    workspace_directory = luigi.Parameter(
-        default='./resources/', description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.',
-        significant=False)  # type: str
+    workspace_directory = luigi.Parameter(default='./resources/',
+                                          description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.',
+                                          significant=False)  # type: str
     local_temporary_directory = luigi.Parameter(default='./resources/tmp/', description='A directory to save temporary files.', significant=False)  # type: str
     rerun = luigi.BoolParameter(default=False, description='If this is true, this task will run even if all output files exist.', significant=False)
-    strict_check = luigi.BoolParameter(
-        default=False, description='If this is true, this task will not run only if all input and output files exist.', significant=False)
-    modification_time_check = luigi.BoolParameter(
-        default=False,
-        description='If this is true, this task will not run only if all input and output files exist,'
-                    ' and all input files are modified before output file are modified.',
-        significant=False)
+    strict_check = luigi.BoolParameter(default=False,
+                                       description='If this is true, this task will not run only if all input and output files exist.',
+                                       significant=False)
+    modification_time_check = luigi.BoolParameter(default=False,
+                                                  description='If this is true, this task will not run only if all input and output files exist,'
+                                                  ' and all input files are modified before output file are modified.',
+                                                  significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
-    significant = luigi.BoolParameter(
-        default=True,
-        description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
-        significant=False)
+    significant = luigi.BoolParameter(default=True,
+                                      description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
+                                      significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
@@ -132,15 +133,14 @@ class TaskOnKart(luigi.Task):
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
 
-    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2 ** 26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        return gokart.target.make_model_target(
-            file_path=file_path,
-            temporary_directory=self.local_temporary_directory,
-            unique_id=unique_id,
-            save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
-            load_function=gokart.target.LargeDataFrameProcessor.load)
+        return gokart.target.make_model_target(file_path=file_path,
+                                               temporary_directory=self.local_temporary_directory,
+                                               unique_id=unique_id,
+                                               save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
+                                               load_function=gokart.target.LargeDataFrameProcessor.load)
 
     def make_model_target(self,
                           relative_file_path: str,
@@ -158,12 +158,11 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
-        return gokart.target.make_model_target(
-            file_path=file_path,
-            temporary_directory=self.local_temporary_directory,
-            unique_id=unique_id,
-            save_function=save_function,
-            load_function=load_function)
+        return gokart.target.make_model_target(file_path=file_path,
+                                               temporary_directory=self.local_temporary_directory,
+                                               unique_id=unique_id,
+                                               save_function=save_function,
+                                               load_function=load_function)
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
@@ -188,10 +187,13 @@ class TaskOnKart(luigi.Task):
 
         return _load(self._get_input_targets(target))
 
-    def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None,
+    def load_data_frame(self,
+                        target: Union[None, str, TargetOnKart] = None,
+                        required_columns: Optional[Set[str]] = None,
                         drop_columns: bool = False) -> pd.DataFrame:
         data = self.load(target=target)
         if isinstance(data, list):
+
             def _pd_concat(dfs):
                 if isinstance(dfs, list):
                     return pd.concat([_pd_concat(df) for df in dfs])
@@ -278,6 +280,34 @@ class TaskOnKart(luigi.Task):
         if target.exists():
             return self.load(target)
         return dict()
+
+    @luigi.Task.event_handler(luigi.Event.START)
+    def _set_random_seed(self):
+        random_seed = self._get_random_seed()
+        seeds = {
+            'seed': random_seed,
+            'seed_method': [
+                'random.seed',
+                'np.random.seed',
+            ]
+        }
+        random.seed(random_seed)
+        np.random.seed(random_seed)
+        try:
+            import torch
+            torch.manual_seed(random_seed)
+            seeds['seed_method'].append('torch.manual_seed')
+            torch.cuda.manual_seed(random_seed)
+            seeds['seed_method'].append('torch.cuda.manual_seed')
+        except Exception:
+            pass
+        self.dump(seeds, self._get_random_seeds_target())
+
+    def _get_random_seeds_target(self):
+        return self.make_target(f'log/random_seed/{type(self).__name__}.pkl')
+
+    def _get_random_seed(self):
+        return int(self.make_unique_id(), 16) % (2**32 - 1)  # maximum numpy.random.seed
 
     @luigi.Task.event_handler(luigi.Event.START)
     def _dump_task_params(self):
