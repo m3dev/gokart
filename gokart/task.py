@@ -45,7 +45,7 @@ class TaskOnKart(luigi.Task):
     significant = luigi.BoolParameter(default=True,
                                       description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
                                       significant=False)
-    fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method lisg.', significant=False)
+    fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
