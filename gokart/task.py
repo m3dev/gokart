@@ -1,6 +1,5 @@
 import hashlib
 import os
-import random
 import sys
 from importlib import import_module
 from logging import getLogger
@@ -8,7 +7,6 @@ from typing import Union, List, Any, Callable, Set, Optional, Dict
 
 import luigi
 import pandas as pd
-import numpy as np
 
 import gokart
 from gokart.file_processor import FileProcessor
@@ -47,6 +45,7 @@ class TaskOnKart(luigi.Task):
     significant = luigi.BoolParameter(default=True,
                                       description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
                                       significant=False)
+    fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method lisg.', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
@@ -284,27 +283,29 @@ class TaskOnKart(luigi.Task):
     @luigi.Task.event_handler(luigi.Event.START)
     def _set_random_seed(self):
         random_seed = self._get_random_seed()
-        seeds = {
-            'seed': random_seed,
-            'seed_method': [
-                'random.seed',
-                'np.random.seed',
-            ]
-        }
-        random.seed(random_seed)
-        np.random.seed(random_seed)
-        try:
-            import torch
-            torch.manual_seed(random_seed)
-            seeds['seed_method'].append('torch.manual_seed')
-            torch.cuda.manual_seed(random_seed)
-            seeds['seed_method'].append('torch.cuda.manual_seed')
-        except Exception:
-            pass
-        self.dump(seeds, self._get_random_seeds_target())
+        seed_methods = self.try_set_seed(self.fix_random_seed_methods, random_seed)
+        self.dump({'seed': random_seed, 'seed_methods': seed_methods}, self._get_random_seeds_target())
 
     def _get_random_seeds_target(self):
         return self.make_target(f'log/random_seed/{type(self).__name__}.pkl')
+
+    @staticmethod
+    def try_set_seed(methods: List[str], random_seed: int) -> List[str]:
+        success_methods = []
+        for method_name in methods:
+            try:
+                for i, x in enumerate(method_name.split('.')):
+                    if i == 0:
+                        m = import_module(x)
+                    else:
+                        m = getattr(m, x)
+                m(random_seed)
+                success_methods.append(method_name)
+            except ModuleNotFoundError:
+                pass
+            except AttributeError:
+                pass
+        return success_methods
 
     def _get_random_seed(self):
         return int(self.make_unique_id(), 16) % (2**32 - 1)  # maximum numpy.random.seed
