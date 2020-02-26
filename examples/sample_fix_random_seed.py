@@ -21,22 +21,22 @@ class SampleTask(gokart.TaskOnKart):
 
 
 if __name__ == '__main__':
-    # //----------------------------------------------------------------
+    # //---------------------------------------------------------------------
     # Please set fix_random_seed_methods parameter.
     # Change seed if you change sample_param.
     #
-    # //--- The output is as follows every time (installed pytorch). ---
-    # {'random': [60, 27, 7, 56, 91, 38, 72, 37, 69, 51],
-    #   'numpy': [20, 17, 22, 65, 87, 4, 30, 76, 81, 31],
-    #   'torch': [0.4886833131313324, 0.8920509815216064,
-    #     0.6191630959510803, -0.13227537274360657, -0.6677181720733643]}
+    # //--- The output is as follows every time (with pytorch installed). ---
+    # {'random': [65, 41, 61, 37, 55, 81, 48, 2, 94, 21],
+    #   'numpy': [79, 86, 5, 22, 79, 98, 56, 40, 81, 37], 'torch': []}
+    #   'torch': [0.14460121095180511, -0.11649507284164429,
+    #            0.6928958296775818, -0.916053831577301, 0.7317505478858948]}
     #
-    # //--------------------- Not install pytorch ----------------------
-    # {'random': [60, 27, 7, 56, 91, 38, 72, 37, 69, 51],
-    #  'numpy': [20, 17, 22, 65, 87, 4, 30, 76, 81, 31],
-    #  'torch': []}
-    # //----------------------------------------------------------------
+    # //------------------------- without pytorch ---------------------------
+    # {'random': [65, 41, 61, 37, 55, 81, 48, 2, 94, 21],
+    #   'numpy': [79, 86, 5, 22, 79, 98, 56, 40, 81, 37], 'torch': []}
+    #
+    # //---------------------------------------------------------------------
     gokart.run([
         'sample_fix_random_seed.SampleTask', '--local-scheduler', '--rerun', '--sample-param=a',
-        '--fix-random-seed-methods=["random.seed","numpy.random.seed","torch.random.manual_seed"]'
+        '--fix-random-seed-methods=["random.seed","numpy.random.seed","torch.random.manual_seed"]', '--fix-random-seed-value=57'
     ])

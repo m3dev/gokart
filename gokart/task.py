@@ -46,6 +46,7 @@ class TaskOnKart(luigi.Task):
                                       description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
                                       significant=False)
     fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False)
+    fix_random_seed_value = luigi.IntParameter(default=None, description='Fix random seed method value.', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, self.get_task_family())
@@ -308,6 +309,8 @@ class TaskOnKart(luigi.Task):
         return success_methods
 
     def _get_random_seed(self):
+        if self.fix_random_seed_value:
+            return self.fix_random_seed_value
         return int(self.make_unique_id(), 16) % (2**32 - 1)  # maximum numpy.random.seed
 
     @luigi.Task.event_handler(luigi.Event.START)
