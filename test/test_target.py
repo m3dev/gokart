@@ -168,7 +168,7 @@ class ModelTargetTest(unittest.TestCase):
     def _load_function(path):
         return make_target(file_path=path).load()
 
-    def test_model_target_on_loacal(self):
+    def test_model_target_on_local(self):
         obj = 1
         file_path = os.path.join(_get_temporary_directory(), 'test.zip')
 
