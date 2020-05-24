@@ -191,12 +191,12 @@ class TaskOnKart(luigi.Task):
                         target: Union[None, str, TargetOnKart] = None,
                         required_columns: Optional[Set[str]] = None,
                         drop_columns: bool = False) -> pd.DataFrame:
-        def _pd_concat(dfs):
+        def _flatten_recursively(dfs):
             if isinstance(dfs, list):
-                return pd.concat([_pd_concat(df) for df in dfs])
+                return pd.concat([_flatten_recursively(df) for df in dfs])
             else:
                 return dfs
-        data = _pd_concat(self.load(target=target))
+        data = _flatten_recursively(self.load(target=target))
 
         required_columns = required_columns or set()
         if data.empty and len(data.index) == 0:
