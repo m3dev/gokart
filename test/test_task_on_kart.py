@@ -277,6 +277,18 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(1, df.shape[0])
         self.assertSetEqual({'a', 'c'}, set(df.columns))
 
+    def test_load_index_only_dataframe(self):
+        task = _DummyTask()
+        task.load = MagicMock(return_value=pd.DataFrame(index=range(3)))
+
+        # connnot load index only frame with required_columns
+        self.assertRaises(AssertionError, lambda : task.load_data_frame(required_columns={'a', 'c'}))
+
+        df: pd.DataFrame = task.load_data_frame()
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertTrue(df.empty)
+        self.assertListEqual(list(range(3)), list(df.index))
+
     def test_use_rerun_with_inherits(self):
         # All tasks are completed.
         task_c = _DummyTaskC()

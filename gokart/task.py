@@ -191,21 +191,16 @@ class TaskOnKart(luigi.Task):
                         target: Union[None, str, TargetOnKart] = None,
                         required_columns: Optional[Set[str]] = None,
                         drop_columns: bool = False) -> pd.DataFrame:
-        data = self.load(target=target)
-        if isinstance(data, list):
-
-            def _pd_concat(dfs):
-                if isinstance(dfs, list):
-                    return pd.concat([_pd_concat(df) for df in dfs])
-                else:
-                    return dfs
-
-            data = _pd_concat(data)
+        def _pd_concat(dfs):
+            if isinstance(dfs, list):
+                return pd.concat([_pd_concat(df) for df in dfs])
+            else:
+                return dfs
+        data = _pd_concat(self.load(target=target))
 
         required_columns = required_columns or set()
-        if data.empty:
+        if data.empty and len(data.index) == 0:
             return pd.DataFrame(columns=required_columns)
-
         assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
         if drop_columns:
             data = data[required_columns]
