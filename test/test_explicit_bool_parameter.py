@@ -9,14 +9,9 @@ from luigi.cmdline_parser import CmdlineParser
 import gokart
 
 
-def run_locally(args):
-    temp = CmdlineParser._instance
-    try:
-        CmdlineParser._instance = None
-        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
-    finally:
-        CmdlineParser._instance = temp
-    return run_exit_status
+def in_parse(cmds, deferred_computation):
+    with CmdlineParser.global_instance(cmds) as cp:
+        deferred_computation(cp.get_task_obj())
 
 
 class WithDefaultTrue(gokart.TaskOnKart):
@@ -40,24 +35,20 @@ class TestExplicitBoolParameter(unittest.TestCase):
         self.assertFalse(WithDefaultFalse().param)
 
     def test_parse_param(self):
-        run_locally(['ExplicitParsing', '--param', 'true'])
-        self.assertTrue(ExplicitParsing._param)
-        run_locally(['ExplicitParsing', '--param', 'false'])
-        self.assertFalse(ExplicitParsing._param)
-        run_locally(['ExplicitParsing', '--param', 'True'])
-        self.assertTrue(ExplicitParsing._param)
-        run_locally(['ExplicitParsing', '--param', 'False'])
-        self.assertFalse(ExplicitParsing._param)
+        in_parse(['ExplicitParsing', '--param', 'true'], lambda task: self.assertTrue(task.param))
+        in_parse(['ExplicitParsing', '--param', 'false'], lambda task: self.assertFalse(task.param))
+        in_parse(['ExplicitParsing', '--param', 'True'], lambda task: self.assertTrue(task.param))
+        in_parse(['ExplicitParsing', '--param', 'False'], lambda task: self.assertFalse(task.param))
 
     def test_missing_parameter(self):
         with self.assertRaises(luigi.parameter.MissingParameterException):
-            run_locally(['ExplicitParsing'])
+            in_parse(['ExplicitParsing'], lambda: True)
 
     def test_value_error(self):
         with self.assertRaises(ValueError):
-            run_locally(['ExplicitParsing', '--param', 'Foo'])
+            in_parse(['ExplicitParsing', '--param', 'Foo'], lambda: True)
 
     def test_expected_one_argment_error(self):
         # argparse throw "expected one argument" error
         with self.assertRaises(SystemExit):
-            run_locally(['ExplicitParsing', '--param'])
+            in_parse(['ExplicitParsing', '--param'], lambda: True)
