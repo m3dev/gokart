@@ -38,3 +38,11 @@ class ListTaskInstanceParameter(luigi.Parameter):
 
     def serialize(self, x):
         return json.dumps(x, cls=_TaskInstanceEncoder)
+
+
+class ExplicitBoolParameter(luigi.BoolParameter):
+    def __init__(self, *args, **kwargs):
+        luigi.Parameter.__init__(self, *args, **kwargs)
+
+    def _parser_kwargs(self, *args, **kwargs):
+        return luigi.Parameter._parser_kwargs(*args, *kwargs)
