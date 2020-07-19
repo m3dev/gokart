@@ -1,6 +1,4 @@
 import unittest
-import argparse
-from unittest.mock import patch
 
 import luigi
 import luigi.mock
@@ -15,15 +13,15 @@ def in_parse(cmds, deferred_computation):
 
 
 class WithDefaultTrue(gokart.TaskOnKart):
-    param = gokart.parameter.ExplicitBoolParameter(default=True)
+    param = gokart.ExplicitBoolParameter(default=True)
 
 
 class WithDefaultFalse(gokart.TaskOnKart):
-    param = gokart.parameter.ExplicitBoolParameter(default=False)
+    param = gokart.ExplicitBoolParameter(default=False)
 
 
 class ExplicitParsing(gokart.TaskOnKart):
-    param = gokart.parameter.ExplicitBoolParameter()
+    param = gokart.ExplicitBoolParameter()
 
     def run(self):
         ExplicitParsing._param = self.param
