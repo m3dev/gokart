@@ -260,6 +260,24 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(['c', 'd'], list(kwargs['list_param']))
         self.assertEqual(True, kwargs['bool_param'])
 
+    @patch('luigi.cmdline_parser.CmdlineParser.get_instance')
+    def test_add_cofigureation_evaluation_order(self, mock_cmdline: MagicMock):
+        """
+        in case TaskOnKart._add_configuration will break evaluation order
+        @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
+        """
+        class DummyTaskAddConfiguration(gokart.TaskOnKart):
+            aa = luigi.IntParameter()
+
+        luigi.configuration.get_config().set(f'DummyTaskAddConfiguration', 'aa', '3')
+        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
+        self.assertEqual(DummyTaskAddConfiguration().aa, 3)
+
+        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(
+            ['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
+        self.assertEqual(DummyTaskAddConfiguration().aa, 2)
+
+
     def test_load_list_of_list_pandas(self):
         task = _DummyTask()
         task.load = MagicMock(return_value=[pd.DataFrame(dict(a=[1])), [pd.DataFrame(dict(a=[2])), pd.DataFrame(dict(a=[3]))]])
