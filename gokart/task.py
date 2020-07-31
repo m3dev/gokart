@@ -49,7 +49,6 @@ class TaskOnKart(luigi.Task):
     fix_random_seed_value = luigi.IntParameter(default=None, description='Fix random seed method value.', significant=False)
 
     def __init__(self, *args, **kwargs):
-        self._add_configuration(kwargs, self.get_task_family())
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log = dict()
