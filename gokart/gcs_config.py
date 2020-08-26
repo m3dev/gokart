@@ -13,9 +13,9 @@ from googleapiclient.discovery import _retrieve_discovery_doc
 
 
 class GCSConfig(luigi.Config):
-    gcs_credential_name = luigi.Parameter(
+    gcs_credential_name: str = luigi.Parameter(
         default='GCS_CREDENTIAL', description='GCS credential environment variable.')
-    discover_cache_local_path = luigi.Parameter(
+    discover_cache_local_path: str = luigi.Parameter(
         default='DISCOVER_CACHE_LOCAL_PATH', description='The file path of discover api cache.')
 
     _DISCOVERY_URI = (
@@ -24,9 +24,15 @@ class GCSConfig(luigi.Config):
     _V2_DISCOVERY_URI = (
         "https://{api}.googleapis.com/$discovery/rest?" "version={apiVersion}"
     )
+    _client = None
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
-        if (not os.path.isfile(self.discover_cache_local_path)):
+        if self._client is None:  # use cache as like singleton object
+            self._client = self._get_gcs_client()
+        return self._client
+
+    def _get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
+        if not os.path.isfile(self.discover_cache_local_path):
             with open(self.discover_cache_local_path, "w") as f:
                 try:
                     fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -57,7 +63,7 @@ class GCSConfig(luigi.Config):
             fcntl.flock(f, fcntl.LOCK_UN)
             return luigi.contrib.gcs.GCSClient(oauth_credentials=self._load_oauth_credentials(), descriptor=descriptor)
 
-    def _load_oauth_credentials(self):
+    def _load_oauth_credentials(self) -> Credentials:
         json_str = os.environ.get(self.gcs_credential_name)
         if not json_str:
             return None
