@@ -273,10 +273,8 @@ class TaskTest(unittest.TestCase):
         mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 3)
 
-        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(
-            ['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
+        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 2)
-
 
     def test_load_list_of_list_pandas(self):
         task = _DummyTask()
@@ -295,12 +293,21 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(1, df.shape[0])
         self.assertSetEqual({'a', 'c'}, set(df.columns))
 
+    def test_load_data_frame_empty_input(self):
+        task = _DummyTask()
+        task.load = MagicMock(return_value=pd.DataFrame(dict(a=[], b=[], c=[])))
+
+        df = task.load_data_frame(required_columns={'a', 'c'})
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(0, df.shape[0])
+        self.assertSetEqual({'a', 'b', 'c'}, set(df.columns))
+
     def test_load_index_only_dataframe(self):
         task = _DummyTask()
         task.load = MagicMock(return_value=pd.DataFrame(index=range(3)))
 
         # connnot load index only frame with required_columns
-        self.assertRaises(AssertionError, lambda : task.load_data_frame(required_columns={'a', 'c'}))
+        self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={'a', 'c'}))
 
         df: pd.DataFrame = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
