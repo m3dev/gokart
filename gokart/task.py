@@ -197,7 +197,7 @@ class TaskOnKart(luigi.Task):
         data = _flatten_recursively(self.load(target=target))
 
         required_columns = required_columns or set()
-        if data.empty and len(data.index) == 0 and len(data.columns) == 0:
+        if data.empty and len(data.index) == 0 and len(required_columns - set(data.columns)) > 0 == 0:
             return pd.DataFrame(columns=required_columns)
         assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
         if drop_columns:
