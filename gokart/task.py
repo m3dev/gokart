@@ -186,19 +186,18 @@ class TaskOnKart(luigi.Task):
 
         return _load(self._get_input_targets(target))
 
-    def load_data_frame(self,
-                        target: Union[None, str, TargetOnKart] = None,
-                        required_columns: Optional[Set[str]] = None,
+    def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None,
                         drop_columns: bool = False) -> pd.DataFrame:
         def _flatten_recursively(dfs):
             if isinstance(dfs, list):
                 return pd.concat([_flatten_recursively(df) for df in dfs])
             else:
                 return dfs
+
         data = _flatten_recursively(self.load(target=target))
 
         required_columns = required_columns or set()
-        if data.empty and len(data.index) == 0:
+        if data.empty and len(data.index) == 0 and len(required_columns - set(data.columns)) > 0:
             return pd.DataFrame(columns=required_columns)
         assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
         if drop_columns:
