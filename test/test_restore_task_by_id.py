@@ -36,7 +36,7 @@ class RestoreTaskByIDTest(unittest.TestCase):
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: luigi.mock.MockTarget(path, **kwargs))
     def test(self):
         task = _DummyTask(sub_task=_SubDummyTask(param=10))
-        luigi.build([task], local_scheduler=True, log_level="INFO")
+        luigi.build([task], local_scheduler=True, log_level="CRITICAL")
 
         unique_id = task.make_unique_id()
         restored = _DummyTask.restore(unique_id)
