@@ -25,7 +25,7 @@ class TaskOnKart(luigi.Task):
 
     * :py:meth:`make_target` - this makes output target with a relative file path.
     * :py:meth:`make_model_target` - this makes output target for models which generate multiple files to save.
-    * :py:meth:`load` - this loads input files of this task. 
+    * :py:meth:`load` - this loads input files of this task.
     * :py:meth:`dump` - this save a object as output of this task.
     """
 
@@ -55,14 +55,38 @@ class TaskOnKart(luigi.Task):
         self.task_unique_id = None
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
+        self.requires = self._add_task_instance(self.requires)
 
     def output(self):
         file_path = self.__module__.replace(".", "/")
         return self.make_target(os.path.join(file_path, f"{type(self).__name__}.pkl"))
 
     def requires(self):
-        tasks = self.make_task_instance_dictionary()
-        return tasks or []  # when tasks is empty dict, then this returns empty list.
+        return {}
+
+    def _add_task_instance(self, func):
+        def wrapper():
+            tasks = self.make_task_instance_dictionary()
+
+            output = func()
+
+            if len(tasks) == 0 or (len(tasks) == 1 and output == list(tasks.values())[0]):
+                return output
+
+            if isinstance(output, TaskOnKart):
+                return {'output': output, **tasks}
+
+            if isinstance(output, list):
+                task_instance_list = [task for task in list(tasks.values()) if task not in output]
+                return output + task_instance_list
+
+            if isinstance(output, dict):
+                output.update(tasks)
+                return output
+
+            raise ValueError(f'{func} must return TaskOnKart, list or dict')
+
+        return wrapper
 
     def make_task_instance_dictionary(self) -> Dict[str, 'TaskOnKart']:
         return {key: var for key, var in vars(self).items() if isinstance(var, TaskOnKart)}
@@ -186,7 +210,9 @@ class TaskOnKart(luigi.Task):
 
         return _load(self._get_input_targets(target))
 
-    def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None,
+    def load_data_frame(self,
+                        target: Union[None, str, TargetOnKart] = None,
+                        required_columns: Optional[Set[str]] = None,
                         drop_columns: bool = False) -> pd.DataFrame:
         def _flatten_recursively(dfs):
             if isinstance(dfs, list):

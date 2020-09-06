@@ -56,6 +56,61 @@ class _DummyTaskD(gokart.TaskOnKart):
     task_namespace = __name__
 
 
+class _WithoutTaskInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+    int_param: int = luigi.IntParameter(default=1)
+
+
+class _WithTaskInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+    a_task = gokart.TaskInstanceParameter()
+
+
+class _RequiresTaskOverridedTaskWithInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+    upstream_task = gokart.TaskInstanceParameter()
+
+    def requires(self):
+        return _WithoutTaskInstanceParameter(int_param=1)
+
+
+class _RequiresTaskOverridedTaskWithoutInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def requires(self):
+        return _WithoutTaskInstanceParameter(int_param=1)
+
+
+class _RequiresListOverridedTaskWithInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+    upstream_task = gokart.TaskInstanceParameter()
+
+    def requires(self):
+        return [_WithoutTaskInstanceParameter(int_param=1)]
+
+
+class _RequiresListOverridedTaskWithoutInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def requires(self):
+        return [_WithoutTaskInstanceParameter(int_param=1)]
+
+
+class _RequiresDictOverridedTaskWithInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+    upstream_task = gokart.TaskInstanceParameter()
+
+    def requires(self):
+        return dict(output_task=_WithoutTaskInstanceParameter(int_param=1))
+
+
+class _RequiresDictOverridedTaskWithoutInstanceParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def requires(self):
+        return dict(output_task=_WithoutTaskInstanceParameter(int_param=1))
+
+
 class TaskTest(unittest.TestCase):
     def setUp(self):
         _DummyTask.clear_instance_cache()
@@ -235,7 +290,7 @@ class TaskTest(unittest.TestCase):
         data = [x for x in task.load_generator()]
         self.assertEqual(data, [[1, 2]])
 
-    def test_load_with_keyword(self):
+    def test_load_with_keyword_with_list(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
@@ -254,7 +309,7 @@ class TaskTest(unittest.TestCase):
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: MagicMock):
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
-        kwargs = dict()
+        kwargs: dict = dict()
         _DummyTask._add_configuration(kwargs, '_DummyTask')
         self.assertEqual(3, kwargs['param'])
         self.assertEqual(['c', 'd'], list(kwargs['list_param']))
@@ -269,7 +324,7 @@ class TaskTest(unittest.TestCase):
         class DummyTaskAddConfiguration(gokart.TaskOnKart):
             aa = luigi.IntParameter()
 
-        luigi.configuration.get_config().set(f'DummyTaskAddConfiguration', 'aa', '3')
+        luigi.configuration.get_config().set('DummyTaskAddConfiguration', 'aa', '3')
         mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 3)
 
@@ -356,18 +411,57 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(y_task.make_unique_id(), z_task.make_unique_id())
 
     def test_default_requires(self):
-        class _WithoutTaskInstanceParameter(gokart.TaskOnKart):
-            task_namespace = __name__
-
-        class _WithTaskInstanceParameter(gokart.TaskOnKart):
-            task_namespace = __name__
-            a_task = gokart.TaskInstanceParameter()
-
         without_task = _WithoutTaskInstanceParameter()
-        self.assertListEqual(without_task.requires(), [])
+        self.assertEqual(without_task.requires(), {})
 
+    def test_default_requires_with_instance_parameter(self):
+        without_task = _WithoutTaskInstanceParameter()
         with_task = _WithTaskInstanceParameter(a_task=without_task)
         self.assertEqual(with_task.requires()['a_task'], without_task)
+
+    def test_overrided_requires_returns_task(self):
+        task_overided_task = _RequiresTaskOverridedTaskWithInstanceParameter(upstream_task=_WithoutTaskInstanceParameter(int_param=2))
+        self.assertEqual(task_overided_task.requires()['output'], _WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(task_overided_task.requires()['upstream_task'], _WithoutTaskInstanceParameter(int_param=2))
+
+    def test_overrided_requires_returns_task_without_instance_parameter(self):
+        task_overided_task = _RequiresTaskOverridedTaskWithoutInstanceParameter()
+        self.assertEqual(task_overided_task.requires(), _WithoutTaskInstanceParameter(int_param=1))
+
+    def test_overrided_requires_returns_task_with_instance_parameter_included_in_requires(self):
+        task_overided_task = _RequiresTaskOverridedTaskWithInstanceParameter(upstream_task=_WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(task_overided_task.requires(), _WithoutTaskInstanceParameter(int_param=1))
+
+    def test_overrided_requires_returns_list(self):
+        task_overided_task = _RequiresListOverridedTaskWithInstanceParameter(upstream_task=_WithoutTaskInstanceParameter(int_param=2))
+        self.assertEqual(task_overided_task.requires()[0], _WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(task_overided_task.requires()[1], _WithoutTaskInstanceParameter(int_param=2))
+        self.assertEqual(len(task_overided_task.requires()), 2)
+
+    def test_overrided_requires_returns_list_without_task_instance_parameter(self):
+        task_overided_task = _RequiresListOverridedTaskWithoutInstanceParameter()
+        self.assertEqual(task_overided_task.requires()[0], _WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(len(task_overided_task.requires()), 1)
+
+    def test_overrided_requires_returns_list_with_instance_parameter_included_in_requires(self):
+        task_overided_task = _RequiresListOverridedTaskWithInstanceParameter(upstream_task=_WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(task_overided_task.requires()[0], _WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(len(task_overided_task.requires()), 1)
+
+    def test_overrided_requires_returns_dict(self):
+        task_overided_task = _RequiresDictOverridedTaskWithInstanceParameter(upstream_task=_WithoutTaskInstanceParameter(int_param=2))
+        self.assertEqual(task_overided_task.requires()['output_task'], _WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(task_overided_task.requires()['upstream_task'], _WithoutTaskInstanceParameter(int_param=2))
+
+    def test_overrided_requires_returns_dict_without_task_instance_parameter(self):
+        task_overided_task = _RequiresDictOverridedTaskWithoutInstanceParameter()
+        self.assertEqual(task_overided_task.requires()['output_task'], _WithoutTaskInstanceParameter(int_param=1))
+
+    def test_overrided_requires_returns_dict_with_instance_parameter_included_in_requires(self):
+        task_overided_task = _RequiresDictOverridedTaskWithInstanceParameter(upstream_task=_WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(task_overided_task.requires()['output_task'], _WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(task_overided_task.requires()['upstream_task'], _WithoutTaskInstanceParameter(int_param=1))
+        self.assertEqual(len(task_overided_task.requires()), 2)
 
     def test_repr(self):
         class _SubTask(gokart.TaskOnKart):
