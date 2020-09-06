@@ -11,13 +11,13 @@ class _SubDummyTask(gokart.TaskOnKart):
     task_namespace = __name__
     param = luigi.IntParameter()
 
+    def run(self):
+        self.dump('test')
+
 
 class _DummyTask(gokart.TaskOnKart):
     task_namespace = __name__
     sub_task = gokart.TaskInstanceParameter()
-
-    def requires(self):
-        return []
 
     def output(self):
         return self.make_target('test.txt')
