@@ -193,6 +193,23 @@ class ParquetFileProcessor(FileProcessor):
         obj.to_parquet(file.name, index=False, compression=self._compression)
 
 
+class FeatherFileProcessor(FileProcessor):
+    def __init__(self):
+        super(FeatherFileProcessor, self).__init__()
+
+    def format(self):
+        return None
+
+    def load(self, file):
+        return pd.read_feather(file.name)
+
+    def dump(self, obj, file):
+        assert isinstance(obj, (pd.DataFrame)), \
+            f'requires pd.DataFrame, but {type(obj)} is passed.'
+        # to_feather supports "bynary" file-like object, but file variable is text
+        obj.to_feather(file.name)
+
+
 def make_file_processor(file_path: str) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
@@ -203,7 +220,8 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.json': JsonFileProcessor(),
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
-        '.parquet': ParquetFileProcessor(compression='gzip')
+        '.parquet': ParquetFileProcessor(compression='gzip'),
+        '.feather': FeatherFileProcessor(),
     }
 
     extension = os.path.splitext(file_path)[1]
