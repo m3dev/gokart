@@ -4,8 +4,8 @@
 
 prepare following environmental variables:
 ```
-export SLACK_TOKEN=xoxb-your-token // token starts with "xoxb-" (bot token is preferable)
-export SLACK_CHANNEL=channel-name  // not "#channel-name", just "channel-name"
+export SLACK_TOKEN=xoxb-your-token    // should use token starts with "xoxb-" (bot token is preferable)
+export SLACK_CHANNEL=channel-name     // not "#channel-name", just "channel-name"
 ```
 
 A Slack bot token can obtain from [here](https://api.slack.com/apps).
