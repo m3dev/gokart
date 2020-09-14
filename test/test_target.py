@@ -91,6 +91,16 @@ class LocalTargetTest(unittest.TestCase):
 
         pd.testing.assert_frame_equal(loaded, obj)
 
+    def test_save_and_load_feather(self):
+        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        file_path = os.path.join(_get_temporary_directory(), 'test.feather')
+
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        loaded = target.load()
+
+        pd.testing.assert_frame_equal(loaded, obj)
+
     def test_last_modified_time(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
         file_path = os.path.join(_get_temporary_directory(), 'test.csv')
