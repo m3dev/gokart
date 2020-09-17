@@ -1,7 +1,8 @@
 # gokart
 
 [![Build Status](https://travis-ci.org/m3dev/gokart.svg)](https://travis-ci.org/m3dev/gokart)
-![https://pypi.org/project/gokart/](https://img.shields.io/pypi/v/gokart)
+[![](https://readthedocs.org/projects/gokart/badge/?version=latest)](https://gokart.readthedocs.io/en/latest/)
+[![](https://img.shields.io/pypi/v/gokart)](https://pypi.org/project/gokart/)
 ![](https://img.shields.io/pypi/l/gokart)
 
 A wrapper of the data pipeline library "luigi".
