@@ -20,7 +20,7 @@ Table of Contents
    task_on_kart
    task_information
    task_settings
-
+   slack_notification
 
 API References
 --------------
