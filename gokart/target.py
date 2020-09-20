@@ -16,7 +16,15 @@ from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.zip_client_util import make_zip_client
 from gokart.object_storage import ObjectStorage
 
+from gokart.redis_lock import RedisParams, make_redis_params, with_lock
+
 logger = getLogger(__name__)
+
+
+def _decorate_file_access_functions_with_redis_lock(self, redis_params):
+    self._load = with_lock(func=self._load, redis_params=redis_params)
+    self._dump = with_lock(func=self._dump, redis_params=redis_params)
+    self._remove = with_lock(func=self._remove, redis_params=redis_params)
 
 
 class TargetOnKart(luigi.Target):
@@ -64,9 +72,10 @@ class TargetOnKart(luigi.Target):
 
 
 class SingleFileTarget(TargetOnKart):
-    def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor):
+    def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor, redis_params: RedisParams) -> None:
         self._target = target
         self._processor = processor
+        _decorate_file_access_functions_with_redis_lock(self=self, redis_params=redis_params)
 
     def _exists(self) -> bool:
         return self._target.exists()
@@ -91,11 +100,13 @@ class SingleFileTarget(TargetOnKart):
 
 
 class ModelTarget(TargetOnKart):
-    def __init__(self, file_path: str, temporary_directory: str, load_function, save_function) -> None:
+    def __init__(self, file_path: str, temporary_directory: str, load_function, save_function, redis_params: RedisParams) -> None:
         self._zip_client = make_zip_client(file_path, temporary_directory)
         self._temporary_directory = temporary_directory
         self._save_function = save_function
         self._load_function = load_function
+
+        _decorate_file_access_functions_with_redis_lock(self=self, redis_params=redis_params)
 
     def _exists(self) -> bool:
         return self._zip_client.exists()
@@ -182,22 +193,30 @@ def _get_last_modification_time(path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
-def make_target(file_path: str, unique_id: Optional[str] = None, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+def make_target(file_path: str,
+                unique_id: Optional[str] = None,
+                processor: Optional[FileProcessor] = None,
+                redis_host: str = None,
+                redis_port: str = None) -> TargetOnKart:
+    redis_params = make_redis_params(file_path=file_path, unique_id=unique_id, redis_host=redis_host, redis_port=redis_port)
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path)
     file_system_target = _make_file_system_target(file_path, processor=processor)
-    return SingleFileTarget(target=file_system_target, processor=processor)
+    return SingleFileTarget(target=file_system_target, processor=processor, redis_params=redis_params)
 
 
 def make_model_target(file_path: str,
                       temporary_directory: str,
                       save_function,
                       load_function,
-                      unique_id: Optional[str] = None) -> TargetOnKart:
+                      unique_id: Optional[str] = None,
+                      redis_host: str = None,
+                      redis_port: str = None) -> TargetOnKart:
+    redis_params = make_redis_params(file_path=file_path, unique_id=unique_id, redis_host=redis_host, redis_port=redis_port)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
-    return ModelTarget(
-        file_path=file_path,
-        temporary_directory=temporary_directory,
-        save_function=save_function,
-        load_function=load_function)
+    return ModelTarget(file_path=file_path,
+                       temporary_directory=temporary_directory,
+                       save_function=save_function,
+                       load_function=load_function,
+                       redis_params=redis_params)
