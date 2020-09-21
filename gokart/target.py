@@ -22,9 +22,9 @@ logger = getLogger(__name__)
 
 
 def _decorate_file_access_functions_with_redis_lock(super, self, redis_params):
-    self._load = with_lock(func=super._load, redis_params=redis_params)
-    self._dump = with_lock(func=super._dump, redis_params=redis_params)
-    self._remove = with_lock(func=super._remove, redis_params=redis_params)
+    self.load = with_lock(func=super.load, redis_params=redis_params)
+    self.dump = with_lock(func=super.dump, redis_params=redis_params)
+    self.remove = with_lock(func=super.remove, redis_params=redis_params)
 
 
 class TargetOnKart(luigi.Target):
