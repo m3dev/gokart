@@ -21,10 +21,10 @@ from gokart.redis_lock import RedisParams, make_redis_params, with_lock
 logger = getLogger(__name__)
 
 
-def _decorate_file_access_functions_with_redis_lock(self, redis_params):
-    self._load = with_lock(func=self._load, redis_params=redis_params)
-    self._dump = with_lock(func=self._dump, redis_params=redis_params)
-    self._remove = with_lock(func=self._remove, redis_params=redis_params)
+def _decorate_file_access_functions_with_redis_lock(super, self, redis_params):
+    self._load = with_lock(func=super._load, redis_params=redis_params)
+    self._dump = with_lock(func=super._dump, redis_params=redis_params)
+    self._remove = with_lock(func=super._remove, redis_params=redis_params)
 
 
 class TargetOnKart(luigi.Target):
@@ -75,7 +75,7 @@ class SingleFileTarget(TargetOnKart):
     def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor, redis_params: RedisParams) -> None:
         self._target = target
         self._processor = processor
-        _decorate_file_access_functions_with_redis_lock(self=self, redis_params=redis_params)
+        _decorate_file_access_functions_with_redis_lock(super=super(SingleFileTarget, self), self=self, redis_params=redis_params)
 
     def _exists(self) -> bool:
         return self._target.exists()
@@ -106,7 +106,7 @@ class ModelTarget(TargetOnKart):
         self._save_function = save_function
         self._load_function = load_function
 
-        _decorate_file_access_functions_with_redis_lock(self=self, redis_params=redis_params)
+        _decorate_file_access_functions_with_redis_lock(super=super(ModelTarget, self), self=self, redis_params=redis_params)
 
     def _exists(self) -> bool:
         return self._zip_client.exists()
