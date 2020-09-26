@@ -41,7 +41,7 @@ class TargetOnKart(luigi.Target):
         return self._path()
 
     def _with_lock(self, func):
-        return with_lock(func=func, redis_param=self.redis_params)
+        return with_lock(func=func, redis_params=self._redis_params)
 
     @abstractmethod
     def _exists(self) -> bool:
@@ -72,6 +72,7 @@ class SingleFileTarget(TargetOnKart):
     def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor, redis_params: RedisParams) -> None:
         self._target = target
         self._processor = processor
+        self._redis_params = redis_params
 
     def _exists(self) -> bool:
         return self._target.exists()
@@ -101,6 +102,7 @@ class ModelTarget(TargetOnKart):
         self._temporary_directory = temporary_directory
         self._save_function = save_function
         self._load_function = load_function
+        self._redis_params = redis_params
 
     def _exists(self) -> bool:
         return self._zip_client.exists()

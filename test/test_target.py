@@ -7,6 +7,7 @@ import boto3
 import numpy as np
 import pandas as pd
 from gokart.file_processor import _ChunkedLargeFileReader
+from gokart.redis_lock import RedisParams
 from moto import mock_s3
 
 from gokart.target import make_target, make_model_target
