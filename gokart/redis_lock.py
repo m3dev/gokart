@@ -1,12 +1,11 @@
 import os
-from logging import INFO, getLogger
+from logging import getLogger
 from typing import NamedTuple
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logger = getLogger(__name__)
-logger.setLevel(INFO)
 
 
 class RedisParams(NamedTuple):
@@ -33,15 +32,15 @@ def with_lock(func, redis_params: RedisParams):
         scheduler.start()
 
         try:
-            logger.info(f'Task lock of {redis_params.redis_key} {func} locked.')
+            logger.debug(f'Task lock of {redis_params.redis_key} locked.')
             result = func(*args, **kwargs)
             redis_lock.release()
-            logger.info(f'Task lock of {redis_params.redis_key} {func} released.')
+            logger.debug(f'Task lock of {redis_params.redis_key} released.')
             scheduler.shutdown()
             return result
         except BaseException as e:
             redis_lock.release()
-            logger.info(f'Task lock of {redis_params.redis_key} {func} released with BaseException.')
+            logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
             scheduler.shutdown()
             raise e
 

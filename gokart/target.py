@@ -46,6 +46,9 @@ class TargetOnKart(luigi.Target):
     def path(self) -> str:
         return self._path()
 
+    def _with_lock(self, func):
+        return with_lock(func, self.redis_params)
+
     @abstractmethod
     def _exists(self) -> bool:
         pass
