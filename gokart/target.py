@@ -21,24 +21,18 @@ from gokart.redis_lock import RedisParams, make_redis_params, with_lock
 logger = getLogger(__name__)
 
 
-def _decorate_file_access_functions_with_redis_lock(super, self, redis_params):
-    self.load = with_lock(func=super.load, redis_params=redis_params)
-    self.dump = with_lock(func=super.dump, redis_params=redis_params)
-    self.remove = with_lock(func=super.remove, redis_params=redis_params)
-
-
 class TargetOnKart(luigi.Target):
     def exists(self) -> bool:
         return self._exists()
 
     def load(self) -> Any:
-        return self._load()
+        return self._with_lock(self._load)()
 
     def dump(self, obj) -> None:
-        self._dump(obj)
+        self._with_lock(self._dump)(obj)
 
     def remove(self) -> None:
-        self._remove()
+        return self._with_lock(self._remove)()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
@@ -47,7 +41,7 @@ class TargetOnKart(luigi.Target):
         return self._path()
 
     def _with_lock(self, func):
-        return with_lock(func, self.redis_params)
+        return with_lock(func=func, redis_param=self.redis_params)
 
     @abstractmethod
     def _exists(self) -> bool:
@@ -78,7 +72,6 @@ class SingleFileTarget(TargetOnKart):
     def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor, redis_params: RedisParams) -> None:
         self._target = target
         self._processor = processor
-        _decorate_file_access_functions_with_redis_lock(super=super(SingleFileTarget, self), self=self, redis_params=redis_params)
 
     def _exists(self) -> bool:
         return self._target.exists()
@@ -108,8 +101,6 @@ class ModelTarget(TargetOnKart):
         self._temporary_directory = temporary_directory
         self._save_function = save_function
         self._load_function = load_function
-
-        _decorate_file_access_functions_with_redis_lock(super=super(ModelTarget, self), self=self, redis_params=redis_params)
 
     def _exists(self) -> bool:
         return self._zip_client.exists()
