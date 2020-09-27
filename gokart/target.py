@@ -69,7 +69,12 @@ class TargetOnKart(luigi.Target):
 
 
 class SingleFileTarget(TargetOnKart):
-    def __init__(self, target: luigi.target.FileSystemTarget, processor: FileProcessor, redis_params: RedisParams) -> None:
+    def __init__(
+            self,
+            target: luigi.target.FileSystemTarget,
+            processor: FileProcessor,
+            redis_params: RedisParams = RedisParams(redis_host=None, redis_port=None, redis_key=None, should_redis_lock=False),
+    ) -> None:
         self._target = target
         self._processor = processor
         self._redis_params = redis_params
@@ -97,7 +102,14 @@ class SingleFileTarget(TargetOnKart):
 
 
 class ModelTarget(TargetOnKart):
-    def __init__(self, file_path: str, temporary_directory: str, load_function, save_function, redis_params: RedisParams) -> None:
+    def __init__(
+            self,
+            file_path: str,
+            temporary_directory: str,
+            load_function,
+            save_function,
+            redis_params: RedisParams = RedisParams(redis_host=None, redis_port=None, redis_key=None, should_redis_lock=False),
+    ) -> None:
         self._zip_client = make_zip_client(file_path, temporary_directory)
         self._temporary_directory = temporary_directory
         self._save_function = save_function

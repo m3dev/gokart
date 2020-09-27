@@ -1,6 +1,6 @@
 import os
 from logging import getLogger
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -9,9 +9,9 @@ logger = getLogger(__name__)
 
 
 class RedisParams(NamedTuple):
-    redis_host: str
-    redis_port: str
-    redis_key: str
+    redis_host: Optional[str]
+    redis_port: Optional[str]
+    redis_key: Optional[str]
     should_redis_lock: bool
 
 
