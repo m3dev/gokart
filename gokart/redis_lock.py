@@ -9,10 +9,10 @@ logger = getLogger(__name__)
 
 
 class RedisParams(NamedTuple):
-    redis_host: Optional[str]
-    redis_port: Optional[str]
-    redis_key: Optional[str]
-    should_redis_lock: bool
+    redis_host: Optional[str] = None
+    redis_port: Optional[str] = None
+    redis_key: Optional[str] = None
+    should_redis_lock: bool = False
 
 
 def with_lock(func, redis_params: RedisParams):

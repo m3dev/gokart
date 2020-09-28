@@ -41,10 +41,14 @@ class TargetOnKart(luigi.Target):
         return self._path()
 
     def _with_lock(self, func):
-        return with_lock(func=func, redis_params=self._redis_params)
+        return with_lock(func=func, redis_params=self._get_redis_params())
 
     @abstractmethod
     def _exists(self) -> bool:
+        pass
+
+    @abstractmethod
+    def _get_redis_params(self) -> RedisParams:
         pass
 
     @abstractmethod
@@ -73,7 +77,7 @@ class SingleFileTarget(TargetOnKart):
             self,
             target: luigi.target.FileSystemTarget,
             processor: FileProcessor,
-            redis_params: RedisParams = RedisParams(redis_host=None, redis_port=None, redis_key=None, should_redis_lock=False),
+            redis_params: RedisParams = RedisParams(),
     ) -> None:
         self._target = target
         self._processor = processor
@@ -81,6 +85,9 @@ class SingleFileTarget(TargetOnKart):
 
     def _exists(self) -> bool:
         return self._target.exists()
+
+    def _get_redis_params(self) -> RedisParams:
+        return self._redis_params
 
     def _load(self) -> Any:
         with self._target.open('r') as f:
@@ -108,7 +115,7 @@ class ModelTarget(TargetOnKart):
             temporary_directory: str,
             load_function,
             save_function,
-            redis_params: RedisParams = RedisParams(redis_host=None, redis_port=None, redis_key=None, should_redis_lock=False),
+            redis_params: RedisParams = RedisParams(),
     ) -> None:
         self._zip_client = make_zip_client(file_path, temporary_directory)
         self._temporary_directory = temporary_directory
@@ -118,6 +125,9 @@ class ModelTarget(TargetOnKart):
 
     def _exists(self) -> bool:
         return self._zip_client.exists()
+
+    def _get_redis_params(self) -> RedisParams:
+        return self._redis_params
 
     def _load(self) -> Any:
         self._zip_client.unpack_archive()
