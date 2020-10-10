@@ -9,10 +9,29 @@ logger = getLogger(__name__)
 
 
 class RedisParams(NamedTuple):
-    redis_host: Optional[str] = None
-    redis_port: Optional[str] = None
-    redis_key: Optional[str] = None
+    redis_host: str = None
+    redis_port: str = None
+    redis_key: str = None
     should_redis_lock: bool = False
+
+
+class RedisClient:
+    _instances: dict = {}
+
+    def __new__(cls, *args, **kwargs):
+        key = (args, tuple(sorted(kwargs.items())))
+        if cls not in cls._instances:
+            cls._instances[cls] = {}
+        if key not in cls._instances[cls]:
+            cls._instances[cls][key] = super(RedisClient, cls).__new__(cls)
+        return cls._instances[cls][key]
+
+    def __init__(self, host: str, port: str) -> None:
+        if not hasattr(self, '_redis_client'):
+            self._redis_client = redis.Redis(host=host, port=port)
+
+    def get_redis_client(self):
+        return self._redis_client
 
 
 def with_lock(func, redis_params: RedisParams):
@@ -20,12 +39,12 @@ def with_lock(func, redis_params: RedisParams):
         return func
 
     def wrapper(*args, **kwargs):
-        redis_client = redis.Redis(host=redis_params.redis_host, port=redis_params.redis_port)
-        redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=15, blocking=True, thread_local=False)
+        redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
+        redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=30, blocking=True, thread_local=False)
         redis_lock.acquire()
 
         def extend_lock():
-            redis_lock.extend(additional_time=15, replace_ttl=True)
+            redis_lock.extend(additional_time=30, replace_ttl=True)
 
         scheduler = BackgroundScheduler()
         scheduler.add_job(extend_lock, 'interval', seconds=10)
@@ -39,7 +58,6 @@ def with_lock(func, redis_params: RedisParams):
             scheduler.shutdown()
             return result
         except BaseException as e:
-            redis_lock.release()
             logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
             scheduler.shutdown()
             raise e

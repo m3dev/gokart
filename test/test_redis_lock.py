@@ -1,6 +1,27 @@
+import random
 import unittest
+from unittest.mock import patch
 
-from gokart.redis_lock import RedisParams, make_redis_key, make_redis_params
+from gokart.redis_lock import RedisClient, RedisParams, make_redis_key, make_redis_params
+
+
+class TestRedisClient(unittest.TestCase):
+    @staticmethod
+    def _get_randint(host, port):
+        return random.randint(0, 100000)
+
+    def test_redis_client_is_singleton(self):
+        with patch('redis.Redis') as mock:
+            mock.side_effect = self._get_randint
+
+            redis_client_0_0 = RedisClient(host='host_0', port='123')
+            redis_client_1 = RedisClient(host='host_1', port='123')
+            redis_client_0_1 = RedisClient(host='host_0', port='123')
+
+            self.assertNotEqual(redis_client_0_0, redis_client_1)
+            self.assertEqual(redis_client_0_0, redis_client_0_1)
+
+            self.assertEqual(redis_client_0_0.get_redis_client(), redis_client_0_1.get_redis_client())
 
 
 class TestMakeRedisKey(unittest.TestCase):
