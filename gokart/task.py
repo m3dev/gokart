@@ -274,7 +274,7 @@ class TaskOnKart(luigi.Task):
             return self.load(target)
         return dict()
 
-    @luigi.Task.event_handler(luigi.Event.START)
+    @luigi.Task.event_handler(luigi.Event.SUCCESS)
     def _set_random_seed(self):
         random_seed = self._get_random_seed()
         seed_methods = self.try_set_seed(self.fix_random_seed_methods, random_seed)
@@ -306,7 +306,7 @@ class TaskOnKart(luigi.Task):
             return self.fix_random_seed_value
         return int(self.make_unique_id(), 16) % (2**32 - 1)  # maximum numpy.random.seed
 
-    @luigi.Task.event_handler(luigi.Event.START)
+    @luigi.Task.event_handler(luigi.Event.SUCCESS)
     def _dump_task_params(self):
         self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
 
@@ -332,7 +332,7 @@ class TaskOnKart(luigi.Task):
     def _log_unique_id(self, exception):
         logger.info(f'FAILURE:\n    task name={type(self).__name__}\n    unique id={self.make_unique_id()}')
 
-    @luigi.Task.event_handler(luigi.Event.START)
+    @luigi.Task.event_handler(luigi.Event.SUCCESS)
     def _dump_module_versions(self):
         self.dump(self._get_module_versions(), self._get_module_versions_target())
 
