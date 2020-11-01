@@ -50,6 +50,7 @@ class TaskOnKart(luigi.Task):
 
     redis_host = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds')
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -133,7 +134,12 @@ class TaskOnKart(luigi.Task):
     def make_target(self, relative_file_path: str, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor, redis_host=self.redis_host, redis_port=self.redis_port)
+        return gokart.target.make_target(file_path=file_path,
+                                         unique_id=unique_id,
+                                         processor=processor,
+                                         redis_host=self.redis_host,
+                                         redis_port=self.redis_port,
+                                         redis_timeout=self.redis_timeout)
 
     def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
@@ -144,7 +150,8 @@ class TaskOnKart(luigi.Task):
                                                save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
                                                load_function=gokart.target.LargeDataFrameProcessor.load,
                                                redis_host=self.redis_host,
-                                               redis_port=self.redis_port)
+                                               redis_port=self.redis_port,
+                                               redis_timeout=self.redis_timeout)
 
     def make_model_target(self,
                           relative_file_path: str,
@@ -168,7 +175,8 @@ class TaskOnKart(luigi.Task):
                                                save_function=save_function,
                                                load_function=load_function,
                                                redis_host=self.redis_host,
-                                               redis_port=self.redis_port)
+                                               redis_port=self.redis_port,
+                                               redis_timeout=self.redis_timeout)
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):

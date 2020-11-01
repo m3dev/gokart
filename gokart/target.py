@@ -215,8 +215,9 @@ def make_target(file_path: str,
                 unique_id: Optional[str] = None,
                 processor: Optional[FileProcessor] = None,
                 redis_host: str = None,
-                redis_port: str = None) -> TargetOnKart:
-    redis_params = make_redis_params(file_path=file_path, unique_id=unique_id, redis_host=redis_host, redis_port=redis_port)
+                redis_port: str = None,
+                redis_timeout: int = 180) -> TargetOnKart:
+    redis_params = make_redis_params(file_path=file_path, unique_id=unique_id, redis_host=redis_host, redis_port=redis_port, redis_timeout=redis_timeout)
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path)
     file_system_target = _make_file_system_target(file_path, processor=processor)
@@ -229,8 +230,9 @@ def make_model_target(file_path: str,
                       load_function,
                       unique_id: Optional[str] = None,
                       redis_host: str = None,
-                      redis_port: str = None) -> TargetOnKart:
-    redis_params = make_redis_params(file_path=file_path, unique_id=unique_id, redis_host=redis_host, redis_port=redis_port)
+                      redis_port: str = None,
+                      redis_timeout: int = 180) -> TargetOnKart:
+    redis_params = make_redis_params(file_path=file_path, unique_id=unique_id, redis_host=redis_host, redis_port=redis_port, redis_timeout=redis_timeout)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
     return ModelTarget(file_path=file_path,

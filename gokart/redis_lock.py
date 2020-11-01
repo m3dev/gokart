@@ -1,18 +1,21 @@
 import os
 from logging import getLogger
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logger = getLogger(__name__)
 
+# TODO: Codes of this file should be implemented to gokart
+
 
 class RedisParams(NamedTuple):
     redis_host: str = None
     redis_port: str = None
+    redis_timeout: int = None
     redis_key: str = None
-    should_redis_lock: bool = False
+    should_redis_lock: bool = 180
 
 
 class RedisClient:
@@ -40,14 +43,14 @@ def with_lock(func, redis_params: RedisParams):
 
     def wrapper(*args, **kwargs):
         redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
-        redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=30, blocking=True, thread_local=False)
+        redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, blocking=True, thread_local=False)
         redis_lock.acquire()
 
         def extend_lock():
-            redis_lock.extend(additional_time=30, replace_ttl=True)
+            redis_lock.extend(additional_time=redis_params.redis_timeout, replace_ttl=True)
 
         scheduler = BackgroundScheduler()
-        scheduler.add_job(extend_lock, 'interval', seconds=10)
+        scheduler.add_job(extend_lock, 'interval', seconds=10, max_instances=999999999, misfire_grace_time=redis_params.redis_timeout, coalesce=False)
         scheduler.start()
 
         try:
@@ -70,8 +73,12 @@ def make_redis_key(file_path: str, unique_id: str):
     return f'{basename_without_ext}_{unique_id}'
 
 
-def make_redis_params(file_path: str, unique_id: str, redis_host: str, redis_port: str):
+def make_redis_params(file_path: str, unique_id: str, redis_host: str, redis_port: str, redis_timeout: int):
     redis_key = make_redis_key(file_path, unique_id)
     should_redis_lock = redis_host is not None and redis_port is not None
-    redis_params = RedisParams(redis_host=redis_host, redis_port=redis_port, redis_key=redis_key, should_redis_lock=should_redis_lock)
+    redis_params = RedisParams(redis_host=redis_host,
+                               redis_port=redis_port,
+                               redis_key=redis_key,
+                               should_redis_lock=should_redis_lock,
+                               redis_timeout=redis_timeout)
     return redis_params
