@@ -5,7 +5,6 @@ from os import path
 with open(path.join(path.abspath(path.dirname(__file__)), 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-
 install_requires = [
     'luigi',
     'boto3',
@@ -16,7 +15,9 @@ install_requires = [
     'google-auth',
     'pyarrow',
     'uritemplate',
-    'google-api-python-client'
+    'google-api-python-client',
+    'APScheduler',
+    'redis',
 ]
 
 setup(
