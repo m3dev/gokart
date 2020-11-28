@@ -48,6 +48,10 @@ class TaskOnKart(luigi.Task):
     fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False)
     fix_random_seed_value = luigi.IntParameter(default=None, description='Fix random seed method value.', significant=False)
 
+    redis_host = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds')
+
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
@@ -130,7 +134,12 @@ class TaskOnKart(luigi.Task):
     def make_target(self, relative_file_path: str, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor)
+        return gokart.target.make_target(file_path=file_path,
+                                         unique_id=unique_id,
+                                         processor=processor,
+                                         redis_host=self.redis_host,
+                                         redis_port=self.redis_port,
+                                         redis_timeout=self.redis_timeout)
 
     def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         file_path = os.path.join(self.workspace_directory, relative_file_path)
@@ -139,7 +148,10 @@ class TaskOnKart(luigi.Task):
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
                                                save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
-                                               load_function=gokart.target.LargeDataFrameProcessor.load)
+                                               load_function=gokart.target.LargeDataFrameProcessor.load,
+                                               redis_host=self.redis_host,
+                                               redis_port=self.redis_port,
+                                               redis_timeout=self.redis_timeout)
 
     def make_model_target(self,
                           relative_file_path: str,
@@ -150,9 +162,9 @@ class TaskOnKart(luigi.Task):
         Make target for models which generate multiple files in saving, e.g. gensim.Word2Vec, Tensorflow, and so on.
 
         :param relative_file_path: A file path to save.
-        :param save_function: A function to save a model. This takes a model object and a file path. 
+        :param save_function: A function to save a model. This takes a model object and a file path.
         :param load_function: A function to load a model. This takes a file path and returns a model object.
-        :param use_unique_id: If this is true, add an unique id to a file base name.  
+        :param use_unique_id: If this is true, add an unique id to a file base name.
         """
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
@@ -161,7 +173,10 @@ class TaskOnKart(luigi.Task):
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
                                                save_function=save_function,
-                                               load_function=load_function)
+                                               load_function=load_function,
+                                               redis_host=self.redis_host,
+                                               redis_port=self.redis_port,
+                                               redis_timeout=self.redis_timeout)
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
@@ -186,7 +201,9 @@ class TaskOnKart(luigi.Task):
 
         return _load(self._get_input_targets(target))
 
-    def load_data_frame(self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None,
+    def load_data_frame(self,
+                        target: Union[None, str, TargetOnKart] = None,
+                        required_columns: Optional[Set[str]] = None,
                         drop_columns: bool = False) -> pd.DataFrame:
         def _flatten_recursively(dfs):
             if isinstance(dfs, list):
