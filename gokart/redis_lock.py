@@ -11,11 +11,11 @@ logger = getLogger(__name__)
 
 
 class RedisParams(NamedTuple):
-    redis_host: str = None
-    redis_port: str = None
-    redis_timeout: int = None
-    redis_key: str = None
-    should_redis_lock: bool = 180
+    redis_host: str
+    redis_port: str
+    redis_timeout: int
+    redis_key: str
+    should_redis_lock: bool
 
 
 class RedisClient:
