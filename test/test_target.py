@@ -1,3 +1,4 @@
+import io
 import os
 import shutil
 import unittest
@@ -8,6 +9,7 @@ import numpy as np
 import pandas as pd
 from gokart.file_processor import _ChunkedLargeFileReader
 from gokart.redis_lock import RedisParams
+from matplotlib import pyplot
 from moto import mock_s3
 
 from gokart.target import make_target, make_model_target
@@ -61,6 +63,18 @@ class LocalTargetTest(unittest.TestCase):
         loaded = target.load()
 
         np.testing.assert_almost_equal(obj, loaded)
+
+    def test_save_and_load_figure(self):
+        figure_binary = io.BytesIO()
+        pd.DataFrame(dict(x=range(10), y=range(10))).plot.scatter(x='x', y='y')
+        pyplot.savefig(figure_binary)
+        figure_binary.seek(0)
+        file_path = os.path.join(_get_temporary_directory(), 'test.png')
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(figure_binary.read())
+
+        loaded = target.load()
+        self.assertGreater(len(loaded), 1000) # any binary
 
     def test_save_and_load_csv(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
