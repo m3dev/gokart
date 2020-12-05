@@ -153,6 +153,12 @@ class TaskTest(unittest.TestCase):
         self.assertIsInstance(default_target, SingleFileTarget)
         self.assertEqual(f'./resources/test/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.pkl', default_target._target.path)
 
+    def test_default_large_dataframe_target(self):
+        task = _DummyTaskD()
+        default_large_dataframe_target = task.make_large_data_frame_target()
+        self.assertIsInstance(default_large_dataframe_target, ModelTarget)
+        self.assertEqual(f'./resources/test/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.zip', default_large_dataframe_target._zip_client._file_path)
+
     def test_make_target(self):
         task = _DummyTask()
         target = task.make_target('test.txt')
