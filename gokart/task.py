@@ -361,7 +361,7 @@ class TaskOnKart(luigi.Task):
 
     def _get_module_versions(self) -> str:
         module_versions = []
-        for x in set([x.split('.')[0] for x in sys.modules.keys() if '_' not in x]):
+        for x in set([x.split('.')[0] for x in globals().keys() if '_' not in x]):
             module = import_module(x)
             if '__version__' in dir(module):
                 if type(module.__version__) == str:
