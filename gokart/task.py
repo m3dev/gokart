@@ -1,6 +1,7 @@
 import hashlib
 import os
 import sys
+import types
 from importlib import import_module
 from logging import getLogger
 from typing import Union, List, Any, Callable, Set, Optional, Dict
@@ -61,8 +62,7 @@ class TaskOnKart(luigi.Task):
         self._rerun_state = self.rerun
 
     def output(self):
-        file_path = self.__module__.replace(".", "/")
-        return self.make_target(os.path.join(file_path, f"{type(self).__name__}.pkl"))
+        return self.make_target()
 
     def requires(self):
         tasks = self.make_task_instance_dictionary()
@@ -131,8 +131,10 @@ class TaskOnKart(luigi.Task):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: str, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
-        file_path = os.path.join(self.workspace_directory, relative_file_path)
+    def make_target(self, relative_file_path: str = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+        formatted_relative_file_path = relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace(".", "/"),
+                                                                                                              f"{type(self).__name__}.pkl")
+        file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_target(file_path=file_path,
                                          unique_id=unique_id,
@@ -141,8 +143,10 @@ class TaskOnKart(luigi.Task):
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout)
 
-    def make_large_data_frame_target(self, relative_file_path: str, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
-        file_path = os.path.join(self.workspace_directory, relative_file_path)
+    def make_large_data_frame_target(self, relative_file_path: str = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
+        formatted_relative_file_path = relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace(".", "/"),
+                                                                                                              f"{type(self).__name__}.zip")
+        file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
@@ -358,7 +362,7 @@ class TaskOnKart(luigi.Task):
 
     def _get_module_versions(self) -> str:
         module_versions = []
-        for x in set([x.split('.')[0] for x in sys.modules.keys() if '_' not in x]):
+        for x in set([x.split('.')[0] for x in globals().keys() if isinstance(x, types.ModuleType) and '_' not in x]):
             module = import_module(x)
             if '__version__' in dir(module):
                 if type(module.__version__) == str:

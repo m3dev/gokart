@@ -20,6 +20,12 @@ install_requires = [
     'redis',
 ]
 
+tests_require = [
+    'moto==1.3.6',
+    'testfixtures==6.14.2',
+    'matplotlib'
+]
+
 setup(
     name='gokart',
     use_scm_version=True,
@@ -32,7 +38,7 @@ setup(
     license='MIT License',
     packages=find_packages(),
     install_requires=install_requires,
-    tests_require=['moto==1.3.6', 'testfixtures==6.14.2'],
+    tests_require=tests_require,
     test_suite='test',
     classifiers=['Programming Language :: Python :: 3.6'],
 )

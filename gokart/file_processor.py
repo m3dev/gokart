@@ -31,6 +31,27 @@ class FileProcessor(object):
         pass
 
 
+class BinaryFileProcessor(FileProcessor):
+    """
+    Pass bytes to this processor
+
+    ```
+    figure_binary = io.BytesIO()
+    plt.savefig(figure_binary)
+    figure_binary.seek(0)
+    BinaryFileProcessor().dump(figure_binary.read())
+    ```
+    """
+    def format(self):
+        return luigi.format.Nop
+
+    def load(self, file):
+        return file.read()
+
+    def dump(self, obj, file):
+        file.write(obj)
+
+
 class _ChunkedLargeFileReader(object):
     def __init__(self, file) -> None:
         self._file = file
@@ -222,6 +243,8 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip'),
         '.feather': FeatherFileProcessor(),
+        '.png': BinaryFileProcessor(),
+        '.jpg': BinaryFileProcessor(),
     }
 
     extension = os.path.splitext(file_path)[1]
