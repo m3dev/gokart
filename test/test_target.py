@@ -74,7 +74,7 @@ class LocalTargetTest(unittest.TestCase):
         target.dump(figure_binary.read())
 
         loaded = target.load()
-        self.assertGreater(len(loaded), 1000) # any binary
+        self.assertGreater(len(loaded), 1000)  # any binary
 
     def test_save_and_load_csv(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
