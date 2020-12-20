@@ -49,7 +49,7 @@ Above config file (``config.conf``) must be read  before ``gokart.run()`` as in 
         param: str = luigi.Parameter()
 
 
-This is useful when multiple tasks has same parameter, since parameter settings of ``MasterConfig`` will be inherited to all tasks decorated with ``@inherits_config_params(MasterConfig)``.
+This is useful when multiple tasks has the same parameter, since parameter settings of ``MasterConfig`` will be inherited to all tasks decorated with ``@inherits_config_params(MasterConfig)``.
 
 Note that parameters which exist in both ``MasterConfig`` and ``SomeTask`` will be inherited.
 In the above example, ``param2`` will not be available in ``SomeTask``, since ``SomeTask`` does not have ``param2`` parameter.
