@@ -18,7 +18,7 @@ Parameter of each task can be set as a command line parameter in ``--[task name]
     [sample.SomeTask]
     param = Hello
 
-Above config file (``config.conf``) must be read  before ``gokart.run()`` as in the following example. 
+Above config file (``config.conf``) must be read before ``gokart.run()`` as in the following example. 
 
 .. code:: python
 
