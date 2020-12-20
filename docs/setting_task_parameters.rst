@@ -3,7 +3,7 @@ Setting Task Parameters
 
 There are several ways to set task parameters.
 
-1. Set parameter at command line
+1. Set parameter from command line
 --------------------------------------
 .. code:: sh
 
