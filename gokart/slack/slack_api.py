@@ -35,7 +35,7 @@ class SlackAPI(object):
                     if channel['name'] == channel_name:
                         return channel['id']
             raise ChannelNotFoundError(f'Channel {channel_name} is not found in public channels.')
-        except (ChannelNotFoundError, SlackApiError) as e:
+        except Exception as e:
             logger.warning(f'The job will start without slack notification: {e}')
 
     def send_snippet(self, comment, title, content):
@@ -47,5 +47,5 @@ class SlackAPI(object):
             response = self._client.api_call('files.upload', data=request_body)
             if not response['ok']:
                 raise FileNotUploadedError(f'Error while uploading file. The error reason is "{response["error"]}".')
-        except (FileNotUploadedError, SlackApiError) as e:
+        except Exception as e:
             logger.warning(f'Failed to send slack notification: {e}')
