@@ -18,6 +18,7 @@ Table of Contents
    :maxdepth: 2
 
    task_on_kart
+   setting_task_parameters
    task_information
    task_settings
    slack_notification
