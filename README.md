@@ -98,12 +98,12 @@ def run(self):
 ```
 
 ## Advanced
-### Using task lock
+### Task cache collision lock
 #### Require
 You need to install (redis)[https://redis.io/topics/quickstart] for this advanced function.
 
 #### Description
-Task lock is implemented to prevent task cahche collision.
+Task lock is implemented to prevent task cache collision.
 (Originally, task cache collision may occur when same task with same parameters run at different applications parallelly.) 
 
 1. Set up a redis server at somewhere accessible from gokart/luigi jobs.
@@ -131,3 +131,20 @@ Task lock is implemented to prevent task cahche collision.
     redis_host=localhost
     redis_port=6379
     ```
+
+### Inherit task parameters with decorator
+#### Description
+```python
+class MasterConfig(luigi.Config):
+    param: str = luigi.Parameter()
+    param2: str = luigi.Parameter()
+
+@inherits_config_params(MasterConfig)
+class SomeTask(gokart.TaskOnKart):
+    param: str = luigi.Parameter()
+```
+
+This is useful when multiple tasks has same parameter, since parameter settings of `MasterConfig`  will be inherited to all tasks decorated with `@inherits_config_params(MasterConfig)`.
+
+Note that parameters which exists in both `MasterConfig` and `SomeTask` will be inherited.
+In the above example, `param2` will not be available in `SomeTask`, since `SomeTask` does not have `param2` parameter.
