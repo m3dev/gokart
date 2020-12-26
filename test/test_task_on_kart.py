@@ -387,7 +387,7 @@ class TaskTest(unittest.TestCase):
 
         task = _Task(int_param=1, task_param=_SubTask(), list_task_param=[_SubTask(), _SubTask()])
         sub_task_id = _SubTask().make_unique_id()
-        expected = f'{__name__}._Task(redis_timeout=180, int_param=1, task_param={__name__}._SubTask({sub_task_id}), ' \
+        expected = f'{__name__}._Task(int_param=1, task_param={__name__}._SubTask({sub_task_id}), ' \
             f'list_task_param=[{__name__}._SubTask({sub_task_id}), {__name__}._SubTask({sub_task_id})])'
         self.assertEqual(expected, str(task))
 
