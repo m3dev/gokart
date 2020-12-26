@@ -51,7 +51,7 @@ class TaskOnKart(luigi.Task):
 
     redis_host = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
-    redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds')
+    redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
