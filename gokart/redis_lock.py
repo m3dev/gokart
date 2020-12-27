@@ -62,6 +62,7 @@ def with_lock(func, redis_params: RedisParams):
             return result
         except BaseException as e:
             logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
+            redis_lock.release()
             scheduler.shutdown()
             raise e
 

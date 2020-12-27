@@ -2,6 +2,7 @@ import io
 import os
 import shutil
 import unittest
+from unittest.mock import patch
 from datetime import datetime
 
 import boto3
@@ -140,6 +141,24 @@ class LocalTargetTest(unittest.TestCase):
         loaded = target.load()
 
         pd.testing.assert_series_equal(loaded['column_name'], obj)
+
+    def test_dump_with_lock(self):
+        with patch('gokart.target.TargetOnKart.wrap_with_lock') as wrap_with_lock_mock:
+            obj = 1
+            file_path = os.path.join(_get_temporary_directory(), 'test.pkl')
+            target = make_target(file_path=file_path, unique_id=None)
+            target.dump(obj, lock_at_dump=True)
+
+            wrap_with_lock_mock.assert_called_once()
+
+    def test_dump_without_lock(self):
+        with patch('gokart.target.TargetOnKart.wrap_with_lock') as wrap_with_lock_mock:
+            obj = 1
+            file_path = os.path.join(_get_temporary_directory(), 'test.pkl')
+            target = make_target(file_path=file_path, unique_id=None)
+            target.dump(obj, lock_at_dump=False)
+
+            wrap_with_lock_mock.assert_not_called()
 
 
 class S3TargetTest(unittest.TestCase):

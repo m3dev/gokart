@@ -26,13 +26,16 @@ class TargetOnKart(luigi.Target):
         return self._exists()
 
     def load(self) -> Any:
-        return self._with_lock(self._load)()
+        return self.wrap_with_lock(self._load)()
 
-    def dump(self, obj) -> None:
-        self._with_lock(self._dump)(obj)
+    def dump(self, obj, lock_at_dump: bool = True) -> None:
+        if lock_at_dump:
+            self.wrap_with_lock(self._dump)(obj)
+        else:
+            self._dump(obj)
 
     def remove(self) -> None:
-        return self._with_lock(self._remove)()
+        return self.wrap_with_lock(self._remove)()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
@@ -40,7 +43,7 @@ class TargetOnKart(luigi.Target):
     def path(self) -> str:
         return self._path()
 
-    def _with_lock(self, func):
+    def wrap_with_lock(self, func):
         return with_lock(func=func, redis_params=self._get_redis_params())
 
     @abstractmethod
