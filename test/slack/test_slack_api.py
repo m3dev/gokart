@@ -4,8 +4,8 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 from testfixtures import LogCapture
-from slack.web.slack_response import SlackResponse
-from slack import WebClient
+from slack_sdk.web.slack_response import SlackResponse
+from slack_sdk import WebClient
 
 import gokart.slack
 
@@ -23,7 +23,7 @@ def _slack_response(token, data):
 
 
 class TestSlackAPI(unittest.TestCase):
-    @mock.patch('gokart.slack.slack_api.slack.WebClient')
+    @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_initialization_with_invalid_token(self, patch):
         def _conversations_list(params={}):
             return _slack_response(token='invalid', data={'ok': False, 'error': 'error_reason'})
@@ -37,7 +37,7 @@ class TestSlackAPI(unittest.TestCase):
             l.check(('gokart.slack.slack_api', 'WARNING',
                      'The job will start without slack notification: Channel test is not found in public channels.'))
 
-    @mock.patch('gokart.slack.slack_api.slack.WebClient')
+    @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_invalid_channel(self, patch):
         def _conversations_list(params={}):
             return _slack_response(token='valid',
@@ -63,7 +63,7 @@ class TestSlackAPI(unittest.TestCase):
                 'The job will start without slack notification: Channel invalid_channel is not found in public channels.'
             ))
 
-    @mock.patch('gokart.slack.slack_api.slack.WebClient')
+    @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_send_snippet_with_invalid_token(self, patch):
         def _conversations_list(params={}):
             return _slack_response(token='valid',
@@ -94,7 +94,7 @@ class TestSlackAPI(unittest.TestCase):
                 ('gokart.slack.slack_api', 'WARNING',
                  'Failed to send slack notification: Error while uploading file. The error reason is "error_reason".'))
 
-    @mock.patch('gokart.slack.slack_api.slack.WebClient')
+    @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_send(self, patch):
         def _conversations_list(params={}):
             return _slack_response(token='valid',
