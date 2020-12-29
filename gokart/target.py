@@ -43,8 +43,8 @@ class TargetOnKart(luigi.Target):
     def path(self) -> str:
         return self._path()
 
-    def wrap_with_lock(self, func):
-        return with_lock(func=func, redis_params=self._get_redis_params())
+    def wrap_with_lock(self, func, redis_fail: bool = False):
+        return with_lock(func=func, redis_params=self._get_redis_params(), redis_fail=redis_fail)
 
     @abstractmethod
     def _exists(self) -> bool:

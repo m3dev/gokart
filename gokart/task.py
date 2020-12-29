@@ -26,19 +26,19 @@ class RunWithLock:
     def __call__(self, instance):
         instance._lock_at_dump = False
         output_list = luigi.task.flatten(instance.output())
-        return _run_with_lock(partial(self._func, self=instance), output_list)
+        return _run_with_lock(partial(self._func, self=instance), output_list, instance.redis_fail)
 
     def __get__(self, instance, owner_class):
         return partial(self.__call__, instance)
 
 
-def _run_with_lock(func, output_list: list):
+def _run_with_lock(func, output_list: list, redis_fail: bool):
     if len(output_list) == 0:
         return func()
 
     output = output_list.pop()
-    wrapped_func = output.wrap_with_lock(func)
-    return _run_with_lock(func=wrapped_func, output_list=output_list)
+    wrapped_func = output.wrap_with_lock(func, redis_fail=redis_fail)
+    return _run_with_lock(func=wrapped_func, output_list=output_list, redis_fail=redis_fail)
 
 
 class TaskOnKart(luigi.Task):
@@ -75,6 +75,12 @@ class TaskOnKart(luigi.Task):
     redis_host = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
+    redis_fail: bool = gokart.parameter.ExplicitBoolParameter(
+        default=False, description='True for failing the task when the cache is locked, instead of waiting for the lock to be released', significant=False)
+
+    # TODO: redis_failを他のlockにも反映させる
+
+    # TODO: rerunの処理を自動で入れる
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')

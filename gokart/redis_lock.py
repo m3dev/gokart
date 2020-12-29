@@ -37,13 +37,14 @@ class RedisClient:
         return self._redis_client
 
 
-def with_lock(func, redis_params: RedisParams):
+def with_lock(func, redis_params: RedisParams, redis_fail: bool):
     if not redis_params.should_redis_lock:
         return func
 
     def wrapper(*args, **kwargs):
         redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
-        redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, blocking=True, thread_local=False)
+        blocking = not redis_fail
+        redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, blocking=blocking, thread_local=False)
         redis_lock.acquire()
 
         def extend_lock():
