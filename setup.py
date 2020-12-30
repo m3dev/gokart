@@ -9,7 +9,7 @@ install_requires = [
     'luigi',
     'boto3',
     'slack_sdk',
-    'pandas',
+    'pandas<1.2',
     'numpy',
     'tqdm',
     'google-auth',
