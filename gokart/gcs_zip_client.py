@@ -37,4 +37,3 @@ class GCSZipClient(ZipClient):
         if base_name.endswith('/'):
             base_name = base_name[:-1]
         return base_name + extension
-
