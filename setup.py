@@ -20,11 +20,7 @@ install_requires = [
     'redis',
 ]
 
-tests_require = [
-    'moto==1.3.6',
-    'testfixtures==6.14.2',
-    'matplotlib'
-]
+tests_require = ['moto==1.3.6', 'testfixtures==6.14.2', 'matplotlib']
 
 setup(
     name='gokart',
