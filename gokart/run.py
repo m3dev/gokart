@@ -81,8 +81,7 @@ def _try_get_slack_api(cmdline_args: List[str]) -> Optional[gokart.slack.SlackAP
     return None
 
 
-def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAPI],
-                                        event_aggregator: gokart.slack.EventAggregator, cmdline_args: List[str]):
+def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAPI], event_aggregator: gokart.slack.EventAggregator, cmdline_args: List[str]):
     if slack_api is None:
         # do nothing
         return
@@ -93,13 +92,7 @@ def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAP
         task_name = type(task).__name__
 
     comment = f'Report of {task_name}' + os.linesep + event_aggregator.get_summary()
-    content = os.linesep.join([
-        '===== Event List ====',
-        event_aggregator.get_event_list(),
-        os.linesep,
-        '==== Tree Info ====',
-        tree_info
-    ])
+    content = os.linesep.join(['===== Event List ====', event_aggregator.get_event_list(), os.linesep, '==== Tree Info ====', tree_info])
     slack_api.send_snippet(comment=comment, title='event.txt', content=content)
 
 

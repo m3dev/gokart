@@ -9,7 +9,7 @@ install_requires = [
     'luigi',
     'boto3',
     'slack_sdk',
-    'pandas',
+    'pandas<1.2',
     'numpy',
     'tqdm',
     'google-auth',
@@ -20,11 +20,7 @@ install_requires = [
     'redis',
 ]
 
-tests_require = [
-    'moto==1.3.6',
-    'testfixtures==6.14.2',
-    'matplotlib'
-]
+tests_require = ['moto==1.3.6', 'testfixtures==6.14.2', 'matplotlib']
 
 setup(
     name='gokart',

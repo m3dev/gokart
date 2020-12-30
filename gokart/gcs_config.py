@@ -13,17 +13,11 @@ from googleapiclient.discovery import _retrieve_discovery_doc
 
 
 class GCSConfig(luigi.Config):
-    gcs_credential_name: str = luigi.Parameter(
-        default='GCS_CREDENTIAL', description='GCS credential environment variable.')
-    discover_cache_local_path: str = luigi.Parameter(
-        default='DISCOVER_CACHE_LOCAL_PATH', description='The file path of discover api cache.')
+    gcs_credential_name: str = luigi.Parameter(default='GCS_CREDENTIAL', description='GCS credential environment variable.')
+    discover_cache_local_path: str = luigi.Parameter(default='DISCOVER_CACHE_LOCAL_PATH', description='The file path of discover api cache.')
 
-    _DISCOVERY_URI = (
-        "https://www.googleapis.com/discovery/v1/apis/" "{api}/{apiVersion}/rest"
-    )
-    _V2_DISCOVERY_URI = (
-        "https://{api}.googleapis.com/$discovery/rest?" "version={apiVersion}"
-    )
+    _DISCOVERY_URI = ("https://www.googleapis.com/discovery/v1/apis/" "{api}/{apiVersion}/rest")
+    _V2_DISCOVERY_URI = ("https://{api}.googleapis.com/$discovery/rest?" "version={apiVersion}")
     _client = None
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
@@ -42,9 +36,7 @@ class GCSConfig(luigi.Config):
                     for discovery_url in (self._DISCOVERY_URI, self._V2_DISCOVERY_URI):
                         requested_url = uritemplate.expand(discovery_url, params)
                         try:
-                            content = _retrieve_discovery_doc(
-                                requested_url, discovery_http, False
-                            )
+                            content = _retrieve_discovery_doc(requested_url, discovery_http, False)
                         except HttpError as e:
                             if e.resp.status == http_client.NOT_FOUND:
                                 continue

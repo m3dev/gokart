@@ -10,7 +10,6 @@ from gokart.pandas_type_config import PandasTypeError
 
 
 class _DummyPandasTypeConfig(PandasTypeConfig):
-
     @classmethod
     def type_dict(cls) -> Dict[str, Any]:
         return {'int_column': int, 'datetime_column': datetime, 'array_column': np.ndarray}
