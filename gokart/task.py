@@ -15,6 +15,7 @@ from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import TaskInstanceParameter, ListTaskInstanceParameter
 from gokart.target import TargetOnKart
+from gokart.redis_lock import make_redis_params
 
 logger = getLogger(__name__)
 
@@ -26,19 +27,19 @@ class RunWithLock:
     def __call__(self, instance):
         instance._lock_at_dump = False
         output_list = luigi.task.flatten(instance.output())
-        return _run_with_lock(partial(self._func, self=instance), output_list, instance.redis_fail)
+        return _run_with_lock(partial(self._func, self=instance), output_list)
 
     def __get__(self, instance, owner_class):
         return partial(self.__call__, instance)
 
 
-def _run_with_lock(func, output_list: list, redis_fail: bool):
+def _run_with_lock(func, output_list: list):
     if len(output_list) == 0:
         return func()
 
     output = output_list.pop()
-    wrapped_func = output.wrap_with_lock(func, redis_fail=redis_fail)
-    return _run_with_lock(func=wrapped_func, output_list=output_list, redis_fail=redis_fail)
+    wrapped_func = output.wrap_with_lock(func)
+    return _run_with_lock(func=wrapped_func, output_list=output_list)
 
 
 class TaskOnKart(luigi.Task):
@@ -76,11 +77,11 @@ class TaskOnKart(luigi.Task):
     redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
     redis_fail: bool = gokart.parameter.ExplicitBoolParameter(
-        default=False, description='True for failing the task when the cache is locked, instead of waiting for the lock to be released', significant=False)
+        default=False,
+        description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
+        significant=False)
 
-    # TODO: redis_failを他のlockにも反映させる
-
-    # TODO: rerunの処理を自動で入れる
+    # TODO: retryの処理を自動で入れる --> Task.retry_countを増やしてみる --> 評価のタイミングが問題?
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -166,26 +167,32 @@ class TaskOnKart(luigi.Task):
                                                                                                               f"{type(self).__name__}.pkl")
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        return gokart.target.make_target(file_path=file_path,
+
+        redis_params = make_redis_params(file_path=file_path,
                                          unique_id=unique_id,
-                                         processor=processor,
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
-                                         redis_timeout=self.redis_timeout)
+                                         redis_timeout=self.redis_timeout,
+                                         redis_fail=self.redis_fail)
+        return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor, redis_params=redis_params)
 
     def make_large_data_frame_target(self, relative_file_path: str = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace(".", "/"),
                                                                                                               f"{type(self).__name__}.zip")
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
+        redis_params = make_redis_params(file_path=file_path,
+                                         unique_id=unique_id,
+                                         redis_host=self.redis_host,
+                                         redis_port=self.redis_port,
+                                         redis_timeout=self.redis_timeout,
+                                         redis_fail=self.redis_fail)
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
                                                save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
                                                load_function=gokart.target.LargeDataFrameProcessor.load,
-                                               redis_host=self.redis_host,
-                                               redis_port=self.redis_port,
-                                               redis_timeout=self.redis_timeout)
+                                               redis_params=redis_params)
 
     def make_model_target(self,
                           relative_file_path: str,
@@ -203,14 +210,18 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
+        redis_params = make_redis_params(file_path=file_path,
+                                         unique_id=unique_id,
+                                         redis_host=self.redis_host,
+                                         redis_port=self.redis_port,
+                                         redis_timeout=self.redis_timeout,
+                                         redis_fail=self.redis_fail)
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
                                                save_function=save_function,
                                                load_function=load_function,
-                                               redis_host=self.redis_host,
-                                               redis_port=self.redis_port,
-                                               redis_timeout=self.redis_timeout)
+                                               redis_params=redis_params)
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
