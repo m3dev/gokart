@@ -81,8 +81,6 @@ class TaskOnKart(luigi.Task):
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
 
-    # TODO: retryの処理を自動で入れる --> Task.retry_countを増やしてみる --> 評価のタイミングが問題?
-
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
