@@ -24,7 +24,4 @@ class SampleTask(gokart.TaskOnKart):
 
 
 if __name__ == '__main__':
-    gokart.run([
-        'sample_pandas_type_check.SampleTask',
-        '--local-scheduler',
-        '--rerun'])
+    gokart.run(['sample_pandas_type_check.SampleTask', '--local-scheduler', '--rerun'])

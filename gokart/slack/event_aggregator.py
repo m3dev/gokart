@@ -22,10 +22,8 @@ class EventAggregator(object):
     def get_event_list(self) -> str:
         message = ''
         if self._event_queue[luigi.Event.FAILURE]:
-            failure_message = os.linesep.join([
-                f"Task: {failure['task']}; Exception: {failure['exception']}"
-                for failure in self._event_queue[luigi.Event.FAILURE]
-            ])
+            failure_message = os.linesep.join(
+                [f"Task: {failure['task']}; Exception: {failure['exception']}" for failure in self._event_queue[luigi.Event.FAILURE]])
             message += '---- Failure Tasks ----' + os.linesep + failure_message
         if self._event_queue[luigi.Event.SUCCESS]:
             success_message = os.linesep.join(self._event_queue[luigi.Event.SUCCESS])
