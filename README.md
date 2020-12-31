@@ -98,7 +98,7 @@ def run(self):
 ```
 
 ## Advanced
-### Task cache collision lock
+### 1. Task cache collision lock
 #### Require
 You need to install (redis)[https://redis.io/topics/quickstart] for this advanced function.
 
@@ -132,7 +132,55 @@ Task lock is implemented to prevent task cache collision.
     redis_port=6379
     ```
 
-### Inherit task parameters with decorator
+### 2. Using efficient task cache collision lock
+#### Description
+Above task lock will prevent cache collision. However, above setting check collisions only when the task access the cache file (i.e. `task.dump()`, `task.load()` and `task.remove()`). This will allow applications to run `run()` of same task at the same time, which is not efficent.
+
+Settings in this section will prevent running `run()` at the same time for efficiency.
+
+1. Set normal cache collision lock
+    Set cache collision lock following `1. Task cache collision lock`.
+
+2. Decorate `run()` with `@RunWithLock`
+    Decorate `run()` of yourt gokart tasks which you want to lock with `@RunWithLock`.
+
+    ```python
+    from gokart.task import RunWithLock
+    
+    @RunWithLock
+    class SomeTask(gokart.TaskOnKart):
+        def run(self):
+            ...
+    ```
+
+3. Set `redis_fail` parameter to true.
+    This parameter will affect the behavior when the task's lock is taken by other application.
+    By setting `redis_fail=True`, task will be failed if the task's lock is taken by other application. The locked task will be skipped and other independent task will be done first.
+    If `redis_fail=False`, it will wait until the lock of other application is released.
+
+    The parameter can be set by config file.
+
+    ```conf.ini
+    [TaskOnKart]
+    redis_host=localhost
+    redis_port=6379
+    redis_fail=true
+    ```
+
+4. Set retry parameters.
+    Set following parameters to retry when task failed.
+    Values of `retry_count` and `retry_delay`can be set to any value depends on your situation.
+    
+    ```
+    [scheduler]
+    retry_count=10000
+    retry_delay=10
+
+    [worker]
+    keep_alive=true
+    ```
+
+### 3. Inherit task parameters with decorator
 #### Description
 ```python
 class MasterConfig(luigi.Config):
