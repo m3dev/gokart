@@ -17,6 +17,10 @@ class RedisParams(NamedTuple):
     redis_fail: bool
 
 
+class TaskLockException(Exception):
+    pass
+
+
 class RedisClient:
     _instances: dict = {}
 
@@ -45,7 +49,7 @@ def with_lock(func, redis_params: RedisParams):
         blocking = not redis_params.redis_fail
         redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, thread_local=False)
         if not redis_lock.acquire(blocking=blocking):
-            raise Exception('Lock already taken by other task.')
+            raise TaskLockException('Lock already taken by other task.')
 
         def extend_lock():
             redis_lock.extend(additional_time=redis_params.redis_timeout, replace_ttl=True)

@@ -145,7 +145,7 @@ Settings in this section will prevent running `run()` at the same time for effic
     Decorate `run()` of yourt gokart tasks which you want to lock with `@RunWithLock`.
 
     ```python
-    from gokart.task import RunWithLock
+    from gokart.run_with_lock import RunWithLock
     
     @RunWithLock
     class SomeTask(gokart.TaskOnKart):

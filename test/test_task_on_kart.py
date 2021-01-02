@@ -11,7 +11,7 @@ import gokart
 from gokart.parameter import TaskInstanceParameter, ListTaskInstanceParameter
 from gokart.file_processor import XmlFileProcessor
 from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
-from gokart.task import RunWithLock
+from gokart.run_with_lock import RunWithLock
 
 
 class _DummyTask(gokart.TaskOnKart):

@@ -20,28 +20,6 @@ from gokart.redis_lock import make_redis_params
 logger = getLogger(__name__)
 
 
-class RunWithLock:
-    def __init__(self, func):
-        self._func = func
-
-    def __call__(self, instance):
-        instance._lock_at_dump = False
-        output_list = luigi.task.flatten(instance.output())
-        return _run_with_lock(partial(self._func, self=instance), output_list)
-
-    def __get__(self, instance, owner_class):
-        return partial(self.__call__, instance)
-
-
-def _run_with_lock(func, output_list: list):
-    if len(output_list) == 0:
-        return func()
-
-    output = output_list.pop()
-    wrapped_func = output.wrap_with_lock(func)
-    return _run_with_lock(func=wrapped_func, output_list=output_list)
-
-
 class TaskOnKart(luigi.Task):
     """
     This is a wrapper class of luigi.Task.
@@ -76,7 +54,7 @@ class TaskOnKart(luigi.Task):
     redis_host = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
-    redis_fail: bool = gokart.parameter.ExplicitBoolParameter(
+    redis_fail: bool = luigi.BoolParameter(
         default=False,
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
