@@ -100,7 +100,7 @@ def run(self):
 ## Advanced
 ### Task cache collision lock
 #### Require
-You need to install (redis)[https://redis.io/topics/quickstart] for this advanced function.
+You need to install [redis](https://redis.io/topics/quickstart) for this advanced function.
 
 #### Description
 Task lock is implemented to prevent task cache collision.
