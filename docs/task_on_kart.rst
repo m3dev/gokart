@@ -132,7 +132,7 @@ Advanced Features
 ---------------------
 
 TaskOnKart.load_generator
-----------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The :func:`~gokart.task.TaskOnKart.load_generator` method is used to load input data with generator.
 For instance, an example implementation could be as follows:
 
