@@ -267,12 +267,7 @@ class TaskTest(unittest.TestCase):
 
         # fail
         task = _DummyTask(fail_on_empty_dump=True)
-        self.assertRaises(
-            AssertionError,
-            lambda :         task.dump(pd.DataFrame())
-        )
-
-
+        self.assertRaises(AssertionError, lambda: task.dump(pd.DataFrame()))
 
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: MagicMock):
