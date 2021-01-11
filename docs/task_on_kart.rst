@@ -100,26 +100,6 @@ The `load` method loads individual task input by passing a key of an input dicti
         data_b = self.load('b')
 
 
-TaskOnKart.load_generator
-----------------
-The :func:`~gokart.task.TaskOnKart.load_generator` method is used to load input data with generator.
-For instance, an example implementation could be as follows:
-
-.. code:: python
-
-    def requires(self):
-        return TaskA(param='called by TaskB')
-
-    def run(self):
-        for data in self.load_generator():
-            any_process(data)
-
-
-Usage is the same as `TaskOnKart.generator`.
-`load_generator` reads the divided file into iterations.
-It's effective when can't read all data to memory, because `load_generator` doesn't load all files at once.
-
-
 TaskOnKart.dump
 ----------------
 The :func:`~gokart.task.TaskOnKart.dump` method is used to dump results of tasks.
@@ -147,3 +127,33 @@ In the case that a task has 2 or more output, it is possible to specify output t
         b_data = do_something_b(self.load())
         self.dump(a_data, 'a')
         self.dump(b_data, 'b')
+
+Advanced Features
+---------------------
+
+TaskOnKart.load_generator
+----------------
+The :func:`~gokart.task.TaskOnKart.load_generator` method is used to load input data with generator.
+For instance, an example implementation could be as follows:
+
+.. code:: python
+
+    def requires(self):
+        return TaskA(param='called by TaskB')
+
+    def run(self):
+        for data in self.load_generator():
+            any_process(data)
+
+
+Usage is the same as `TaskOnKart.generator`.
+`load_generator` reads the divided file into iterations.
+It's effective when can't read all data to memory, because `load_generator` doesn't load all files at once.
+
+
+TaskOnKart.fail_on_empty_dump
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Raise `AssertionError` on trying to dump empty dataframe.
+
+Empty caches sometimes hide bugs and let us spend much time debugging. This feature notice us some bugs (including wrong datasources) in the early stage.
