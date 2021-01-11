@@ -257,6 +257,23 @@ class TaskTest(unittest.TestCase):
         task.dump(1)
         target.dump.assert_called_once()
 
+    def test_fail_on_empty_dump(self):
+        # do not fail
+        task = _DummyTask(fail_on_empty_dump=False)
+        target = MagicMock(spec=TargetOnKart)
+        task.output = MagicMock(return_value=target)
+        task.dump(pd.DataFrame())
+        target.dump.assert_called_once()
+
+        # fail
+        task = _DummyTask(fail_on_empty_dump=True)
+        self.assertRaises(
+            AssertionError,
+            lambda :         task.dump(pd.DataFrame())
+        )
+
+
+
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: MagicMock):
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
