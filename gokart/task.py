@@ -247,7 +247,7 @@ class TaskOnKart(luigi.Task):
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
-        self._get_output_target(target).dump(obj)
+        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump)
 
     def make_unique_id(self):
         self.task_unique_id = self.task_unique_id or self._make_hash_id()
