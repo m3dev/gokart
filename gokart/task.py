@@ -58,6 +58,7 @@ class TaskOnKart(luigi.Task):
         default=False,
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
+    fail_on_empty_dump: bool = gokart.ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -244,7 +245,9 @@ class TaskOnKart(luigi.Task):
 
     def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
-        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump)
+        if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
+            assert not obj.empty
+        self._get_output_target(target).dump(obj)
 
     def make_unique_id(self):
         self.task_unique_id = self.task_unique_id or self._make_hash_id()
