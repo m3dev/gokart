@@ -14,7 +14,7 @@ class RedisParams(NamedTuple):
     redis_timeout: int
     redis_key: str
     should_redis_lock: bool
-    redis_fail: bool
+    redis_fail_on_collision: bool
 
 
 class TaskLockException(Exception):
@@ -46,7 +46,7 @@ def with_lock(func, redis_params: RedisParams):
 
     def wrapper(*args, **kwargs):
         redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
-        blocking = not redis_params.redis_fail
+        blocking = not redis_params.redis_fail_on_collision
         redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, thread_local=False)
         if not redis_lock.acquire(blocking=blocking):
             raise TaskLockException('Lock already taken by other task.')
@@ -79,7 +79,12 @@ def make_redis_key(file_path: str, unique_id: str):
     return f'{basename_without_ext}_{unique_id}'
 
 
-def make_redis_params(file_path: str, unique_id: str, redis_host: str = None, redis_port: str = None, redis_timeout: int = None, redis_fail: bool = False):
+def make_redis_params(file_path: str,
+                      unique_id: str,
+                      redis_host: str = None,
+                      redis_port: str = None,
+                      redis_timeout: int = None,
+                      redis_fail_on_collision: bool = False):
     redis_key = make_redis_key(file_path, unique_id)
     should_redis_lock = redis_host is not None and redis_port is not None
     redis_params = RedisParams(redis_host=redis_host,
@@ -87,5 +92,5 @@ def make_redis_params(file_path: str, unique_id: str, redis_host: str = None, re
                                redis_key=redis_key,
                                should_redis_lock=should_redis_lock,
                                redis_timeout=redis_timeout,
-                               redis_fail=redis_fail)
+                               redis_fail_on_collision=redis_fail_on_collision)
     return redis_params

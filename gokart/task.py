@@ -54,7 +54,7 @@ class TaskOnKart(luigi.Task):
     redis_host = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
-    redis_fail: bool = luigi.BoolParameter(
+    redis_fail_on_collision: bool = luigi.BoolParameter(
         default=False,
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
@@ -149,7 +149,7 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail=self.redis_fail)
+                                         redis_fail_on_collision=self.redis_fail_on_collision)
         return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor, redis_params=redis_params)
 
     def make_large_data_frame_target(self, relative_file_path: str = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
@@ -162,7 +162,7 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail=self.redis_fail)
+                                         redis_fail_on_collision=self.redis_fail_on_collision)
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
@@ -191,7 +191,7 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail=self.redis_fail)
+                                         redis_fail_on_collision=self.redis_fail_on_collision)
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
