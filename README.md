@@ -98,40 +98,6 @@ def run(self):
 ```
 
 ## Advanced
-### Task cache collision lock
-#### Require
-You need to install [redis](https://redis.io/topics/quickstart) for this advanced function.
-
-#### Description
-Task lock is implemented to prevent task cache collision.
-(Originally, task cache collision may occur when same task with same parameters run at different applications parallelly.) 
-
-1. Set up a redis server at somewhere accessible from gokart/luigi jobs.
-
-    Following will run redis at your localhost.
-
-    ```bash
-    $ redis-server
-    ```
-
-2. Set redis server hostname and port number as parameters to gokart.TaskOnKart().
-
-    You can set it by adding `--redis-host=[your-redis-localhost] --redis-port=[redis-port-number]` options to gokart python script.
-
-    e.g.
-    ```bash
-    
-    python main.py sample.SomeTask --local-scheduler --redis-host=localhost --redis-port=6379
-    ```
-
-    Alternatively, you may set parameters at config file.
-
-    ```conf.ini
-    [TaskOnKart]
-    redis_host=localhost
-    redis_port=6379
-    ```
-
 ### Inherit task parameters with decorator
 #### Description
 ```python
