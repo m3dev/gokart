@@ -109,3 +109,6 @@ venv.bak/
 # gokart
 resources
 examples/resources
+
+# poetry
+dist
