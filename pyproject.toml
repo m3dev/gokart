@@ -15,11 +15,11 @@ style = "pep440"
 pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 luigi = "*"
 boto3 = "*"
 slack-sdk = "^3.0"
-pandas = "*"
+pandas = "<1.2"
 numpy = "*"
 tqdm = "*"
 google-auth = "*"
