@@ -11,6 +11,7 @@ import gokart
 from gokart.parameter import TaskInstanceParameter, ListTaskInstanceParameter
 from gokart.file_processor import XmlFileProcessor
 from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
+from gokart.run_with_lock import RunWithLock
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -54,6 +55,32 @@ class _DummyTaskC(gokart.TaskOnKart):
 
 class _DummyTaskD(gokart.TaskOnKart):
     task_namespace = __name__
+
+
+class _DummyTaskWithLock(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    @RunWithLock
+    def run(self):
+        pass
+
+
+class _DummyTaskWithLockMultipleOutput(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    @RunWithLock
+    def run(self):
+        pass
+
+    def output(self):
+        return dict(dataA=self.make_target('fileA.pkl'), dataB=self.make_target('fileB.pkl'))
+
+
+class _DummyTaskWithoutLock(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def run(self):
+        pass
 
 
 class TaskTest(unittest.TestCase):
@@ -151,13 +178,13 @@ class TaskTest(unittest.TestCase):
         task = _DummyTaskD()
         default_target = task.output()
         self.assertIsInstance(default_target, SingleFileTarget)
-        self.assertEqual(f'./resources/test/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.pkl', default_target._target.path)
+        self.assertEqual(f'./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.pkl', default_target._target.path)
 
     def test_default_large_dataframe_target(self):
         task = _DummyTaskD()
         default_large_dataframe_target = task.make_large_data_frame_target()
         self.assertIsInstance(default_large_dataframe_target, ModelTarget)
-        self.assertEqual(f'./resources/test/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.zip', default_large_dataframe_target._zip_client._file_path)
+        self.assertEqual(f'./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.zip', default_large_dataframe_target._zip_client._file_path)
 
     def test_make_target(self):
         task = _DummyTask()
@@ -402,6 +429,39 @@ class TaskTest(unittest.TestCase):
         expected = f'{__name__}._Task(int_param=1, task_param={__name__}._SubTask({sub_task_id}), ' \
             f'list_task_param=[{__name__}._SubTask({sub_task_id}), {__name__}._SubTask({sub_task_id})])'
         self.assertEqual(expected, str(task))
+
+    def test_run_with_lock_decorator(self):
+        task = _DummyTaskWithLock()
+
+        def _wrap(func):
+            return func
+
+        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+            mock_obj.side_effect = _wrap
+            task.run()
+            mock_obj.assert_called_once()
+
+    def test_run_with_lock_decorator_multiple_output(self):
+        task = _DummyTaskWithLockMultipleOutput()
+
+        def _wrap(func):
+            return func
+
+        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+            mock_obj.side_effect = _wrap
+            task.run()
+            self.assertEqual(mock_obj.call_count, 2)
+
+    def test_run_without_lock_decorator(self):
+        task = _DummyTaskWithoutLock()
+
+        def _wrap(func):
+            return func
+
+        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+            mock_obj.side_effect = _wrap
+            task.run()
+            mock_obj.assert_not_called()
 
 
 if __name__ == '__main__':

@@ -105,3 +105,10 @@ venv.bak/
 
 # pycharm
 .idea
+
+# gokart
+resources
+examples/resources
+
+# poetry
+dist
