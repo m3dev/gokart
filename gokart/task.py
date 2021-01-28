@@ -51,8 +51,8 @@ class TaskOnKart(luigi.Task):
     fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False)
     fix_random_seed_value = luigi.IntParameter(default=None, description='Fix random seed method value.', significant=False)
 
-    redis_host = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
-    redis_port = luigi.Parameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_host = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_port = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
     redis_fail_on_collision: bool = luigi.BoolParameter(
         default=False,
