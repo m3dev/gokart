@@ -33,7 +33,7 @@ matplotlib = "*"
 [tool.poetry.dev-dependencies]
 tox = "*"
 moto = "*"
-testfixtures = "==6.14.2"
+testfixtures = "*"
 coverage = "*"
 
 [build-system]
