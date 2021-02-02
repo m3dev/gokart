@@ -1,7 +1,8 @@
 # gokart
 
-[![Build Status](https://travis-ci.org/m3dev/gokart.svg)](https://travis-ci.org/m3dev/gokart)
+[![Test](https://github.com/m3dev/gokart/workflows/Test/badge.svg)](https://github.com/m3dev/gokart/actions?query=workflow%3ATest)
 [![](https://readthedocs.org/projects/gokart/badge/?version=latest)](https://gokart.readthedocs.io/en/latest/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/gokart.svg)](https://pypi.org/project/gokart/)
 [![](https://img.shields.io/pypi/v/gokart)](https://pypi.org/project/gokart/)
 ![](https://img.shields.io/pypi/l/gokart)
 
@@ -30,17 +31,17 @@ class BasicTask(gokart.TaskOnKart):
     def run(self):
         # load data which TaskA output
         texts = self.load()
-        
+
         # do something with texts, and make results.
-        
+
         # save results with the file path {self.workspace_directory}/basic_task_{unique_id}.csv
         self.dump(results)
-``` 
+```
 
 ### Details of base functions
 #### Make Target with TaskOnKart
 `TaskOnKart.make_target` judge `Target` type by the passed path extension. The following extensions are supported.
- 
+
  - pkl
  - txt
  - csv
@@ -50,13 +51,13 @@ class BasicTask(gokart.TaskOnKart):
  - xml
 
 #### Make Target for models which generate multiple files in saving.
-`TaskOnKart.make_model_target` and `TaskOnKart.dump` are designed to save and load models like gensim.model.Word2vec. 
+`TaskOnKart.make_model_target` and `TaskOnKart.dump` are designed to save and load models like gensim.model.Word2vec.
 ```python
 class TrainWord2Vec(TaskOnKart):
     def output(self):
         # please use 'zip'.
         return self.make_model_target(
-            'model.zip', 
+            'model.zip',
             save_function=gensim.model.Word2Vec.save,
             load_function=gensim.model.Word2Vec.load)
 
@@ -73,7 +74,7 @@ def requires(self):
 
 def run(self):
     # pass a key in the dictionary `self.requires()`
-    data = self.load('data')  
+    data = self.load('data')
     model = self.load('model')
 ```
 
@@ -94,7 +95,7 @@ def requires(self):
     return LoadDataFrame()
 
 def run(self):
-    data = self.load_data_frame(required_columns={'id', 'name'})  
+    data = self.load_data_frame(required_columns={'id', 'name'})
 ```
 
 ## Advanced
