@@ -36,6 +36,9 @@ class BasicTask(gokart.TaskOnKart):
 
         # save results with the file path {self.workspace_directory}/basic_task_{unique_id}.csv
         self.dump(results)
+
+if __name__ == '__main__':
+    gokart.run(['BasicTask', '--local-scheduler'])
 ```
 
 ### Details of base functions
@@ -115,3 +118,17 @@ This is useful when multiple tasks has same parameter, since parameter settings 
 
 Note that parameters which exists in both `MasterConfig` and `SomeTask` will be inherited.
 In the above example, `param2` will not be available in `SomeTask`, since `SomeTask` does not have `param2` parameter.
+
+### Dump task information file
+### Description
+```python
+if __name__ == '__main__':
+    gokart.run(['BasicTask', '--local-scheduler'], dump_task_info_path='resources/task_info.csv')
+```
+
+The information of completed tasks can be dumped to file by setting `dump_task_info_path` parameter to `gokart.run()`.
+
+Task information is a pandas dataframe with columns of task name, unique_id, cache file path, parameters and processing time.
+The data will be dumped to a path/file name specified in `dump_task_info_path`.
+The file format will be decided by the file extension of `dump_task_info_path` (e.g. `***.pkl`-> pickle file, `***.csv` -> csv file).
+
