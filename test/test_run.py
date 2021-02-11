@@ -27,7 +27,7 @@ class RunTest(unittest.TestCase):
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
         os.environ.setdefault('test_param', 'test')
         with self.assertRaises(SystemExit) as exit_code:
-            gokart.run()
+            gokart.run(dump_task_info_path='resources/task_info.csv')
         self.assertEqual(exit_code.exception.code, 0)
 
     @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--log-level=CRITICAL', '--local-scheduler'])
