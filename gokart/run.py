@@ -1,4 +1,5 @@
 import configparser
+from gokart.target import make_target
 import os
 import sys
 from configparser import ConfigParser
@@ -13,6 +14,7 @@ from luigi.cmdline_parser import CmdlineParser
 import gokart
 import gokart.slack
 from gokart.object_storage import ObjectStorage
+from gokart.task_info import get_task_info
 
 logger = getLogger(__name__)
 
@@ -96,7 +98,14 @@ def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAP
     slack_api.send_snippet(comment=comment, title='event.txt', content=content)
 
 
-def run(cmdline_args=None, set_retcode=True):
+def _dump_task_info(cmdline_args: List[str], dump_task_info_path: Optional[str]):
+    if dump_task_info_path is not None:
+        result, unique_id = get_task_info(cmdline_args=cmdline_args)
+        task_info_target = make_target(file_path=dump_task_info_path, unique_id=unique_id, processor=None, redis_params=None)
+        task_info_target.dump(obj=result, lock_at_dump=False)
+
+
+def run(cmdline_args=None, set_retcode=True, dump_task_info_path: Optional[str] = None):
     cmdline_args = cmdline_args or sys.argv[1:]
 
     if set_retcode:
@@ -118,5 +127,6 @@ def run(cmdline_args=None, set_retcode=True):
         event_aggregator.set_handlers()
         luigi.cmdline.luigi_run(cmdline_args)
     except SystemExit as e:
+        _dump_task_info(cmdline_args=cmdline_args, dump_task_info_path=dump_task_info_path)
         _try_to_send_event_summary_to_slack(slack_api, event_aggregator, cmdline_args)
         sys.exit(e.code)
