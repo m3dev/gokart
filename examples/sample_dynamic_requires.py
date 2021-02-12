@@ -1,8 +1,7 @@
 import luigi
 
-import gokart
-
-'''
+import gokart  # noqa isort:skip
+"""
 Executes a Task using the results of a Task as dynamic parameters.
 
 For example, when we create a Task that generates model parameters.
@@ -14,11 +13,11 @@ We can using `gokart.TaskInstanceParameter` in gokart.
 Code: https://github.com/m3dev/gokart/blob/master/gokart/parameter.py
 
 luigi's dynamic-dependencies: https://luigi.readthedocs.io/en/stable/tasks.html#dynamic-dependencies
-'''
+"""
 
 
 class TaskA(gokart.TaskOnKart):
-    '''Generate parameters dynamically.'''
+    """Generate parameters dynamically."""
     sample = luigi.Parameter()
 
     def run(self):
