@@ -1,13 +1,13 @@
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import luigi
 import luigi.mock
 
 import gokart
-from gokart.slack import SlackConfig
 from gokart.run import _try_to_send_event_summary_to_slack
+from gokart.slack import SlackConfig
 
 
 class _DummyTask(gokart.TaskOnKart):

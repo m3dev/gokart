@@ -1,5 +1,6 @@
-import gokart
 import luigi
+
+import gokart
 
 
 class inherits_config_params:

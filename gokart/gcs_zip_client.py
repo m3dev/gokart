@@ -1,8 +1,8 @@
 import os
 import shutil
 
-from gokart.zip_client import ZipClient, _unzip_file
 from gokart.gcs_config import GCSConfig
+from gokart.zip_client import ZipClient, _unzip_file
 
 
 class GCSZipClient(ZipClient):

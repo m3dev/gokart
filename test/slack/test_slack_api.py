@@ -3,9 +3,9 @@ from logging import getLogger
 from unittest import mock
 from unittest.mock import MagicMock
 
-from testfixtures import LogCapture
-from slack_sdk.web.slack_response import SlackResponse
 from slack_sdk import WebClient
+from slack_sdk.web.slack_response import SlackResponse
+from testfixtures import LogCapture
 
 import gokart.slack
 

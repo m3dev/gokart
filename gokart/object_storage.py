@@ -1,13 +1,14 @@
 from datetime import datetime
 
 import luigi
-from luigi.format import Format, FileWrapper
-import luigi.contrib.s3
 import luigi.contrib.gcs
-from gokart.s3_config import S3Config
+import luigi.contrib.s3
+from luigi.format import FileWrapper, Format
+
 from gokart.gcs_config import GCSConfig
-from gokart.s3_zip_client import S3ZipClient
 from gokart.gcs_zip_client import GCSZipClient
+from gokart.s3_config import S3Config
+from gokart.s3_zip_client import S3ZipClient
 from gokart.zip_client import ZipClient
 
 object_storage_path_prefix = ['s3://', 'gs://']

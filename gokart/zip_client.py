@@ -2,7 +2,7 @@ import os
 import shutil
 import zipfile
 from abc import abstractmethod
-from typing import Union, IO
+from typing import IO, Union
 
 
 def _unzip_file(fp: Union[str, IO, os.PathLike], extract_dir: str) -> None:

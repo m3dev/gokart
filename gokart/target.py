@@ -13,10 +13,9 @@ import pandas as pd
 from tqdm import tqdm
 
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.zip_client_util import make_zip_client
 from gokart.object_storage import ObjectStorage
-
 from gokart.redis_lock import RedisParams, make_redis_params, with_lock
+from gokart.zip_client_util import make_zip_client
 
 logger = getLogger(__name__)
 

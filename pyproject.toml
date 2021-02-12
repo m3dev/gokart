@@ -35,6 +35,7 @@ tox = "*"
 moto = "*"
 testfixtures = "*"
 coverage = "*"
+isort = "^5.7.0"
 
 [build-system]
 requires = ["poetry"]

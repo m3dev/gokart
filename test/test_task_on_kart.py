@@ -8,10 +8,10 @@ import pandas as pd
 from luigi.util import inherits
 
 import gokart
-from gokart.parameter import TaskInstanceParameter, ListTaskInstanceParameter
 from gokart.file_processor import XmlFileProcessor
-from gokart.target import TargetOnKart, SingleFileTarget, ModelTarget
+from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.run_with_lock import RunWithLock
+from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
 
 
 class _DummyTask(gokart.TaskOnKart):

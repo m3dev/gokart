@@ -1,9 +1,9 @@
 import unittest
 from logging import getLogger
-from typing import Dict, Any
+from typing import Any, Dict
 
 import pandas as pd
-from luigi.mock import MockTarget, MockFileSystem
+from luigi.mock import MockFileSystem, MockTarget
 from mock import patch
 
 import gokart
