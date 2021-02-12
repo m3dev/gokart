@@ -1,5 +1,4 @@
 import configparser
-from gokart.target import make_target
 import os
 import sys
 from configparser import ConfigParser
@@ -14,6 +13,7 @@ from luigi.cmdline_parser import CmdlineParser
 import gokart
 import gokart.slack
 from gokart.object_storage import ObjectStorage
+from gokart.target import make_target
 from gokart.task_info import get_task_info
 
 logger = getLogger(__name__)
