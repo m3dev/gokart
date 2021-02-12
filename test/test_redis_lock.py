@@ -2,8 +2,7 @@ import random
 import unittest
 from unittest.mock import patch
 
-from gokart.redis_lock import (RedisClient, RedisParams, make_redis_key,
-                               make_redis_params)
+from gokart.redis_lock import RedisClient, RedisParams, make_redis_key, make_redis_params
 
 
 class TestRedisClient(unittest.TestCase):

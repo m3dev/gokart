@@ -37,6 +37,9 @@ testfixtures = "*"
 coverage = "*"
 isort = "^5.7.0"
 
+[tool.isort]
+line_length = 160
+
 [build-system]
 requires = ["poetry"]
 build-backend = "poetry.masonry.api"
