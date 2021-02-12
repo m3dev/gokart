@@ -37,8 +37,7 @@ class BasicTask(gokart.TaskOnKart):
         # save results with the file path {self.workspace_directory}/basic_task_{unique_id}.csv
         self.dump(results)
 
-if __name__ == '__main__':
-    gokart.run(['BasicTask', '--local-scheduler'])
+gokart.run(['BasicTask', '--local-scheduler'])
 ```
 
 ### Details of base functions
