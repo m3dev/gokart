@@ -14,5 +14,3 @@ jobs:
         with:
           python-version: 3.8
       - uses: jamescurtin/isort-action@master
-        with:
-            requirementsFiles: "requirements.txt requirements-test.txt"
