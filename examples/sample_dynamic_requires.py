@@ -1,8 +1,8 @@
 import luigi
 
-import gokart  # noqa isort:skip
-"""
-Executes a Task using the results of a Task as dynamic parameters.
+import gokart
+
+"""Executes a Task using the results of a Task as dynamic parameters.
 
 For example, when we create a Task that generates model parameters.
 TaskA: model parameter tuning task. output: optimized parameter dictionary.
