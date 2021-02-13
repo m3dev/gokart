@@ -1,7 +1,3 @@
-import luigi
-
-import gokart
-
 """Executes a Task using the results of a Task as dynamic parameters.
 
 For example, when we create a Task that generates model parameters.
@@ -14,6 +10,10 @@ Code: https://github.com/m3dev/gokart/blob/master/gokart/parameter.py
 
 luigi's dynamic-dependencies: https://luigi.readthedocs.io/en/stable/tasks.html#dynamic-dependencies
 """
+
+import luigi
+
+import gokart
 
 
 class TaskA(gokart.TaskOnKart):
