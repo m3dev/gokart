@@ -4,6 +4,7 @@ from logging import getLogger
 import luigi
 
 import gokart
+from gokart.task import TaskOnKart
 
 logger = getLogger(__name__)
 
@@ -38,7 +39,7 @@ def make_tree_info(task, indent='', last=True, details=False):
     return result
 
 
-class tree_info(gokart.TaskOnKart):
+class tree_info(TaskOnKart):
     mode = luigi.Parameter(default='', description='This must be in ["simple", "all"].')  # type: str
     output_path = luigi.Parameter(default='tree.txt', description='Output file path.')  # type: str
 

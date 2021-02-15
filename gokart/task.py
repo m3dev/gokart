@@ -13,7 +13,7 @@ import pandas as pd
 import gokart
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
-from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
+from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.redis_lock import make_redis_params
 from gokart.target import TargetOnKart
 
@@ -58,7 +58,7 @@ class TaskOnKart(luigi.Task):
         default=False,
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
-    fail_on_empty_dump: bool = gokart.ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
+    fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
