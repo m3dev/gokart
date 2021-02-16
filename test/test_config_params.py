@@ -1,9 +1,9 @@
 import unittest
 
-import gokart
 import luigi
 from luigi.cmdline_parser import CmdlineParser
 
+import gokart
 from gokart.config_params import inherits_config_params
 
 

@@ -1,11 +1,11 @@
-from functools import partial
 import hashlib
 import os
 import sys
 import types
+from functools import partial
 from importlib import import_module
 from logging import getLogger
-from typing import Union, List, Any, Callable, Set, Optional, Dict
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import luigi
 import pandas as pd
@@ -13,9 +13,9 @@ import pandas as pd
 import gokart
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
-from gokart.parameter import TaskInstanceParameter, ListTaskInstanceParameter
-from gokart.target import TargetOnKart
+from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.redis_lock import make_redis_params
+from gokart.target import TargetOnKart
 
 logger = getLogger(__name__)
 
@@ -58,7 +58,7 @@ class TaskOnKart(luigi.Task):
         default=False,
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
-    fail_on_empty_dump: bool = gokart.ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
+    fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')

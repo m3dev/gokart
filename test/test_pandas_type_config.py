@@ -1,5 +1,5 @@
-from datetime import datetime, date
-from typing import Dict, Any
+from datetime import date, datetime
+from typing import Any, Dict
 from unittest import TestCase
 
 import numpy as np

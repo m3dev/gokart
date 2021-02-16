@@ -1,7 +1,8 @@
-from typing import Dict, Any
+from typing import Any, Dict
+
+import pandas as pd
 
 import gokart
-import pandas as pd
 
 
 # Please define a class which inherits `gokart.PandasTypeConfig`.

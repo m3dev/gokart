@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from logging import getLogger
-from typing import Dict, Any
+from typing import Any, Dict
 
 import luigi
 import numpy as np

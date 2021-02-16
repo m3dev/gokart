@@ -1,6 +1,6 @@
-import unittest
 import os
-from unittest.mock import patch, MagicMock, mock_open
+import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 from gokart.gcs_config import GCSConfig
 

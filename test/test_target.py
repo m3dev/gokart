@@ -2,18 +2,18 @@ import io
 import os
 import shutil
 import unittest
-from unittest.mock import patch
 from datetime import datetime
+from unittest.mock import patch
 
 import boto3
 import numpy as np
 import pandas as pd
-from gokart.file_processor import _ChunkedLargeFileReader
-from gokart.redis_lock import RedisParams
 from matplotlib import pyplot
 from moto import mock_s3
 
-from gokart.target import make_target, make_model_target
+from gokart.file_processor import _ChunkedLargeFileReader
+from gokart.redis_lock import RedisParams
+from gokart.target import make_model_target, make_target
 
 
 def _get_temporary_directory():

@@ -1,8 +1,8 @@
 import os
 import shutil
 
-from gokart.zip_client import ZipClient, _unzip_file
 from gokart.s3_config import S3Config
+from gokart.zip_client import ZipClient, _unzip_file
 
 
 class S3ZipClient(ZipClient):

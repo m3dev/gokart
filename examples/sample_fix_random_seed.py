@@ -1,8 +1,9 @@
 import random
 
-import gokart
 import luigi
 import numpy as np
+
+import gokart
 
 
 class SampleTask(gokart.TaskOnKart):

@@ -3,7 +3,7 @@ import unittest
 import luigi
 
 import gokart
-from gokart import TaskOnKart, TaskInstanceParameter
+from gokart import TaskInstanceParameter, TaskOnKart
 
 
 class _DummySubTask(TaskOnKart):

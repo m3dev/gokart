@@ -1,15 +1,15 @@
+import fcntl
 import json
 import os
-import fcntl
-import uritemplate
+from http import client as http_client
 
 import luigi
 import luigi.contrib.gcs
-from http import client as http_client
-from googleapiclient.errors import HttpError
+import uritemplate
 from google.oauth2.service_account import Credentials
-from googleapiclient.http import build_http
 from googleapiclient.discovery import _retrieve_discovery_doc
+from googleapiclient.errors import HttpError
+from googleapiclient.http import build_http
 
 
 class GCSConfig(luigi.Config):
