@@ -20,10 +20,10 @@ class TaskInfo(NamedTuple):
     processing_time: str
 
 
-def make_tasks_info(task: gokart.TaskOnKart, cache: Set[str], with_logging: bool = False) -> List[TaskInfo]:
+def make_task_info(task: gokart.TaskOnKart, cache: Set[str], with_logging: bool = False) -> List[TaskInfo]:
     unique_id = task.make_unique_id()
     if with_logging:
-        logger.info(f'make_tasks_info: {task}[{unique_id}]')
+        logger.info(f'make_task_info: {task}[{unique_id}]')
     if unique_id in cache:
         return []
     cache.add(unique_id)
@@ -37,17 +37,17 @@ def make_tasks_info(task: gokart.TaskOnKart, cache: Set[str], with_logging: bool
     result = [task_info]
     children = luigi.task.flatten(task.requires())
     for child in children:
-        result += make_tasks_info(child, cache, with_logging=with_logging)
+        result += make_task_info(child, cache, with_logging=with_logging)
     return result
 
 
-def make_tasks_info_with_unique_id(task: gokart.TaskOnKart, cache: Set[str], with_logging: bool = False) -> Tuple[List[TaskInfo], str]:
-    result = make_tasks_info(task=task, cache=cache, with_logging=with_logging)
+def make_task_info_with_unique_id(task: gokart.TaskOnKart, cache: Set[str], with_logging: bool = False) -> Tuple[List[TaskInfo], str]:
+    result = make_task_info(task=task, cache=cache, with_logging=with_logging)
     unique_id = task.make_unique_id()
     return result, unique_id
 
 
 def get_task_info(cmdline_args: List[str], with_logging: bool = False) -> Tuple[pd.DataFrame, str]:
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        result, unique_id = make_tasks_info_with_unique_id(cp.get_task_obj(), set(), with_logging=with_logging)
+        result, unique_id = make_task_info_with_unique_id(cp.get_task_obj(), set(), with_logging=with_logging)
     return pd.DataFrame(result), unique_id
