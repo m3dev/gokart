@@ -329,7 +329,7 @@ class TaskTest(unittest.TestCase):
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(3, df.shape[0])
 
-    def test_load_dict_of_pandas(self):
+    def test_load_single_value_dict_of_dataframe(self):
         task = _DummyTask()
         task.load = MagicMock(return_value={'a': pd.DataFrame(dict(a=[1]))})
 
