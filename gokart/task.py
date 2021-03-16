@@ -230,6 +230,8 @@ class TaskOnKart(luigi.Task):
         def _flatten_recursively(dfs):
             if isinstance(dfs, list):
                 return pd.concat([_flatten_recursively(df) for df in dfs])
+            if isinstance(dfs, dict):
+                return pd.concat([_flatten_recursively(df) for df in dfs.values()])
             else:
                 return dfs
 

@@ -351,9 +351,6 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         task.load = MagicMock(return_value=pd.DataFrame(index=range(3)))
 
-        # connnot load index only frame with required_columns
-        self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={'a', 'c'}))
-
         df: pd.DataFrame = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
         self.assertTrue(df.empty)
