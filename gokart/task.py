@@ -233,7 +233,11 @@ class TaskOnKart(luigi.Task):
             else:
                 return dfs
 
-        data = _flatten_recursively(self.load(target=target))
+        dfs = self.load(target=target)
+        if isinstance(dfs, dict) and len(dfs) == 1:
+            dfs = list(dfs.values())[0]
+
+        data = _flatten_recursively(dfs)
 
         required_columns = required_columns or set()
         if data.empty and len(data.index) == 0 and len(required_columns - set(data.columns)) > 0:

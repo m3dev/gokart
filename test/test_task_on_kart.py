@@ -314,7 +314,7 @@ class TaskTest(unittest.TestCase):
         class DummyTaskAddConfiguration(gokart.TaskOnKart):
             aa = luigi.IntParameter()
 
-        luigi.configuration.get_config().set(f'DummyTaskAddConfiguration', 'aa', '3')
+        luigi.configuration.get_config().set('DummyTaskAddConfiguration', 'aa', '3')
         mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 3)
 
@@ -328,6 +328,14 @@ class TaskTest(unittest.TestCase):
         df = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(3, df.shape[0])
+
+    def test_load_single_value_dict_of_dataframe(self):
+        task = _DummyTask()
+        task.load = MagicMock(return_value={'a': pd.DataFrame(dict(a=[1]))})
+
+        df = task.load_data_frame()
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(1, df.shape[0])
 
     def test_load_data_frame_drop_columns(self):
         task = _DummyTask()
