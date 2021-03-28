@@ -10,12 +10,11 @@ from typing import Any, Optional
 import luigi
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
 from gokart.redis_lock import RedisParams, make_redis_params, with_lock
 from gokart.zip_client_util import make_zip_client
+from tqdm import tqdm
 
 logger = getLogger(__name__)
 
@@ -92,11 +91,11 @@ class SingleFileTarget(TargetOnKart):
         return self._redis_params
 
     def _load(self) -> Any:
-        with self._target.open('r') as f:
+        with self._target.open("r") as f:
             return self._processor.load(f)
 
     def _dump(self, obj) -> None:
-        with self._target.open('w') as f:
+        with self._target.open("w") as f:
             self._processor.dump(obj, f)
 
     def _remove(self) -> None:
@@ -155,10 +154,10 @@ class ModelTarget(TargetOnKart):
         return self._zip_client.path
 
     def _model_path(self):
-        return os.path.join(self._temporary_directory, 'model.pkl')
+        return os.path.join(self._temporary_directory, "model.pkl")
 
     def _load_function_path(self):
-        return os.path.join(self._temporary_directory, 'load_function.pkl')
+        return os.path.join(self._temporary_directory, "load_function.pkl")
 
     def _remove_temporary_directory(self):
         shutil.rmtree(self._temporary_directory)
@@ -176,19 +175,19 @@ class LargeDataFrameProcessor(object):
         os.makedirs(dir_path, exist_ok=True)
 
         if df.empty:
-            df.to_pickle(os.path.join(dir_path, 'data_0.pkl'))
+            df.to_pickle(os.path.join(dir_path, "data_0.pkl"))
             return
 
         split_size = df.values.nbytes // self.max_byte + 1
-        logger.info(f'saving a large pdDataFrame with split_size={split_size}')
+        logger.info(f"saving a large pdDataFrame with split_size={split_size}")
         for i, idx in tqdm(list(enumerate(np.array_split(range(df.shape[0]), split_size)))):
-            df.iloc[idx[0]:idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
+            df.iloc[idx[0] : idx[-1] + 1].to_pickle(os.path.join(dir_path, f"data_{i}.pkl"))
 
     @staticmethod
     def load(file_path: str) -> pd.DataFrame:
         dir_path = os.path.dirname(file_path)
 
-        return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, 'data_*.pkl'))])
+        return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, "data_*.pkl"))])
 
 
 def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
@@ -201,7 +200,7 @@ def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] 
 def _make_file_path(original_path: str, unique_id: Optional[str] = None) -> str:
     if unique_id is not None:
         [base, extension] = os.path.splitext(original_path)
-        return base + '_' + unique_id + extension
+        return base + "_" + unique_id + extension
     return original_path
 
 
@@ -209,7 +208,7 @@ def _get_last_modification_time(path: str) -> datetime:
     if ObjectStorage.if_object_storage_path(path):
         if ObjectStorage.exists(path):
             return ObjectStorage.get_timestamp(path)
-        raise FileNotFoundError(f'No such file or directory: {path}')
+        raise FileNotFoundError(f"No such file or directory: {path}")
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
@@ -221,17 +220,12 @@ def make_target(file_path: str, unique_id: Optional[str] = None, processor: Opti
     return SingleFileTarget(target=file_system_target, processor=processor, redis_params=_redis_params)
 
 
-def make_model_target(file_path: str,
-                      temporary_directory: str,
-                      save_function,
-                      load_function,
-                      unique_id: Optional[str] = None,
-                      redis_params: RedisParams = None) -> TargetOnKart:
+def make_model_target(
+    file_path: str, temporary_directory: str, save_function, load_function, unique_id: Optional[str] = None, redis_params: RedisParams = None
+) -> TargetOnKart:
     _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
-    return ModelTarget(file_path=file_path,
-                       temporary_directory=temporary_directory,
-                       save_function=save_function,
-                       load_function=load_function,
-                       redis_params=_redis_params)
+    return ModelTarget(
+        file_path=file_path, temporary_directory=temporary_directory, save_function=save_function, load_function=load_function, redis_params=_redis_params
+    )

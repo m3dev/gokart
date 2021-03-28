@@ -1,8 +1,7 @@
 import unittest
 
-import luigi
-
 import gokart
+import luigi
 from gokart import TaskOnKart
 
 
@@ -29,5 +28,5 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
         self.assertEqual(parsed[1].task_id, original[1].task_id)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

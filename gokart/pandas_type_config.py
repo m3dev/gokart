@@ -37,13 +37,13 @@ class PandasTypeConfig(luigi.Config):
 
 class PandasTypeConfigMap(luigi.Config):
     """To initialize this class only once, this inherits luigi.Config."""
+
     def __init__(self, *args, **kwargs) -> None:
         super(PandasTypeConfigMap, self).__init__(*args, **kwargs)
         task_names = Register.task_names()
         task_classes = [Register.get_task_cls(task_name) for task_name in task_names]
         self._map = {
-            task_class.task_namespace: task_class
-            for task_class in task_classes if issubclass(task_class, PandasTypeConfig) and task_class != PandasTypeConfig
+            task_class.task_namespace: task_class for task_class in task_classes if issubclass(task_class, PandasTypeConfig) and task_class != PandasTypeConfig
         }
 
     def check(self, obj, task_namespace: str):

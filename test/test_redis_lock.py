@@ -11,12 +11,12 @@ class TestRedisClient(unittest.TestCase):
         return random.randint(0, 100000)
 
     def test_redis_client_is_singleton(self):
-        with patch('redis.Redis') as mock:
+        with patch("redis.Redis") as mock:
             mock.side_effect = self._get_randint
 
-            redis_client_0_0 = RedisClient(host='host_0', port='123')
-            redis_client_1 = RedisClient(host='host_1', port='123')
-            redis_client_0_1 = RedisClient(host='host_0', port='123')
+            redis_client_0_0 = RedisClient(host="host_0", port="123")
+            redis_client_1 = RedisClient(host="host_1", port="123")
+            redis_client_0_1 = RedisClient(host="host_0", port="123")
 
             self.assertNotEqual(redis_client_0_0, redis_client_1)
             self.assertEqual(redis_client_0_0, redis_client_0_1)
@@ -26,37 +26,25 @@ class TestRedisClient(unittest.TestCase):
 
 class TestMakeRedisKey(unittest.TestCase):
     def test_make_redis_key(self):
-        result = make_redis_key(file_path='gs://test_ll/dir/fname.pkl', unique_id='12345')
-        self.assertEqual(result, 'fname_12345')
+        result = make_redis_key(file_path="gs://test_ll/dir/fname.pkl", unique_id="12345")
+        self.assertEqual(result, "fname_12345")
 
 
 class TestMakeRedisParams(unittest.TestCase):
     def test_make_redis_params_with_valid_host(self):
-        result = make_redis_params(file_path='gs://aaa.pkl',
-                                   unique_id='123',
-                                   redis_host='0.0.0.0',
-                                   redis_port='12345',
-                                   redis_timeout=180,
-                                   redis_fail_on_collision=False)
-        expected = RedisParams(redis_host='0.0.0.0',
-                               redis_port='12345',
-                               redis_key='aaa_123',
-                               should_redis_lock=True,
-                               redis_timeout=180,
-                               redis_fail_on_collision=False)
+        result = make_redis_params(
+            file_path="gs://aaa.pkl", unique_id="123", redis_host="0.0.0.0", redis_port="12345", redis_timeout=180, redis_fail_on_collision=False
+        )
+        expected = RedisParams(
+            redis_host="0.0.0.0", redis_port="12345", redis_key="aaa_123", should_redis_lock=True, redis_timeout=180, redis_fail_on_collision=False
+        )
         self.assertEqual(result, expected)
 
     def test_make_redis_params_with_no_host(self):
-        result = make_redis_params(file_path='gs://aaa.pkl',
-                                   unique_id='123',
-                                   redis_host=None,
-                                   redis_port='12345',
-                                   redis_timeout=180,
-                                   redis_fail_on_collision=False)
-        expected = RedisParams(redis_host=None,
-                               redis_port='12345',
-                               redis_key='aaa_123',
-                               should_redis_lock=False,
-                               redis_timeout=180,
-                               redis_fail_on_collision=False)
+        result = make_redis_params(
+            file_path="gs://aaa.pkl", unique_id="123", redis_host=None, redis_port="12345", redis_timeout=180, redis_fail_on_collision=False
+        )
+        expected = RedisParams(
+            redis_host=None, redis_port="12345", redis_key="aaa_123", should_redis_lock=False, redis_timeout=180, redis_fail_on_collision=False
+        )
         self.assertEqual(result, expected)

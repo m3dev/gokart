@@ -34,6 +34,6 @@ class S3ZipClient(ZipClient):
     def _temporary_file_path(self):
         extension = os.path.splitext(self._file_path)[1]
         base_name = self._temporary_directory
-        if base_name.endswith('/'):
+        if base_name.endswith("/"):
             base_name = base_name[:-1]
         return base_name + extension

@@ -13,11 +13,11 @@ from googleapiclient.http import build_http
 
 
 class GCSConfig(luigi.Config):
-    gcs_credential_name: str = luigi.Parameter(default='GCS_CREDENTIAL', description='GCS credential environment variable.')
-    discover_cache_local_path: str = luigi.Parameter(default='DISCOVER_CACHE_LOCAL_PATH', description='The file path of discover api cache.')
+    gcs_credential_name: str = luigi.Parameter(default="GCS_CREDENTIAL", description="GCS credential environment variable.")
+    discover_cache_local_path: str = luigi.Parameter(default="DISCOVER_CACHE_LOCAL_PATH", description="The file path of discover api cache.")
 
-    _DISCOVERY_URI = ("https://www.googleapis.com/discovery/v1/apis/" "{api}/{apiVersion}/rest")
-    _V2_DISCOVERY_URI = ("https://{api}.googleapis.com/$discovery/rest?" "version={apiVersion}")
+    _DISCOVERY_URI = "https://www.googleapis.com/discovery/v1/apis/" "{api}/{apiVersion}/rest"
+    _V2_DISCOVERY_URI = "https://{api}.googleapis.com/$discovery/rest?" "version={apiVersion}"
     _client = None
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:

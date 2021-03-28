@@ -1,13 +1,12 @@
 import unittest
 from unittest.mock import patch
 
+import gokart
+import gokart.info
 import luigi
 import luigi.mock
 from luigi.mock import MockFileSystem, MockTarget
 from luigi.task_register import Register
-
-import gokart
-import gokart.info
 
 
 class _SubTask(gokart.TaskOnKart):
@@ -15,10 +14,10 @@ class _SubTask(gokart.TaskOnKart):
     param = luigi.IntParameter()
 
     def output(self):
-        return self.make_target('sub_task.txt')
+        return self.make_target("sub_task.txt")
 
     def run(self):
-        self.dump(f'task uid = {self.make_unique_id()}')
+        self.dump(f"task uid = {self.make_unique_id()}")
 
 
 class _Task(gokart.TaskOnKart):
@@ -30,17 +29,17 @@ class _Task(gokart.TaskOnKart):
         return self.sub
 
     def output(self):
-        return self.make_target('task.txt')
+        return self.make_target("task.txt")
 
     def run(self):
-        self.dump(f'task uid = {self.make_unique_id()}')
+        self.dump(f"task uid = {self.make_unique_id()}")
 
 
 class TestInfo(unittest.TestCase):
     def setUp(self) -> None:
         MockFileSystem().clear()
 
-    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    @patch("luigi.LocalTarget", new=lambda path, **kwargs: MockTarget(path, **kwargs))
     def test_make_tree_info_pending(self):
         task = _Task(param=1, sub=_SubTask(param=2))
 
@@ -51,7 +50,7 @@ class TestInfo(unittest.TestCase):
    └─-\(PENDING\) _SubTask\[[a-z0-9]*\]"""
         self.assertRegex(tree, expected)
 
-    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    @patch("luigi.LocalTarget", new=lambda path, **kwargs: MockTarget(path, **kwargs))
     def test_make_tree_info_complete(self):
         task = _Task(param=1, sub=_SubTask(param=2))
 
@@ -64,5 +63,5 @@ class TestInfo(unittest.TestCase):
         self.assertRegex(tree, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

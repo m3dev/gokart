@@ -1,13 +1,12 @@
 import random
 
+import gokart
 import luigi
 import numpy as np
 
-import gokart
-
 
 class SampleTask(gokart.TaskOnKart):
-    task_namespace = 'sample_fix_random_seed'
+    task_namespace = "sample_fix_random_seed"
     sample_param = luigi.Parameter()
 
     def run(self):
@@ -15,13 +14,14 @@ class SampleTask(gokart.TaskOnKart):
         y = [np.random.randint(0, 100) for _ in range(0, 10)]
         try:
             import torch
+
             z = [torch.randn(1).tolist()[0] for _ in range(0, 5)]
         except ImportError:
             z = []
-        self.dump({'random': x, 'numpy': y, 'torch': z})
+        self.dump({"random": x, "numpy": y, "torch": z})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # //---------------------------------------------------------------------
     # Please set fix_random_seed_methods parameter.
     # Change seed if you change sample_param.
@@ -37,7 +37,13 @@ if __name__ == '__main__':
     #   'numpy': [79, 86, 5, 22, 79, 98, 56, 40, 81, 37], 'torch': []}
     #
     # //---------------------------------------------------------------------
-    gokart.run([
-        'sample_fix_random_seed.SampleTask', '--local-scheduler', '--rerun', '--sample-param=a',
-        '--fix-random-seed-methods=["random.seed","numpy.random.seed","torch.random.manual_seed"]', '--fix-random-seed-value=57'
-    ])
+    gokart.run(
+        [
+            "sample_fix_random_seed.SampleTask",
+            "--local-scheduler",
+            "--rerun",
+            "--sample-param=a",
+            '--fix-random-seed-methods=["random.seed","numpy.random.seed","torch.random.manual_seed"]',
+            "--fix-random-seed-value=57",
+        ]
+    )

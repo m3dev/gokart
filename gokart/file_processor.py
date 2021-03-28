@@ -10,7 +10,6 @@ import luigi.format
 import numpy as np
 import pandas as pd
 import pandas.errors
-
 from gokart.object_storage import ObjectStorage
 
 logger = getLogger(__name__)
@@ -41,6 +40,7 @@ class BinaryFileProcessor(FileProcessor):
     BinaryFileProcessor().dump(figure_binary.read())
     ```
     """
+
     def format(self):
         return luigi.format.Nop
 
@@ -60,15 +60,15 @@ class _ChunkedLargeFileReader(object):
 
     def read(self, n):
         if n >= (1 << 31):
-            logger.info(f'reading a large file with total_bytes={n}.')
+            logger.info(f"reading a large file with total_bytes={n}.")
             buffer = bytearray(n)
             idx = 0
             while idx < n:
                 batch_size = min(n - idx, 1 << 31 - 1)
-                logger.info(f'reading bytes [{idx}, {idx + batch_size})...')
-                buffer[idx:idx + batch_size] = self._file.read(batch_size)
+                logger.info(f"reading bytes [{idx}, {idx + batch_size})...")
+                buffer[idx : idx + batch_size] = self._file.read(batch_size)
                 idx += batch_size
-            logger.info('done.')
+            logger.info("done.")
             return buffer
         return self._file.read(n)
 
@@ -90,12 +90,12 @@ class PickleFileProcessor(FileProcessor):
         n = len(buffer)
         idx = 0
         while idx < n:
-            logger.info(f'writing a file with total_bytes={n}...')
+            logger.info(f"writing a file with total_bytes={n}...")
             batch_size = min(n - idx, 1 << 31 - 1)
-            logger.info(f'writing bytes [{idx}, {idx + batch_size})')
-            file.write(buffer[idx:idx + batch_size])
+            logger.info(f"writing bytes [{idx}, {idx + batch_size})")
+            file.write(buffer[idx : idx + batch_size])
             idx += batch_size
-        logger.info('done')
+        logger.info("done")
 
 
 class TextFileProcessor(FileProcessor):
@@ -108,13 +108,13 @@ class TextFileProcessor(FileProcessor):
     def dump(self, obj, file):
         if isinstance(obj, list):
             for x in obj:
-                file.write(str(x) + '\n')
+                file.write(str(x) + "\n")
         else:
             file.write(str(obj))
 
 
 class CsvFileProcessor(FileProcessor):
-    def __init__(self, sep=','):
+    def __init__(self, sep=","):
         self._sep = sep
         super(CsvFileProcessor, self).__init__()
 
@@ -128,8 +128,7 @@ class CsvFileProcessor(FileProcessor):
             return pd.DataFrame()
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame, pd.Series)), \
-            f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
+        assert isinstance(obj, (pd.DataFrame, pd.Series)), f"requires pd.DataFrame or pd.Series, but {type(obj)} is passed."
         obj.to_csv(file, index=False, sep=self._sep, header=True)
 
 
@@ -143,7 +142,7 @@ class GzipFileProcessor(FileProcessor):
     def dump(self, obj, file):
         if isinstance(obj, list):
             for x in obj:
-                file.write((str(x) + '\n').encode())
+                file.write((str(x) + "\n").encode())
         else:
             file.write(str(obj).encode())
 
@@ -159,8 +158,9 @@ class JsonFileProcessor(FileProcessor):
             return pd.DataFrame()
 
     def dump(self, obj, file):
-        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict), \
-           f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
+        assert (
+            isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict)
+        ), f"requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed."
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
         obj.to_json(file)
@@ -177,7 +177,7 @@ class XmlFileProcessor(FileProcessor):
             return ET.ElementTree()
 
     def dump(self, obj, file):
-        assert isinstance(obj, ET.ElementTree), f'requires ET.ElementTree, but {type(obj)} is passed.'
+        assert isinstance(obj, ET.ElementTree), f"requires ET.ElementTree, but {type(obj)} is passed."
         obj.write(file)
 
 
@@ -186,15 +186,15 @@ class NpzFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        return np.load(file)['data']
+        return np.load(file)["data"]
 
     def dump(self, obj, file):
-        assert isinstance(obj, np.ndarray), f'requires np.ndarray, but {type(obj)} is passed.'
+        assert isinstance(obj, np.ndarray), f"requires np.ndarray, but {type(obj)} is passed."
         np.savez_compressed(file, data=obj)
 
 
 class ParquetFileProcessor(FileProcessor):
-    def __init__(self, engine='pyarrow', compression=None):
+    def __init__(self, engine="pyarrow", compression=None):
         self._engine = engine
         self._compression = compression
         super(ParquetFileProcessor, self).__init__()
@@ -207,8 +207,7 @@ class ParquetFileProcessor(FileProcessor):
         return pd.read_parquet(file.name)
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame)), \
-            f'requires pd.DataFrame, but {type(obj)} is passed.'
+        assert isinstance(obj, (pd.DataFrame)), f"requires pd.DataFrame, but {type(obj)} is passed."
         # MEMO: to_parquet only supports a filepath as string (not a file handle)
         obj.to_parquet(file.name, index=False, compression=self._compression)
 
@@ -224,28 +223,27 @@ class FeatherFileProcessor(FileProcessor):
         return pd.read_feather(file.name)
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame)), \
-            f'requires pd.DataFrame, but {type(obj)} is passed.'
+        assert isinstance(obj, (pd.DataFrame)), f"requires pd.DataFrame, but {type(obj)} is passed."
         # to_feather supports "bynary" file-like object, but file variable is text
         obj.to_feather(file.name)
 
 
 def make_file_processor(file_path: str) -> FileProcessor:
     extension2processor = {
-        '.txt': TextFileProcessor(),
-        '.csv': CsvFileProcessor(sep=','),
-        '.tsv': CsvFileProcessor(sep='\t'),
-        '.pkl': PickleFileProcessor(),
-        '.gz': GzipFileProcessor(),
-        '.json': JsonFileProcessor(),
-        '.xml': XmlFileProcessor(),
-        '.npz': NpzFileProcessor(),
-        '.parquet': ParquetFileProcessor(compression='gzip'),
-        '.feather': FeatherFileProcessor(),
-        '.png': BinaryFileProcessor(),
-        '.jpg': BinaryFileProcessor(),
+        ".txt": TextFileProcessor(),
+        ".csv": CsvFileProcessor(sep=","),
+        ".tsv": CsvFileProcessor(sep="\t"),
+        ".pkl": PickleFileProcessor(),
+        ".gz": GzipFileProcessor(),
+        ".json": JsonFileProcessor(),
+        ".xml": XmlFileProcessor(),
+        ".npz": NpzFileProcessor(),
+        ".parquet": ParquetFileProcessor(compression="gzip"),
+        ".feather": FeatherFileProcessor(),
+        ".png": BinaryFileProcessor(),
+        ".jpg": BinaryFileProcessor(),
     }
 
     extension = os.path.splitext(file_path)[1]
-    assert extension in extension2processor, f'{extension} is not supported. The supported extensions are {list(extension2processor.keys())}.'
+    assert extension in extension2processor, f"{extension} is not supported. The supported extensions are {list(extension2processor.keys())}."
     return extension2processor[extension]

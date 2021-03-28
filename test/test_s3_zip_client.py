@@ -3,13 +3,12 @@ import shutil
 import unittest
 
 import boto3
-from moto import mock_s3
-
 from gokart.s3_zip_client import S3ZipClient
+from moto import mock_s3
 
 
 def _get_temporary_directory():
-    return os.path.abspath(os.path.join(os.path.dirname(__name__), 'temporary'))
+    return os.path.abspath(os.path.join(os.path.dirname(__name__), "temporary"))
 
 
 class TestS3ZipClient(unittest.TestCase):
@@ -18,10 +17,10 @@ class TestS3ZipClient(unittest.TestCase):
 
     @mock_s3
     def test_make_archive(self):
-        conn = boto3.resource('s3', region_name='us-east-1')
-        conn.create_bucket(Bucket='test')
+        conn = boto3.resource("s3", region_name="us-east-1")
+        conn.create_bucket(Bucket="test")
 
-        file_path = os.path.join('s3://test/', 'test.zip')
+        file_path = os.path.join("s3://test/", "test.zip")
         temporary_directory = _get_temporary_directory()
 
         zip_client = S3ZipClient(file_path=file_path, temporary_directory=temporary_directory)
@@ -35,12 +34,12 @@ class TestS3ZipClient(unittest.TestCase):
 
     @mock_s3
     def test_unpack_archive(self):
-        conn = boto3.resource('s3', region_name='us-east-1')
-        conn.create_bucket(Bucket='test')
+        conn = boto3.resource("s3", region_name="us-east-1")
+        conn.create_bucket(Bucket="test")
 
-        file_path = os.path.join('s3://test/', 'test.zip')
-        in_temporary_directory = os.path.join(_get_temporary_directory(), 'in', 'dummy')
-        out_temporary_directory = os.path.join(_get_temporary_directory(), 'out', 'dummy')
+        file_path = os.path.join("s3://test/", "test.zip")
+        in_temporary_directory = os.path.join(_get_temporary_directory(), "in", "dummy")
+        out_temporary_directory = os.path.join(_get_temporary_directory(), "out", "dummy")
 
         # make dummy zip file.
         os.makedirs(in_temporary_directory, exist_ok=True)

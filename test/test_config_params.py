@@ -1,10 +1,9 @@
 import unittest
 
-import luigi
-from luigi.cmdline_parser import CmdlineParser
-
 import gokart
+import luigi
 from gokart.config_params import inherits_config_params
+from luigi.cmdline_parser import CmdlineParser
 
 
 def in_parse(cmds, deferred_computation):
@@ -14,15 +13,15 @@ def in_parse(cmds, deferred_computation):
 
 
 class ConfigClass(luigi.Config):
-    param_a = luigi.Parameter(default='config a')
-    param_b = luigi.Parameter(default='config b')
-    param_c = luigi.Parameter(default='config c')
+    param_a = luigi.Parameter(default="config a")
+    param_b = luigi.Parameter(default="config b")
+    param_c = luigi.Parameter(default="config c")
 
 
 @inherits_config_params(ConfigClass)
 class Inherited(gokart.TaskOnKart):
     param_a = luigi.Parameter()
-    param_b = luigi.Parameter(default='overrided')
+    param_b = luigi.Parameter(default="overrided")
 
 
 class ChildTask(Inherited):
@@ -34,7 +33,7 @@ class ChildTaskWithNewParam(Inherited):
 
 
 class ConfigClass2(luigi.Config):
-    param_a = luigi.Parameter(default='config a from config class 2')
+    param_a = luigi.Parameter(default="config a from config class 2")
 
 
 @inherits_config_params(ConfigClass2)
@@ -45,25 +44,25 @@ class ChildTaskWithNewConfig(Inherited):
 class TestInheritsConfigParam(unittest.TestCase):
     def test_inherited_params(self):
         # test fill values
-        in_parse(['Inherited'], lambda task: self.assertEqual(task.param_a, 'config a'))
+        in_parse(["Inherited"], lambda task: self.assertEqual(task.param_a, "config a"))
 
         # test overrided
-        in_parse(['Inherited'], lambda task: self.assertEqual(task.param_b, 'config b'))
+        in_parse(["Inherited"], lambda task: self.assertEqual(task.param_b, "config b"))
 
         # Command line argument takes precedence over config param
-        in_parse(['Inherited', '--param-a', 'command line arg'], lambda task: self.assertEqual(task.param_a, 'command line arg'))
+        in_parse(["Inherited", "--param-a", "command line arg"], lambda task: self.assertEqual(task.param_a, "command line arg"))
 
         # Parameters which is not a member of the task will not be set
         with self.assertRaises(AttributeError):
-            in_parse(['Inherited'], lambda task: task.param_c)
+            in_parse(["Inherited"], lambda task: task.param_c)
 
     def test_child_task(self):
-        in_parse(['ChildTask'], lambda task: self.assertEqual(task.param_a, 'config a'))
-        in_parse(['ChildTask'], lambda task: self.assertEqual(task.param_b, 'config b'))
-        in_parse(['ChildTask', '--param-a', 'command line arg'], lambda task: self.assertEqual(task.param_a, 'command line arg'))
+        in_parse(["ChildTask"], lambda task: self.assertEqual(task.param_a, "config a"))
+        in_parse(["ChildTask"], lambda task: self.assertEqual(task.param_b, "config b"))
+        in_parse(["ChildTask", "--param-a", "command line arg"], lambda task: self.assertEqual(task.param_a, "command line arg"))
         with self.assertRaises(AttributeError):
-            in_parse(['ChildTask'], lambda task: task.param_c)
+            in_parse(["ChildTask"], lambda task: task.param_c)
 
     def test_child_override(self):
-        in_parse(['ChildTaskWithNewConfig'], lambda task: self.assertEqual(task.param_a, 'config a from config class 2'))
-        in_parse(['ChildTaskWithNewConfig'], lambda task: self.assertEqual(task.param_b, 'config b'))
+        in_parse(["ChildTaskWithNewConfig"], lambda task: self.assertEqual(task.param_a, "config a from config class 2"))
+        in_parse(["ChildTaskWithNewConfig"], lambda task: self.assertEqual(task.param_b, "config b"))

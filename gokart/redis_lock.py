@@ -33,7 +33,7 @@ class RedisClient:
         return cls._instances[cls][key]
 
     def __init__(self, host: str, port: str) -> None:
-        if not hasattr(self, '_redis_client'):
+        if not hasattr(self, "_redis_client"):
             self._redis_client = redis.Redis(host=host, port=port)
 
     def get_redis_client(self):
@@ -49,24 +49,24 @@ def with_lock(func, redis_params: RedisParams):
         blocking = not redis_params.redis_fail_on_collision
         redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, thread_local=False)
         if not redis_lock.acquire(blocking=blocking):
-            raise TaskLockException('Lock already taken by other task.')
+            raise TaskLockException("Lock already taken by other task.")
 
         def extend_lock():
             redis_lock.extend(additional_time=redis_params.redis_timeout, replace_ttl=True)
 
         scheduler = BackgroundScheduler()
-        scheduler.add_job(extend_lock, 'interval', seconds=10, max_instances=999999999, misfire_grace_time=redis_params.redis_timeout, coalesce=False)
+        scheduler.add_job(extend_lock, "interval", seconds=10, max_instances=999999999, misfire_grace_time=redis_params.redis_timeout, coalesce=False)
         scheduler.start()
 
         try:
-            logger.debug(f'Task lock of {redis_params.redis_key} locked.')
+            logger.debug(f"Task lock of {redis_params.redis_key} locked.")
             result = func(*args, **kwargs)
             redis_lock.release()
-            logger.debug(f'Task lock of {redis_params.redis_key} released.')
+            logger.debug(f"Task lock of {redis_params.redis_key} released.")
             scheduler.shutdown()
             return result
         except BaseException as e:
-            logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
+            logger.debug(f"Task lock of {redis_params.redis_key} released with BaseException.")
             redis_lock.release()
             scheduler.shutdown()
             raise e
@@ -76,21 +76,20 @@ def with_lock(func, redis_params: RedisParams):
 
 def make_redis_key(file_path: str, unique_id: str):
     basename_without_ext = os.path.splitext(os.path.basename(file_path))[0]
-    return f'{basename_without_ext}_{unique_id}'
+    return f"{basename_without_ext}_{unique_id}"
 
 
-def make_redis_params(file_path: str,
-                      unique_id: str,
-                      redis_host: str = None,
-                      redis_port: str = None,
-                      redis_timeout: int = None,
-                      redis_fail_on_collision: bool = False):
+def make_redis_params(
+    file_path: str, unique_id: str, redis_host: str = None, redis_port: str = None, redis_timeout: int = None, redis_fail_on_collision: bool = False
+):
     redis_key = make_redis_key(file_path, unique_id)
     should_redis_lock = redis_host is not None and redis_port is not None
-    redis_params = RedisParams(redis_host=redis_host,
-                               redis_port=redis_port,
-                               redis_key=redis_key,
-                               should_redis_lock=should_redis_lock,
-                               redis_timeout=redis_timeout,
-                               redis_fail_on_collision=redis_fail_on_collision)
+    redis_params = RedisParams(
+        redis_host=redis_host,
+        redis_port=redis_port,
+        redis_key=redis_key,
+        should_redis_lock=should_redis_lock,
+        redis_timeout=redis_timeout,
+        redis_fail_on_collision=redis_fail_on_collision,
+    )
     return redis_params

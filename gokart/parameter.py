@@ -7,8 +7,8 @@ from luigi import task_register
 class TaskInstanceParameter(luigi.Parameter):
     @staticmethod
     def _recursive(param_dict):
-        params = dict(param_dict['params'])
-        task_cls = task_register.Register.get_task_cls(param_dict['type'])
+        params = dict(param_dict["params"])
+        task_cls = task_register.Register.get_task_cls(param_dict["type"])
         for key, value in task_cls.get_params():
             if key in params:
                 params[key] = value.parse(params[key])

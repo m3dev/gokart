@@ -3,21 +3,20 @@ import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
+import gokart
 import luigi
 import pandas as pd
-from luigi.util import inherits
-
-import gokart
 from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.run_with_lock import RunWithLock
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
+from luigi.util import inherits
 
 
 class _DummyTask(gokart.TaskOnKart):
     task_namespace = __name__
     param = luigi.IntParameter(default=1)
-    list_param = luigi.ListParameter(default=['a', 'b'])
+    list_param = luigi.ListParameter(default=["a", "b"])
     bool_param = luigi.BoolParameter()
 
     def output(self):
@@ -73,7 +72,7 @@ class _DummyTaskWithLockMultipleOutput(gokart.TaskOnKart):
         pass
 
     def output(self):
-        return dict(dataA=self.make_target('fileA.pkl'), dataB=self.make_target('fileB.pkl'))
+        return dict(dataA=self.make_target("fileA.pkl"), dataB=self.make_target("fileB.pkl"))
 
 
 class _DummyTaskWithoutLock(gokart.TaskOnKart):
@@ -92,7 +91,7 @@ class TaskTest(unittest.TestCase):
 
     def test_complete_without_dependency(self):
         task = _DummyTask()
-        self.assertTrue(task.complete(), msg='_DummyTask does not have any output files, so this always must be completed.')
+        self.assertTrue(task.complete(), msg="_DummyTask does not have any output files, so this always must be completed.")
 
     def test_complete_with_rerun_flag(self):
         task = _DummyTask(rerun=True)
@@ -106,7 +105,7 @@ class TaskTest(unittest.TestCase):
         # depends on an uncompleted target.
         task = _DummyTask()
         task.input = MagicMock(return_value=uncompleted_target)
-        self.assertTrue(task.complete(), msg='task does not care input targets.')
+        self.assertTrue(task.complete(), msg="task does not care input targets.")
 
         # make a task check its inputs.
         task.strict_check = True
@@ -125,14 +124,14 @@ class TaskTest(unittest.TestCase):
         task.modification_time_check = False
         task.input = MagicMock(return_value=input_target)
         task.output = MagicMock(return_value=output_target)
-        self.assertTrue(task.complete(), msg='task does not care modified time')
+        self.assertTrue(task.complete(), msg="task does not care modified time")
 
         # make a task check its inputs.
         task.modification_time_check = True
         self.assertFalse(task.complete())
 
     def test_complete_when_modification_time_equals_output(self):
-        """ Test the case that modification time of input equals that of output.
+        """Test the case that modification time of input equals that of output.
         The case is occurred when input and output targets are same.
         """
         input_target = MagicMock(spec=TargetOnKart)
@@ -151,17 +150,17 @@ class TaskTest(unittest.TestCase):
     def test_complete_when_input_and_output_equal(self):
         target1 = MagicMock(spec=TargetOnKart)
         target1.exists.return_value = True
-        target1.path.return_value = 'path1.pkl'
+        target1.path.return_value = "path1.pkl"
         target1.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
 
         target2 = MagicMock(spec=TargetOnKart)
         target2.exists.return_value = True
-        target2.path.return_value = 'path2.pkl'
+        target2.path.return_value = "path2.pkl"
         target2.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
 
         target3 = MagicMock(spec=TargetOnKart)
         target3.exists.return_value = True
-        target3.path.return_value = 'path3.pkl'
+        target3.path.return_value = "path3.pkl"
         target3.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
 
         task = _DummyTask()
@@ -178,38 +177,38 @@ class TaskTest(unittest.TestCase):
         task = _DummyTaskD()
         default_target = task.output()
         self.assertIsInstance(default_target, SingleFileTarget)
-        self.assertEqual(f'./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.pkl', default_target._target.path)
+        self.assertEqual(f"./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.pkl", default_target._target.path)
 
     def test_default_large_dataframe_target(self):
         task = _DummyTaskD()
         default_large_dataframe_target = task.make_large_data_frame_target()
         self.assertIsInstance(default_large_dataframe_target, ModelTarget)
-        self.assertEqual(f'./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.zip', default_large_dataframe_target._zip_client._file_path)
+        self.assertEqual(f"./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.zip", default_large_dataframe_target._zip_client._file_path)
 
     def test_make_target(self):
         task = _DummyTask()
-        target = task.make_target('test.txt')
+        target = task.make_target("test.txt")
         self.assertIsInstance(target, SingleFileTarget)
 
     def test_make_target_without_id(self):
-        path = _DummyTask().make_target('test.txt', use_unique_id=False)._target.path
-        self.assertEqual(path, os.path.join(_DummyTask().workspace_directory, 'test.txt'))
+        path = _DummyTask().make_target("test.txt", use_unique_id=False)._target.path
+        self.assertEqual(path, os.path.join(_DummyTask().workspace_directory, "test.txt"))
 
     def test_make_target_with_processor(self):
         task = _DummyTask()
         processor = XmlFileProcessor()
-        target = task.make_target('test.dummy', processor=processor)
+        target = task.make_target("test.dummy", processor=processor)
         self.assertEqual(target._processor, processor)
         self.assertIsInstance(target, SingleFileTarget)
 
     def test_compare_targets_of_different_tasks(self):
-        path1 = _DummyTask(param=1).make_target('test.txt')._target.path
-        path2 = _DummyTask(param=2).make_target('test.txt')._target.path
-        self.assertNotEqual(path1, path2, msg='different tasks must generate different targets.')
+        path1 = _DummyTask(param=1).make_target("test.txt")._target.path
+        path2 = _DummyTask(param=2).make_target("test.txt")._target.path
+        self.assertNotEqual(path1, path2, msg="different tasks must generate different targets.")
 
     def test_make_model_target(self):
         task = _DummyTask()
-        target = task.make_model_target('test.zip', save_function=MagicMock(), load_function=MagicMock())
+        target = task.make_model_target("test.zip", save_function=MagicMock(), load_function=MagicMock())
         self.assertIsInstance(target, ModelTarget)
 
     def test_load_with_single_target(self):
@@ -226,9 +225,9 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
         target.load.return_value = 1
-        task.input = MagicMock(return_value={'target_key': target})
+        task.input = MagicMock(return_value={"target_key": target})
 
-        data = task.load('target_key')
+        data = task.load("target_key")
         target.load.assert_called_once()
         self.assertEqual(data, 1)
 
@@ -252,13 +251,13 @@ class TaskTest(unittest.TestCase):
         target1.load.return_value = 1
         target2 = MagicMock(spec=TargetOnKart)
         target2.load.return_value = 2
-        task.input = MagicMock(return_value={'target_key_1': target1, 'target_key_2': target2})
+        task.input = MagicMock(return_value={"target_key_1": target1, "target_key_2": target2})
 
         data = task.load()
         target1.load.assert_called_once()
         target2.load.assert_called_once()
-        self.assertEqual(data['target_key_1'], 1)
-        self.assertEqual(data['target_key_2'], 2)
+        self.assertEqual(data["target_key_1"], 1)
+        self.assertEqual(data["target_key_2"], 2)
 
     def test_load_generator_with_single_target(self):
         task = _DummyTask()
@@ -272,8 +271,8 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
-        task.input = MagicMock(return_value={'target_key': target})
-        data = [x for x in task.load_generator('target_key')]
+        task.input = MagicMock(return_value={"target_key": target})
+        data = [x for x in task.load_generator("target_key")]
         self.assertEqual(data, [[1, 2]])
 
     def test_dump(self):
@@ -296,29 +295,30 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask(fail_on_empty_dump=True)
         self.assertRaises(AssertionError, lambda: task.dump(pd.DataFrame()))
 
-    @patch('luigi.configuration.get_config')
+    @patch("luigi.configuration.get_config")
     def test_add_configuration(self, mock_config: MagicMock):
-        mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
+        mock_config.return_value = {"_DummyTask": {"list_param": '["c", "d"]', "param": "3", "bool_param": "True"}}
         kwargs = dict()
-        _DummyTask._add_configuration(kwargs, '_DummyTask')
-        self.assertEqual(3, kwargs['param'])
-        self.assertEqual(['c', 'd'], list(kwargs['list_param']))
-        self.assertEqual(True, kwargs['bool_param'])
+        _DummyTask._add_configuration(kwargs, "_DummyTask")
+        self.assertEqual(3, kwargs["param"])
+        self.assertEqual(["c", "d"], list(kwargs["list_param"]))
+        self.assertEqual(True, kwargs["bool_param"])
 
-    @patch('luigi.cmdline_parser.CmdlineParser.get_instance')
+    @patch("luigi.cmdline_parser.CmdlineParser.get_instance")
     def test_add_cofigureation_evaluation_order(self, mock_cmdline: MagicMock):
         """
         in case TaskOnKart._add_configuration will break evaluation order
         @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
         """
+
         class DummyTaskAddConfiguration(gokart.TaskOnKart):
             aa = luigi.IntParameter()
 
-        luigi.configuration.get_config().set(f'DummyTaskAddConfiguration', 'aa', '3')
-        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
+        luigi.configuration.get_config().set(f"DummyTaskAddConfiguration", "aa", "3")
+        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(["DummyTaskAddConfiguration"])
         self.assertEqual(DummyTaskAddConfiguration().aa, 3)
 
-        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
+        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(["DummyTaskAddConfiguration", "--DummyTaskAddConfiguration-aa", "2"])
         self.assertEqual(DummyTaskAddConfiguration().aa, 2)
 
     def test_load_list_of_list_pandas(self):
@@ -333,26 +333,26 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         task.load = MagicMock(return_value=pd.DataFrame(dict(a=[1], b=[2], c=[3])))
 
-        df = task.load_data_frame(required_columns={'a', 'c'}, drop_columns=True)
+        df = task.load_data_frame(required_columns={"a", "c"}, drop_columns=True)
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(1, df.shape[0])
-        self.assertSetEqual({'a', 'c'}, set(df.columns))
+        self.assertSetEqual({"a", "c"}, set(df.columns))
 
     def test_load_data_frame_empty_input(self):
         task = _DummyTask()
         task.load = MagicMock(return_value=pd.DataFrame(dict(a=[], b=[], c=[])))
 
-        df = task.load_data_frame(required_columns={'a', 'c'})
+        df = task.load_data_frame(required_columns={"a", "c"})
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(0, df.shape[0])
-        self.assertSetEqual({'a', 'b', 'c'}, set(df.columns))
+        self.assertSetEqual({"a", "b", "c"}, set(df.columns))
 
     def test_load_index_only_dataframe(self):
         task = _DummyTask()
         task.load = MagicMock(return_value=pd.DataFrame(index=range(3)))
 
         # connnot load index only frame with required_columns
-        self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={'a', 'c'}))
+        self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={"a", "c"}))
 
         df: pd.DataFrame = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
@@ -366,7 +366,7 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(task_c.requires().complete())  # This is an instance of TaskB.
         self.assertTrue(task_c.requires().requires().complete())  # This is an instance of TaskA.
 
-        luigi.configuration.get_config().set(f'{__name__}._DummyTaskB', 'rerun', 'True')
+        luigi.configuration.get_config().set(f"{__name__}._DummyTaskB", "rerun", "True")
         task_c = _DummyTaskC()
         self.assertTrue(task_c.complete())
         self.assertFalse(task_c.requires().complete())  # This is an instance of _DummyTaskB.
@@ -381,10 +381,10 @@ class TaskTest(unittest.TestCase):
     def test_significant_flag(self):
         def _make_task(significant: bool, has_required_task: bool):
             class _MyDummyTaskA(gokart.TaskOnKart):
-                task_namespace = f'{__name__}_{significant}_{has_required_task}'
+                task_namespace = f"{__name__}_{significant}_{has_required_task}"
 
             class _MyDummyTaskB(gokart.TaskOnKart):
-                task_namespace = f'{__name__}_{significant}_{has_required_task}'
+                task_namespace = f"{__name__}_{significant}_{has_required_task}"
 
                 def requires(self):
                     if has_required_task:
@@ -412,7 +412,7 @@ class TaskTest(unittest.TestCase):
         self.assertListEqual(without_task.requires(), [])
 
         with_task = _WithTaskInstanceParameter(a_task=without_task)
-        self.assertEqual(with_task.requires()['a_task'], without_task)
+        self.assertEqual(with_task.requires()["a_task"], without_task)
 
     def test_repr(self):
         class _SubTask(gokart.TaskOnKart):
@@ -426,8 +426,10 @@ class TaskTest(unittest.TestCase):
 
         task = _Task(int_param=1, task_param=_SubTask(), list_task_param=[_SubTask(), _SubTask()])
         sub_task_id = _SubTask().make_unique_id()
-        expected = f'{__name__}._Task(int_param=1, task_param={__name__}._SubTask({sub_task_id}), ' \
-            f'list_task_param=[{__name__}._SubTask({sub_task_id}), {__name__}._SubTask({sub_task_id})])'
+        expected = (
+            f"{__name__}._Task(int_param=1, task_param={__name__}._SubTask({sub_task_id}), "
+            f"list_task_param=[{__name__}._SubTask({sub_task_id}), {__name__}._SubTask({sub_task_id})])"
+        )
         self.assertEqual(expected, str(task))
 
     def test_run_with_lock_decorator(self):
@@ -436,7 +438,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch("gokart.target.TargetOnKart.wrap_with_lock") as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_called_once()
@@ -447,7 +449,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch("gokart.target.TargetOnKart.wrap_with_lock") as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             self.assertEqual(mock_obj.call_count, 2)
@@ -458,11 +460,11 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch("gokart.target.TargetOnKart.wrap_with_lock") as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_not_called()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

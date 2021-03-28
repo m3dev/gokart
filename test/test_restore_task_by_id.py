@@ -1,10 +1,9 @@
 import unittest
 from unittest.mock import patch
 
+import gokart
 import luigi
 import luigi.mock
-
-import gokart
 
 
 class _SubDummyTask(gokart.TaskOnKart):
@@ -12,7 +11,7 @@ class _SubDummyTask(gokart.TaskOnKart):
     param = luigi.IntParameter()
 
     def run(self):
-        self.dump('test')
+        self.dump("test")
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -20,17 +19,17 @@ class _DummyTask(gokart.TaskOnKart):
     sub_task = gokart.TaskInstanceParameter()
 
     def output(self):
-        return self.make_target('test.txt')
+        return self.make_target("test.txt")
 
     def run(self):
-        self.dump('test')
+        self.dump("test")
 
 
 class RestoreTaskByIDTest(unittest.TestCase):
     def setUp(self) -> None:
         luigi.mock.MockFileSystem().clear()
 
-    @patch('luigi.LocalTarget', new=lambda path, **kwargs: luigi.mock.MockTarget(path, **kwargs))
+    @patch("luigi.LocalTarget", new=lambda path, **kwargs: luigi.mock.MockTarget(path, **kwargs))
     def test(self):
         task = _DummyTask(sub_task=_SubDummyTask(param=10))
         luigi.build([task], local_scheduler=True, log_level="CRITICAL")
@@ -40,5 +39,5 @@ class RestoreTaskByIDTest(unittest.TestCase):
         self.assertTrue(task.make_unique_id(), restored.make_unique_id())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
