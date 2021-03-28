@@ -35,11 +35,18 @@ tox = "*"
 moto = "*"
 testfixtures = "*"
 coverage = "*"
-isort = "^5.7.0"
-yapf = "^0.30.0"
+pysen = {extras = ["lint"], version = "^0.9.1"}
 
-[tool.isort]
+[tool.pysen.lint]
+enable_black = true
+enable_isort = true
 line_length = 160
+
+[[tool.pysen.lint.mypy_targets]]
+paths = ["gokart"]
+
+[tool.pysen.lint.source]
+excludes = [".tox/"]
 
 [build-system]
 requires = ["poetry"]
