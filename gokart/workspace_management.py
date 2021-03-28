@@ -23,7 +23,7 @@ def delete_local_unnecessary_outputs(task: gokart.TaskOnKart):
     necessary_files = set(_get_all_output_file_paths(task))
     unnecessary_files = all_files - necessary_files - log_files
     if len(unnecessary_files) == 0:
-        logger.info(f"all files are necessary for this task.")
+        logger.info("all files are necessary for this task.")
     else:
         logger.info(f"remove following files: {os.linesep} {os.linesep.join(unnecessary_files)}")
     for file in unnecessary_files:

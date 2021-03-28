@@ -8,7 +8,7 @@ from gokart.gcs_zip_client import GCSZipClient
 from gokart.s3_config import S3Config
 from gokart.s3_zip_client import S3ZipClient
 from gokart.zip_client import ZipClient
-from luigi.format import FileWrapper, Format
+from luigi.format import Format
 
 object_storage_path_prefix = ["s3://", "gs://"]
 

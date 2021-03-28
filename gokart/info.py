@@ -1,7 +1,6 @@
 import warnings
 from logging import getLogger
 
-import gokart
 import luigi
 from gokart.task import TaskOnKart
 
