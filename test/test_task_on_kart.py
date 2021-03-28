@@ -331,7 +331,7 @@ class TaskTest(unittest.TestCase):
 
     def test_load_single_value_dict_of_dataframe(self):
         task = _DummyTask()
-        task.load = MagicMock(return_value={'a': pd.DataFrame(dict(a=[1]))})
+        task.load = MagicMock(return_value={"a": pd.DataFrame(dict(a=[1]))})
 
         df = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
