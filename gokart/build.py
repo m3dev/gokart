@@ -1,7 +1,9 @@
 from logging import getLogger
 from typing import Optional, Any
+from configparser import ConfigParser
 import logging
 import sys
+import os
 
 import luigi
 from gokart.task import TaskOnKart
@@ -31,19 +33,25 @@ def _get_output(task: TaskOnKart) -> Any:
     return output.load()
 
 
+def _read_environ():
+    config = luigi.configuration.get_config()
+    for key, value in os.environ.items():
+        super(ConfigParser, config).set(section=None, option=key, value=value.replace('%', '%%'))
+
+
+def add_config(file_path: str):
+    _, ext = os.path.splitext(file_path)
+    luigi.configuration.core.PARSER = ext
+    assert luigi.configuration.add_config_path(file_path)
+
+
 def build(task: TaskOnKart, verbose: bool = False, return_value: bool = True) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
     """
-
-    # TODO: _check_env
-    # TODO: load config
-    # TODO: check workspace
     # TODO: fix Task Ambitious
 
+    _read_environ()
     with HideLogger(verbose):
         luigi.build([task], local_scheduler=True)
-
-    if return_value:
-        return _get_output(task)
-    return None
+    return _get_output(task) if return_value else None
