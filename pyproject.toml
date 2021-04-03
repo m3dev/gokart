@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gokart"
 version = "0.0.0"  # using poetry-dynamic-versioning
-description="A wrapper of luigi. This make it easy to define tasks."
+description="A wrapper of luigi. Gokart solves reproducibility, task dependencies, constraints of good code, and ease of use for Machine Learning Pipeline."
 authors = ["M3, inc."]
 license = "MIT"
 readme = "README.md"

@@ -5,13 +5,22 @@
 
 Welcome to gokart's documentation!
 ==================================
-Getting Started
-----------------
 
-Run ``pip instgall gokart`` to install the latest version from PyPI.
-`Documentation: <https://gokart.readthedocs.io/en/latest/>`_ for the latest release is hosted on readthedocs.
+Useful links: `GitHub <https://github.com/m3dev/gokart>`_ | `cookiecutter gokart <https://github.com/m3dev/cookiecutter-gokart>`_
 
-Table of Contents
+`Gokart <https://github.com/m3dev/gokart>`_ is a wrapper of the data pipeline library `luigi <https://github.com/spotify/luigi>`_. Gokart solves "**reproducibility**", "**task dependencies**", "**constraints of good code**", and "**ease of use**" for Machine Learning Pipeline.
+
+
+Getting started
+-----------------
+
+.. toctree::
+   :maxdepth: 2
+
+   intro_to_gokart
+   tutorial
+
+User Guide
 -----------------
 
 .. toctree::
