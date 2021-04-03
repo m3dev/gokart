@@ -26,7 +26,7 @@ class RunTest(unittest.TestCase):
 
     def test_build(self):
         text = 'test'
-        output = gokart.build(_DummyTask(param=text))
+        output = gokart.build(_DummyTask(param=text), reset_register=False)
         self.assertEqual(output, text)
 
 
