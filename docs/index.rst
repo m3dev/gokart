@@ -22,6 +22,7 @@ Table of Contents
    task_information
    task_settings
    slack_notification
+   using_task_cache_collision_lock
 
 API References
 --------------
