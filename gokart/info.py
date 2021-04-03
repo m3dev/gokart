@@ -3,7 +3,6 @@ from logging import getLogger
 
 import luigi
 
-import gokart
 from gokart.task import TaskOnKart
 
 logger = getLogger(__name__)
