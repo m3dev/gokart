@@ -12,7 +12,7 @@ Prepare following environmental variables:
    export SLACK_CHANNEL=channel-name     // not "#channel-name", just "channel-name"
 
 
-A Slack bot token can obtain from `here <https://api.slack.com/apps>`_.
+A Slack bot token can obtain from `slack app document <https://api.slack.com/apps>`_.
 
 A bot token needs following scopes:
 
@@ -20,7 +20,7 @@ A bot token needs following scopes:
 - `chat:write`
 - `files:write`
 
-More about scopes are `here <https://api.slack.com/scopes>`_.
+More about scopes are `slack scopes document <https://api.slack.com/scopes>`_.
 
 Implement Slack notification
 ----------------------------
@@ -28,6 +28,7 @@ Implement Slack notification
 Write following codes pass arguments to your gokart workflow.
 
 .. code:: python
+
     cmdline_args = sys.argv[1:]
     if 'SLACK_CHANNEL' in os.environ:
         cmdline_args.append(f'--SlackConfig-channel={os.environ["SLACK_CHANNEL"]}')
