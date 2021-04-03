@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+
+# https://github.com/sphinx-doc/sphinx/issues/6211
+import luigi
+
+import gokart
+
+luigi.task.Task.requires.__doc__ = gokart.task.TaskOnKart.requires.__doc__
+luigi.task.Task.output.__doc__ = gokart.task.TaskOnKart.output.__doc__
+
 #
 # Configuration file for the Sphinx documentation builder.
 #

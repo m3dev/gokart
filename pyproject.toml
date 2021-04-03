@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/m3dev/gokart"
 repository = "https://github.com/m3dev/gokart"
-documentation = ""
+documentation = "https://gokart.readthedocs.io/en/latest/"
 
 [tool.poetry-dynamic-versioning]
 enable = true
