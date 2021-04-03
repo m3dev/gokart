@@ -52,7 +52,7 @@ def build(task: TaskOnKart, verbose: bool = False, return_value: bool = True, re
     """
     if reset_register:
         luigi.task_register.Register._reg = [x for x in luigi.task_register.Register._reg
-                                             if x.__module__ in {'gokart', 'luigi'}]  # avoid TaskClassAmbigiousException
+                                             if x.__module__.split('.')[0] in {'gokart', 'luigi'}]  # avoid TaskClassAmbigiousException
     _read_environ()
     with HideLogger(verbose):
         luigi.build([task], local_scheduler=True)
