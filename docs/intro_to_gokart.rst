@@ -95,4 +95,44 @@ gokart has ``run`` and ``build`` methods for running task. Each has a different 
 - ``gokart.build``: uses inline code on jupyter notebook, IPython, and more. return task output.
 
 
-Next :doc:`tutorial` section is explained by ``gokart.build``. If want to make a batch that runs in shell, please refer to :doc:`tutorial`'s `gokart run` section.
+gokart.run
+~~~~~~~~~~
+
+The :func:`~gokart.run` is running on shell.
+
+.. code:: python
+
+    import gokart
+    import luigi
+
+    class SampleTask(gokart.TaskOnKart):
+        param = luigi.Parameter()
+
+        def run(self):
+            self.dump(self.param)
+
+    gokart.run()
+
+
+.. code:: sh
+
+    python sample.py --local-scheduler --param=hello
+
+
+gokart.build
+~~~~~~~~~~~~
+
+The :func:`~gokart.build` is inline code.
+
+.. code:: python
+
+    import gokart
+    import luigi
+
+    class SampleTask(gokart.TaskOnKart):
+        param = luigi.Parameter()
+
+        def run(self):
+            self.dump(self.param)
+
+    gokart.build(SampleTask(param='hello'), return_value=False)
