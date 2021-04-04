@@ -95,6 +95,4 @@ gokart has ``run`` and ``build`` methods for running task. Each has a different 
 - ``gokart.build``: uses inline code on jupyter notebook, IPython, and more. return task output.
 
 
-Next :doc:`tutorial` section is explained by ``gokart.build``. If want to make a batch that runs in shell, please refer to :doc:`gokart_run` section.
-# TODO: add run section
-
+Next :doc:`tutorial` section is explained by ``gokart.build``. If want to make a batch that runs in shell, please refer to :doc:`tutorial`'s `gokart run` section.
