@@ -72,17 +72,16 @@ The result of dumping the task will be saved in the ``__name__`` directory.
         print(pickle.load(f))  # Hellow, world!
 
 
-That will be given hash value depending on the parameter of the task. This means that if you change the parameter of the task, the hash value will change, and change output file. This is very useful when changing parameters and experimenting. Please refer to :doc:`setting_task_parameters` for task parameters. Also see :doc:`task_output` for information on how to return this output destination.
-# TODO: add task_output
+That will be given hash value depending on the parameter of the task. This means that if you change the parameter of the task, the hash value will change, and change output file. This is very useful when changing parameters and experimenting. Please refer to :doc:`setting_task_parameters` section for task parameters. Also see :doc:`task_on_kart` section for information on how to return this output destination.
 
 
 In addition, the following files are automatically saved as ``log``.
 
 - ``module_versions``: The versions of all modules that were imported when the script was executed. For reproducibility.
 - ``processing_time``: The execution time of the task.
-- ``random_seed``: This is random seed of python and numpy. For reproducibility in Machine Learning. please refer to :doc:`fix_random_seed`.
+- ``random_seed``: This is random seed of python and numpy. For reproducibility in Machine Learning. please refer to :doc:`fix_random_seed` section.
 - ``task_log``: This is the output of the task logger.
-- ``task_params``: This is task's parameters. Please refer to :doc:`setting_task_parameters`.
+- ``task_params``: This is task's parameters. Please refer to :doc:`setting_task_parameters` section.
 
 # TODO: add fix_random_seed
 
