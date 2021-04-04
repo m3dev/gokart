@@ -1,21 +1,94 @@
-Setting Task Parameters
-======================================================
+Task Parameters
+===============
 
-There are several ways to set task parameters. 
+We can set parameters for tasks.
+
+.. code:: python
+
+    class Task(gokart.TaskOnKart):
+        param_a = luigi.Parameter()
+        param_c = luigi.ListParameter()
+        param_d = luigi.IntParameter(default=1)
+
 Please refer to `luigi document <https://luigi.readthedocs.io/en/stable/api/luigi.parameter.html>`_ for a list of parameter types.
 
-There are several ways to do this.
+
+Gokart Parameter
+----------------
+
+There is also a parameter provided by gokart. 
+
+- TaskInstanceParameter
+- ListTaskInstanceParameter
+- ExplicitBoolParameter
+
+
+gokart.TaskInstanceParameter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :func:`~gokart.parameter.TaskInstanceParameter` is executes a task using the results of a task as dynamic parameters.
+
+
+.. code:: python
+
+    class TaskA(gokart.TaskOnKart):
+        def run(self):
+            self.dump('Hello')
+
+
+    class TaskB(gokart.TaskOnKart):
+        require_task = gokart.TaskInstanceParameter()
+
+        def requires(self):
+            return self.require_task
+
+        def run(self):
+            task_a = self.load()
+            self.dump(','.join([task_a, 'world']))
+
+    task = TaskB(require_task=TaskA())
+    print(gokart.build(task))  # Hello,world
+
+
+Helps to create a pipeline.
+
+
+gokart.ListTaskInstanceParameter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :func:`~gokart.parameter.ListTaskInstanceParameter` is list of TaskInstanceParameter.
+
+
+gokart.ExplicitBoolParameter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :func:`~gokart.parameter.ExplicitBoolParameter` is parameter for explicitly specified value.
+
+``luigi.BoolParameter`` already has "explicit parsing" feature, but also still has implicit behavior like follows.
+
+::
+
+    $ python main.py Task --param
+    # param will be set as True
+    $ python main.py Task
+    # param will be set as False
+
+``ExplicitBoolParameter`` can solve these problems on parameters from command line.
+
+
+Setting Task Parameters
+-----------------------
+
+There are several ways to set task parameters. 
 
 - command line
 - config file & enviroment variables
 - upstream task
 - inherits_config_params
 
-There is also a parameter provided by gokart, which is described in Advanced Features section.
-
 
 Set parameter from command line
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. code:: sh
 
     python main.py sample.SomeTask --SomeTask-param=Hello
@@ -24,7 +97,7 @@ Parameter of each task can be set as a command line parameter in ``--[task name]
 
 
 Set parameter at config file
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ::
 
     [sample.SomeTask]
@@ -53,7 +126,7 @@ The advantage of using environment variables is that important information is no
 
 
 Set parameter at upstream task
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Parameters can be set from upstream, as in a typical pipeline.
 
@@ -65,7 +138,7 @@ Parameters can be set from upstream, as in a typical pipeline.
 
 
 Inherit parameter from other task
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Parameters can be set ``@inherits_config_params`` decorator.
 
@@ -84,19 +157,3 @@ This is useful when multiple tasks has the same parameter, since parameter setti
 
 Note that parameters which exist in both ``MasterConfig`` and ``SomeTask`` will be inherited.
 In the above example, ``param2`` will not be available in ``SomeTask``, since ``SomeTask`` does not have ``param2`` parameter.
-
-
-Advanced Features
----------------------
-
-gokart.TaskInstanceParameter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-gokart.ListTaskInstanceParameter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-gokart.ExplicitBoolParameter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
