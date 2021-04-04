@@ -35,7 +35,7 @@ A minimal gokart tasks looks something like this:
 ``gokart.build`` return the result of dump by ``gokart.TaskOnKart``. The example will output the following.
 
 
-.. code:: python
+.. code:: sh
 
     Hellow, world!
 
