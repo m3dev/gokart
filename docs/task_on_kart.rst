@@ -229,6 +229,7 @@ TaskOnKart.make_model_target
 The :func:`~gokart.task.TaskOnKart.make_model_target` method is used to dump for non supported file types.
 
 .. code:: python
+
     import gensim
 
     class TrainWord2Vec(gokart.TaskOnKart):
