@@ -28,8 +28,9 @@ User Guide
 
    task_on_kart
    task_parameters
-   task_information
    task_settings
+   task_information
+   logging
    slack_notification
    using_task_cache_collision_lock
 

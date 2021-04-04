@@ -13,7 +13,7 @@ To use the S3 repository, please set ``s3://{YOUR_REPOSITORY_NAME}`` to :attr:`~
 and appropriate values to the parameters of :class:`~gokart.s3_config.S3Config`.
 
 
-rerun task
+Rerun task
 ----------
 [TBD]
 

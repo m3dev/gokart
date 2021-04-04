@@ -1,4 +1,4 @@
-gokart Slack notification
+Slack notification
 =========================
 
 Prerequisites
