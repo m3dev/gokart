@@ -132,7 +132,7 @@ The `load` method loads individual task input by passing a key of an input dicti
 
 
 We can also omit the :func:`~gokart.task.TaskOnKart.requires` and write the task used by :func:`~gokart.parameter.TaskInstanceParameter`.
-Extensions include :func:`~gokart.task.TaskOnKart.load_data_frame` and :func:`~gokart.task.TaskOnKart.load_generator`. Please refer to :func:`~gokart.task.TaskOnKart.load`, :doc:`setting_task_parameters`, and described later Advanced Features section.
+Extensions include :func:`~gokart.task.TaskOnKart.load_data_frame` and :func:`~gokart.task.TaskOnKart.load_generator`. Please refer to :func:`~gokart.task.TaskOnKart.load`, :doc:`task_parameters`, and described later Advanced Features section.
 
 
 TaskOnKart.dump
