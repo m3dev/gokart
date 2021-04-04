@@ -37,7 +37,7 @@ How ``TaskOnKart`` helps to define a task looks like:
             # `make_target` makes an instance of `luigi.Target`.
             # This infers the output format and the destination of an output objects.
             # The target file path is
-            #     '{TaskOnKart.workspace_directory}/output_of_task_b_{self.make_unique_id()}.pkl'.
+            #     '{self.workspace_directory}/output_of_task_b_{self.make_unique_id()}.pkl'.
             return self.make_target('output_of_task_b.pkl')
 
         def run(self):
@@ -70,15 +70,29 @@ For instance, an example implementation could be as follows:
 .. code:: python
 
     def output(self):
-        return self.make_target('output_file_name.pkl')
+        return self.make_target('file_name.pkl')
 
 The ``make_target`` method adds ``_{self.make_unique_id()}`` to the file name as suffix.
-In this case, the target file path is ``{TaskOnKart.workspace_directory}/output_file_name_{self.make_unique_id()}.pkl``.
+In this case, the target file path is ``{self.workspace_directory}/file_name_{self.make_unique_id()}.pkl``.
 
 
-**By default, file path is inferred from "__name__" of the script, so output can be omitted.**
+It is also possible to specify a file format other than pkl. The supported file formats are as follows:
 
-Please refer to :func:`~gokart.task.TaskOnKart.make_target`.
+- .pkl
+- .txt
+- .csv
+- .tsv
+- .gz
+- .json
+- .xml
+
+If dump something other than the above, can use :func:`~gokart.TaskOnKart.make_model_target`.
+Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later Advanced Features section.
+
+
+.. note::
+    By default, file path is inferred from "__name__" of the script, so ``output`` method can be omitted.
+    Please refer to :doc:`tutorial` section.
 
 
 TaskOnKart.load
@@ -176,10 +190,28 @@ It's effective when can't read all data to memory, because `load_generator` does
 
 Please refer to :func:`~gokart.task.TaskOnKart.load_generator`.
 
+
+TaskOnKart.load_data_frame
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The :func:`~gokart.task.TaskOnKart.load_data_frame` method is used to load input ``pandas.DataFrame``.
+
+.. code:: python
+
+    def requires(self):
+        return MakeDataFrameTask()
+
+    def run(self):
+        df = self.load_data_frame(required_columns={'colA', 'colB'}, drop_columns=True)
+
+This allows us to omit ``reset_index`` and ``drop`` when loading. And if there is a missing column, ``AssertionError`` will be raised. Useful for pipelines based on pandas.
+
+Please refer to :func:`~gokart.task.TaskOnKart.load_data_frame`.
+
+
 TaskOnKart.fail_on_empty_dump
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :func:`~gokart.task.TaskOnKart.fail_on_empty_dump` method is `AssertionError` on trying to dump empty dataframe.
+The :func:`~gokart.task.TaskOnKart.fail_on_empty_dump` method is `AssertionError` on trying to dump empty ``pandas.DataFrame``.
 
 .. code:: python
 
@@ -190,3 +222,28 @@ The :func:`~gokart.task.TaskOnKart.fail_on_empty_dump` method is `AssertionError
 Empty caches sometimes hide bugs and let us spend much time debugging. This feature notice us some bugs (including wrong datasources) in the early stage.
 
 Please refer to :func:`~gokart.task.TaskOnKart.fail_on_empty_dump`.
+
+
+TaskOnKart.make_model_target
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The :func:`~gokart.task.TaskOnKart.make_model_target` method is used to dump for non supported file types.
+
+.. code:: python
+    import gensim
+
+    class TrainWord2Vec(gokart.TaskOnKart):
+        def output(self):
+            # please use 'zip'.
+            return self.make_model_target(
+                'model.zip',
+                save_function=gensim.model.Word2Vec.save,
+                load_function=gensim.model.Word2Vec.load)
+
+        def run(self):
+            # -- train word2vec ---
+            word2vec = train_word2vec()
+            self.dump(word2vec)
+
+It is dumped and zipped with ``gensim.model.Word2Vec.save``.
+
+Please refer to :func:`~gokart.task.TaskOnKart.make_model_target`.
