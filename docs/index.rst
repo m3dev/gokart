@@ -11,6 +11,32 @@ Useful links: `GitHub <https://github.com/m3dev/gokart>`_ | `cookiecutter gokart
 `Gokart <https://github.com/m3dev/gokart>`_ is a wrapper of the data pipeline library `luigi <https://github.com/spotify/luigi>`_. Gokart solves "**reproducibility**", "**task dependencies**", "**constraints of good code**", and "**ease of use**" for Machine Learning Pipeline.
 
 
+Good thing about gokart
+-----------------------
+
+Here are some good things about gokart.
+
+- The following data for each Task is stored separately in a pkl file with hash value
+    - task output data
+    - imported all module versions
+    - task processing time
+    - random seed in task
+    - displayed log
+    - all parameters set as class variables in the task
+- If change parameter of Task, rerun spontaneously.
+    - The above file will be generated with a different hash value
+    - The hash value of dependent task will also change and both will be rerun
+- The above output is exchanged between tasks as an intermediate file, which is memory-friendly
+- pandas.DataFrame type and column checking during I/O
+- Directory structure of saved files is automatically determined from structure of script
+- Seeds for numpy and random are automatically fixed
+- Can code while adhering to SOLID principles as much as possible
+- Tasks are locked via redis even if they run in parallel
+
+**These are all functions baptized for creating Machine Learning batches. Provides an excellent environment for reproducibility and team development.**
+
+
+
 Getting started
 -----------------
 
