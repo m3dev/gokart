@@ -79,11 +79,9 @@ In addition, the following files are automatically saved as ``log``.
 
 - ``module_versions``: The versions of all modules that were imported when the script was executed. For reproducibility.
 - ``processing_time``: The execution time of the task.
-- ``random_seed``: This is random seed of python and numpy. For reproducibility in Machine Learning. please refer to :doc:`fix_random_seed` section.
+- ``random_seed``: This is random seed of python and numpy. For reproducibility in Machine Learning. please refer to :doc:`task_settings` section.
 - ``task_log``: This is the output of the task logger.
 - ``task_params``: This is task's parameters. Please refer to :doc:`task_parameters` section.
-
-# TODO: add fix_random_seed
 
 
 How to running task

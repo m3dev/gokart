@@ -33,6 +33,7 @@ User Guide
    logging
    slack_notification
    using_task_cache_collision_lock
+   for_pandas
 
 API References
 --------------
