@@ -116,7 +116,15 @@ The :func:`~gokart.run` is running on shell.
 
 .. code:: sh
 
-    python sample.py --local-scheduler --param=hello
+    python sample.py SampleTask --local-scheduler --param=hello
+
+
+If you were to write it in Python, it would be the same as the following behavior.
+
+
+.. code:: python
+
+    gokart.run(['SampleTask', '--local-scheduler', '--param=hello'])
 
 
 gokart.build
