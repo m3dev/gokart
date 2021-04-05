@@ -191,39 +191,6 @@ It's effective when can't read all data to memory, because `load_generator` does
 Please refer to :func:`~gokart.task.TaskOnKart.load_generator`.
 
 
-TaskOnKart.load_data_frame
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The :func:`~gokart.task.TaskOnKart.load_data_frame` method is used to load input ``pandas.DataFrame``.
-
-.. code:: python
-
-    def requires(self):
-        return MakeDataFrameTask()
-
-    def run(self):
-        df = self.load_data_frame(required_columns={'colA', 'colB'}, drop_columns=True)
-
-This allows us to omit ``reset_index`` and ``drop`` when loading. And if there is a missing column, ``AssertionError`` will be raised. Useful for pipelines based on pandas.
-
-Please refer to :func:`~gokart.task.TaskOnKart.load_data_frame`.
-
-
-TaskOnKart.fail_on_empty_dump
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The :func:`~gokart.task.TaskOnKart.fail_on_empty_dump` method is `AssertionError` on trying to dump empty ``pandas.DataFrame``.
-
-.. code:: python
-
-    def run(self):
-        df = pd.DataFrame()
-        self.fail_on_empty_dump(df)  # AssertionError
-
-Empty caches sometimes hide bugs and let us spend much time debugging. This feature notice us some bugs (including wrong datasources) in the early stage.
-
-Please refer to :func:`~gokart.task.TaskOnKart.fail_on_empty_dump`.
-
-
 TaskOnKart.make_model_target
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The :func:`~gokart.task.TaskOnKart.make_model_target` method is used to dump for non supported file types.
@@ -248,3 +215,17 @@ The :func:`~gokart.task.TaskOnKart.make_model_target` method is used to dump for
 It is dumped and zipped with ``gensim.model.Word2Vec.save``.
 
 Please refer to :func:`~gokart.task.TaskOnKart.make_model_target`.
+
+
+TaskOnKart.load_data_frame
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please refer to :doc:`for_pandas`.
+
+
+TaskOnKart.fail_on_empty_dump
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please refer to :doc:`for_pandas`.
+
+

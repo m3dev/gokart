@@ -8,5 +8,5 @@ Core settings
 
 
 Logger ini file
-----------
+---------------
 [TBD]
