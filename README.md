@@ -24,6 +24,7 @@ Here are some good things about gokart.
     - displayed log
     - all parameters set as class variables in the task
 - If change parameter of Task, automatically rerun.
+- Support GCS or S3
 - The above output is exchanged between tasks as an intermediate file, which is memory-friendly
 - pandas.DataFrame type and column checking during I/O
 - Directory structure of saved files is automatically determined from structure of script

@@ -26,6 +26,7 @@ Here are some good things about gokart.
 - If change parameter of Task, rerun spontaneously.
     - The above file will be generated with a different hash value
     - The hash value of dependent task will also change and both will be rerun
+- Support GCS or S3
 - The above output is exchanged between tasks as an intermediate file, which is memory-friendly
 - pandas.DataFrame type and column checking during I/O
 - Directory structure of saved files is automatically determined from structure of script
