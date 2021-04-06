@@ -6,112 +6,79 @@
 [![](https://img.shields.io/pypi/v/gokart)](https://pypi.org/project/gokart/)
 ![](https://img.shields.io/pypi/l/gokart)
 
-A wrapper of the data pipeline library "luigi".
+Gokart solves reproducibility, task dependencies, constraints of good code, and ease of use for Machine Learning Pipeline.
 
 
-## Getting Started
-Run `pip install gokart` to install the latest version from PyPI. [Documentation](https://gokart.readthedocs.io/en/latest/) for the latest release is hosted on readthedocs.
+# Good thing about gokart
 
-## How to Use
-Please use gokart.TaskOnKart instead of luigi.Task to define your tasks.
+Here are some good things about gokart.
+
+- The following data for each Task is stored separately in a pkl file with hash value
+    - task output data
+    - imported all module versions
+    - task processing time
+    - random seed in task
+    - displayed log
+    - all parameters set as class variables in the task
+- If change parameter of Task, rerun spontaneously.
+    - The above file will be generated with a different hash value
+    - The hash value of dependent task will also change and both will be rerun
+- The above output is exchanged between tasks as an intermediate file, which is memory-friendly
+- pandas.DataFrame type and column checking during I/O
+- Directory structure of saved files is automatically determined from structure of script
+- Seeds for numpy and random are automatically fixed
+- Can code while adhering to SOLID principles as much as possible
+- Tasks are locked via redis even if they run in parallel
+
+*These are all functions baptized for creating Machine Learning batches. Provides an excellent environment for reproducibility and team development.*
 
 
-### Basic Task with gokart.TaskOnKart
+# Getting Started
+
+Within the activated Python environment, use the following command to install gokart.
+
+```
+pip install gokart
+```
+
+[Documentation](https://gokart.readthedocs.io/en/latest/) for the latest release is hosted on readthedocs.
+
+
+# Quickstart
+
+A minimal gokart tasks looks something like this:
+
+
 ```python
 import gokart
 
-class BasicTask(gokart.TaskOnKart):
-    def requires(self):
-        return TaskA()
-
-    def output(self):
-        # please use TaskOnKart.make_target to make Target.
-        return self.make_target('basic_task.csv')
-
+class Example(gokart.TaskOnKart):
     def run(self):
-        # load data which TaskA output
-        texts = self.load()
+        self.dump('Hello, world!')
 
-        # do something with texts, and make results.
-
-        # save results with the file path {self.workspace_directory}/basic_task_{unique_id}.csv
-        self.dump(results)
+task = Example()
+output = gokart.build(task)
+print(output)
 ```
 
-### Details of base functions
-#### Make Target with TaskOnKart
-`TaskOnKart.make_target` judge `Target` type by the passed path extension. The following extensions are supported.
+`gokart.build` return the result of dump by `gokart.TaskOnKart`. The example will output the following.
 
- - pkl
- - txt
- - csv
- - tsv
- - gz
- - json
- - xml
 
-#### Make Target for models which generate multiple files in saving.
-`TaskOnKart.make_model_target` and `TaskOnKart.dump` are designed to save and load models like gensim.model.Word2vec.
-```python
-class TrainWord2Vec(TaskOnKart):
-    def output(self):
-        # please use 'zip'.
-        return self.make_model_target(
-            'model.zip',
-            save_function=gensim.model.Word2Vec.save,
-            load_function=gensim.model.Word2Vec.load)
-
-    def run(self):
-        # make word2vec
-        self.dump(word2vec)
 ```
-
-#### Load input data
-##### Pattern 1: Load input data individually.
-```python
-def requires(self):
-    return dict(data=LoadItemData(), model=LoadModel())
-
-def run(self):
-    # pass a key in the dictionary `self.requires()`
-    data = self.load('data')
-    model = self.load('model')
-```
-
-##### Pattern 2: Load input data at once
-```python
-def run(self):
-    input_data = self.load()
-    """
-    The above line is equivalent to the following:
-    input_data = dict(data=self.load('data'), model=self.load('model'))
-    """
+Hello, world!
 ```
 
 
-#### Load input data as pd.DataFrame
-```python
-def requires(self):
-    return LoadDataFrame()
+# Achievements
 
-def run(self):
-    data = self.load_data_frame(required_columns={'id', 'name'})
-```
+gokart is a proven product.
 
-## Advanced
-### Inherit task parameters with decorator
-#### Description
-```python
-class MasterConfig(luigi.Config):
-    param: str = luigi.Parameter()
-    param2: str = luigi.Parameter()
+- It's actually been used by [m3.inc](https://corporate.m3.com/en) for over 3 years
+- Natural Language Processing Competition by [Nishika.inc](https://nishika.com) 2nd prize : [Solution Repository](https://github.com/vaaaaanquish/nishika_akutagawa_2nd_prize)
 
-@inherits_config_params(MasterConfig)
-class SomeTask(gokart.TaskOnKart):
-    param: str = luigi.Parameter()
-```
 
-This is useful when multiple tasks has same parameter, since parameter settings of `MasterConfig`  will be inherited to all tasks decorated with `@inherits_config_params(MasterConfig)`.
+# Thanks
 
-Note that parameters which exists in both `MasterConfig` and `SomeTask` will be inherited.
-In the above example, `param2` will not be available in `SomeTask`, since `SomeTask` does not have `param2` parameter.
+gokart is a wrapper for luigi. Thanks to luigi and dependent projects!
+
+- [luigi](https://github.com/spotify/luigi)
