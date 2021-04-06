@@ -9,6 +9,9 @@
 Gokart solves reproducibility, task dependencies, constraints of good code, and ease of use for Machine Learning Pipeline.
 
 
+[Documentation](https://gokart.readthedocs.io/en/latest/) for the latest release is hosted on readthedocs.
+
+
 # Good thing about gokart
 
 Here are some good things about gokart.
@@ -20,9 +23,7 @@ Here are some good things about gokart.
     - random seed in task
     - displayed log
     - all parameters set as class variables in the task
-- If change parameter of Task, rerun spontaneously.
-    - The above file will be generated with a different hash value
-    - The hash value of dependent task will also change and both will be rerun
+- If change parameter of Task, automatically rerun.
 - The above output is exchanged between tasks as an intermediate file, which is memory-friendly
 - pandas.DataFrame type and column checking during I/O
 - Directory structure of saved files is automatically determined from structure of script
@@ -40,8 +41,6 @@ Within the activated Python environment, use the following command to install go
 ```
 pip install gokart
 ```
-
-[Documentation](https://gokart.readthedocs.io/en/latest/) for the latest release is hosted on readthedocs.
 
 
 # Quickstart
