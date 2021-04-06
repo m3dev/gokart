@@ -7,7 +7,7 @@ Gokart has several features for Pandas.
 Pandas Type Config
 ------------------
 
-Pandas often estimates and changes the type automatically. In gokart, specify a column name to check the type of Task input and output.
+Pandas has a feature that converts the type of column(s) automatically. This feature sometimes cause wrong result. To avoid unintentional type conversion of pandas, we can specify a column name to check the type of Task input and output in gokart.
 
 
 .. code:: python
