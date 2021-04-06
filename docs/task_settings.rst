@@ -70,7 +70,7 @@ When used from an argument as follows:
 
 ``rerun`` parameter will look at the dependent tasks up to one level.
 
-Example: Suppose we have a Task{A,B,C} that has already been executed. Suppose we have TaskC as an endpoint and depend on it using requires.
+Example: Suppose we have a straight line pipeline composed of TaskA, TaskB and TaskC,  and TaskC is an endpoint of this pipeline. We also suppose that all the tasks have already been executed.
 
 - TaskA(rerun=True)  ->  TaskB  ->  TaskC    # not rerunning
 - TaskA  ->  TaskB(rerun=True)  ->  TaskC    # reruning TaskB and TaskC
