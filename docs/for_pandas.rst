@@ -48,7 +48,7 @@ The :func:`~gokart.task.TaskOnKart.load_data_frame` method is used to load input
     def run(self):
         df = self.load_data_frame(required_columns={'colA', 'colB'}, drop_columns=True)
 
-This allows us to omit ``reset_index`` and ``drop`` when loading. And if there is a missing column, ``AssertionError`` will be raised. Useful for pipelines based on pandas.
+This allows us to omit ``reset_index`` and ``drop`` when loading. If there is a missing column in an example above, ``AssertionError`` will be raised. This feature is useful for pipelines based on pandas.
 
 Please refer to :func:`~gokart.task.TaskOnKart.load_data_frame`.
 
