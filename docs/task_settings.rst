@@ -8,7 +8,7 @@ Directory to Save Outputs
 -------------------------
 
 We can use both a local directory and the S3 to save outputs.
-To use local directory, please set a local directory path to :attr:`~gokart.task.TaskOnKart.workspace_directory`. Please refer to :doc:`task_parameters` for how to set it up.
+If you would like to use local directory, please set a local directory path to :attr:`~gokart.task.TaskOnKart.workspace_directory`. Please refer to :doc:`task_parameters` for how to set it up.
 
 It is recommended to use the config file since it does not change much.
 
