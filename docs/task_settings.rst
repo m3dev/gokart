@@ -27,7 +27,7 @@ It is recommended to use the config file since it does not change much.
 
 To use the S3 or GCS repository, please set the bucket path as ``s3://{YOUR_REPOSITORY_NAME}`` or ``gs://{YOUR_REPOSITORY_NAME}`` respectively.
 
-And appropriate values to the parameters of :class:`~gokart.s3_config.S3Config` or :class:`~gokart.gcs_config.GCSConfig`. These read credential information from Environment Variables.
+If use S3 or GCS, please set credential information to Environment Variables.
 
 .. code:: sh
 

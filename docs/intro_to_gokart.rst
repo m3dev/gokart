@@ -25,7 +25,7 @@ A minimal gokart tasks looks something like this:
 
     class Example(gokart.TaskOnKart):
         def run(self):
-            self.dump('Hellow, world!')
+            self.dump('Hello, world!')
 
     task = Example()
     output = gokart.build(task)
@@ -37,7 +37,7 @@ A minimal gokart tasks looks something like this:
 
 .. code:: sh
 
-    Hellow, world!
+    Hello, world!
 
 
 ``gokart`` records all the information needed for Machine Learning. By default, ``resources`` will be generated in the same directory as the script.
