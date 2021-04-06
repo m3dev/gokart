@@ -85,7 +85,7 @@ If you want to change the parameter of TaskA and rerun TaskB and TaskC, recommen
     class TaskA(gokart.TaskOnKart):
         __version = luigi.IntParameter(default=1)
 
-The hash value of TaskA will change, so TaskB and TaskC that depend on that hash value will be rerun.
+If the hash value of TaskA will change, the dependent tasks (in this case, TaskB and TaskC) will rerun.
 
 
 Fix random seed
