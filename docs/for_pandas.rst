@@ -64,6 +64,6 @@ The :func:`~gokart.task.TaskOnKart.fail_on_empty_dump` method is `AssertionError
         df = pd.DataFrame()
         self.fail_on_empty_dump(df)  # AssertionError
 
-Empty caches sometimes hide bugs and let us spend much time debugging. This feature notice us some bugs (including wrong datasources) in the early stage.
+Empty caches sometimes hide bugs and let us spend much time debugging. This feature notifies us some bugs (including wrong datasources) in the early stage.
 
 Please refer to :func:`~gokart.task.TaskOnKart.fail_on_empty_dump`.
