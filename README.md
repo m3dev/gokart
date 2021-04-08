@@ -69,6 +69,13 @@ Hello, world!
 ```
 
 
+This is an introduction to some of the gokart.
+There are still more useful features.
+
+Please See [Documentation](https://gokart.readthedocs.io/en/latest/) .
+
+Have a good gokart life.
+
 # Achievements
 
 gokart is a proven product.
