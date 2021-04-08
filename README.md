@@ -23,7 +23,7 @@ Here are some good things about gokart.
     - random seed in task
     - displayed log
     - all parameters set as class variables in the task
-- If change parameter of Task, automatically rerun.
+- Automatically rerun the pipeline if parameters of Tasks are changed.
 - Support GCS or S3
 - The above output is exchanged between tasks as an intermediate file, which is memory-friendly
 - pandas.DataFrame type and column checking during I/O
