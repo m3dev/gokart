@@ -32,8 +32,7 @@ Pandas has a feature that converts the type of column(s) automatically. This fea
             df = pd.DataFrame(dict(int_column=['a']))
             self.dump(df)
 
-This is useful when developing batches.
-
+This is useful when dataframe has nullable columns because pandas auto-conversion often fails in such case.
 
 Easy to Load DataFrame
 ----------------------
