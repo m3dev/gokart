@@ -87,7 +87,7 @@ In addition, the following files are automatically saved as ``log``.
 How to running task
 -------------------
 
-gokart has ``run`` and ``build`` methods for running task. Each has a different purpose.
+Gokart has ``run`` and ``build`` methods for running task. Each has a different purpose.
 
 - ``gokart.run``: uses arguments on the shell. return retcode.
 - ``gokart.build``: uses inline code on jupyter notebook, IPython, and more. return task output.
