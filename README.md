@@ -16,7 +16,7 @@ Gokart solves reproducibility, task dependencies, constraints of good code, and 
 
 Here are some good things about gokart.
 
-- The following data for each Task is stored separately in a pkl file with hash value
+- The following meta data for each Task is stored separately in a `pkl` file with hash value
     - task output data
     - imported all module versions
     - task processing time
