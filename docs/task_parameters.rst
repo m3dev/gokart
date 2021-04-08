@@ -74,7 +74,7 @@ The :func:`~gokart.parameter.ExplicitBoolParameter` is parameter for explicitly 
     $ python main.py Task
     # param will be set as False
 
-``ExplicitBoolParameter`` can solve these problems on parameters from command line.
+``ExplicitBoolParameter`` solves these problems on parameters from command line.
 
 
 Setting Task Parameters
