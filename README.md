@@ -26,7 +26,7 @@ Here are some good things about gokart.
 - Automatically rerun the pipeline if parameters of Tasks are changed.
 - Support GCS and S3 as a data store for intermediate results of Tasks in the pipeline.
 - The above output is exchanged between tasks as an intermediate file, which is memory-friendly
-- pandas.DataFrame type and column checking during I/O
+- `pandas.DataFrame` type and column checking during I/O
 - Directory structure of saved files is automatically determined from structure of script
 - Seeds for numpy and random are automatically fixed
 - Can code while adhering to SOLID principles as much as possible
