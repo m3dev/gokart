@@ -91,7 +91,7 @@ If the hash value of TaskA will change, the dependent tasks (in this case, TaskB
 Fix random seed
 ---------------
 
-Every Task has a parameter named :attr:`~gokart.task.TaskOnKart.fix_random_seed_methods` and :attr:`~gokart.task.TaskOnKart.fix_random_seed_value`. This can be used to fix the random seed.
+Every task has a parameter named :attr:`~gokart.task.TaskOnKart.fix_random_seed_methods` and :attr:`~gokart.task.TaskOnKart.fix_random_seed_value`. This can be used to fix the random seed.
 
 
 .. code:: python
