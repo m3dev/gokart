@@ -17,7 +17,7 @@ Please refer to `luigi document <https://luigi.readthedocs.io/en/stable/api/luig
 Gokart Parameter
 ----------------
 
-There is also a parameter provided by gokart. 
+There are also parameters provided by gokart. 
 
 - TaskInstanceParameter
 - ListTaskInstanceParameter
