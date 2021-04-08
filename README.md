@@ -29,7 +29,7 @@ Here are some good things about gokart.
 - `pandas.DataFrame` type and column checking during I/O
 - Directory structure of saved files is automatically determined from structure of script
 - Seeds for numpy and random are automatically fixed
-- Can code while adhering to SOLID principles as much as possible
+- Can code while adhering to [SOLID](https://en.wikipedia.org/wiki/SOLID) principles as much as possible
 - Tasks are locked via redis even if they run in parallel
 
 *These are all functions baptized for creating Machine Learning batches. Provides an excellent environment for reproducibility and team development.*
