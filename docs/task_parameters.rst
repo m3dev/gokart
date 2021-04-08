@@ -27,7 +27,7 @@ There is also a parameter provided by gokart.
 gokart.TaskInstanceParameter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :func:`~gokart.parameter.TaskInstanceParameter` is executes a task using the results of a task as dynamic parameters.
+The :func:`~gokart.parameter.TaskInstanceParameter` executes a task using the results of a task as dynamic parameters.
 
 
 .. code:: python
