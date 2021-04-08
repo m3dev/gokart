@@ -257,7 +257,7 @@ And the dependent task, ``StringToSplit``, will also have a different hash value
 
 Please refer to :doc:`task_settings` for details.
 
-Please try rerun task at hand:)
+Please try rerunning task at hand:)
 
 
 Feature
