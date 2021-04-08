@@ -32,7 +32,7 @@ Here are some good things about gokart.
 - Can code while adhering to [SOLID](https://en.wikipedia.org/wiki/SOLID) principles as much as possible
 - Tasks are locked via redis even if they run in parallel
 
-*These are all functions baptized for creating Machine Learning batches. Provides an excellent environment for reproducibility and team development.*
+*All the functions above are created for constructing Machine Learning batches. Provides an excellent environment for reproducibility and team development.*
 
 
 # Getting Started
