@@ -24,7 +24,7 @@ Here are some good things about gokart.
     - displayed log
     - all parameters set as class variables in the task
 - Automatically rerun the pipeline if parameters of Tasks are changed.
-- Support GCS or S3
+- Support GCS and S3 as a data store for intermediate results of Tasks in the pipeline.
 - The above output is exchanged between tasks as an intermediate file, which is memory-friendly
 - pandas.DataFrame type and column checking during I/O
 - Directory structure of saved files is automatically determined from structure of script
