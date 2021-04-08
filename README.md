@@ -12,7 +12,7 @@ Gokart solves reproducibility, task dependencies, constraints of good code, and 
 [Documentation](https://gokart.readthedocs.io/en/latest/) for the latest release is hosted on readthedocs.
 
 
-# Good thing about gokart
+# About gokart
 
 Here are some good things about gokart.
 
@@ -32,8 +32,15 @@ Here are some good things about gokart.
 - Can code while adhering to [SOLID](https://en.wikipedia.org/wiki/SOLID) principles as much as possible
 - Tasks are locked via redis even if they run in parallel
 
-*All the functions above are created for constructing Machine Learning batches. Provides an excellent environment for reproducibility and team development.*
+**All the functions above are created for constructing Machine Learning batches. Provides an excellent environment for reproducibility and team development.**
 
+
+Here are some non-goal / downside of the gokart.
+- Batch execution in parallel is supported, but parallel and concurrent execution of task in memory.
+- Gokart is focused on reproducibility. So, I/O and capacity of data storage can become a bottleneck.
+- No support for task visualize.
+- Gokart is not an experiment management tool. The management of the execution result is cut out as [Thunderbolt](https://github.com/m3dev/thunderbolt).
+- Gokart does not recommend writing pipelines in toml, yaml, json, and more. Gokart is preferring to write them in Python.
 
 # Getting Started
 
