@@ -85,7 +85,7 @@ Have a good gokart life.
 
 # Achievements
 
-gokart is a proven product.
+Gokart is a proven product.
 
 - It's actually been used by [m3.inc](https://corporate.m3.com/en) for over 3 years
 - Natural Language Processing Competition by [Nishika.inc](https://nishika.com) 2nd prize : [Solution Repository](https://github.com/vaaaaanquish/nishika_akutagawa_2nd_prize)
