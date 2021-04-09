@@ -203,6 +203,8 @@ class TaskOnKart(luigi.Task):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
             if isinstance(targets, dict):
+                if len(targets) == 1:
+                    return _load(list(targets.values())[0])
                 return {k: _load(t) for k, t in targets.items()}
             return targets.load()
 
