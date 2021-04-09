@@ -203,12 +203,13 @@ class TaskOnKart(luigi.Task):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
             if isinstance(targets, dict):
-                if len(targets) == 1:
-                    return _load(list(targets.values())[0])
                 return {k: _load(t) for k, t in targets.items()}
             return targets.load()
 
-        return _load(self._get_input_targets(target))
+        data = _load(self._get_input_targets(target))
+        if isinstance(data, dict) and len(data) == 1:
+            return list(data.values())[0]
+        return data
 
     def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):
