@@ -207,7 +207,7 @@ class TaskOnKart(luigi.Task):
             return targets.load()
 
         data = _load(self._get_input_targets(target))
-        if isinstance(data, dict) and len(data) == 1:
+        if target is None and isinstance(data, dict) and len(data) == 1:
             return list(data.values())[0]
         return data
 
