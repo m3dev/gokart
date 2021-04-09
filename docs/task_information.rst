@@ -87,8 +87,3 @@ the output could be like:
 Delete Unnecessary Output Files
 --------------------------------
 To delete output files which are not necessary to run a task, add option ``--delete-unnecessary-output-files``. This option is supported only when a task outputs files in local storage not S3 for now.
-
-
-Notify Job Status to Slack
----------------------------
-When :class:`~gokart.slack.slack_config.SlackConfig` is set, ``gokart.run`` notices task results at the end of pipeline.

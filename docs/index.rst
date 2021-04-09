@@ -5,23 +5,62 @@
 
 Welcome to gokart's documentation!
 ==================================
-Getting Started
-----------------
 
-Run ``pip instgall gokart`` to install the latest version from PyPI.
-`Documentation: <https://gokart.readthedocs.io/en/latest/>`_ for the latest release is hosted on readthedocs.
+Useful links: `GitHub <https://github.com/m3dev/gokart>`_ | `cookiecutter gokart <https://github.com/m3dev/cookiecutter-gokart>`_
 
-Table of Contents
+`Gokart <https://github.com/m3dev/gokart>`_ is a wrapper of the data pipeline library `luigi <https://github.com/spotify/luigi>`_. Gokart solves "**reproducibility**", "**task dependencies**", "**constraints of good code**", and "**ease of use**" for Machine Learning Pipeline.
+
+
+Good thing about gokart
+-----------------------
+
+Here are some good things about gokart.
+
+- The following data for each Task is stored separately in a pkl file with hash value
+    - task output data
+    - imported all module versions
+    - task processing time
+    - random seed in task
+    - displayed log
+    - all parameters set as class variables in the task
+- If change parameter of Task, rerun spontaneously.
+    - The above file will be generated with a different hash value
+    - The hash value of dependent task will also change and both will be rerun
+- Support GCS or S3
+- The above output is exchanged between tasks as an intermediate file, which is memory-friendly
+- pandas.DataFrame type and column checking during I/O
+- Directory structure of saved files is automatically determined from structure of script
+- Seeds for numpy and random are automatically fixed
+- Can code while adhering to SOLID principles as much as possible
+- Tasks are locked via redis even if they run in parallel
+
+**These are all functions baptized for creating Machine Learning batches. Provides an excellent environment for reproducibility and team development.**
+
+
+
+Getting started
+-----------------
+
+.. toctree::
+   :maxdepth: 2
+
+   intro_to_gokart
+   tutorial
+
+User Guide
 -----------------
 
 .. toctree::
    :maxdepth: 2
 
    task_on_kart
-   setting_task_parameters
-   task_information
+   task_parameters
    task_settings
+   task_information
+   logging
    slack_notification
+   using_task_cache_collision_lock
+   for_pandas
 
 API References
 --------------
