@@ -206,7 +206,10 @@ class TaskOnKart(luigi.Task):
                 return {k: _load(t) for k, t in targets.items()}
             return targets.load()
 
-        return _load(self._get_input_targets(target))
+        data = _load(self._get_input_targets(target))
+        if target is None and isinstance(data, dict) and len(data) == 1:
+            return list(data.values())[0]
+        return data
 
     def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):

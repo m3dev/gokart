@@ -222,6 +222,16 @@ class TaskTest(unittest.TestCase):
         target.load.assert_called_once()
         self.assertEqual(data, 1)
 
+    def test_load_with_single_dict_target(self):
+        task = _DummyTask()
+        target = MagicMock(spec=TargetOnKart)
+        target.load.return_value = 1
+        task.input = MagicMock(return_value={'target_key': target})
+
+        data = task.load()
+        target.load.assert_called_once()
+        self.assertEqual(data, 1)
+
     def test_load_with_keyword(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
