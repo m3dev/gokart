@@ -4,7 +4,6 @@ from unittest.mock import patch
 import luigi
 import luigi.mock
 from luigi.mock import MockFileSystem, MockTarget
-from luigi.task_register import Register
 
 import gokart
 import gokart.info
@@ -36,6 +35,18 @@ class _Task(gokart.TaskOnKart):
         self.dump(f'task uid = {self.make_unique_id()}')
 
 
+class _DoubleLoadSubTask(gokart.TaskOnKart):
+    task_namespace = __name__
+    sub1 = gokart.TaskInstanceParameter()
+    sub2 = gokart.TaskInstanceParameter()
+
+    def output(self):
+        return self.make_target('sub_task.txt')
+
+    def run(self):
+        self.dump(f'task uid = {self.make_unique_id()}')
+
+
 class TestInfo(unittest.TestCase):
     def setUp(self) -> None:
         MockFileSystem().clear()
@@ -61,6 +72,42 @@ class TestInfo(unittest.TestCase):
         expected = r"""
 └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
    └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]"""
+        self.assertRegex(tree, expected)
+
+    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    def test_make_tree_info_compress(self):
+        task = _DoubleLoadSubTask(
+            sub1=_Task(param=1, sub=_SubTask(param=2)),
+            sub2=_Task(param=1, sub=_SubTask(param=2)),
+        )
+
+        # check after sub task runs
+        luigi.build([task], local_scheduler=True)
+        tree = gokart.info.make_tree_info(task)
+        expected = r"""
+└─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
+   |--\(COMPLETE\) _Task\[[a-z0-9]*\]
+   |  └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]
+   └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
+      └─- \.\.\."""
+        self.assertRegex(tree, expected)
+
+    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    def test_make_tree_info_not_compress(self):
+        task = _DoubleLoadSubTask(
+            sub1=_Task(param=1, sub=_SubTask(param=2)),
+            sub2=_Task(param=1, sub=_SubTask(param=2)),
+        )
+
+        # check after sub task runs
+        luigi.build([task], local_scheduler=True)
+        tree = gokart.info.make_tree_info(task, compress=False)
+        expected = r"""
+└─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
+   |--\(COMPLETE\) _Task\[[a-z0-9]*\]
+   |  └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]
+   └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
+      └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]"""
         self.assertRegex(tree, expected)
 
 
