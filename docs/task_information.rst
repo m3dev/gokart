@@ -91,7 +91,7 @@ It use :func:`~gokart.info.make_tree_info` in the following:
             self.dump(','.join(task))
 
 
-The more dependencies you have, the harder it is to see the tree.
+The more dependencies you have, the harder it is to grasp the task tree.
 
 
 .. code:: python
