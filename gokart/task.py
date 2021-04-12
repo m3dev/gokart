@@ -1,8 +1,6 @@
 import hashlib
 import os
-import sys
 import types
-from functools import partial
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Optional, Set, Union
@@ -28,7 +26,7 @@ class TaskOnKart(luigi.Task):
 
     * :py:meth:`make_target` - this makes output target with a relative file path.
     * :py:meth:`make_model_target` - this makes output target for models which generate multiple files to save.
-    * :py:meth:`load` - this loads input files of this task. 
+    * :py:meth:`load` - this loads input files of this task.
     * :py:meth:`dump` - this save a object as output of this task.
     """
 
@@ -208,7 +206,10 @@ class TaskOnKart(luigi.Task):
                 return {k: _load(t) for k, t in targets.items()}
             return targets.load()
 
-        return _load(self._get_input_targets(target))
+        data = _load(self._get_input_targets(target))
+        if target is None and isinstance(data, dict) and len(data) == 1:
+            return list(data.values())[0]
+        return data
 
     def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Any:
         def _load(targets):

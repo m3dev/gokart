@@ -1,14 +1,15 @@
-1. Task cache collision lock
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Task cache collision lock
+=========================
 
 Requires
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------
 
-You need to install (redis)[https://redis.io/topics/quickstart] for this
-advanced function.
+You need to install `redis <https://redis.io/topics/quickstart>`_ for this advanced function.
+
 
 Description
-^^^^^^^^^^^
+-----------
+
 
 Task lock is implemented to prevent task cache collision. (Originally,
 task cache collision may occur when same task with same parameters run
@@ -41,12 +42,9 @@ at different applications parallelly.)
         redis_host=localhost
         redis_port=6379
 
-2. Using efficient task cache collision lock
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-Description
-^^^^^^^^^^^
+Using efficient task cache collision lock
+-----------------------------------------
 
 Above task lock will prevent cache collision. However, above setting check collisions only when the task access the cache file (i.e. ``task.dump()``, ``task.load()`` and ``task.remove()``). This will allow applications to run ``run()`` of same task at the same time, which
 is not efficent.
