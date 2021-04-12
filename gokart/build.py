@@ -40,13 +40,17 @@ def add_config(file_path: str):
     assert luigi.configuration.add_config_path(file_path)
 
 
+def _reset_register(keep={'gokart', 'luigi'}):
+    luigi.task_register.Register._reg = [x for x in luigi.task_register.Register._reg
+                                         if x.__module__.split('.')[0] in keep]  # avoid TaskClassAmbigiousException
+
+
 def build(task: TaskOnKart, verbose: bool = False, return_value: bool = True, reset_register: bool = True) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
     """
     if reset_register:
-        luigi.task_register.Register._reg = [x for x in luigi.task_register.Register._reg
-                                             if x.__module__.split('.')[0] in {'gokart', 'luigi'}]  # avoid TaskClassAmbigiousException
+        _reset_register()
     _read_environ()
     _check_config()
     with HideLogger(verbose):
