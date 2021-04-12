@@ -126,7 +126,7 @@ The more dependencies you have, the harder it is to grasp the task tree.
 
 
 This has been omitted.
-We can disable compress by doing the following:
+We can disable this omission by passing ``False`` to compress flag:
 
 .. code:: python
 
