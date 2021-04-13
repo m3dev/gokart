@@ -125,7 +125,7 @@ The more dependencies you have, the harder it is to see the tree.
             └─- ...
 
 
-This has been omitted.
+In task dependency tree output by `make_tree_info`, the sub-trees already shown in above will be omitted.
 We can disable compress by doing the following:
 
 .. code:: python
