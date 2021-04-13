@@ -93,6 +93,11 @@ Gokart has ``run`` and ``build`` methods for running task. Each has a different 
 - ``gokart.build``: uses inline code on jupyter notebook, IPython, and more. return task output.
 
 
+.. note::
+
+    It is not recommended to use ``gokart.run`` and ``gokart.build`` together in the same script. Because ``gokart.build`` will clear the contents of ``luigi.register``. It's the only way to handle duplicate tasks.
+
+
 gokart.run
 ~~~~~~~~~~
 
