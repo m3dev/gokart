@@ -91,7 +91,7 @@ It use :func:`~gokart.info.make_tree_info` in the following:
             self.dump(','.join(task))
 
 
-The more dependencies you have, the harder it is to see the tree.
+The more dependencies you have, the harder it is to grasp the task tree.
 
 
 .. code:: python
@@ -126,7 +126,7 @@ The more dependencies you have, the harder it is to see the tree.
 
 
 In task dependency tree output by `make_tree_info`, the sub-trees already shown in above will be omitted.
-We can disable abbreviation by doing the following:
+We can disable this omission by passing ``False`` to ``abbr`` flag:
 
 .. code:: python
 
