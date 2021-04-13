@@ -1,13 +1,12 @@
 import logging
-import os
 import sys
 from logging import getLogger
 from typing import Any, Optional
 
 import luigi
 
-from gokart.run import _check_config, _read_environ
 from gokart.task import TaskOnKart
+from gokart.utils import check_config, read_environ
 
 
 class HideLogger:
@@ -34,12 +33,6 @@ def _get_output(task: TaskOnKart) -> Any:
     return output.load()
 
 
-def add_config(file_path: str):
-    _, ext = os.path.splitext(file_path)
-    luigi.configuration.core.PARSER = ext
-    assert luigi.configuration.add_config_path(file_path)
-
-
 def _reset_register(keep={'gokart', 'luigi'}):
     luigi.task_register.Register._reg = [x for x in luigi.task_register.Register._reg
                                          if x.__module__.split('.')[0] in keep]  # avoid TaskClassAmbigiousException
@@ -51,8 +44,8 @@ def build(task: TaskOnKart, verbose: bool = False, return_value: bool = True, re
     """
     if reset_register:
         _reset_register()
-    _read_environ()
-    _check_config()
+    read_environ()
+    check_config()
     with HideLogger(verbose):
         luigi.build([task], local_scheduler=True)
     return _get_output(task) if return_value else None
