@@ -8,7 +8,7 @@ from gokart.task import TaskOnKart
 logger = getLogger(__name__)
 
 
-def make_tree_info(task, indent='', last=True, details=False, abbr=True, task_set=None):
+def make_tree_info(task, indent='', last=True, details=False, abbr=True, visited_tasks=None):
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
     """
@@ -27,10 +27,10 @@ def make_tree_info(task, indent='', last=True, details=False, abbr=True, task_se
     result += f'({is_complete}) {name}[{task.make_unique_id()}]'
 
     if abbr:
-        task_set = task_set or {}
+        visited_tasks = visited_tasks or {}
         task_id = f'{name}_{task.make_unique_id()}'
-        if task_id not in task_set:
-            task_set.add(task_id)
+        if task_id not in visited_tasks:
+            visited_tasks.add(task_id)
         else:
             result += f'\n{indent}└─- ...'
             return result
@@ -45,7 +45,7 @@ def make_tree_info(task, indent='', last=True, details=False, abbr=True, task_se
 
     children = luigi.task.flatten(task.requires())
     for index, child in enumerate(children):
-        result += make_tree_info(child, indent, (index + 1) == len(children), details=details, abbr=abbr, task_set=task_set)
+        result += make_tree_info(child, indent, (index + 1) == len(children), details=details, abbr=abbr, visited_tasks=visited_tasks)
     return result
 
 
