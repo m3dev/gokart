@@ -25,6 +25,12 @@ class Inherited(gokart.TaskOnKart):
     param_b = luigi.Parameter(default='overrided')
 
 
+@inherits_config_params(ConfigClass, param_config2task={'param_a': 'param_d'})
+class Inherited2(gokart.TaskOnKart):
+    param_c = luigi.Parameter()
+    param_d = luigi.Parameter()
+
+
 class ChildTask(Inherited):
     pass
 
@@ -56,6 +62,10 @@ class TestInheritsConfigParam(unittest.TestCase):
         # Parameters which is not a member of the task will not be set
         with self.assertRaises(AttributeError):
             in_parse(['Inherited'], lambda task: task.param_c)
+
+        # test parameter name alias
+        in_parse(['Inherited2'], lambda task: self.assertEqual(task.param_c, 'config c'))
+        in_parse(['Inherited2'], lambda task: self.assertEqual(task.param_d, 'config a'))
 
     def test_child_task(self):
         in_parse(['ChildTask'], lambda task: self.assertEqual(task.param_a, 'config a'))
