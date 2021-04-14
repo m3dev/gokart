@@ -75,7 +75,7 @@ class TestInfo(unittest.TestCase):
         self.assertRegex(tree, expected)
 
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
-    def test_make_tree_info_compress(self):
+    def test_make_tree_info_abbreviation(self):
         task = _DoubleLoadSubTask(
             sub1=_Task(param=1, sub=_SubTask(param=2)),
             sub2=_Task(param=1, sub=_SubTask(param=2)),
@@ -101,7 +101,7 @@ class TestInfo(unittest.TestCase):
 
         # check after sub task runs
         luigi.build([task], local_scheduler=True)
-        tree = gokart.info.make_tree_info(task, compress=False)
+        tree = gokart.info.make_tree_info(task, abbr=False)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
    |--\(COMPLETE\) _Task\[[a-z0-9]*\]
