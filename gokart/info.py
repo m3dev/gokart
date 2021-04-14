@@ -27,7 +27,7 @@ def make_tree_info(task, indent='', last=True, details=False, abbr=True, visited
     result += f'({is_complete}) {name}[{task.make_unique_id()}]'
 
     if abbr:
-        visited_tasks = visited_tasks or {}
+        visited_tasks = visited_tasks or set()
         task_id = f'{name}_{task.make_unique_id()}'
         if task_id not in visited_tasks:
             visited_tasks.add(task_id)
