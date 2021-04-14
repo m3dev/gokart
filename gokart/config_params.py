@@ -1,4 +1,5 @@
 from typing import Dict, Optional
+
 import luigi
 
 import gokart
