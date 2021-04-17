@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import pandas as pd
 from luigi.mock import MockFileSystem, MockTarget
-from mock import patch
+from unittest.mock import patch
 
 import gokart
 from gokart.pandas_type_config import PandasTypeConfig
