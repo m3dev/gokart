@@ -77,10 +77,10 @@ class TaskOnKart(luigi.Task):
         return tasks or []  # when tasks is empty dict, then this returns empty list.
 
     def make_task_instance_dictionary(self) -> Dict[str, 'TaskOnKart']:
-        return {key: var for key, var in vars(self).items() if isinstance(var, TaskOnKart) or self._is_list_of_task_on_kart(var)}
+        return {key: var for key, var in vars(self).items() if self._is_task_on_kart(var)}
 
-    def _is_list_of_task_on_kart(self, x):
-        return isinstance(x, list) and x and isinstance(x[0], TaskOnKart)
+    def _is_task_on_kart(self, value):
+        return isinstance(value, TaskOnKart) or (isinstance(value, list) and value and all([isinstance(v, TaskOnKart) for v in value]))
 
     @classmethod
     def _add_configuration(cls, kwargs, section):
