@@ -471,6 +471,12 @@ class TaskTest(unittest.TestCase):
             task.run()
             mock_obj.assert_not_called()
 
+    def test_is_task_on_kart(self):
+        self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart(gokart.TaskOnKart()))
+        self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart(1))
+        self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart(list()))
+        self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart([gokart.TaskOnKart(), gokart.TaskOnKart()]))
+
 
 if __name__ == '__main__':
     unittest.main()
