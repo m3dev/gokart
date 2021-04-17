@@ -81,7 +81,7 @@ class TaskOnKart(luigi.Task):
 
     @staticmethod
     def is_task_on_kart(value):
-        return isinstance(value, TaskOnKart) or (isinstance(value, list) and value and all([isinstance(v, TaskOnKart) for v in value]))
+        return isinstance(value, TaskOnKart) or (isinstance(value, list) and bool(value) and all([isinstance(v, TaskOnKart) for v in value]))
 
     @classmethod
     def _add_configuration(cls, kwargs, section):
