@@ -474,7 +474,7 @@ class TaskTest(unittest.TestCase):
     def test_is_task_on_kart(self):
         self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart(gokart.TaskOnKart()))
         self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart(1))
-        self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart([]))
+        self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart(list()))
         self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart([gokart.TaskOnKart(), gokart.TaskOnKart()]))
 
 
