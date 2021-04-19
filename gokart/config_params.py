@@ -10,8 +10,8 @@ class inherits_config_params:
         """
         Decorates task to inherit parameter of `config_class`.
 
-        * config_class: Inherit parameter value of this task to decorated task. Only parameters exist in both tasks are inherited.
-        * param_config2task: Dictinary to map paramter names between config_class and decorated task.
+        * config_class: Inherit parameter value of this task to decorated task. Only parameter values exist in both tasks are inherited.
+        * param_config2task: Dictionary to map paramter names between config_class and decorated task.
                              key: config_class's parameter name. value: decorated task's parameter name.
         """
 
