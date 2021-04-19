@@ -7,6 +7,14 @@ import gokart
 
 class inherits_config_params:
     def __init__(self, config_class: luigi.Config, param_config2task: Optional[Dict[str, str]] = None):
+        """
+        Decorates task to inherit parameter of `config_class`.
+
+        * config_class: Inherit parameter value of this task to decorated task. Only parameters exist in both tasks are inherited.
+        * param_config2task: Dictinary to map paramter names between config_class and decorated task.
+                             key: config_class's parameter name. value: decorated task's parameter name.
+        """
+
         self._config_class: luigi.Config = config_class
         self._param_config2task: Dict[str, str] = param_config2task if param_config2task is not None else {}
 
