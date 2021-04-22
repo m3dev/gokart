@@ -60,12 +60,12 @@ In the above example, ``param2`` will not be available in ``SomeTask``, since ``
         param: str = luigi.Parameter()
         param2: str = luigi.Parameter()
 
-    @inherits_config_params(MasterConfig, param_config2task={'param2': 'param3'})
+    @inherits_config_params(MasterConfig, parameter_alias={'param2': 'param3'})
     class SomeTask(gokart.TaskOnKart):
         param3: str = luigi.Parameter()
 
 
-You may also set a parameter name alias by setting ``param_config2task``.
-``param_config2task`` must be a dictionary of inheriting task's parameter name as keys and decorating task's parameter names as values.
+You may also set a parameter name alias by setting ``parameter_alias``.
+``parameter_alias`` must be a dictionary of inheriting task's parameter name as keys and decorating task's parameter names as values.
 
 In the above example, ``SomeTask.param3`` will be set to same value as ``MasterConfig.param2``.

@@ -25,7 +25,7 @@ class Inherited(gokart.TaskOnKart):
     param_b = luigi.Parameter(default='overrided')
 
 
-@inherits_config_params(ConfigClass, param_config2task={'param_a': 'param_d'})
+@inherits_config_params(ConfigClass, parameter_alias={'param_a': 'param_d'})
 class Inherited2(gokart.TaskOnKart):
     param_c = luigi.Parameter()
     param_d = luigi.Parameter()
