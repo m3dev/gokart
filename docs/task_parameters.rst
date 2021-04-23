@@ -158,3 +158,19 @@ This is useful when multiple tasks has the same parameter, since parameter setti
 
 Note that parameters which exist in both ``MasterConfig`` and ``SomeTask`` will be inherited.
 In the above example, ``param2`` will not be available in ``SomeTask``, since ``SomeTask`` does not have ``param2`` parameter.
+
+.. code:: python
+
+    class MasterConfig(luigi.Config):
+        param: str = luigi.Parameter()
+        param2: str = luigi.Parameter()
+
+    @inherits_config_params(MasterConfig, parameter_alias={'param2': 'param3'})
+    class SomeTask(gokart.TaskOnKart):
+        param3: str = luigi.Parameter()
+
+
+You may also set a parameter name alias by setting ``parameter_alias``.
+``parameter_alias`` must be a dictionary of inheriting task's parameter name as keys and decorating task's parameter names as values.
+
+In the above example, ``SomeTask.param3`` will be set to same value as ``MasterConfig.param2``.
