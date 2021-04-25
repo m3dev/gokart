@@ -69,7 +69,7 @@ The result of dumping the task will be saved in the ``__name__`` directory.
     import pickle
 
     with open('resources/__main__/Example_8441c59b5ce0113396d53509f19371fb.pkl', 'rb') as f:
-        print(pickle.load(f))  # Hellow, world!
+        print(pickle.load(f))  # Hello, world!
 
 
 That will be given hash value depending on the parameter of the task. This means that if you change the parameter of the task, the hash value will change, and change output file. This is very useful when changing parameters and experimenting. Please refer to :doc:`task_parameters` section for task parameters. Also see :doc:`task_on_kart` section for information on how to return this output destination.

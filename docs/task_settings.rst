@@ -1,7 +1,7 @@
 Task Settings
 =============
 
-Task settings. Aslo please refer to :doc:`task_parameters` section.
+Task settings. Also please refer to :doc:`task_parameters` section.
 
 
 Directory to Save Outputs
@@ -73,7 +73,7 @@ When used from an argument as follows:
 Example: Suppose we have a straight line pipeline composed of TaskA, TaskB and TaskC,  and TaskC is an endpoint of this pipeline. We also suppose that all the tasks have already been executed.
 
 - TaskA(rerun=True)  ->  TaskB  ->  TaskC    # not rerunning
-- TaskA  ->  TaskB(rerun=True)  ->  TaskC    # reruning TaskB and TaskC
+- TaskA  ->  TaskB(rerun=True)  ->  TaskC    # rerunning TaskB and TaskC
 
 This is due to the way intermediate files are handled. ``rerun`` parameter is ``significant=False``, it does not affect the hash value. It is very important to understand this difference.
 
