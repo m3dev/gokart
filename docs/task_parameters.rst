@@ -1,3 +1,4 @@
+===============
 Task Parameters
 ===============
 
@@ -15,17 +16,17 @@ Please refer to `luigi document <https://luigi.readthedocs.io/en/stable/api/luig
 
 
 Gokart Parameter
-----------------
+================
 
 There are also parameters provided by gokart. 
 
-- TaskInstanceParameter
-- ListTaskInstanceParameter
-- ExplicitBoolParameter
+- 1. gokart.TaskInstanceParameter
+- 2. gokart.ListTaskInstanceParameter
+- 3. gokart.ExplicitBoolParameter
 
 
-gokart.TaskInstanceParameter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1. gokart.TaskInstanceParameter
+----------------------------
 
 The :func:`~gokart.parameter.TaskInstanceParameter` executes a task using the results of a task as dynamic parameters.
 
@@ -54,14 +55,14 @@ The :func:`~gokart.parameter.TaskInstanceParameter` executes a task using the re
 Helps to create a pipeline.
 
 
-gokart.ListTaskInstanceParameter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. gokart.ListTaskInstanceParameter
+----------------------------
 
 The :func:`~gokart.parameter.ListTaskInstanceParameter` is list of TaskInstanceParameter.
 
 
-gokart.ExplicitBoolParameter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. gokart.ExplicitBoolParameter
+----------------------------
 
 The :func:`~gokart.parameter.ExplicitBoolParameter` is parameter for explicitly specified value.
 
@@ -78,18 +79,18 @@ The :func:`~gokart.parameter.ExplicitBoolParameter` is parameter for explicitly 
 
 
 Setting Task Parameters
------------------------
+================
 
 There are several ways to set task parameters. 
 
-- command line
-- config file & enviroment variables
-- upstream task
-- inherits_config_params
+- 1. Set parameter from command line
+- 2. Set parameter at config file
+- 3. Set parameter at upstream task
+- 4. Inherit parameter from other task
 
 
-Set parameter from command line
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1. Set parameter from command line
+-------------------------
 .. code:: sh
 
     python main.py sample.SomeTask --SomeTask-param=Hello
@@ -97,8 +98,8 @@ Set parameter from command line
 Parameter of each task can be set as a command line parameter in ``--[task name]-[parameter name]=[value]`` format.
 
 
-Set parameter at config file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. Set parameter at config file
+-------------------------
 ::
 
     [sample.SomeTask]
@@ -126,8 +127,8 @@ It can also be loaded from environment variable in the following:
 The advantage of using environment variables is that important information is not logged and common settings can be used.
 
 
-Set parameter at upstream task
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. Set parameter at upstream task
+-------------------------
 
 Parameters can be set from upstream, as in a typical pipeline.
 
@@ -138,8 +139,8 @@ Parameters can be set from upstream, as in a typical pipeline.
             return dict(sometask=SomeTask(param='Hello'))
 
 
-Inherit parameter from other task
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4. Inherit parameter from other task
+-------------------------
 
 Parameters can be set ``@inherits_config_params`` decorator.
 
