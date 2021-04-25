@@ -2,7 +2,7 @@ Task Parameters
 ===============
 
 We can set parameters for tasks.
-Aslo please refer to :doc:`task_settings` section.
+Also please refer to :doc:`task_settings` section.
 
 .. code:: python
 
