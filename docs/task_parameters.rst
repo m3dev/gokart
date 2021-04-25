@@ -1,3 +1,4 @@
+===============
 Task Parameters
 ===============
 
@@ -15,7 +16,7 @@ Please refer to `luigi document <https://luigi.readthedocs.io/en/stable/api/luig
 
 
 Gokart Parameter
------------------------
+================
 
 There are also parameters provided by gokart. 
 
@@ -25,7 +26,7 @@ There are also parameters provided by gokart.
 
 
 1. gokart.TaskInstanceParameter
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 The :func:`~gokart.parameter.TaskInstanceParameter` executes a task using the results of a task as dynamic parameters.
 
@@ -55,13 +56,13 @@ Helps to create a pipeline.
 
 
 2. gokart.ListTaskInstanceParameter
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 The :func:`~gokart.parameter.ListTaskInstanceParameter` is list of TaskInstanceParameter.
 
 
 3. gokart.ExplicitBoolParameter
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 The :func:`~gokart.parameter.ExplicitBoolParameter` is parameter for explicitly specified value.
 
@@ -78,7 +79,7 @@ The :func:`~gokart.parameter.ExplicitBoolParameter` is parameter for explicitly 
 
 
 Setting Task Parameters
----------------
+================
 
 There are several ways to set task parameters. 
 
@@ -89,7 +90,7 @@ There are several ways to set task parameters.
 
 
 1. Set parameter from command line
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 .. code:: sh
 
     python main.py sample.SomeTask --SomeTask-param=Hello
@@ -98,7 +99,7 @@ Parameter of each task can be set as a command line parameter in ``--[task name]
 
 
 2. Set parameter at config file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 ::
 
     [sample.SomeTask]
@@ -127,7 +128,7 @@ The advantage of using environment variables is that important information is no
 
 
 3. Set parameter at upstream task
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 Parameters can be set from upstream, as in a typical pipeline.
 
@@ -139,7 +140,7 @@ Parameters can be set from upstream, as in a typical pipeline.
 
 
 4. Inherit parameter from other task
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 Parameters can be set ``@inherits_config_params`` decorator.
 
