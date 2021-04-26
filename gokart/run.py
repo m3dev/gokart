@@ -1,7 +1,5 @@
-import configparser
 import os
 import sys
-from configparser import ConfigParser
 from logging import getLogger
 from typing import List, Optional
 
@@ -13,23 +11,9 @@ from luigi.cmdline_parser import CmdlineParser
 import gokart
 import gokart.slack
 from gokart.object_storage import ObjectStorage
+from gokart.utils import check_config, read_environ
 
 logger = getLogger(__name__)
-
-
-def _read_environ():
-    config = luigi.configuration.get_config()
-    for key, value in os.environ.items():
-        super(ConfigParser, config).set(section=None, option=key, value=value.replace('%', '%%'))
-
-
-def _check_config():
-    parser = luigi.configuration.LuigiConfigParser.instance()
-    for section in parser.sections():
-        try:
-            parser.items(section)
-        except configparser.InterpolationMissingOptionError as e:
-            raise luigi.parameter.MissingParameterException(f'Environment variable "{e.args[3]}" must be set.')
 
 
 def _run_tree_info(cmdline_args, details):
@@ -106,8 +90,8 @@ def run(cmdline_args=None, set_retcode=True):
         luigi.retcodes.retcode.task_failed = 40
         luigi.retcodes.retcode.scheduling_error = 50
 
-    _read_environ()
-    _check_config()
+    read_environ()
+    check_config()
     _try_tree_info(cmdline_args)
     _try_to_delete_unnecessary_output_file(cmdline_args)
     gokart.testing.try_to_run_test_for_empty_data_frame(cmdline_args)

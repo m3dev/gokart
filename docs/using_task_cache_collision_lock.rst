@@ -1,18 +1,19 @@
-1. Task cache collision lock
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Task cache collision lock
+=========================
 
 Requires
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------
 
-You need to install (redis)[https://redis.io/topics/quickstart] for this
-advanced function.
+You need to install `redis <https://redis.io/topics/quickstart>`_ for this advanced function.
+
 
 Description
-^^^^^^^^^^^
+-----------
+
 
 Task lock is implemented to prevent task cache collision. (Originally,
 task cache collision may occur when same task with same parameters run
-at different applications parallelly.)
+at different applications in parallel.)
 
 1. Set up a redis server at somewhere accessible from gokart/luigi jobs.
 
@@ -41,21 +42,18 @@ at different applications parallelly.)
         redis_host=localhost
         redis_port=6379
 
-2. Using efficient task cache collision lock
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-Description
-^^^^^^^^^^^
+Using efficient task cache collision lock
+-----------------------------------------
 
 Above task lock will prevent cache collision. However, above setting check collisions only when the task access the cache file (i.e. ``task.dump()``, ``task.load()`` and ``task.remove()``). This will allow applications to run ``run()`` of same task at the same time, which
-is not efficent.
+is not efficient.
 
 Settings in this section will prevent running ``run()`` at the same time for efficiency.
 
 1. Set normal cache collision lock Set cache collision lock following ``1. Task cache collision lock``.
 
-2. Decorate ``run()`` with ``@RunWithLock`` Decorate ``run()`` of yourt gokart tasks which you want to lock with ``@RunWithLock``.
+2. Decorate ``run()`` with ``@RunWithLock`` Decorate ``run()`` of your gokart tasks which you want to lock with ``@RunWithLock``.
 
     .. code:: python
 
