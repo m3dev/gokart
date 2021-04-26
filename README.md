@@ -1,5 +1,9 @@
 # gokart
 
+<p align="center">
+  <img src="./docs/gokart_logo_side_isolation.svg" width="90%">
+<p>
+
 [![Test](https://github.com/m3dev/gokart/workflows/Test/badge.svg)](https://github.com/m3dev/gokart/actions?query=workflow%3ATest)
 [![](https://readthedocs.org/projects/gokart/badge/?version=latest)](https://gokart.readthedocs.io/en/latest/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/gokart.svg)](https://pypi.org/project/gokart/)
