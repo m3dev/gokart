@@ -26,7 +26,7 @@ Set parameter at config file
     [sample.SomeTask]
     param = Hello
 
-Above config file (``config.ini``) must be read before ``gokart.run()`` as in the following: 
+Above config file (``config.ini``) must be read before ``gokart.run()`` as the following code: 
 
 .. code:: python
 
@@ -35,7 +35,7 @@ Above config file (``config.ini``) must be read before ``gokart.run()`` as in th
         gokart.run()
 
 
-It can also be loaded from environment variable in the following:
+It can also be loaded from environment variable as the following code:
 
 ::
 
@@ -45,13 +45,13 @@ It can also be loaded from environment variable in the following:
     [TaskOnKart]
     workspace_directory=%(WORKSPACE_DIRECTORY)s
 
-The advantage of using environment variables is that important information is not logged and common settings can be used.
+The advantages of using environment variables are 1) important information will not be logged 2) common settings can be used.
 
 
 Set parameter at upstream task
 ==================================
 
-Parameters can be set from upstream, as in a typical pipeline.
+Parameters can be set at the upstream task, as in a typical pipeline.
 
 .. code:: python
 
@@ -63,7 +63,7 @@ Parameters can be set from upstream, as in a typical pipeline.
 Inherit parameter from other task
 ==================================
 
-Parameters can be set ``@inherits_config_params`` decorator.
+Parameter values can be inherited from other task using ``@inherits_config_params`` decorator.
 
 .. code:: python
 
@@ -76,9 +76,9 @@ Parameters can be set ``@inherits_config_params`` decorator.
         param: str = luigi.Parameter()
 
 
-This is useful when multiple tasks has the same parameter, since parameter settings of ``MasterConfig`` will be inherited to all tasks decorated with ``@inherits_config_params(MasterConfig)``.
+This is useful when multiple tasks has the same parameter. In the above example, parameter settings of ``MasterConfig`` will be inherited to all tasks decorated with ``@inherits_config_params(MasterConfig)`` as ``SomeTask``.
 
-Note that parameters which exist in both ``MasterConfig`` and ``SomeTask`` will be inherited.
+Note that only parameters which exist in both ``MasterConfig`` and ``SomeTask`` will be inherited.
 In the above example, ``param2`` will not be available in ``SomeTask``, since ``SomeTask`` does not have ``param2`` parameter.
 
 .. code:: python
@@ -93,6 +93,6 @@ In the above example, ``param2`` will not be available in ``SomeTask``, since ``
 
 
 You may also set a parameter name alias by setting ``parameter_alias``.
-``parameter_alias`` must be a dictionary of inheriting task's parameter name as keys and decorating task's parameter names as values.
+``parameter_alias`` must be a dictionary of key: inheriting task's parameter name, value: decorating task's parameter name.
 
 In the above example, ``SomeTask.param3`` will be set to same value as ``MasterConfig.param2``.
