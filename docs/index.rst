@@ -55,6 +55,7 @@ User Guide
 
    task_on_kart
    task_parameters
+   setting_task_parameters
    task_settings
    task_information
    logging
