@@ -45,11 +45,11 @@ class TaskOnKart(luigi.Task):
                                                   significant=False)
     serialized_task_definition_check = luigi.BoolParameter(default=False,
                                                            description='If this is true, this task will not run only if all input and output files exist,'
-                                                                       ' and this task class is modified.',
+                                                           ' and this task class is modified.',
                                                            significant=False)
     ignore_serializing_task_definition_error = luigi.BoolParameter(default=False,
                                                                    description='if this is true, this task ignores error while serializing this task.'
-                                                                               ' This parameter is effective only when `serialized_task_check` is `True`',
+                                                                   ' This parameter is effective only when `serialized_task_check` is `True`',
                                                                    significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
     significant = luigi.BoolParameter(default=True,
