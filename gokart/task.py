@@ -5,6 +5,7 @@ from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
+import cloudpickle
 import luigi
 import pandas as pd
 
@@ -42,6 +43,14 @@ class TaskOnKart(luigi.Task):
                                                   description='If this is true, this task will not run only if all input and output files exist,'
                                                   ' and all input files are modified before output file are modified.',
                                                   significant=False)
+    serialized_task_definition_check = luigi.BoolParameter(default=False,
+                                                           description='If this is true, this task will not run only if all input and output files exist,'
+                                                                       ' and this task class is modified.',
+                                                           significant=False)
+    ignore_serializing_task_definition_error = luigi.BoolParameter(default=False,
+                                                                   description='if this is true, this task ignores error while serializing this task.'
+                                                                               ' This parameter is effective only when `serialized_task_check` is `True`',
+                                                                   significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
     significant = luigi.BoolParameter(default=True,
                                       description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
@@ -272,6 +281,16 @@ class TaskOnKart(luigi.Task):
         dependencies = [d for d in dependencies if d is not None]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
+        if self.serialized_task_definition_check:
+            try:
+                dependencies.append(str(cloudpickle.dumps(self.__class__)))
+            except Exception as err:
+                if not self.ignore_serializing_task_definition_error:
+                    msg = f'{self.__class__.__name__} is not serializable,' \
+                          ' you can ignore this error by setting `ignore_serializing_task_error` to `True`'
+                    raise TypeError(msg) from err
+                logger.warning(f'{self.__class__.__name__} is not serializable, so modification cannot be detected')
+
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
     def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> Union[TargetOnKart, List[TargetOnKart]]:
