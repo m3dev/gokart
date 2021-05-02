@@ -339,7 +339,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(True, kwargs['bool_param'])
 
     @patch('luigi.cmdline_parser.CmdlineParser.get_instance')
-    def test_add_cofigureation_evaluation_order(self, mock_cmdline: MagicMock):
+    def test_add_configuration_evaluation_order(self, mock_cmdline: MagicMock):
         """
         in case TaskOnKart._add_configuration will break evaluation order
         @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
@@ -392,7 +392,7 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         task.load = MagicMock(return_value=pd.DataFrame(index=range(3)))
 
-        # connnot load index only frame with required_columns
+        # cannot load index only frame with required_columns
         self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={'a', 'c'}))
 
         df: pd.DataFrame = task.load_data_frame()
