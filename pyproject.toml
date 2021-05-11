@@ -29,7 +29,6 @@ google-api-python-client = "*"
 APScheduler = "*"
 redis = "*"
 matplotlib = "*"
-cloudpickle = "*"
 
 [tool.poetry.dev-dependencies]
 tox = "*"

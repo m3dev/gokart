@@ -57,13 +57,6 @@ class _DummyTaskD(gokart.TaskOnKart):
     task_namespace = __name__
 
 
-class _DummyTaskDCopy(gokart.TaskOnKart):
-    """_DummyTaskDCopy cannot be distinguished from _DummyTaskD if `serialized_task_definition_check` is False
-    """
-    __name__ = '_DummyTaskD'
-    task_namespace = __name__
-
-
 class _DummyTaskWithLock(gokart.TaskOnKart):
     task_namespace = __name__
 
@@ -209,22 +202,6 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(target._processor, processor)
         self.assertIsInstance(target, SingleFileTarget)
 
-    def test_make_target_with_serialized_task_check(self):
-        task1a = _DummyTaskD(serialized_task_definition_check=True)
-        task1b = _DummyTaskD()
-        path1a = task1a.output()._target.path
-        path1b = task1b.output()._target.path
-
-        task2a = _DummyTaskDCopy(serialized_task_definition_check=True)
-        task2b = _DummyTaskDCopy()
-        path2a = task2a.output()._target.path
-        path2b = task2b.output()._target.path
-
-        self.assertNotEqual(path1a, path1b)
-        self.assertNotEqual(path2a, path2b)
-        self.assertNotEqual(path1a, path2a)
-        self.assertEqual(path2b, path2b)
-
     def test_compare_targets_of_different_tasks(self):
         path1 = _DummyTask(param=1).make_target('test.txt')._target.path
         path2 = _DummyTask(param=2).make_target('test.txt')._target.path
@@ -339,7 +316,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(True, kwargs['bool_param'])
 
     @patch('luigi.cmdline_parser.CmdlineParser.get_instance')
-    def test_add_configuration_evaluation_order(self, mock_cmdline: MagicMock):
+    def test_add_cofigureation_evaluation_order(self, mock_cmdline: MagicMock):
         """
         in case TaskOnKart._add_configuration will break evaluation order
         @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
@@ -392,7 +369,7 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         task.load = MagicMock(return_value=pd.DataFrame(index=range(3)))
 
-        # cannot load index only frame with required_columns
+        # connnot load index only frame with required_columns
         self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={'a', 'c'}))
 
         df: pd.DataFrame = task.load_data_frame()
