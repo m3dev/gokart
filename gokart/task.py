@@ -57,6 +57,8 @@ class TaskOnKart(luigi.Task):
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
     fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
+    
+    cache_unique_id: bool = ExplicitBoolParameter(default=True, description='Cache unique id during runtime', significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -259,8 +261,10 @@ class TaskOnKart(luigi.Task):
         self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump)
 
     def make_unique_id(self):
-        self.task_unique_id = self.task_unique_id or self._make_hash_id()
-        return self.task_unique_id
+        unique_id = self.task_unique_id or self._make_hash_id()
+        if self.cache_unique_id:
+            self.task_unique_id = unique_id
+        return unique_id
 
     def _make_hash_id(self):
         def _to_str_params(task):
