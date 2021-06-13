@@ -8,7 +8,6 @@ import gokart
 
 
 class _DummyTask(gokart.TaskOnKart):
-
     def requires(self):
         return _DummyTaskDep()
 
