@@ -8,7 +8,6 @@ import gokart
 
 
 class _DummyTask(gokart.TaskOnKart):
-    task_namespace = __name__
 
     def requires(self):
         return _DummyTaskDep()
@@ -18,7 +17,6 @@ class _DummyTask(gokart.TaskOnKart):
 
 
 class _DummyTaskDep(gokart.TaskOnKart):
-    task_namespace = __name__
 
     param = luigi.Parameter()
 
@@ -26,13 +24,13 @@ class _DummyTaskDep(gokart.TaskOnKart):
         self.dump(self.param)
 
 
-class RunTest(unittest.TestCase):
+class CacheUniqueIDTest(unittest.TestCase):
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
         luigi.mock.MockFileSystem().clear()
         os.environ.clear()
 
-        config_file_path = os.path.join(os.path.dirname(__name__), 'config', 'test_config.ini')
+        config_file_path = os.path.join(os.path.dirname(__name__), 'config', f'{__name__}_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
         os.environ.setdefault('test_param', 'original_param')
 
