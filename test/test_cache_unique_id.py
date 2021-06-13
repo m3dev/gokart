@@ -29,24 +29,22 @@ class CacheUniqueIDTest(unittest.TestCase):
         luigi.mock.MockFileSystem().clear()
         os.environ.clear()
 
-        config_file_path = os.path.join(os.path.dirname(__name__), 'config', f'{__name__}_config.ini')
-        luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
-        os.environ.setdefault('test_param', 'original_param')
-
     def test_cache_unique_id_true(self):
-        output1 = gokart.build(_DummyTask(cache_unique_id=True))
+        _DummyTaskDep.param = luigi.Parameter(default='original_param')
 
-        os.environ['test_param'] = 'updated_param'
-        output2 = gokart.build(_DummyTask(cache_unique_id=True))
+        output1 = gokart.build(_DummyTask(cache_unique_id=True), reset_register=False)
 
+        _DummyTaskDep.param = luigi.Parameter(default='updated_param')
+        output2 = gokart.build(_DummyTask(cache_unique_id=True), reset_register=False)
         self.assertEqual(output1, output2)
 
     def test_cache_unique_id_false(self):
-        output1 = gokart.build(_DummyTask(cache_unique_id=False))
+        _DummyTaskDep.param = luigi.Parameter(default='original_param')
 
-        os.environ['test_param'] = 'updated_param'
-        output2 = gokart.build(_DummyTask(cache_unique_id=False))
+        output1 = gokart.build(_DummyTask(cache_unique_id=False), reset_register=False)
 
+        _DummyTaskDep.param = luigi.Parameter(default='updated_param')
+        output2 = gokart.build(_DummyTask(cache_unique_id=False), reset_register=False)
         self.assertNotEqual(output1, output2)
 
 
