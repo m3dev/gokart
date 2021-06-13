@@ -57,7 +57,7 @@ class TaskOnKart(luigi.Task):
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
     fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
-    
+
     cache_unique_id: bool = ExplicitBoolParameter(default=True, description='Cache unique id during runtime', significant=False)
 
     def __init__(self, *args, **kwargs):

@@ -112,3 +112,9 @@ examples/resources
 
 # poetry
 dist
+
+# Development
+.vscode
+
+# macOS Files
+**/.DS_Store
