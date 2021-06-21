@@ -29,6 +29,13 @@ class RunTest(unittest.TestCase):
         output = gokart.build(_DummyTask(param=text), reset_register=False)
         self.assertEqual(output, text)
 
+    def test_read_config(self):
+        os.environ.setdefault('test_param', 'test')
+        config_file_path = os.path.join(os.path.dirname(__name__), 'config', 'test_config.ini')
+        gokart.utils.add_config(config_file_path)
+        output = gokart.build(_DummyTask())
+        self.assertEqual(output, 'test')
+
 
 if __name__ == '__main__':
     unittest.main()
