@@ -25,8 +25,8 @@ class RunTest(unittest.TestCase):
         self.config_paths = copy(luigi.configuration.LuigiConfigParser._config_paths)
         luigi.mock.MockFileSystem().clear()
         os.environ.clear()
-    
-    def tearDown(self) -> None:
+
+    def tearDown(self):
         luigi.configuration.LuigiConfigParser._config_paths = self.config_paths
         os.environ.clear()
 
