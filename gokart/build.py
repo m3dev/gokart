@@ -28,8 +28,10 @@ class HideLogger:
 
 def _get_output(task: TaskOnKart) -> Any:
     output = task.output()
-    if type(output) == list:
-        return [x.load() for x in output]
+    if isinstance(output, list) or isinstance(output, tuple):
+        return [t.load() for t in output]
+    if isinstance(output, dict):
+        return {k: t.load() for k, t in output.items()}
     return output.load()
 
 
