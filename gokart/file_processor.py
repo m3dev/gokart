@@ -130,7 +130,7 @@ class CsvFileProcessor(FileProcessor):
     def dump(self, obj, file):
         assert isinstance(obj, (pd.DataFrame, pd.Series)), \
             f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
-        obj.to_csv(file, index=False, sep=self._sep, header=True)
+        obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True)
 
 
 class GzipFileProcessor(FileProcessor):
