@@ -34,7 +34,6 @@ class RunTest(unittest.TestCase):
 
 class LoggerConfigTest(unittest.TestCase):
     def test_logger_config(self):
-        level = None
         for level, expected in ((None, logging.NOTSET), (logging.INFO, logging.INFO), (logging.DEBUG, logging.DEBUG), (logging.CRITICAL, logging.CRITICAL)):
             with self.subTest(level=level, expected=expected):
                 with LoggerConfig(level) as lc:
