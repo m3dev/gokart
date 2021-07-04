@@ -34,12 +34,10 @@ class RunTest(unittest.TestCase):
 
 class LoggerConfigTest(unittest.TestCase):
     def test_logger_config(self):
-        verbose = False
         level = None
-        for verbose, level, expected in ((False, None, logging.CRITICAL), (True, None, logging.NOTSET), (False, logging.DEBUG, logging.DEBUG),
-                                         (True, logging.DEBUG, logging.DEBUG)):
-            with self.subTest(verbose=verbose, level=level, expected=expected):
-                with LoggerConfig(verbose, level) as lc:
+        for level, expected in ((None, logging.NOTSET), (logging.INFO, logging.INFO), (logging.DEBUG, logging.DEBUG), (logging.CRITICAL, logging.CRITICAL)):
+            with self.subTest(level=level, expected=expected):
+                with LoggerConfig(level) as lc:
                     self.assertEqual(lc.logger.level, expected)
 
 
