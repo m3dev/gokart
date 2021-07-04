@@ -17,7 +17,7 @@ class LoggerConfig:
 
     def __enter__(self):
         if self.level is not None:
-            logging.disable(self.level+1)
+            logging.disable(self.level)
             self.logger.setLevel(self.level)
         if self.level == logging.CRITICAL:
             logging.disable(sys.maxsize)
