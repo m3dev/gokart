@@ -16,11 +16,12 @@ class LoggerConfig:
         self.level = level
 
     def __enter__(self):
-        if self.level is not None:
+        if self.level is None:
+            logging.disable(sys.maxsize)
+            self.logger.setLevel(logging.CRITICAL)
+        else:
             logging.disable(self.level)
             self.logger.setLevel(self.level)
-        if self.level == logging.CRITICAL:
-            logging.disable(sys.maxsize)
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
@@ -40,7 +41,7 @@ def _reset_register(keep={'gokart', 'luigi'}):
                                          if x.__module__.split('.')[0] in keep]  # avoid TaskClassAmbigiousException
 
 
-def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: Optional[int] = logging.CRITICAL) -> Optional[Any]:
+def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: Optional[int] = None) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
     """
