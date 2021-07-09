@@ -10,18 +10,18 @@ from gokart.utils import check_config, read_environ
 
 
 class LoggerConfig:
-    def __init__(self, level: Optional[int]):
+    def __init__(self, level: int = logging.CRITICAL):
         self.logger = getLogger(__name__)
         self.default_level = self.logger.level
         self.level = level
 
     def __enter__(self):
-        if self.level is None:
+        if self.level == logging.CRITICAL:
             logging.disable(sys.maxsize)
-            self.logger.setLevel(logging.CRITICAL)
         else:
             logging.disable(self.level)
-            self.logger.setLevel(self.level)
+
+        self.logger.setLevel(self.level)
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
@@ -41,7 +41,7 @@ def _reset_register(keep={'gokart', 'luigi'}):
                                          if x.__module__.split('.')[0] in keep]  # avoid TaskClassAmbigiousException
 
 
-def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: Optional[int] = None) -> Optional[Any]:
+def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: int = logging.CRITICAL) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
     """
