@@ -214,25 +214,9 @@ class ParquetFileProcessor(FileProcessor):
 
 
 class FeatherFileProcessor(FileProcessor):
-    def __init__(self):
+    def __init__(self, store_index_in_feather: bool):
         super(FeatherFileProcessor, self).__init__()
-
-    def format(self):
-        return None
-
-    def load(self, file):
-        return pd.read_feather(file.name)
-
-    def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame)), \
-            f'requires pd.DataFrame, but {type(obj)} is passed.'
-        # to_feather supports "bynary" file-like object, but file variable is text
-        obj.to_feather(file.name)
-
-
-class IndexedFeatherFileProcessor(FileProcessor):
-    def __init__(self):
-        super(IndexedFeatherFileProcessor, self).__init__()
+        self._store_index_in_feather = store_index_in_feather
 
     def format(self):
         return None
@@ -240,24 +224,30 @@ class IndexedFeatherFileProcessor(FileProcessor):
     def load(self, file):
         loaded_df = pd.read_feather(file.name)
 
-        index_column = [col_name for col_name in loaded_df.columns[::-1] if col_name[:14] == 'feather_index_'][0]
-        index_name = index_column[14:]
-        loaded_df.index = pd.Index(loaded_df[index_column], name=index_name)
-        loaded_df = loaded_df.drop(columns={index_column})
+        if self._store_index_in_feather:
+            index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[:24] == '__feather_gokart_index__']
+            if len(index_columns) > 0:
+                index_column = index_columns[0]
+                index_name = index_column[24:]
+                loaded_df.index = pd.Index(loaded_df[index_column], name=index_name)
+                loaded_df = loaded_df.drop(columns={index_column})
+
         return loaded_df
 
     def dump(self, obj, file):
         assert isinstance(obj, (pd.DataFrame)), \
             f'requires pd.DataFrame, but {type(obj)} is passed.'
-
         dump_obj = obj.copy()
-        dump_obj[f'feather_index_{dump_obj.index.name}'] = dump_obj.index
-        dump_obj = dump_obj.reset_index(drop=True)
+
+        if self._store_index_in_feather:
+            dump_obj[f'__feather_gokart_index__{dump_obj.index.name}'] = dump_obj.index
+            dump_obj = dump_obj.reset_index(drop=True)
+
         # to_feather supports "binary" file-like object, but file variable is text
         dump_obj.to_feather(file.name)
 
 
-def make_file_processor(file_path: str) -> FileProcessor:
+def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
         '.csv': CsvFileProcessor(sep=','),
@@ -268,8 +258,7 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip'),
-        '.feather': FeatherFileProcessor(),
-        '.indexedfeather': IndexedFeatherFileProcessor(),
+        '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather),
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
     }

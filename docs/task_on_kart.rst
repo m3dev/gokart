@@ -87,8 +87,7 @@ It is also possible to specify a file format other than pkl. The supported file 
 - .xml
 - .npz
 - .parquet
-- .feather: This file type cannot save index of pd.DataFrame. Use `.indexedfeather` instead when index must be unchanged.
-- .indexedfeather: feather file format with index.
+- .feather
 - .png
 - .jpg
 

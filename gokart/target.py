@@ -191,8 +191,8 @@ class LargeDataFrameProcessor(object):
         return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, 'data_*.pkl'))])
 
 
-def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None) -> luigi.target.FileSystemTarget:
-    processor = processor or make_file_processor(file_path)
+def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:
+    processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
     if ObjectStorage.if_object_storage_path(file_path):
         return ObjectStorage.get_object_storage_target(file_path, processor.format())
     return luigi.LocalTarget(file_path, format=processor.format())
@@ -213,11 +213,15 @@ def _get_last_modification_time(path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
-def make_target(file_path: str, unique_id: Optional[str] = None, processor: Optional[FileProcessor] = None, redis_params: RedisParams = None) -> TargetOnKart:
+def make_target(file_path: str,
+                unique_id: Optional[str] = None,
+                processor: Optional[FileProcessor] = None,
+                redis_params: RedisParams = None,
+                store_index_in_feather: bool = True) -> TargetOnKart:
     _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
-    processor = processor or make_file_processor(file_path)
-    file_system_target = _make_file_system_target(file_path, processor=processor)
+    processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
+    file_system_target = _make_file_system_target(file_path, processor=processor, store_index_in_feather=store_index_in_feather)
     return SingleFileTarget(target=file_system_target, processor=processor, redis_params=_redis_params)
 
 
