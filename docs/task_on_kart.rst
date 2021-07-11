@@ -85,6 +85,13 @@ It is also possible to specify a file format other than pkl. The supported file 
 - .gz
 - .json
 - .xml
+- .npz
+- .parquet
+- .feather: This file type cannot save index of pd.DataFrame. Use `.indexedfeather` instead when index must be unchanged.
+- .indexedfeather: feather file format with index.
+- .png
+- .jpg
+
 
 If dump something other than the above, can use :func:`~gokart.TaskOnKart.make_model_target`.
 Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later Advanced Features section.
