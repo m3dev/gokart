@@ -230,6 +230,33 @@ class FeatherFileProcessor(FileProcessor):
         obj.to_feather(file.name)
 
 
+class IndexedFeatherFileProcessor(FileProcessor):
+    def __init__(self):
+        super(IndexedFeatherFileProcessor, self).__init__()
+
+    def format(self):
+        return None
+
+    def load(self, file):
+        loaded_df = pd.read_feather(file.name)
+
+        index_column = [col_name for col_name in loaded_df.columns[::-1] if col_name[:14] == 'feather_index_'][0]
+        index_name = index_column[14:]
+        loaded_df.index = pd.Index(loaded_df[index_column], name=index_name)
+        loaded_df = loaded_df.drop(columns={index_column})
+        return loaded_df
+
+    def dump(self, obj, file):
+        assert isinstance(obj, (pd.DataFrame)), \
+            f'requires pd.DataFrame, but {type(obj)} is passed.'
+
+        dump_obj = obj.copy()
+        dump_obj[f'feather_index_{dump_obj.index.name}'] = dump_obj.index
+        dump_obj = dump_obj.reset_index(drop=True)
+        # to_feather supports "binary" file-like object, but file variable is text
+        dump_obj.to_feather(file.name)
+
+
 def make_file_processor(file_path: str) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
@@ -242,6 +269,7 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip'),
         '.feather': FeatherFileProcessor(),
+        '.indexedfeather': IndexedFeatherFileProcessor(),
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
     }
