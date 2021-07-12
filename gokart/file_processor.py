@@ -217,6 +217,7 @@ class FeatherFileProcessor(FileProcessor):
     def __init__(self, store_index_in_feather: bool):
         super(FeatherFileProcessor, self).__init__()
         self._store_index_in_feather = store_index_in_feather
+        INDEX_COLUMN_SUFFIX = '__feather_gokart_index__'
 
     def format(self):
         return None
@@ -225,10 +226,10 @@ class FeatherFileProcessor(FileProcessor):
         loaded_df = pd.read_feather(file.name)
 
         if self._store_index_in_feather:
-            index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[:24] == '__feather_gokart_index__']
+            index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[:len(self.INDEX_COLUMN_SUFFIX)] == self.INDEX_COLUMN_SUFFIX]
             if len(index_columns) > 0:
                 index_column = index_columns[0]
-                index_name = index_column[24:]
+                index_name = index_column[len(self.INDEX_COLUMN_SUFFIX):]
                 loaded_df.index = pd.Index(loaded_df[index_column], name=index_name)
                 loaded_df = loaded_df.drop(columns={index_column})
 
@@ -240,7 +241,7 @@ class FeatherFileProcessor(FileProcessor):
         dump_obj = obj.copy()
 
         if self._store_index_in_feather:
-            dump_obj[f'__feather_gokart_index__{dump_obj.index.name}'] = dump_obj.index
+            dump_obj[f'{self.INDEX_COLUMN_SUFFIX}{dump_obj.index.name}'] = dump_obj.index
             dump_obj = dump_obj.reset_index(drop=True)
 
         # to_feather supports "binary" file-like object, but file variable is text
