@@ -217,7 +217,7 @@ class FeatherFileProcessor(FileProcessor):
     def __init__(self, store_index_in_feather: bool):
         super(FeatherFileProcessor, self).__init__()
         self._store_index_in_feather = store_index_in_feather
-        INDEX_COLUMN_SUFFIX = '__feather_gokart_index__'
+        self.INDEX_COLUMN_SUFFIX = '__feather_gokart_index__'
 
     def format(self):
         return None
