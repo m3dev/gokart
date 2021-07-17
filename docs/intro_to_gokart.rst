@@ -147,3 +147,13 @@ The :func:`~gokart.build` is inline code.
             self.dump(self.param)
 
     gokart.build(SampleTask(param='hello'), return_value=False)
+
+
+To output logs of each tasks, you can pass `~log_level` parameter to `~gokart.build` as follows:
+
+.. code:: python
+
+    gokart.build(SampleTask(param='hello'), return_value=False, log_level=logginge.DEBUG)
+
+
+This feature is very useful for running `~gokart` on jupyter notebook.
