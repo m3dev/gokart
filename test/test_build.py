@@ -1,3 +1,4 @@
+import logging
 import os
 import unittest
 from copy import copy
@@ -6,6 +7,7 @@ import luigi
 import luigi.mock
 
 import gokart
+from gokart.build import LoggerConfig
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -62,6 +64,14 @@ class RunTest(unittest.TestCase):
         }
         output = gokart.build(_DummyTaskTwoOutputs(param1=param_dict['out1'], param2=param_dict['out2']), reset_register=False)
         self.assertEqual(output, param_dict)
+
+
+class LoggerConfigTest(unittest.TestCase):
+    def test_logger_config(self):
+        for level, expected in ((logging.INFO, logging.INFO), (logging.DEBUG, logging.DEBUG), (logging.CRITICAL, logging.CRITICAL)):
+            with self.subTest(level=level, expected=expected):
+                with LoggerConfig(level) as lc:
+                    self.assertEqual(lc.logger.level, expected)
 
 
 if __name__ == '__main__':

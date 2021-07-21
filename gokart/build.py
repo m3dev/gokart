@@ -9,16 +9,15 @@ from gokart.task import TaskOnKart
 from gokart.utils import check_config, read_environ
 
 
-class HideLogger:
-    def __init__(self, verbose: bool):
-        self.verbose = verbose
+class LoggerConfig:
+    def __init__(self, level: int = logging.CRITICAL):
         self.logger = getLogger(__name__)
         self.default_level = self.logger.level
+        self.level = level
 
     def __enter__(self):
-        if not self.verbose:
-            logging.disable(sys.maxsize)
-            self.logger.setLevel(logging.CRITICAL)
+        logging.disable(self.level)
+        self.logger.setLevel(self.level)
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
@@ -40,7 +39,7 @@ def _reset_register(keep={'gokart', 'luigi'}):
                                          if x.__module__.split('.')[0] in keep]  # avoid TaskClassAmbigiousException
 
 
-def build(task: TaskOnKart, verbose: bool = False, return_value: bool = True, reset_register: bool = True) -> Optional[Any]:
+def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: int = logging.CRITICAL) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
     """
@@ -48,6 +47,6 @@ def build(task: TaskOnKart, verbose: bool = False, return_value: bool = True, re
         _reset_register()
     read_environ()
     check_config()
-    with HideLogger(verbose):
+    with LoggerConfig(level=log_level):
         luigi.build([task], local_scheduler=True)
     return _get_output(task) if return_value else None
