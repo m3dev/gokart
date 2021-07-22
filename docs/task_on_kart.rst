@@ -100,6 +100,10 @@ Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later 
     By default, file path is inferred from "__name__" of the script, so ``output`` method can be omitted.
     Please refer to :doc:`tutorial` section.
 
+.. note::
+    When using `.feather`, index will be converted to column at saving and restored to index at loading.
+    If you don't prefere saving index, set `store_index_in_feather=False` parameter at `gokart.target.make_target()`.
+
 
 TaskOnKart.load
 ----------------
