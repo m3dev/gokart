@@ -214,23 +214,45 @@ class ParquetFileProcessor(FileProcessor):
 
 
 class FeatherFileProcessor(FileProcessor):
-    def __init__(self):
+    def __init__(self, store_index_in_feather: bool):
         super(FeatherFileProcessor, self).__init__()
+        self._store_index_in_feather = store_index_in_feather
+        self.INDEX_COLUMN_PREFIX = '__feather_gokart_index__'
 
     def format(self):
         return None
 
     def load(self, file):
-        return pd.read_feather(file.name)
+        loaded_df = pd.read_feather(file.name)
+
+        if self._store_index_in_feather:
+            if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
+                index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[:len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
+                index_column = index_columns[0]
+                index_name = index_column[len(self.INDEX_COLUMN_PREFIX):]
+                loaded_df.index = pd.Index(loaded_df[index_column], name=index_name)
+                loaded_df = loaded_df.drop(columns={index_column})
+
+        return loaded_df
 
     def dump(self, obj, file):
         assert isinstance(obj, (pd.DataFrame)), \
             f'requires pd.DataFrame, but {type(obj)} is passed.'
-        # to_feather supports "bynary" file-like object, but file variable is text
-        obj.to_feather(file.name)
+        dump_obj = obj.copy()
+
+        if self._store_index_in_feather:
+            index_column_name = f'{self.INDEX_COLUMN_PREFIX}{dump_obj.index.name}'
+            assert index_column_name not in dump_obj.columns, f'column name {index_column_name} already exists in dump_obj. \
+                Consider not saving index by setting store_index_in_feather=False.'
+
+            dump_obj[index_column_name] = dump_obj.index
+            dump_obj = dump_obj.reset_index(drop=True)
+
+        # to_feather supports "binary" file-like object, but file variable is text
+        dump_obj.to_feather(file.name)
 
 
-def make_file_processor(file_path: str) -> FileProcessor:
+def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
         '.csv': CsvFileProcessor(sep=','),
@@ -241,7 +263,7 @@ def make_file_processor(file_path: str) -> FileProcessor:
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip'),
-        '.feather': FeatherFileProcessor(),
+        '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather),
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
     }

@@ -57,6 +57,9 @@ class TaskOnKart(luigi.Task):
         description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
         significant=False)
     fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
+    store_index_in_feather: bool = ExplicitBoolParameter(default=True,
+                                                         description='Wether to store index when using feather as a output object.',
+                                                         significant=False)
 
     cache_unique_id: bool = ExplicitBoolParameter(default=True, description='Cache unique id during runtime', significant=False)
 
@@ -155,7 +158,11 @@ class TaskOnKart(luigi.Task):
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
                                          redis_fail_on_collision=self.redis_fail_on_collision)
-        return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor, redis_params=redis_params)
+        return gokart.target.make_target(file_path=file_path,
+                                         unique_id=unique_id,
+                                         processor=processor,
+                                         redis_params=redis_params,
+                                         store_index_in_feather=self.store_index_in_feather)
 
     def make_large_data_frame_target(self, relative_file_path: str = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace(".", "/"),

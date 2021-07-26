@@ -108,10 +108,20 @@ class LocalTargetTest(unittest.TestCase):
         pd.testing.assert_frame_equal(loaded, obj)
 
     def test_save_and_load_feather(self):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]), index=pd.Index([33, 44], name='object_index'))
         file_path = os.path.join(_get_temporary_directory(), 'test.feather')
 
         target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        loaded = target.load()
+
+        pd.testing.assert_frame_equal(loaded, obj)
+
+    def test_save_and_load_feather_without_store_index_in_feather(self):
+        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]), index=pd.Index([33, 44], name='object_index')).reset_index()
+        file_path = os.path.join(_get_temporary_directory(), 'test.feather')
+
+        target = make_target(file_path=file_path, unique_id=None, store_index_in_feather=False)
         target.dump(obj)
         loaded = target.load()
 

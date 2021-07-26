@@ -85,6 +85,12 @@ It is also possible to specify a file format other than pkl. The supported file 
 - .gz
 - .json
 - .xml
+- .npz
+- .parquet
+- .feather
+- .png
+- .jpg
+
 
 If dump something other than the above, can use :func:`~gokart.TaskOnKart.make_model_target`.
 Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later Advanced Features section.
@@ -93,6 +99,10 @@ Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later 
 .. note::
     By default, file path is inferred from "__name__" of the script, so ``output`` method can be omitted.
     Please refer to :doc:`tutorial` section.
+
+.. note::
+    When using `.feather`, index will be converted to column at saving and restored to index at loading.
+    If you don't prefere saving index, set `store_index_in_feather=False` parameter at `gokart.target.make_target()`.
 
 
 TaskOnKart.load
