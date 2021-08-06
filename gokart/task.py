@@ -131,17 +131,15 @@ class TaskOnKart(luigi.Task):
         return input_modification_time <= output_modification_time
 
     def clone(self, cls=None, **kwargs):
+        _SPECIAL_PARAMS = {'rerun', 'strict_check', 'modification_time_check'}
         if cls is None:
             cls = self.__class__
 
         new_k = {}
         for param_name, param_class in cls.get_params():
-            if param_name in {'rerun', 'strict_check', 'modification_time_check'}:
-                continue
-
             if param_name in kwargs:
                 new_k[param_name] = kwargs[param_name]
-            elif hasattr(self, param_name):
+            elif hasattr(self, param_name) and (param_name not in _SPECIAL_PARAMS):
                 new_k[param_name] = getattr(self, param_name)
 
         return cls(**new_k)

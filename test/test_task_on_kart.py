@@ -185,7 +185,7 @@ class TaskTest(unittest.TestCase):
 
     def test_clone_with_special_params(self):
         class _DummyTaskRerun(gokart.TaskOnKart):
-            a=luigi.BoolParameter(default=False)
+            a = luigi.BoolParameter(default=False)
         task = _DummyTaskRerun(a=True, rerun=True)
         cloned = task.clone(_DummyTaskRerun)
         cloned_with_explicit_rerun = task.clone(_DummyTaskRerun, rerun=True)
