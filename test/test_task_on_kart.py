@@ -183,6 +183,17 @@ class TaskTest(unittest.TestCase):
             pathlib.Path(default_target._target.path).name
         )
 
+    def test_clone_with_special_params(self):
+        class _DummyTaskRerun(gokart.TaskOnKart):
+            a=luigi.BoolParameter(default=False)
+        task = _DummyTaskRerun(a=True, rerun=True)
+        cloned = task.clone(_DummyTaskRerun)
+        cloned_with_explicit_rerun = task.clone(_DummyTaskRerun, rerun=True)
+        self.assertTrue(cloned.a)
+        self.assertFalse(cloned.rerun)  # do not clone rerun
+        self.assertTrue(cloned_with_explicit_rerun.a)
+        self.assertTrue(cloned_with_explicit_rerun.rerun)
+
     def test_default_large_dataframe_target(self):
         task = _DummyTaskD()
         default_large_dataframe_target = task.make_large_data_frame_target()
