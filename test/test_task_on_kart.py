@@ -1,4 +1,5 @@
 import os
+import pathlib
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -178,13 +179,25 @@ class TaskTest(unittest.TestCase):
         task = _DummyTaskD()
         default_target = task.output()
         self.assertIsInstance(default_target, SingleFileTarget)
-        self.assertEqual(f'./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.pkl', default_target._target.path)
+        self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.pkl', pathlib.Path(default_target._target.path).name)
+
+    def test_clone_with_special_params(self):
+        class _DummyTaskRerun(gokart.TaskOnKart):
+            a = luigi.BoolParameter(default=False)
+
+        task = _DummyTaskRerun(a=True, rerun=True)
+        cloned = task.clone(_DummyTaskRerun)
+        cloned_with_explicit_rerun = task.clone(_DummyTaskRerun, rerun=True)
+        self.assertTrue(cloned.a)
+        self.assertFalse(cloned.rerun)  # do not clone rerun
+        self.assertTrue(cloned_with_explicit_rerun.a)
+        self.assertTrue(cloned_with_explicit_rerun.rerun)
 
     def test_default_large_dataframe_target(self):
         task = _DummyTaskD()
         default_large_dataframe_target = task.make_large_data_frame_target()
         self.assertIsInstance(default_large_dataframe_target, ModelTarget)
-        self.assertEqual(f'./resources/test_task_on_kart/_DummyTaskD_{task.task_unique_id}.zip', default_large_dataframe_target._zip_client._file_path)
+        self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.zip', pathlib.Path(default_large_dataframe_target._zip_client._file_path).name)
 
     def test_make_target(self):
         task = _DummyTask()
