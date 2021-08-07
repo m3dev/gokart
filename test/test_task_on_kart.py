@@ -1,4 +1,5 @@
 import os
+import pathlib
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -12,7 +13,6 @@ from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.run_with_lock import RunWithLock
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
-import pathlib
 
 
 class _DummyTask(gokart.TaskOnKart):
