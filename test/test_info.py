@@ -7,6 +7,7 @@ from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
 import gokart.info
+from gokart.info import dump_task_info_table
 
 
 class _SubTask(gokart.TaskOnKart):
@@ -123,6 +124,48 @@ class TestInfo(unittest.TestCase):
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""
         self.assertRegex(tree, expected)
+
+
+class _TaskInfoExampleTaskA(gokart.TaskOnKart):
+    pass
+
+
+class _TaskInfoExampleTaskB(gokart.TaskOnKart):
+    pass
+
+
+class _TaskInfoExampleTaskC(gokart.TaskOnKart):
+    def requires(self):
+        return dict(taskA=_TaskInfoExampleTaskA(), taskB=_TaskInfoExampleTaskB())
+
+    def run(self):
+        self.dump('DONE')
+
+
+class TestTaskInfo(unittest.TestCase):
+    def test_dump_task_info_table(self):
+        with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
+            self.dumped_data = None
+
+            def _side_effect(obj, lock_at_dump):
+                self.dumped_data = obj
+
+            mock_obj.side_effect = _side_effect
+            dump_task_info_table(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.csv', ignore_task_names=['_TaskInfoExampleTaskB'])
+
+            self.assertEqual(set(self.dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
+
+    def test_dump_task_info_table_with_no_path(self):
+        with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
+            self.dumped_data = None
+
+            def _side_effect(obj, lock_at_dump):
+                self.dumped_data = obj
+
+            mock_obj.side_effect = _side_effect
+            dump_task_info_table(task=_TaskInfoExampleTaskC(), task_info_dump_path=None, ignore_task_names=['_TaskInfoExampleTaskB'])
+
+            self.assertEqual(self.dumped_data, None)
 
 
 if __name__ == '__main__':

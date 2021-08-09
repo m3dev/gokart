@@ -1,9 +1,10 @@
-from gokart.target import TargetOnKart
+from gokart.target import TargetOnKart, make_target
 from typing import List, NamedTuple, Optional, Set, Tuple
 import warnings
 from logging import getLogger
 
 import luigi
+import pandas as pd
 
 from gokart.task import TaskOnKart
 
@@ -102,6 +103,33 @@ def make_tree_info(task, indent='', last=True, details=False, abbr=True, visited
     task_tree = _make_task_tree(task, ignore_task_names=ignore_task_names)
     result = _make_tree_info(task_tree=task_tree, indent=indent, last=last, details=details, abbr=abbr, visited_tasks=visited_tasks)
     return result
+
+
+def _make_tree_info_table_list(task_tree: TaskTree, visited_tasks: Set[str]):
+    task_id = task_tree.get_task_id()
+    if task_id in visited_tasks:
+        return []
+    visited_tasks.add(task_id)
+
+    result = [task_tree.task_info]
+
+    children = task_tree.children_task_trees
+    for child_tree in children:
+        result += _make_tree_info_table_list(task_tree=child_tree, visited_tasks=visited_tasks)
+    return result
+
+
+def dump_task_info_table(task: TaskOnKart, task_info_dump_path: Optional[str], ignore_task_names: Optional[List[str]]):
+    if task_info_dump_path is None:
+        return None
+
+    task_tree = _make_task_tree(task, ignore_task_names=ignore_task_names)
+
+    task_info_table = pd.DataFrame(_make_tree_info_table_list(task_tree=task_tree, visited_tasks=set()))
+    unique_id = task.make_unique_id()
+
+    task_info_target = make_target(file_path=task_info_dump_path, unique_id=unique_id)
+    task_info_target.dump(obj=task_info_table, lock_at_dump=False)
 
 
 class tree_info(TaskOnKart):
