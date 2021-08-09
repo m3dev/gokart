@@ -4,8 +4,8 @@ from typing import Any, List, Optional
 
 import luigi
 
-from gokart.task import TaskOnKart
 from gokart.info import dump_task_info_table
+from gokart.task import TaskOnKart
 from gokart.utils import check_config, read_environ
 
 
