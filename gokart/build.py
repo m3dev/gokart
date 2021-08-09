@@ -1,7 +1,8 @@
+from gokart.task_info import dump_task_info_table
 import logging
 import sys
 from logging import getLogger
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import luigi
 
@@ -39,7 +40,12 @@ def _reset_register(keep={'gokart', 'luigi'}):
                                          if x.__module__.split('.')[0] in keep]  # avoid TaskClassAmbigiousException
 
 
-def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: int = logging.CRITICAL) -> Optional[Any]:
+def build(task: TaskOnKart,
+          return_value: bool = True,
+          reset_register: bool = True,
+          log_level: int = logging.CRITICAL,
+          task_info_dump_path: Optional[str] = None,
+          task_info_ignore_task_names: Optional[List[str]] = None) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
     """
@@ -49,4 +55,5 @@ def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = Tr
     check_config()
     with LoggerConfig(level=log_level):
         luigi.build([task], local_scheduler=True)
+        dump_task_info_table(task=task, task_info_dump_path=task_info_dump_path, task_info_ignore_task_names=task_info_ignore_task_names)
     return _get_output(task) if return_value else None
