@@ -68,10 +68,15 @@ class RunTest(unittest.TestCase):
 
 class LoggerConfigTest(unittest.TestCase):
     def test_logger_config(self):
-        for level, expected in ((logging.INFO, logging.INFO), (logging.DEBUG, logging.DEBUG), (logging.CRITICAL, logging.CRITICAL)):
-            with self.subTest(level=level, expected=expected):
+        for level, enable_expected, disable_expected in (
+            (logging.INFO, logging.INFO, logging.DEBUG),
+            (logging.DEBUG, logging.DEBUG, logging.NOTSET),
+            (logging.CRITICAL, logging.CRITICAL, logging.ERROR),
+        ):
+            with self.subTest(level=level, enable_expected=enable_expected, disable_expected=disable_expected):
                 with LoggerConfig(level) as lc:
-                    self.assertEqual(lc.logger.level, expected)
+                    self.assertTrue(lc.logger.isEnabledFor(enable_expected))
+                    self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
 
 
 if __name__ == '__main__':
