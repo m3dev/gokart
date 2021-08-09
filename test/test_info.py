@@ -59,7 +59,7 @@ class TestInfo(unittest.TestCase):
         tree = gokart.info.make_tree_info(task)
         expected = r"""
 └─-\(PENDING\) _Task\[[a-z0-9]*\]
-   └─-\(PENDING\) _SubTask\[[a-z0-9]*\]"""
+   └─-\(PENDING\) _SubTask\[[a-z0-9]*\]$"""
         self.assertRegex(tree, expected)
 
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
@@ -71,7 +71,7 @@ class TestInfo(unittest.TestCase):
         tree = gokart.info.make_tree_info(task)
         expected = r"""
 └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
-   └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]"""
+   └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]$"""
         self.assertRegex(tree, expected)
 
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
@@ -86,10 +86,10 @@ class TestInfo(unittest.TestCase):
         tree = gokart.info.make_tree_info(task)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
-   |--\(COMPLETE\) _Task\[[a-z0-9]*\]
-   |  └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]
+   \|--\(COMPLETE\) _Task\[[a-z0-9]*\]
+   \|  └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]
    └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
-      └─- \.\.\."""
+      └─- \.\.\.$"""
         self.assertRegex(tree, expected)
 
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
@@ -104,10 +104,24 @@ class TestInfo(unittest.TestCase):
         tree = gokart.info.make_tree_info(task, abbr=False)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
-   |--\(COMPLETE\) _Task\[[a-z0-9]*\]
-   |  └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]
+   \|--\(COMPLETE\) _Task\[[a-z0-9]*\]
+   \|  └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]
    └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
-      └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]"""
+      └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]$"""
+        self.assertRegex(tree, expected)
+
+    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    def test_make_tree_info_not_compress_ignore_task(self):
+        task = _DoubleLoadSubTask(
+            sub1=_Task(param=1, sub=_SubTask(param=2)),
+            sub2=_Task(param=1, sub=_SubTask(param=2)),
+        )
+
+        # check after sub task runs
+        luigi.build([task], local_scheduler=True)
+        tree = gokart.info.make_tree_info(task, abbr=False, ignore_task_names=['_Task'])
+        expected = r"""
+└─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""
         self.assertRegex(tree, expected)
 
 
