@@ -4,8 +4,8 @@ from typing import List, NamedTuple, Optional, Set
 import luigi
 import pandas as pd
 
-from gokart.task import TaskOnKart
 from gokart.target import TargetOnKart, make_target
+from gokart.task import TaskOnKart
 
 logger = getLogger(__name__)
 

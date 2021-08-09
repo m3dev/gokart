@@ -1,9 +1,10 @@
-import gokart
-from gokart.task_info import _make_task_info_table, dump_task_info_table
 import unittest
+from unittest.mock import patch
+
 import pandas as pd
 
-from unittest.mock import patch
+import gokart
+from gokart.task_info import _make_task_info_table, dump_task_info_table
 
 
 class _TaskInfoExampleTaskA(gokart.TaskOnKart):
