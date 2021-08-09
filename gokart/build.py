@@ -1,4 +1,3 @@
-from gokart.task_info import dump_task_info_table
 import logging
 import sys
 from logging import getLogger
@@ -7,6 +6,7 @@ from typing import Any, List, Optional
 import luigi
 
 from gokart.task import TaskOnKart
+from gokart.task_info import dump_task_info_table
 from gokart.utils import check_config, read_environ
 
 
