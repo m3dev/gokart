@@ -48,6 +48,17 @@ def build(task: TaskOnKart,
           task_info_ignore_task_names: Optional[List[str]] = None) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
+
+    Args:
+        return_value (bool): Whether to return the result or not.
+        reset_register (bool): Whether to reset the luigi Register or not.
+        log_level (int): Minimum valid log level.
+        task_info_dump_path (str): Path of the output destination for TaskInfo file. To disable dumping TaskInfo file, set to `None`.
+        task_info_ignore_task_names (List[str]): Task names ignored in TaskInfo.
+
+    Returns:
+        bool: The return value. True for success, False otherwise.
+
     """
     if reset_register:
         _reset_register()
