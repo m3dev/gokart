@@ -65,5 +65,5 @@ def build(task: TaskOnKart,
     check_config()
     with LoggerConfig(level=log_level):
         luigi.build([task], local_scheduler=True)
-        dump_task_info_table(task=task, task_info_dump_path=task_info_dump_path, task_info_ignore_task_names=task_info_ignore_task_names)
+        dump_task_info_table(task=task, task_info_dump_path=task_info_dump_path, ignore_task_names=task_info_ignore_task_names)
     return _get_output(task) if return_value else None
