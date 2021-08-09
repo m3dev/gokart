@@ -36,7 +36,6 @@ class TaskTree:
 
 
 def _make_task_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]) -> TaskTree:
-    # taskが無効の場合空？？
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
         is_task_complete = task.complete()
