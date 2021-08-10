@@ -181,8 +181,11 @@ TaskInfo table is a pandas DataFrame format table containing `task name`, `cache
 To dump TaskInfo table, set ``task_info_dump_path`` parameter at ``gokart.build()``.
 
 - path destination can be `local`, `S3`, or `GCS`
-- file extension can be any type that gokart file processor accepts, including `csv`, `pickle`, or `txt`.
+- file extension can be any type that gokart file processor accepts, including `csv`, `pickle`, or `txt`. See `TaskOnKart.make_target module <https://gokart.readthedocs.io/en/latest/task_on_kart.html#taskonkart-make-target>`_ for details.
 
 .. code:: python
 
     gokart.build(task=task, task_info_dump_path="./task_info.csv", task_info_ignore_task_names=None)
+    # task_info_dump_path (str): Path of the output destination for TaskInfo file. To disable dumping TaskInfo file, set to `None`.
+    # task_info_ignore_task_names (List[str]): Task names ignored in TaskInfo.
+

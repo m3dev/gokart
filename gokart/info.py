@@ -119,10 +119,7 @@ def _make_tree_info_table_list(task_tree: TaskTree, visited_tasks: Set[str]):
     return result
 
 
-def dump_task_info_table(task: TaskOnKart, task_info_dump_path: Optional[str], ignore_task_names: Optional[List[str]]):
-    if task_info_dump_path is None:
-        return None
-
+def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]]):
     task_tree = _make_task_tree(task, ignore_task_names=ignore_task_names)
 
     task_info_table = pd.DataFrame(_make_tree_info_table_list(task_tree=task_tree, visited_tasks=set()))

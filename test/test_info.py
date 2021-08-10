@@ -155,18 +155,6 @@ class TestTaskInfo(unittest.TestCase):
 
             self.assertEqual(set(self.dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
 
-    def test_dump_task_info_table_with_no_path(self):
-        with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
-            self.dumped_data = None
-
-            def _side_effect(obj, lock_at_dump):
-                self.dumped_data = obj
-
-            mock_obj.side_effect = _side_effect
-            dump_task_info_table(task=_TaskInfoExampleTaskC(), task_info_dump_path=None, ignore_task_names=['_TaskInfoExampleTaskB'])
-
-            self.assertEqual(self.dumped_data, None)
-
 
 if __name__ == '__main__':
     unittest.main()
