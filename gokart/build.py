@@ -16,12 +16,12 @@ class LoggerConfig:
         self.level = level
 
     def __enter__(self):
-        logging.disable(self.level)
+        logging.disable(self.level - 10)  # subtract 10 to disable below self.level
         self.logger.setLevel(self.level)
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
-        logging.disable(self.default_level)
+        logging.disable(self.default_level - 10)  # subtract 10 to disable below self.level
         self.logger.setLevel(self.default_level)
 
 
