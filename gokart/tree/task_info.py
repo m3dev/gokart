@@ -1,6 +1,6 @@
-from typing import List, Optional, Set
-from dataclasses import dataclass
 import warnings
+from dataclasses import dataclass
+from typing import List, Optional, Set
 
 import luigi
 
