@@ -1,0 +1,94 @@
+from typing import List, Optional, Set
+from dataclasses import dataclass
+import warnings
+
+import luigi
+
+from gokart.task import TaskOnKart
+
+
+@dataclass
+class TaskInfo:
+    name: str
+    unique_id: str
+    output_paths: List[TaskOnKart]
+    params: dict
+    processing_time: str
+    is_complete: str
+    task_log: dict
+    children_task_infos: List['TaskInfo']
+
+    def get_task_id(self):
+        return f'{self.name}_{self.unique_id}'
+
+    def get_task_title(self):
+        return f'({self.is_complete}) {self.name}[{self.unique_id}]'
+
+    def get_task_detail(self):
+        return f'(parameter={self.params}, output={self.output_paths}, time={self.processing_time}, task_log={self.task_log})'
+
+
+def _make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]) -> TaskInfo:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
+        is_task_complete = task.complete()
+
+    name = task.__class__.__name__
+    unique_id = task.make_unique_id()
+    output_paths = [t.path() for t in luigi.task.flatten(task.output())]
+    params = task.get_info(only_significant=True)
+    processing_time = task.get_processing_time()
+    if type(processing_time) == float:
+        processing_time = str(processing_time) + 's'
+    is_complete = ('COMPLETE' if is_task_complete else 'PENDING')
+    task_log = dict(task.get_task_log())
+
+    children = luigi.task.flatten(task.requires())
+    children_task_infos: List[TaskInfo] = []
+    for child in children:
+        if ignore_task_names is None or child.__class__.__name__ not in ignore_task_names:
+            children_task_infos.append(_make_task_info_tree(child, ignore_task_names=ignore_task_names))
+    return TaskInfo(name=name,
+                    unique_id=unique_id,
+                    output_paths=output_paths,
+                    params=params,
+                    processing_time=processing_time,
+                    is_complete=is_complete,
+                    task_log=task_log,
+                    children_task_infos=children_task_infos)
+
+
+def _make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, abbr: bool, visited_tasks: Set[str]):
+    result = '\n' + indent
+    if last:
+        result += '└─-'
+        indent += '   '
+    else:
+        result += '|--'
+        indent += '|  '
+    result += task_info.get_task_title()
+
+    if abbr:
+        task_id = task_info.get_task_id()
+        if task_id not in visited_tasks:
+            visited_tasks.add(task_id)
+        else:
+            result += f'\n{indent}└─- ...'
+            return result
+
+    if details:
+        result += task_info.get_task_detail()
+
+    children = task_info.children_task_infos
+    for index, child in enumerate(children):
+        result += _make_tree_info(child, indent, (index + 1) == len(children), details=details, abbr=abbr, visited_tasks=visited_tasks)
+    return result
+
+
+def make_tree_info_string(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: Optional[List[str]] = None):
+    """
+    Return a string representation of the tasks, their statuses/parameters in a dependency tree format
+    """
+    task_info = _make_task_info_tree(task, ignore_task_names=ignore_task_names)
+    result = _make_tree_info(task_info=task_info, indent='', last=True, details=details, abbr=abbr, visited_tasks=set())
+    return result
