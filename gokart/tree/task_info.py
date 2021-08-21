@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from typing import List, Optional, Set
 
 import luigi
+import pandas as pd
 
+from gokart.target import make_target
 from gokart.task import TaskOnKart
 
 
@@ -26,6 +28,15 @@ class TaskInfo:
 
     def get_task_detail(self):
         return f'(parameter={self.params}, output={self.output_paths}, time={self.processing_time}, task_log={self.task_log})'
+
+    def task_info_dict(self):
+        return dict(name=self.name,
+                    unique_id=self.unique_id,
+                    output_paths=self.output_paths,
+                    params=self.params,
+                    processing_time=self.processing_time,
+                    is_complete=self.is_complete,
+                    task_log=self.task_log)
 
 
 def _make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]) -> TaskInfo:
@@ -92,3 +103,27 @@ def make_tree_info_string(task: TaskOnKart, details: bool = False, abbr: bool = 
     task_info = _make_task_info_tree(task, ignore_task_names=ignore_task_names)
     result = _make_tree_info(task_info=task_info, indent='', last=True, details=details, abbr=abbr, visited_tasks=set())
     return result
+
+
+def _make_tree_info_table_list(task_info: TaskInfo, visited_tasks: Set[str]):
+    task_id = task_info.get_task_id()
+    if task_id in visited_tasks:
+        return []
+    visited_tasks.add(task_id)
+
+    result = [task_info.task_info_dict()]
+
+    children = task_info.children_task_infos
+    for child in children:
+        result += _make_tree_info_table_list(task_info=child, visited_tasks=visited_tasks)
+    return result
+
+
+def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]]):
+    task_info = _make_task_info_tree(task, ignore_task_names=ignore_task_names)
+
+    task_info_table = pd.DataFrame(_make_tree_info_table_list(task_info=task_info, visited_tasks=set()))
+    unique_id = task.make_unique_id()
+
+    task_info_target = make_target(file_path=task_info_dump_path, unique_id=unique_id)
+    task_info_target.dump(obj=task_info_table, lock_at_dump=False)

@@ -1,12 +1,13 @@
 import unittest
 from unittest.mock import patch
 
+import pandas as pd
 import luigi
 import luigi.mock
 from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
-from gokart.tree.task_info import make_tree_info_string
+from gokart.tree.task_info import dump_task_info_table, make_tree_info_string
 
 
 class _SubTask(gokart.TaskOnKart):
@@ -123,3 +124,34 @@ class TestInfo(unittest.TestCase):
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""
         self.assertRegex(tree, expected)
+
+
+class _TaskInfoExampleTaskA(gokart.TaskOnKart):
+    pass
+
+
+class _TaskInfoExampleTaskB(gokart.TaskOnKart):
+    pass
+
+
+class _TaskInfoExampleTaskC(gokart.TaskOnKart):
+    def requires(self):
+        return dict(taskA=_TaskInfoExampleTaskA(), taskB=_TaskInfoExampleTaskB())
+
+    def run(self):
+        self.dump('DONE')
+
+
+class TestTaskInfoTable(unittest.TestCase):
+    def test_dump_task_info_table(self):
+        with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
+            self.dumped_data = None
+
+            def _side_effect(obj, lock_at_dump):
+                self.dumped_data = obj
+
+            mock_obj.side_effect = _side_effect
+            dump_task_info_table(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.csv', ignore_task_names=['_TaskInfoExampleTaskB'])
+
+            self.assertEqual(set(self.dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
+            self.assertEqual(set(self.dumped_data.columns), {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log'})
