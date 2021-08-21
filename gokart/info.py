@@ -10,12 +10,33 @@ from gokart.tree.task_info import make_tree_info_string
 logger = getLogger(__name__)
 
 
-def make_tree_info(task, indent='', last=True, details=False, abbr=True, visited_tasks=None, ignore_task_names=None):
+def make_tree_info(task: TaskOnKart,
+                   indent: str = '',
+                   last: bool = True,
+                   details: bool = False,
+                   abbr: bool = True,
+                   visited_tasks: Optional[Set[str]] = None,
+                   ignore_task_names: Optional[List[str]] = None) -> str:
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
 
     This function has moved to `gokart.tree.task_info.make_tree_info_string`.
     This code is remained for backward compatibility.
+
+    Parameters
+    ----------
+    - task: TaskOnKart
+        Root task.
+    - details: bool
+        Whether or not to output details.
+    - abbr: bool
+        Whether or not to simplify tasks information that has already appeared.
+    - ignore_task_names: Optional[List[str]]
+        List of task names to ignore.
+    Returns
+    -------
+    - tree_info : str
+        Formatted task dependency tree.
     """
     return make_tree_info_string(task=task, details=details, abbr=abbr, ignore_task_names=ignore_task_names)
 
