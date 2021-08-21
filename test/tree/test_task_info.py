@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import patch
 
-import pandas as pd
 import luigi
 import luigi.mock
+import pandas as pd
 from luigi.mock import MockFileSystem, MockTarget
 
 import gokart

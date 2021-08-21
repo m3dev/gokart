@@ -120,6 +120,19 @@ def _make_tree_info_table_list(task_info: TaskInfo, visited_tasks: Set[str]):
 
 
 def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]]):
+    """Dump a table containing information about dependent tasks.
+
+    Parameters
+    ----------
+    - task: TaskOnKart
+        Root task.
+    - task_info_dump_path: str
+        Output target file path. Path destination can be `local`, `S3`, or `GCS`.
+        File extension can be any type that gokart file processor accepts, including `csv`, `pickle`, or `txt`.
+        See `TaskOnKart.make_target module <https://gokart.readthedocs.io/en/latest/task_on_kart.html#taskonkart-make-target>` for details.
+    - ignore_task_names: Optional[List[str]]
+        List of task names to ignore.
+    """
     task_info = _make_task_info_tree(task, ignore_task_names=ignore_task_names)
 
     task_info_table = pd.DataFrame(_make_tree_info_table_list(task_info=task_info, visited_tasks=set()))

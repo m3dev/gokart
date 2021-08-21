@@ -170,3 +170,23 @@ the output could be like:
 Delete Unnecessary Output Files
 --------------------------------
 To delete output files which are not necessary to run a task, add option ``--delete-unnecessary-output-files``. This option is supported only when a task outputs files in local storage not S3 for now.
+
+
+Dump TaskInfo Table
+--------------------
+``gokart.tree.task_info.dump_task_info_table()`` will dump table information of dependent tasks as a pandas DataFrame.
+This table contains `task name`, `cache unique id`, `cache file path`, `task parameters`, `task processing time`, `completed flag`, and `task log`.
+
+.. code:: python
+
+    from gokart.tree.task_info import dump_task_info_table
+
+    dump_task_info_table(task, task_info_dump_path, ignore_task_names)
+    # - task: TaskOnKart
+    #     Root task.
+    # - task_info_dump_path: str
+    #     Output target file path. Path destination can be `local`, `S3`, or `GCS`.
+    #     File extension can be any type that gokart file processor accepts, including `csv`, `pickle`, or `txt`.
+    #     See `TaskOnKart.make_target module <https://gokart.readthedocs.io/en/latest/task_on_kart.html#taskonkart-make-target>` for details.
+    # - ignore_task_names: Optional[List[str]]
+    #     List of task names to ignore.
