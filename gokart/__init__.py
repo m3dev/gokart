@@ -5,5 +5,6 @@ from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, T
 from gokart.run import run
 from gokart.task import TaskOnKart
 from gokart.testing import test_run
+from gokart.tree.task_info import make_tree_info_string
 from gokart.utils import add_config
 from gokart.workspace_management import delete_local_unnecessary_outputs

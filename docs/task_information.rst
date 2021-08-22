@@ -58,7 +58,7 @@ An example output is as follows:
 On Python
 ~~~~~~~~~
 
-It use :func:`~gokart.info.make_tree_info` in the following:
+It use :func:`~gokart.tree.task_info.make_tree_info_string` in the following:
 
 
 .. code:: python
@@ -106,7 +106,7 @@ The more dependencies you have, the harder it is to grasp the task tree.
             task2=TaskD(task1=TaskC(task=TaskA(param='foo')), task2=TaskC(task=TaskB(task=TaskA(param='bar'))))   # same task
         )
     )
-    print(gokart.make_tree_info(task))
+    print(gokart.make_tree_info_string(task))
 
 
 .. code:: sh
@@ -125,12 +125,12 @@ The more dependencies you have, the harder it is to grasp the task tree.
             └─- ...
 
 
-In task dependency tree output by `make_tree_info`, the sub-trees already shown in above will be omitted.
+In task dependency tree output by `make_tree_info_string`, the sub-trees already shown in above will be omitted.
 We can disable this omission by passing ``False`` to ``abbr`` flag:
 
 .. code:: python
 
-    print(make_tree_info(task, abbr=False))
+    print(make_tree_info_string(task, abbr=False))
 
 
 
