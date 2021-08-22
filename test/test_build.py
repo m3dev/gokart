@@ -7,7 +7,7 @@ import luigi
 import luigi.mock
 
 import gokart
-from gokart.build import LoggerConfig, GokartBuildError
+from gokart.build import GokartBuildError, LoggerConfig
 
 
 class _DummyTask(gokart.TaskOnKart):
