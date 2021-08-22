@@ -25,6 +25,10 @@ class LoggerConfig:
         self.logger.setLevel(self.default_level)
 
 
+class GokartBuildError(Exception):
+    pass
+
+
 def _get_output(task: TaskOnKart) -> Any:
     output = task.output()
     if isinstance(output, list) or isinstance(output, tuple):
@@ -48,5 +52,7 @@ def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = Tr
     read_environ()
     check_config()
     with LoggerConfig(level=log_level):
-        luigi.build([task], local_scheduler=True)
+        result = luigi.build([task], local_scheduler=True, detailed_summary=True)
+        if result.status == luigi.LuigiStatusCode.FAILED:
+            raise GokartBuildError(result.summary_text)
     return _get_output(task) if return_value else None
