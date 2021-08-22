@@ -99,6 +99,21 @@ def _make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool,
 def make_tree_info_string(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: Optional[List[str]] = None):
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
+
+    Parameters
+    ----------
+    - task: TaskOnKart
+        Root task.
+    - details: bool
+        Whether or not to output details.
+    - abbr: bool
+        Whether or not to simplify tasks information that has already appeared.
+    - ignore_task_names: Optional[List[str]]
+        List of task names to ignore.
+    Returns
+    -------
+    - tree_info : str
+        Formatted task dependency tree.
     """
     task_info = _make_task_info_tree(task, ignore_task_names=ignore_task_names)
     result = _make_tree_info(task_info=task_info, indent='', last=True, details=details, abbr=abbr, visited_tasks=set())
