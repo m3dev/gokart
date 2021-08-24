@@ -129,8 +129,7 @@ def _make_tree_info_table_list(task_info: TaskInfo, visited_tasks: Set[str]):
     result = [task_info.task_info_dict()]
 
     children = task_info.children_task_infos
-    for child in children:
-        result += _make_tree_info_table_list(task_info=child, visited_tasks=visited_tasks)
+    result += list(itertools.chain.from_iterable(_make_tree_info_table_list(task_info=child, visited_tasks=visited_tasks) for child in children))
     return result
 
 
