@@ -7,93 +7,7 @@ import pandas as pd
 
 from gokart.target import make_target
 from gokart.task import TaskOnKart
-
-
-@dataclass
-class TaskInfo:
-    name: str
-    unique_id: str
-    output_paths: List[TaskOnKart]
-    params: dict
-    processing_time: str
-    is_complete: str
-    task_log: dict
-    children_task_infos: List['TaskInfo']
-
-    def get_task_id(self):
-        return f'{self.name}_{self.unique_id}'
-
-    def get_task_title(self):
-        return f'({self.is_complete}) {self.name}[{self.unique_id}]'
-
-    def get_task_detail(self):
-        return f'(parameter={self.params}, output={self.output_paths}, time={self.processing_time}, task_log={self.task_log})'
-
-    def task_info_dict(self):
-        return dict(name=self.name,
-                    unique_id=self.unique_id,
-                    output_paths=self.output_paths,
-                    params=self.params,
-                    processing_time=self.processing_time,
-                    is_complete=self.is_complete,
-                    task_log=self.task_log)
-
-
-def _make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]) -> TaskInfo:
-    with warnings.catch_warnings():
-        warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
-        is_task_complete = task.complete()
-
-    name = task.__class__.__name__
-    unique_id = task.make_unique_id()
-    output_paths = [t.path() for t in luigi.task.flatten(task.output())]
-    params = task.get_info(only_significant=True)
-    processing_time = task.get_processing_time()
-    if type(processing_time) == float:
-        processing_time = str(processing_time) + 's'
-    is_complete = ('COMPLETE' if is_task_complete else 'PENDING')
-    task_log = dict(task.get_task_log())
-
-    children = luigi.task.flatten(task.requires())
-    children_task_infos: List[TaskInfo] = []
-    for child in children:
-        if ignore_task_names is None or child.__class__.__name__ not in ignore_task_names:
-            children_task_infos.append(_make_task_info_tree(child, ignore_task_names=ignore_task_names))
-    return TaskInfo(name=name,
-                    unique_id=unique_id,
-                    output_paths=output_paths,
-                    params=params,
-                    processing_time=processing_time,
-                    is_complete=is_complete,
-                    task_log=task_log,
-                    children_task_infos=children_task_infos)
-
-
-def _make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, abbr: bool, visited_tasks: Set[str]):
-    result = '\n' + indent
-    if last:
-        result += '└─-'
-        indent += '   '
-    else:
-        result += '|--'
-        indent += '|  '
-    result += task_info.get_task_title()
-
-    if abbr:
-        task_id = task_info.get_task_id()
-        if task_id not in visited_tasks:
-            visited_tasks.add(task_id)
-        else:
-            result += f'\n{indent}└─- ...'
-            return result
-
-    if details:
-        result += task_info.get_task_detail()
-
-    children = task_info.children_task_infos
-    for index, child in enumerate(children):
-        result += _make_tree_info(child, indent, (index + 1) == len(children), details=details, abbr=abbr, visited_tasks=visited_tasks)
-    return result
+from gokart.tree.task_info_formatter import make_task_info_tree, make_tree_info, make_tree_info_table_list
 
 
 def make_tree_info_string(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: Optional[List[str]] = None):
@@ -115,21 +29,8 @@ def make_tree_info_string(task: TaskOnKart, details: bool = False, abbr: bool = 
     - tree_info : str
         Formatted task dependency tree.
     """
-    task_info = _make_task_info_tree(task, ignore_task_names=ignore_task_names)
-    result = _make_tree_info(task_info=task_info, indent='', last=True, details=details, abbr=abbr, visited_tasks=set())
-    return result
-
-
-def _make_tree_info_table_list(task_info: TaskInfo, visited_tasks: Set[str]):
-    task_id = task_info.get_task_id()
-    if task_id in visited_tasks:
-        return []
-    visited_tasks.add(task_id)
-
-    result = [task_info.task_info_dict()]
-
-    children = task_info.children_task_infos
-    result += list(itertools.chain.from_iterable(_make_tree_info_table_list(task_info=child, visited_tasks=visited_tasks) for child in children))
+    task_info = make_task_info_tree(task, ignore_task_names=ignore_task_names)
+    result = make_tree_info(task_info=task_info, indent='', last=True, details=details, abbr=abbr, visited_tasks=set())
     return result
 
 
@@ -147,9 +48,9 @@ def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task
     - ignore_task_names: Optional[List[str]]
         List of task names to ignore.
     """
-    task_info = _make_task_info_tree(task, ignore_task_names=ignore_task_names)
+    task_info = make_task_info_tree(task, ignore_task_names=ignore_task_names)
 
-    task_info_table = pd.DataFrame(_make_tree_info_table_list(task_info=task_info, visited_tasks=set()))
+    task_info_table = pd.DataFrame(make_tree_info_table_list(task_info=task_info, visited_tasks=set()))
     unique_id = task.make_unique_id()
 
     task_info_target = make_target(file_path=task_info_dump_path, unique_id=unique_id)
