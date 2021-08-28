@@ -127,14 +127,16 @@ class TestInfo(unittest.TestCase):
 
 
 class _TaskInfoExampleTaskA(gokart.TaskOnKart):
-    pass
+    task_namespace = __name__
 
 
 class _TaskInfoExampleTaskB(gokart.TaskOnKart):
-    pass
+    task_namespace = __name__
 
 
 class _TaskInfoExampleTaskC(gokart.TaskOnKart):
+    task_namespace = __name__
+
     def requires(self):
         return dict(taskA=_TaskInfoExampleTaskA(), taskB=_TaskInfoExampleTaskB())
 
