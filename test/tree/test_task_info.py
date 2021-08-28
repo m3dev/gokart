@@ -7,7 +7,7 @@ import pandas as pd
 from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
-from gokart.tree.task_info import dump_task_info_table, make_tree_info_string
+from gokart.tree.task_info import dump_task_info_table, make_task_info_as_tree_str
 
 
 class _SubTask(gokart.TaskOnKart):
@@ -57,7 +57,7 @@ class TestInfo(unittest.TestCase):
         task = _Task(param=1, sub=_SubTask(param=2))
 
         # check before running
-        tree = make_tree_info_string(task)
+        tree = make_task_info_as_tree_str(task)
         expected = r"""
 └─-\(PENDING\) _Task\[[a-z0-9]*\]
    └─-\(PENDING\) _SubTask\[[a-z0-9]*\]$"""
@@ -69,7 +69,7 @@ class TestInfo(unittest.TestCase):
 
         # check after sub task runs
         luigi.build([task], local_scheduler=True)
-        tree = make_tree_info_string(task)
+        tree = make_task_info_as_tree_str(task)
         expected = r"""
 └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
    └─-\(COMPLETE\) _SubTask\[[a-z0-9]*\]$"""
@@ -84,7 +84,7 @@ class TestInfo(unittest.TestCase):
 
         # check after sub task runs
         luigi.build([task], local_scheduler=True)
-        tree = make_tree_info_string(task)
+        tree = make_task_info_as_tree_str(task)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
    \|--\(COMPLETE\) _Task\[[a-z0-9]*\]
@@ -102,7 +102,7 @@ class TestInfo(unittest.TestCase):
 
         # check after sub task runs
         luigi.build([task], local_scheduler=True)
-        tree = make_tree_info_string(task, abbr=False)
+        tree = make_task_info_as_tree_str(task, abbr=False)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
    \|--\(COMPLETE\) _Task\[[a-z0-9]*\]
@@ -120,7 +120,7 @@ class TestInfo(unittest.TestCase):
 
         # check after sub task runs
         luigi.build([task], local_scheduler=True)
-        tree = make_tree_info_string(task, abbr=False, ignore_task_names=['_Task'])
+        tree = make_task_info_as_tree_str(task, abbr=False, ignore_task_names=['_Task'])
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""
         self.assertRegex(tree, expected)

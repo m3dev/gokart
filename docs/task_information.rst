@@ -1,13 +1,20 @@
 Task Information
 ================
 
-Task Tree
----------
+There are 5 ways to print the significant parameters and state of the task and its dependencies.
 
-There are two ways to print the significant parameters and state of the task and its dependencies in a tree format.
-One is to use luigi module. See `luigi.tools.deps_tree module <https://luigi.readthedocs.io/en/stable/api/luigi.tools.deps_tree.html>`_ for details.
-Another is to use ``task-info`` option which is implemented in gokart.
+* 1. One is to use luigi module. See `luigi.tools.deps_tree module <https://luigi.readthedocs.io/en/stable/api/luigi.tools.deps_tree.html>`_ for details.
+* 2. ``task-info`` option of ``gokart.run()``.
+* 3. ``make_task_info_as_tree_str()`` will return significant parameters and dependency tree as str.
+* 4. ``make_task_info_as_table()`` will return significant parameter and dependent tasks as pandas.DataFrame table format.
+* 5. ``dump_task_info_table()`` will dump the result of ``make_task_info_as_table()`` to a file.
 
+
+This document will cover 2~5.
+
+
+2. task-info option of gokart.run()
+--------------------------------------------
 
 On CLI
 ~~~~~~
@@ -55,11 +62,34 @@ An example output is as follows:
        └─-(COMPLETE) TaskA[2549878535c070fb6c3cd4061bdbbcff](parameter={'workspace_directory': './resources/', 'local_temporary_directory': './resources/tmp/', 'param': 'called by TaskB'}, output=['./resources/output_of_task_a_2549878535c070fb6c3cd4061bdbbcff.pkl'], time=0.0009829998016357422s, task_log={})
 
 
-On Python
-~~~~~~~~~
 
-It use :func:`~gokart.tree.task_info.make_tree_info_string` in the following:
+3. make_task_info_as_tree_str()
+-----------------------------------------
 
+``gokart.tree.task_info.make_task_info_as_tree_str()`` will return a tree dependency tree as a str.
+
+.. code:: python
+
+    from gokart.tree.task_info import make_task_info_as_tree_str
+
+    make_task_info_as_tree_str(task, ignore_task_names)
+    # Parameters
+    # ----------
+    # - task: TaskOnKart
+    #     Root task.
+    # - details: bool
+    #     Whether or not to output details.
+    # - abbr: bool
+    #     Whether or not to simplify tasks information that has already appeared.
+    # - ignore_task_names: Optional[List[str]]
+    #     List of task names to ignore.
+    # Returns
+    # -------
+    # - tree_info : str
+    #     Formatted task dependency tree.
+
+
+example
 
 .. code:: python
 
@@ -91,9 +121,6 @@ It use :func:`~gokart.tree.task_info.make_tree_info_string` in the following:
             self.dump(','.join(task))
 
 
-The more dependencies you have, the harder it is to grasp the task tree.
-
-
 .. code:: python
 
     task = TaskD(
@@ -106,7 +133,7 @@ The more dependencies you have, the harder it is to grasp the task tree.
             task2=TaskD(task1=TaskC(task=TaskA(param='foo')), task2=TaskC(task=TaskB(task=TaskA(param='bar'))))   # same task
         )
     )
-    print(gokart.make_tree_info_string(task))
+    print(gokart.make_task_info_as_tree_str(task))
 
 
 .. code:: sh
@@ -125,12 +152,63 @@ The more dependencies you have, the harder it is to grasp the task tree.
             └─- ...
 
 
-In task dependency tree output by `make_tree_info_string`, the sub-trees already shown in above will be omitted.
-We can disable this omission by passing ``False`` to ``abbr`` flag:
+In the above example, the sub-trees already shown is omitted.
+This can be disabled by passing ``False`` to ``abbr`` flag:
 
 .. code:: python
 
-    print(make_tree_info_string(task, abbr=False))
+    print(make_task_info_as_tree_str(task, abbr=False))
+
+
+4. make_task_info_as_table()
+--------------------------------
+
+``gokart.tree.task_info.make_task_info_as_table()`` will return a table containing the information of significant parameters and dependent tasks as a pandas DataFrame.
+This table contains `task name`, `cache unique id`, `cache file path`, `task parameters`, `task processing time`, `completed flag`, and `task log`.
+
+.. code:: python
+
+    from gokart.tree.task_info import make_task_info_as_table
+
+    make_task_info_as_table(task, ignore_task_names)
+    # """Return a table containing information about dependent tasks.
+    #
+    # Parameters
+    # ----------
+    # - task: TaskOnKart
+    #     Root task.
+    # - ignore_task_names: Optional[List[str]]
+    #     List of task names to ignore.
+    # Returns
+    # -------
+    # - task_info_table : pandas.DataFrame 
+    #     Formatted task dependency table.
+    # """
+
+
+5. dump_task_info_table()
+-----------------------------------------
+
+``gokart.tree.task_info.dump_task_info_table()`` will dump the task_info table made at ``make_task_info_as_table()`` to a file.
+
+.. code:: python
+
+    from gokart.tree.task_info import dump_task_info_table
+
+    dump_task_info_table(task, task_info_dump_path, ignore_task_names)
+    # Parameters
+    # ----------
+    # - task: TaskOnKart
+    #     Root task.
+    # - task_info_dump_path: str
+    #     Output target file path. Path destination can be `local`, `S3`, or `GCS`.
+    #     File extension can be any type that gokart file processor accepts, including `csv`, `pickle`, or `txt`.
+    #     See `TaskOnKart.make_target module <https://gokart.readthedocs.io/en/latest/task_on_kart.html#taskonkart-make-target>` for details.
+    # - ignore_task_names: Optional[List[str]]
+    #     List of task names to ignore.
+    # Returns
+    # -------
+    # None
 
 
 
@@ -171,22 +249,3 @@ Delete Unnecessary Output Files
 --------------------------------
 To delete output files which are not necessary to run a task, add option ``--delete-unnecessary-output-files``. This option is supported only when a task outputs files in local storage not S3 for now.
 
-
-Dump TaskInfo Table
---------------------
-``gokart.tree.task_info.dump_task_info_table()`` will dump table information of dependent tasks as a pandas DataFrame.
-This table contains `task name`, `cache unique id`, `cache file path`, `task parameters`, `task processing time`, `completed flag`, and `task log`.
-
-.. code:: python
-
-    from gokart.tree.task_info import dump_task_info_table
-
-    dump_task_info_table(task, task_info_dump_path, ignore_task_names)
-    # - task: TaskOnKart
-    #     Root task.
-    # - task_info_dump_path: str
-    #     Output target file path. Path destination can be `local`, `S3`, or `GCS`.
-    #     File extension can be any type that gokart file processor accepts, including `csv`, `pickle`, or `txt`.
-    #     See `TaskOnKart.make_target module <https://gokart.readthedocs.io/en/latest/task_on_kart.html#taskonkart-make-target>` for details.
-    # - ignore_task_names: Optional[List[str]]
-    #     List of task names to ignore.

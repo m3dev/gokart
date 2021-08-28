@@ -10,7 +10,7 @@ from gokart.task import TaskOnKart
 from gokart.tree.task_info_formatter import make_task_info_tree, make_tree_info, make_tree_info_table_list
 
 
-def make_tree_info_string(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: Optional[List[str]] = None):
+def make_task_info_as_tree_str(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: Optional[List[str]] = None):
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
 
@@ -34,6 +34,27 @@ def make_tree_info_string(task: TaskOnKart, details: bool = False, abbr: bool = 
     return result
 
 
+def make_task_info_as_table(task: TaskOnKart, ignore_task_names: Optional[List[str]]):
+    """Return a table containing information about dependent tasks.
+
+    Parameters
+    ----------
+    - task: TaskOnKart
+        Root task.
+    - ignore_task_names: Optional[List[str]]
+        List of task names to ignore.
+    Returns
+    -------
+    - task_info_table : pandas.DataFrame 
+        Formatted task dependency table.
+    """
+
+    task_info = make_task_info_tree(task, ignore_task_names=ignore_task_names)
+    task_info_table = pd.DataFrame(make_tree_info_table_list(task_info=task_info, visited_tasks=set()))
+
+    return task_info_table
+
+
 def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]]):
     """Dump a table containing information about dependent tasks.
 
@@ -47,10 +68,12 @@ def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task
         See `TaskOnKart.make_target module <https://gokart.readthedocs.io/en/latest/task_on_kart.html#taskonkart-make-target>` for details.
     - ignore_task_names: Optional[List[str]]
         List of task names to ignore.
+    Returns
+    -------
+    None
     """
-    task_info = make_task_info_tree(task, ignore_task_names=ignore_task_names)
+    task_info_table = make_task_info_as_table(task=task, ignore_task_names=ignore_task_names)
 
-    task_info_table = pd.DataFrame(make_tree_info_table_list(task_info=task_info, visited_tasks=set()))
     unique_id = task.make_unique_id()
 
     task_info_target = make_target(file_path=task_info_dump_path, unique_id=unique_id)

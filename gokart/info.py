@@ -5,7 +5,7 @@ from typing import List, NamedTuple, Optional, Set, Tuple
 import luigi
 
 from gokart.task import TaskOnKart
-from gokart.tree.task_info import make_tree_info_string
+from gokart.tree.task_info import make_task_info_as_tree_str
 
 logger = getLogger(__name__)
 
@@ -20,7 +20,7 @@ def make_tree_info(task: TaskOnKart,
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
 
-    This function has moved to `gokart.tree.task_info.make_tree_info_string`.
+    This function has moved to `gokart.tree.task_info.make_task_info_as_tree_str`.
     This code is remained for backward compatibility.
 
     Parameters
@@ -38,7 +38,7 @@ def make_tree_info(task: TaskOnKart,
     - tree_info : str
         Formatted task dependency tree.
     """
-    return make_tree_info_string(task=task, details=details, abbr=abbr, ignore_task_names=ignore_task_names)
+    return make_task_info_as_tree_str(task=task, details=details, abbr=abbr, ignore_task_names=ignore_task_names)
 
 
 class tree_info(TaskOnKart):
