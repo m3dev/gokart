@@ -7,7 +7,7 @@ import luigi
 import luigi.mock
 
 import gokart
-from gokart.build import LoggerConfig
+from gokart.build import GokartBuildError, LoggerConfig
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -32,6 +32,13 @@ class _DummyTaskTwoOutputs(gokart.TaskOnKart):
     def run(self):
         self.dump(self.param1, 'out1')
         self.dump(self.param2, 'out2')
+
+
+class _DummyFailedTask(gokart.TaskOnKart):
+    task_namespace = __name__
+
+    def run(self):
+        raise RuntimeError
 
 
 class RunTest(unittest.TestCase):
@@ -64,6 +71,10 @@ class RunTest(unittest.TestCase):
         }
         output = gokart.build(_DummyTaskTwoOutputs(param1=param_dict['out1'], param2=param_dict['out2']), reset_register=False)
         self.assertEqual(output, param_dict)
+
+    def test_failed_task(self):
+        with self.assertRaises(GokartBuildError):
+            gokart.build(_DummyFailedTask(), reset_register=False)
 
 
 class LoggerConfigTest(unittest.TestCase):

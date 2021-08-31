@@ -157,3 +157,4 @@ To output logs of each tasks, you can pass `~log_level` parameter to `~gokart.bu
 
 
 This feature is very useful for running `~gokart` on jupyter notebook.
+When some tasks are failed, gokart.build raises GokartBuildError. If you have to get tracebacks, you should set `log_level` as `logging.DEBUG`.

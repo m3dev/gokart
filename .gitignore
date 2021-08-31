@@ -112,3 +112,6 @@ examples/resources
 
 # poetry
 dist
+
+# temporary data
+temporary.zip

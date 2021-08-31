@@ -11,10 +11,9 @@ There are 6 ways to print the significant parameters and state of the task and i
 * 6. ``dump_task_info_tree()`` will dump the task tree object (TaskInfo) to a pickle file.
 
 
-This document will cover 2~5.
+This document will cover 2~6.
 
-
-1. task-info option of gokart.run()
+2. task-info option of gokart.run()
 --------------------------------------------
 
 On CLI
