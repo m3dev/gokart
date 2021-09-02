@@ -81,7 +81,7 @@ def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task
     task_info_target.dump(obj=task_info_table, lock_at_dump=False)
 
 
-def dump_task_info_tree(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]]):
+def dump_task_info_tree(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]], use_unique_id: bool = True):
     """Dump the task info tree object (TaskInfo) to a pickle file.
 
     Parameters
@@ -93,6 +93,8 @@ def dump_task_info_tree(task: TaskOnKart, task_info_dump_path: str, ignore_task_
         File extension must be '.pkl'.
     - ignore_task_names: Optional[List[str]]
         List of task names to ignore.
+    - use_unique_id: bool = True
+        Whether to use unique id to dump target file. Default is True.
     Returns
     -------
     None
@@ -102,7 +104,7 @@ def dump_task_info_tree(task: TaskOnKart, task_info_dump_path: str, ignore_task_
 
     task_info_tree = make_task_info_tree(task, ignore_task_names=ignore_task_names)
 
-    unique_id = task.make_unique_id()
+    unique_id = task.make_unique_id() if use_unique_id else None
 
     task_info_target = make_target(file_path=task_info_dump_path, unique_id=unique_id)
     task_info_target.dump(obj=task_info_tree, lock_at_dump=False)

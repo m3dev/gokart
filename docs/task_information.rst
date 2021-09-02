@@ -220,7 +220,7 @@ This table contains `task name`, `cache unique id`, `cache file path`, `task par
 
     from gokart.tree.task_info import dump_task_info_tree
 
-    dump_task_info_tree(task, task_info_dump_path, ignore_task_names)
+    dump_task_info_tree(task, task_info_dump_path, ignore_task_names, use_unique_id)
     # Parameters
     # ----------
     # - task: TaskOnKart
@@ -230,6 +230,8 @@ This table contains `task name`, `cache unique id`, `cache file path`, `task par
     #     File extension must be '.pkl'.
     # - ignore_task_names: Optional[List[str]]
     #     List of task names to ignore.
+    # - use_unique_id: bool = True
+    #     Whether to use unique id to dump target file. Default is True.
     # Returns
     # -------
     # None
