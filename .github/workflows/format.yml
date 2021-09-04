@@ -16,11 +16,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
-        pip install toml
+        pip install toml yapf
     - name: run YAPF to test if python code is correctly formatted
-      uses: AlexanderMelde/yapf-action@master
-      with:
-        args: --verbose --exclude=**/docs/*
+      run: |
+        yapf -dr --verbose --exclude=**/docs/*
     - uses: actions/setup-python@v2
       with:
         python-version: 3.8
