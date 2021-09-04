@@ -19,7 +19,7 @@ jobs:
         pip install toml yapf
     - name: run YAPF to test if python code is correctly formatted
       run: |
-        yapf -dr --verbose --exclude=**/docs/*
+        yapf --diff --recursive --verbose --exclude=**/docs/* $GITHUB_WORKSPACE
     - uses: actions/setup-python@v2
       with:
         python-version: 3.8
