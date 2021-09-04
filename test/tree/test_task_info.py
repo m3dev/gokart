@@ -7,7 +7,7 @@ import pandas as pd
 from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
-from gokart.tree.task_info import dump_task_info_table, make_task_info_as_tree_str
+from gokart.tree.task_info import dump_task_info_table, dump_task_info_tree, make_task_info_as_tree_str
 
 
 class _SubTask(gokart.TaskOnKart):
@@ -157,3 +157,29 @@ class TestTaskInfoTable(unittest.TestCase):
 
             self.assertEqual(set(self.dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
             self.assertEqual(set(self.dumped_data.columns), {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log'})
+
+
+class TestTaskInfoTree(unittest.TestCase):
+    def test_dump_task_info_tree(self):
+        with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
+            self.dumped_data = None
+
+            def _side_effect(obj, lock_at_dump):
+                self.dumped_data = obj
+
+            mock_obj.side_effect = _side_effect
+            dump_task_info_tree(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.pkl', ignore_task_names=['_TaskInfoExampleTaskB'])
+
+            self.assertEqual(self.dumped_data.name, '_TaskInfoExampleTaskC')
+            self.assertEqual(self.dumped_data.children_task_infos[0].name, '_TaskInfoExampleTaskA')
+
+    def test_dump_task_info_tree_with_invalid_path_extention(self):
+        with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
+            self.dumped_data = None
+
+            def _side_effect(obj, lock_at_dump):
+                self.dumped_data = obj
+
+            mock_obj.side_effect = _side_effect
+            with self.assertRaises(AssertionError):
+                dump_task_info_tree(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.csv', ignore_task_names=['_TaskInfoExampleTaskB'])

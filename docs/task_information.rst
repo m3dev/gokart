@@ -1,17 +1,17 @@
 Task Information
 ================
 
-There are 5 ways to print the significant parameters and state of the task and its dependencies.
+There are 6 ways to print the significant parameters and state of the task and its dependencies.
 
 * 1. One is to use luigi module. See `luigi.tools.deps_tree module <https://luigi.readthedocs.io/en/stable/api/luigi.tools.deps_tree.html>`_ for details.
 * 2. ``task-info`` option of ``gokart.run()``.
 * 3. ``make_task_info_as_tree_str()`` will return significant parameters and dependency tree as str.
 * 4. ``make_task_info_as_table()`` will return significant parameter and dependent tasks as pandas.DataFrame table format.
 * 5. ``dump_task_info_table()`` will dump the result of ``make_task_info_as_table()`` to a file.
+* 6. ``dump_task_info_tree()`` will dump the task tree object (TaskInfo) to a pickle file.
 
 
-This document will cover 2~5.
-
+This document will cover 2~6.
 
 2. task-info option of gokart.run()
 --------------------------------------------
@@ -210,6 +210,31 @@ This table contains `task name`, `cache unique id`, `cache file path`, `task par
     # -------
     # None
 
+
+6. dump_task_info_tree()
+-----------------------------------------
+
+``gokart.tree.task_info.dump_task_info_tree()`` will dump the task tree object (TaskInfo) to a pickle file.
+
+.. code:: python
+
+    from gokart.tree.task_info import dump_task_info_tree
+
+    dump_task_info_tree(task, task_info_dump_path, ignore_task_names, use_unique_id)
+    # Parameters
+    # ----------
+    # - task: TaskOnKart
+    #     Root task.
+    # - task_info_dump_path: str
+    #     Output target file path. Path destination can be `local`, `S3`, or `GCS`.
+    #     File extension must be '.pkl'.
+    # - ignore_task_names: Optional[List[str]]
+    #     List of task names to ignore.
+    # - use_unique_id: bool = True
+    #     Whether to use unique id to dump target file. Default is True.
+    # Returns
+    # -------
+    # None
 
 
 Task Logs
