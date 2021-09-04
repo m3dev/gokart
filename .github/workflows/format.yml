@@ -14,6 +14,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        pip install toml
     - name: run YAPF to test if python code is correctly formatted
       uses: AlexanderMelde/yapf-action@master
       with:
