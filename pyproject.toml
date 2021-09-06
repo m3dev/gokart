@@ -38,6 +38,10 @@ coverage = "*"
 isort = "^5.7"
 yapf = "^0.31"
 
+[tool.yapf]
+based_on_style = "pep8"
+column_limit = 160
+
 [tool.isort]
 line_length = 160
 
