@@ -38,7 +38,7 @@ def _try_tree_info(cmdline_args):
     else:
         raise ValueError(f'--tree-info-mode must be "simple" or "all", but "{mode}" is passed.')
     logger.info(f'output tree info: {output_path}')
-    exit()
+    sys.exit()
 
 
 def _try_to_delete_unnecessary_output_file(cmdline_args: List[str]):
@@ -49,7 +49,7 @@ def _try_to_delete_unnecessary_output_file(cmdline_args: List[str]):
                 logger.info('delete-unnecessary-output-files is not support s3/gcs.')
             else:
                 gokart.delete_local_unnecessary_outputs(task)
-            exit()
+            sys.exit()
 
 
 def _try_get_slack_api(cmdline_args: List[str]) -> Optional[gokart.slack.SlackAPI]:
