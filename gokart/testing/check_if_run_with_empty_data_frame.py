@@ -1,4 +1,5 @@
 import logging
+import sys
 from typing import List, Optional
 
 import luigi
@@ -70,7 +71,7 @@ def _test_run_with_empty_data_frame(cmdline_args: List[str], test_run_params: te
 
     test_logger.info('gokart test results:\n' + '\n'.join(s.format() for s in test_status_list))
     if any(s.fail() for s in test_status_list):
-        exit(1)
+        sys.exit(1)
 
 
 def try_to_run_test_for_empty_data_frame(cmdline_args: List[str]):
@@ -80,4 +81,4 @@ def try_to_run_test_for_empty_data_frame(cmdline_args: List[str]):
     if test_run_params.pandas:
         cmdline_args = [a for a in cmdline_args if not a.startswith('--test-run-')]
         _test_run_with_empty_data_frame(cmdline_args=cmdline_args, test_run_params=test_run_params)
-        exit(0)
+        sys.exit(0)
