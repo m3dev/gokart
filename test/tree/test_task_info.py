@@ -1,3 +1,4 @@
+from gokart.tree.task_info_formatter import RequiredTask
 import unittest
 from unittest.mock import patch
 
@@ -156,7 +157,8 @@ class TestTaskInfoTable(unittest.TestCase):
             dump_task_info_table(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.csv', ignore_task_names=['_TaskInfoExampleTaskB'])
 
             self.assertEqual(set(self.dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
-            self.assertEqual(set(self.dumped_data.columns), {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log'})
+            self.assertEqual(set(self.dumped_data.columns),
+                             {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log', 'requires'})
 
 
 class TestTaskInfoTree(unittest.TestCase):
@@ -172,6 +174,10 @@ class TestTaskInfoTree(unittest.TestCase):
 
             self.assertEqual(self.dumped_data.name, '_TaskInfoExampleTaskC')
             self.assertEqual(self.dumped_data.children_task_infos[0].name, '_TaskInfoExampleTaskA')
+
+            self.assertEqual(self.dumped_data.requires.keys(), {'taskA', 'taskB'})
+            self.assertEqual(self.dumped_data.requires['taskA'].name, '_TaskInfoExampleTaskA')
+            self.assertEqual(self.dumped_data.requires['taskB'].name, '_TaskInfoExampleTaskB')
 
     def test_dump_task_info_tree_with_invalid_path_extention(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
