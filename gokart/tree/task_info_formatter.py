@@ -1,6 +1,6 @@
 import warnings
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import Dict, List, NamedTuple, Optional, Set, Union
 
 import luigi
 import pandas as pd
@@ -18,6 +18,7 @@ class TaskInfo:
     processing_time: str
     is_complete: str
     task_log: dict
+    requires: Union['RequiredTask', List['RequiredTask'], Dict[str, 'RequiredTask']]
     children_task_infos: List['TaskInfo']
 
     def get_task_id(self):
@@ -36,7 +37,26 @@ class TaskInfo:
                     params=self.params,
                     processing_time=self.processing_time,
                     is_complete=self.is_complete,
-                    task_log=self.task_log)
+                    task_log=self.task_log,
+                    requires=self.requires)
+
+
+class RequiredTask(NamedTuple):
+    name: str
+    unique_id: str
+
+
+def _make_requires_info(requires):
+    if isinstance(requires, TaskOnKart):
+        return RequiredTask(name=requires.__class__.__name__, unique_id=requires.make_unique_id())
+
+    if isinstance(requires, list) or isinstance(requires, tuple):
+        return [_make_requires_info(requires=item) for item in requires]
+
+    if isinstance(requires, dict):
+        return {key: _make_requires_info(requires=item) for key, item in requires.items()}
+
+    raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `List[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 
 
 def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]) -> TaskInfo:
@@ -53,6 +73,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
         processing_time = str(processing_time) + 's'
     is_complete = ('COMPLETE' if is_task_complete else 'PENDING')
     task_log = dict(task.get_task_log())
+    requires = _make_requires_info(task.requires())
 
     children = luigi.task.flatten(task.requires())
     children_task_infos: List[TaskInfo] = []
@@ -66,6 +87,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
                     processing_time=processing_time,
                     is_complete=is_complete,
                     task_log=task_log,
+                    requires=requires,
                     children_task_infos=children_task_infos)
 
 
