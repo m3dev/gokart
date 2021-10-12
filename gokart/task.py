@@ -276,10 +276,10 @@ class TaskOnKart(luigi.Task):
         for name, t in inspect.getmembers(target_class):
             try:
                 codes.add(inspect.getsource(t))
-            except:
-                continue
+            except TypeError:
+                pass
         return codes
-    
+
     def get_own_code(self):
         gokart_codes = self.get_code(TaskOnKart)
         own_codes = self.get_code(self)
