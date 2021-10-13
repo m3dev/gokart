@@ -273,7 +273,7 @@ class TaskOnKart(luigi.Task):
     @staticmethod
     def get_code(target_class):
         codes = set()
-        for _, t in inspect.getmembers(target_class, inspect.ismethod):
+        for _, t in inspect.getmembers(target_class):
             try:
                 codes.add(inspect.getsource(t))
             except TypeError:
