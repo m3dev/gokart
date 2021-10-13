@@ -1,7 +1,7 @@
 import hashlib
+import inspect
 import os
 import types
-import inspect
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Optional, Set, Union
