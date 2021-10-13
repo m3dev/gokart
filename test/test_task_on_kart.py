@@ -13,6 +13,7 @@ from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.run_with_lock import RunWithLock
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
+from gokart.task import TaskOnKart
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -215,6 +216,33 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(target._processor, processor)
         self.assertIsInstance(target, SingleFileTarget)
 
+    def test_get_own_code(self):
+        task = _DummyTask()
+        task_scripts = "def output(self):\nreturn None\n"
+        print(task_scripts)
+        print(task.get_own_code())
+        self.assertEqual(task.get_own_code().replace(' ', ''), task_scripts.replace(' ', ''))
+
+    def test_make_unique_id_with_own_code(self):
+        class TaskA(TaskOnKart):
+            def run(self):
+                self.dump('Hello, world!')
+        task = TaskA()
+        task_with_code = TaskA(serialized_task_definition_check=True)
+        task_output_path = task.output()._target.path
+        task_with_code_output_path = task_with_code.output()._target.path
+        self.assertNotEqual(task_output_path, task_with_code_output_path)
+
+        class TaskA(TaskOnKart):
+            def run(self):
+                self.dump('Hello!')
+        task_fix = TaskA()
+        task_fix_with_code = TaskA(serialized_task_definition_check=True)
+        task_fix_output_path = task_fix.output()._target.path
+        task_fix_with_code_output_path = task_fix_with_code.output()._target.path
+        self.assertNotEqual(task_with_code_output_path, task_fix_with_code_output_path)
+        self.assertEqual(task_output_path, task_fix_output_path)
+        
     def test_compare_targets_of_different_tasks(self):
         path1 = _DummyTask(param=1).make_target('test.txt')._target.path
         path2 = _DummyTask(param=2).make_target('test.txt')._target.path
