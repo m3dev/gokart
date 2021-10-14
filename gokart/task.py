@@ -44,8 +44,8 @@ class TaskOnKart(luigi.Task):
                                                   ' and all input files are modified before output file are modified.',
                                                   significant=False)
     serialized_task_definition_check = luigi.BoolParameter(default=False,
-                                                           description='If this is true, this task will not run only if all input and output files exist,'
-                                                           'and this task class is modified.',
+                                                           description='If this is true, even if all outputs are present,'
+                                                           'this task will be executed if any changes have been made to the code.',
                                                            significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
     significant = luigi.BoolParameter(default=True,
