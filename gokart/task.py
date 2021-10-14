@@ -275,7 +275,7 @@ class TaskOnKart(luigi.Task):
         def has_sourcecode(obj):
             return inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isframe(obj) or inspect.iscode(obj)
 
-        return set([inspect.getsource(t) for _, t in inspect.getmembers(target_class, has_sourcecode)])
+        return {inspect.getsource(t) for _, t in inspect.getmembers(target_class, has_sourcecode)}
 
     def get_own_code(self):
         gokart_codes = self.get_code(TaskOnKart)
