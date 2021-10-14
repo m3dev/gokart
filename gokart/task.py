@@ -271,7 +271,7 @@ class TaskOnKart(luigi.Task):
         self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump)
 
     @staticmethod
-    def get_code(target_class):
+    def get_code(target_class) -> Set[str]:
         def has_sourcecode(obj):
             return inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isframe(obj) or inspect.iscode(obj)
 
