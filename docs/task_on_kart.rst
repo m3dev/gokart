@@ -104,6 +104,11 @@ Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later 
     When using `.feather`, index will be converted to column at saving and restored to index at loading.
     If you don't prefere saving index, set `store_index_in_feather=False` parameter at `gokart.target.make_target()`.
 
+.. note::
+    When you set `serialized_task_definition_check=True`, the task will rerun when you modify the scripts of the task.
+    Please note that the scripts outside the class are not considered.
+
+
 
 TaskOnKart.load
 ----------------

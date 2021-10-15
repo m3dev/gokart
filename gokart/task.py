@@ -1,4 +1,5 @@
 import hashlib
+import inspect
 import os
 import types
 from importlib import import_module
@@ -42,6 +43,10 @@ class TaskOnKart(luigi.Task):
                                                   description='If this is true, this task will not run only if all input and output files exist,'
                                                   ' and all input files are modified before output file are modified.',
                                                   significant=False)
+    serialized_task_definition_check = luigi.BoolParameter(default=False,
+                                                           description='If this is true, even if all outputs are present,'
+                                                           'this task will be executed if any changes have been made to the code.',
+                                                           significant=False)
     delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
     significant = luigi.BoolParameter(default=True,
                                       description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
@@ -265,6 +270,18 @@ class TaskOnKart(luigi.Task):
             assert not obj.empty
         self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump)
 
+    @staticmethod
+    def get_code(target_class) -> Set[str]:
+        def has_sourcecode(obj):
+            return inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isframe(obj) or inspect.iscode(obj)
+
+        return {inspect.getsource(t) for _, t in inspect.getmembers(target_class, has_sourcecode)}
+
+    def get_own_code(self):
+        gokart_codes = self.get_code(TaskOnKart)
+        own_codes = self.get_code(self)
+        return ''.join(sorted(list(own_codes - gokart_codes)))
+
     def make_unique_id(self):
         unique_id = self.task_unique_id or self._make_hash_id()
         if self.cache_unique_id:
@@ -281,6 +298,8 @@ class TaskOnKart(luigi.Task):
         dependencies = [d for d in dependencies if d is not None]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
+        if self.serialized_task_definition_check:
+            dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
     def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> Union[TargetOnKart, List[TargetOnKart]]:

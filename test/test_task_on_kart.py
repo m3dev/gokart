@@ -215,6 +215,34 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(target._processor, processor)
         self.assertIsInstance(target, SingleFileTarget)
 
+    def test_get_own_code(self):
+        task = _DummyTask()
+        task_scripts = "def output(self):\nreturn None\n"
+        self.assertEqual(task.get_own_code().replace(' ', ''), task_scripts.replace(' ', ''))
+
+    def test_make_unique_id_with_own_code(self):
+        class _MyDummyTaskA(gokart.TaskOnKart):
+            _visible_in_registry = False
+
+            def run(self):
+                self.dump('Hello, world!')
+
+        task_unique_id = _MyDummyTaskA(serialized_task_definition_check=False).make_unique_id()
+        task_with_code_unique_id = _MyDummyTaskA(serialized_task_definition_check=True).make_unique_id()
+        self.assertNotEqual(task_unique_id, task_with_code_unique_id)
+
+        class _MyDummyTaskA(gokart.TaskOnKart):
+            _visible_in_registry = False
+
+            def run(self):
+                modified_code = 'modify!!'
+                self.dump(modified_code)
+
+        task_modified_unique_id = _MyDummyTaskA(serialized_task_definition_check=False).make_unique_id()
+        task_modified_with_code_unique_id = _MyDummyTaskA(serialized_task_definition_check=True).make_unique_id()
+        self.assertEqual(task_modified_unique_id, task_unique_id)
+        self.assertNotEqual(task_modified_with_code_unique_id, task_with_code_unique_id)
+
     def test_compare_targets_of_different_tasks(self):
         path1 = _DummyTask(param=1).make_target('test.txt')._target.path
         path2 = _DummyTask(param=2).make_target('test.txt')._target.path
