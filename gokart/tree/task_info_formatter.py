@@ -59,7 +59,7 @@ def _make_requires_info(requires):
     raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `List[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 
 
-def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]) -> TaskInfo:
+def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]] = None) -> TaskInfo:
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
         is_task_complete = task.complete()

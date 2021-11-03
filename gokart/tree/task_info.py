@@ -35,7 +35,7 @@ def make_task_info_as_tree_str(task: TaskOnKart, details: bool = False, abbr: bo
     return result
 
 
-def make_task_info_as_table(task: TaskOnKart, ignore_task_names: Optional[List[str]]):
+def make_task_info_as_table(task: TaskOnKart, ignore_task_names: Optional[List[str]] = None):
     """Return a table containing information about dependent tasks.
 
     Parameters
@@ -56,7 +56,7 @@ def make_task_info_as_table(task: TaskOnKart, ignore_task_names: Optional[List[s
     return task_info_table
 
 
-def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]]):
+def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]] = None):
     """Dump a table containing information about dependent tasks.
 
     Parameters
@@ -81,7 +81,7 @@ def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task
     task_info_target.dump(obj=task_info_table, lock_at_dump=False)
 
 
-def dump_task_info_tree(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]], use_unique_id: bool = True):
+def dump_task_info_tree(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: Optional[List[str]] = None, use_unique_id: bool = True):
     """Dump the task info tree object (TaskInfo) to a pickle file.
 
     Parameters
