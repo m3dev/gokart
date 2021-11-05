@@ -1,5 +1,5 @@
-import json
 import bz2
+import json
 
 import luigi
 from luigi import task_register
