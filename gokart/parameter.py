@@ -1,8 +1,11 @@
 import bz2
 import json
+from logging import getLogger
 
 import luigi
 from luigi import task_register
+
+logger = getLogger(__name__)
 
 
 class TaskInstanceParameter(luigi.Parameter):
@@ -17,7 +20,11 @@ class TaskInstanceParameter(luigi.Parameter):
 
     def parse(self, s):
         if isinstance(s, str):
-            s = luigi.DictParameter().parse(bz2.decompress(bytes.fromhex(s)).decode())
+            try:
+                s = bz2.decompress(bytes.fromhex(s)).decode()
+            except Exception as e:
+                logger.debug(f'[Exception] {e} by {s}')
+            s = luigi.dictparameter().parse(s)
         return self._recursive(s)
 
     def serialize(self, x):
