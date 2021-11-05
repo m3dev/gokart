@@ -24,7 +24,7 @@ class TaskInstanceParameter(luigi.Parameter):
                 s = bz2.decompress(bytes.fromhex(s)).decode()
             except Exception as e:
                 logger.debug(f'[Exception] {e} by {s}')
-            s = luigi.dictparameter().parse(s)
+            s = luigi.DictParameter().parse(s)
         return self._recursive(s)
 
     def serialize(self, x):
