@@ -18,10 +18,11 @@ class TaskInstanceParameter(luigi.Parameter):
                 params[key] = value.parse(params[key])
         return task_cls(**params)
 
+    @staticmethod
     def _recursive_decompress(self, s):
         s = dict(luigi.DictParameter().parse(s))
         if 'params' in s:
-            s['params'] = self._recursive_decompress(bz2.decompress(bytes.fromhex(s['params'])).decode())
+            s['params'] = TaskInstanceParameter._recursive_decompress(bz2.decompress(bytes.fromhex(s['params'])).decode())
         return s
 
     def parse(self, s):
