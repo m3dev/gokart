@@ -11,24 +11,26 @@ logger = getLogger(__name__)
 class TaskInstanceParameter(luigi.Parameter):
     @staticmethod
     def _recursive(param_dict):
-        params = dict(param_dict['params'])
+        params = param_dict['params']
         task_cls = task_register.Register.get_task_cls(param_dict['type'])
         for key, value in task_cls.get_params():
             if key in params:
                 params[key] = value.parse(params[key])
         return task_cls(**params)
 
+    def _recursive_decompress(self, s):
+        s = dict(luigi.DictParameter().parse(s))
+        if 'params' in s:
+            s['params'] = self._recursive_decompress(bz2.decompress(bytes.fromhex(s['params'])).decode())
+        return s
+
     def parse(self, s):
         if isinstance(s, str):
-            try:
-                s = bz2.decompress(bytes.fromhex(s)).decode()
-            except Exception as e:
-                logger.debug(f'[Exception] {e} by {s}')
-            s = luigi.DictParameter().parse(s)
+            s = self._recursive_decompress(s)
         return self._recursive(s)
 
     def serialize(self, x):
-        params = bz2.compress(str(x.to_str_params(only_significant=True)).encode()).hex()
+        params = bz2.compress(json.dumps(x.to_str_params(only_significant=True)).encode()).hex()
         values = dict(type=x.get_task_family(), params=params)
         return luigi.DictParameter().serialize(values)
 
