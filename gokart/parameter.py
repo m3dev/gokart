@@ -17,13 +17,11 @@ class TaskInstanceParameter(luigi.Parameter):
 
     def parse(self, s):
         if isinstance(s, str):
-            s = luigi.DictParameter().parse(
-                bz2.decompress(bytes.fromhex(s)).decode())
+            s = luigi.DictParameter().parse(bz2.decompress(bytes.fromhex(s)).decode())
         return self._recursive(s)
 
     def serialize(self, x):
-        params = bz2.compress(
-            str(x.to_str_params(only_significant=True)).encode()).hex()
+        params = bz2.compress(str(x.to_str_params(only_significant=True)).encode()).hex()
         values = dict(type=x.get_task_family(), params=params)
         return luigi.DictParameter().serialize(values)
 
