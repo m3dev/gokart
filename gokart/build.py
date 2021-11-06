@@ -46,6 +46,7 @@ def _reset_register(keep={'gokart', 'luigi'}):
 def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: int = logging.ERROR, **env_params) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
+    Sharing the most of its parameters with luigi.build (see https://luigi.readthedocs.io/en/stable/api/luigi.html?highlight=build#luigi.build)
     """
     if reset_register:
         _reset_register()
