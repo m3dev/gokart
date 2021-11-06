@@ -43,7 +43,7 @@ def _reset_register(keep={'gokart', 'luigi'}):
                                          if x.__module__.split('.')[0] in keep]  # avoid TaskClassAmbigiousException
 
 
-def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: int = logging.ERROR) -> Optional[Any]:
+def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = True, log_level: int = logging.ERROR, **env_params) -> Optional[Any]:
     """
     Run gokart task for local interpreter.
     """
@@ -52,7 +52,7 @@ def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = Tr
     read_environ()
     check_config()
     with LoggerConfig(level=log_level):
-        result = luigi.build([task], local_scheduler=True, detailed_summary=True)
+        result = luigi.build([task], local_scheduler=True, detailed_summary=True, **env_params)
         if result.status == luigi.LuigiStatusCode.FAILED:
             raise GokartBuildError(result.summary_text)
     return _get_output(task) if return_value else None
