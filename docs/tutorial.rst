@@ -111,10 +111,10 @@ Check the output.
         print(pickle.load(f))  # sample output
 
 
-4, Running unittet
+4, Run unittest
 ------------------
 
-It is important to do unittest before modifying the code.
+It is important to run unittest before and after modifying the code.
 
 .. code:: sh
 
