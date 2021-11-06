@@ -4,7 +4,9 @@ import pandas as pd
 def assert_frame_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs):
     """
     Assert that two DataFrames are equal.
-    Note 
+    This function is mostly same as pandas.testing.assert_frame_equal, however
+    - this fuction ignores the order of index and columns.
+    - this function fails when duplicated index or columns are found.
 
     Parameters
     ----------
