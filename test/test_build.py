@@ -41,6 +41,14 @@ class _DummyFailedTask(gokart.TaskOnKart):
         raise RuntimeError
 
 
+class _ParallelRunner(gokart.TaskOnKart):
+    def requires(self):
+        return [_DummyTask(param=str(i)) for i in range(10)]
+
+    def run(self):
+        self.dump('done')
+
+
 class RunTest(unittest.TestCase):
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
@@ -56,6 +64,10 @@ class RunTest(unittest.TestCase):
         text = 'test'
         output = gokart.build(_DummyTask(param=text), reset_register=False)
         self.assertEqual(output, text)
+
+    def test_build_parallel(self):
+        output = gokart.build(_ParallelRunner(), reset_register=False, workers=20)
+        self.assertEqual(output, 'done')
 
     def test_read_config(self):
         os.environ.setdefault('test_param', 'test')
