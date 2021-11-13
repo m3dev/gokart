@@ -1,10 +1,10 @@
 import pandas as pd
 
 
-def assert_frame_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs):
+def assert_frame_contents_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs):
     """
     Assert that two DataFrames are equal.
-    This function is mostly same as pandas.testing.assert_frame_equal, however
+    This function is mostly same as pandas.testing.assert_frame_contents_equal, however
     - this fuction ignores the order of index and columns.
     - this function fails when duplicated index or columns are found.
 
@@ -13,7 +13,7 @@ def assert_frame_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs):
     - actual, expected: pd.DataFrame
         DataFrames to be compared.
     - kwargs: Any
-        Parameters passed to pandas.testing.assert_frame_equal.
+        Parameters passed to pandas.testing.assert_frame_contents_equal.
     """
     assert isinstance(actual, pd.DataFrame), 'actual is not a DataFrame'
     assert isinstance(expected, pd.DataFrame), 'expected is not a DataFrame'
@@ -27,4 +27,4 @@ def assert_frame_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs):
     assert set(actual.index) == set(expected.index), 'indexes are not equal'
 
     expected_reindexed = expected.reindex(actual.index)[actual.columns]
-    pd.testing.assert_frame_equal(actual, expected_reindexed, **kwargs)
+    pd.testing.assert_frame_contents_equal(actual, expected_reindexed, **kwargs)
