@@ -11,6 +11,7 @@ class _RequiredTaskExampleTaskA(gokart.TaskOnKart):
 
 
 class TestMakeRequiresInfo(unittest.TestCase):
+
     def test_make_requires_info_with_task_on_kart(self):
         requires = _RequiredTaskExampleTaskA()
         resulted = _make_requires_info(requires=requires)

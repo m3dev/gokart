@@ -11,6 +11,7 @@ import gokart.info
 
 
 class TestInfo(unittest.TestCase):
+
     def setUp(self) -> None:
         MockFileSystem().clear()
 

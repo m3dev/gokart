@@ -48,6 +48,7 @@ class _DoubleLoadSubTask(gokart.TaskOnKart):
 
 
 class TestInfo(unittest.TestCase):
+
     def setUp(self) -> None:
         MockFileSystem().clear()
 
@@ -144,6 +145,7 @@ class _TaskInfoExampleTaskC(gokart.TaskOnKart):
 
 
 class TestTaskInfoTable(unittest.TestCase):
+
     def test_dump_task_info_table(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
             self.dumped_data = None
@@ -160,6 +162,7 @@ class TestTaskInfoTable(unittest.TestCase):
 
 
 class TestTaskInfoTree(unittest.TestCase):
+
     def test_dump_task_info_tree(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
             self.dumped_data = None

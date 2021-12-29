@@ -27,6 +27,7 @@ class _DummyTask(gokart.TaskOnKart):
 
 
 class RestoreTaskByIDTest(unittest.TestCase):
+
     def setUp(self) -> None:
         luigi.mock.MockFileSystem().clear()
 

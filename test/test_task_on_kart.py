@@ -85,6 +85,7 @@ class _DummyTaskWithoutLock(gokart.TaskOnKart):
 
 
 class TaskTest(unittest.TestCase):
+
     def setUp(self):
         _DummyTask.clear_instance_cache()
         _DummyTaskA.clear_instance_cache()
@@ -182,6 +183,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.pkl', pathlib.Path(default_target._target.path).name)
 
     def test_clone_with_special_params(self):
+
         class _DummyTaskRerun(gokart.TaskOnKart):
             a = luigi.BoolParameter(default=False)
 
@@ -221,6 +223,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(task.get_own_code().replace(' ', ''), task_scripts.replace(' ', ''))
 
     def test_make_unique_id_with_own_code(self):
+
         class _MyDummyTaskA(gokart.TaskOnKart):
             _visible_in_registry = False
 
@@ -362,6 +365,7 @@ class TaskTest(unittest.TestCase):
         in case TaskOnKart._add_configuration will break evaluation order
         @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
         """
+
         class DummyTaskAddConfiguration(gokart.TaskOnKart):
             aa = luigi.IntParameter()
 
@@ -438,7 +442,9 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(task_c.requires().requires().complete())  # This is an instance of _DummyTaskA.
 
     def test_significant_flag(self):
+
         def _make_task(significant: bool, has_required_task: bool):
+
             class _MyDummyTaskA(gokart.TaskOnKart):
                 task_namespace = f'{__name__}_{significant}_{has_required_task}'
 
@@ -460,6 +466,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(y_task.make_unique_id(), z_task.make_unique_id())
 
     def test_default_requires(self):
+
         class _WithoutTaskInstanceParameter(gokart.TaskOnKart):
             task_namespace = __name__
 
@@ -474,6 +481,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(with_task.requires()['a_task'], without_task)
 
     def test_repr(self):
+
         class _SubTask(gokart.TaskOnKart):
             task_namespace = __name__
 

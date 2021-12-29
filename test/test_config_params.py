@@ -49,6 +49,7 @@ class ChildTaskWithNewConfig(Inherited):
 
 
 class TestInheritsConfigParam(unittest.TestCase):
+
     def test_inherited_params(self):
         # test fill values
         in_parse(['Inherited'], lambda task: self.assertEqual(task.param_a, 'config a'))

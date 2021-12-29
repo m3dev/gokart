@@ -18,6 +18,7 @@ class _DummyTask(TaskOnKart):
 
 
 class ListTaskInstanceParameterTest(unittest.TestCase):
+
     def setUp(self):
         _DummyTask.clear_instance_cache()
 
