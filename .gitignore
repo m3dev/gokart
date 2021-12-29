@@ -115,3 +115,9 @@ dist
 
 # temporary data
 temporary.zip
+
+# vscode
+.vscode/
+
+# DS_Store
+.DS_Store
