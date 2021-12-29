@@ -20,6 +20,7 @@ class test_run(gokart.TaskOnKart):
 
 
 class _TestStatus:
+
     def __init__(self, task: gokart.TaskOnKart) -> None:
         self.namespace = task.task_namespace
         self.name = type(task).__name__

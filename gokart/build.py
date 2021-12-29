@@ -10,6 +10,7 @@ from gokart.utils import check_config, read_environ
 
 
 class LoggerConfig:
+
     def __init__(self, level: int):
         self.logger = getLogger(__name__)
         self.default_level = self.logger.level

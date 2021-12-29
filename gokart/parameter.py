@@ -9,6 +9,7 @@ logger = getLogger(__name__)
 
 
 class TaskInstanceParameter(luigi.Parameter):
+
     @staticmethod
     def _recursive(param_dict):
         params = param_dict['params']
@@ -37,6 +38,7 @@ class TaskInstanceParameter(luigi.Parameter):
 
 
 class _TaskInstanceEncoder(json.JSONEncoder):
+
     def default(self, obj):
         if isinstance(obj, luigi.Task):
             return TaskInstanceParameter().serialize(obj)
@@ -45,6 +47,7 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 
 class ListTaskInstanceParameter(luigi.Parameter):
+
     def parse(self, s):
         return [TaskInstanceParameter().parse(x) for x in list(json.loads(s))]
 
@@ -53,6 +56,7 @@ class ListTaskInstanceParameter(luigi.Parameter):
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
+
     def __init__(self, *args, **kwargs):
         luigi.Parameter.__init__(self, *args, **kwargs)
 

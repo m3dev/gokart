@@ -8,6 +8,7 @@ logger = getLogger(__name__)
 
 
 class EventAggregator(object):
+
     def __init__(self) -> None:
         self._event_queue = defaultdict(list)
 

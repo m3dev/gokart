@@ -215,6 +215,7 @@ class TaskOnKart(luigi.Task):
                                                redis_params=redis_params)
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
+
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
@@ -228,6 +229,7 @@ class TaskOnKart(luigi.Task):
         return data
 
     def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Any:
+
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 for t in targets:
@@ -244,6 +246,7 @@ class TaskOnKart(luigi.Task):
                         target: Union[None, str, TargetOnKart] = None,
                         required_columns: Optional[Set[str]] = None,
                         drop_columns: bool = False) -> pd.DataFrame:
+
         def _flatten_recursively(dfs):
             if isinstance(dfs, list):
                 return pd.concat([_flatten_recursively(df) for df in dfs])
@@ -272,6 +275,7 @@ class TaskOnKart(luigi.Task):
 
     @staticmethod
     def get_code(target_class) -> Set[str]:
+
         def has_sourcecode(obj):
             return inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isframe(obj) or inspect.iscode(obj)
 
@@ -289,6 +293,7 @@ class TaskOnKart(luigi.Task):
         return unique_id
 
     def _make_hash_id(self):
+
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id()) if task.significant else None
