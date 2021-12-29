@@ -1,29 +1,31 @@
 Task cache collision lock
 =========================
 
+If there is a possibility of multiple worker nodes executing the same task, cache collision may happen.
+Specifically, while node A is loading the cache of a task, node B may be writing to it.
+This can lead to reading an inappropriate data and other unwanted behaviors.
+
+The redis lock introduced in this page is a feature to prevent such cache collisions.
+
 Requires
 --------
 
-You need to install `redis <https://redis.io/topics/quickstart>`_ for this advanced function.
+You need to install `redis <https://redis.io/topics/quickstart>`_ for using this advanced feature.
 
 
-Description
+How to use
 -----------
 
 
-Task lock is implemented to prevent task cache collision. (Originally,
-task cache collision may occur when same task with same parameters run
-at different applications in parallel.)
-
 1. Set up a redis server at somewhere accessible from gokart/luigi jobs.
 
-    Following will run redis at your localhost.
+    e.g. Following script will run redis at your localhost.
     
     .. code:: bash
 
         $ redis-server
 
-2. Set redis server hostname and port number as parameters to gokart.TaskOnKart().
+2. Set redis server hostname and port number as parameters of gokart.TaskOnKart().
 
     You can set it by adding ``--redis-host=[your-redis-localhost] --redis-port=[redis-port-number]`` options to gokart python script.
 
@@ -31,29 +33,49 @@ at different applications in parallel.)
 
     .. code:: bash
 
-        python main.py sample.SomeTask –local-scheduler –redis-host=localhost –redis-port=6379
+        python main.py sample.SomeTask --local-scheduler --redis-host=localhost --redis-port=6379
     
 
     Alternatively, you may set parameters at config file.
     
+    e.g.
+
     .. code::
 
         [TaskOnKart]
         redis_host=localhost
         redis_port=6379
 
+3. Done
+    
+    With the above configuration, all tasks that inherits gokart.TaskOnKart will ask the redis server if any other node is not trying to access the same cache file at the same time whenever they access the file with dump or load.
+    
 
-Using efficient task cache collision lock
+Advanced: Using efficient task cache collision lock
 -----------------------------------------
 
-Above task lock will prevent cache collision. However, above setting check collisions only when the task access the cache file (i.e. ``task.dump()``, ``task.load()`` and ``task.remove()``). This will allow applications to run ``run()`` of same task at the same time, which
-is not efficient.
+The cache lock introduced above will prevent cache collision.
+However, above setting check collisions only when the task access the cache file (i.e. ``task.dump()``, ``task.load()`` and ``task.remove()``).
+This will allow applications to run ``run()`` of same task at the same time, which is not time efficient.
 
 Settings in this section will prevent running ``run()`` at the same time for efficiency.
 
-1. Set normal cache collision lock Set cache collision lock following ``1. Task cache collision lock``.
+If you try to run() the same task on multiple worker nodes at the same time, run() will fail on the second and subsequent node's tasks.
+gokart will execute other unaffected tasks in the meantime. Since we have also set up the retry process, we will come back to the failed task later.
+When it comes back, the first worker node has already completed run() and a cache has been created, so there is no need to run() on the second and subsequent nodes.
+In this way, efficient distributed processing is made possible.
 
-2. Decorate ``run()`` with ``@RunWithLock`` Decorate ``run()`` of your gokart tasks which you want to lock with ``@RunWithLock``.
+
+This setting must be done to each gokart task which you want to lock the ``run()```.
+
+1. Set normal cache collision lock
+
+    Follow the steps in ``How to use`` to set up cache collision lock.
+
+
+2. Decorate ``run()`` with ``@RunWithLock`` 
+    
+    Decorate ``run()`` of your gokart tasks you want to lock with ``@RunWithLock``.
 
     .. code:: python
 
@@ -61,10 +83,14 @@ Settings in this section will prevent running ``run()`` at the same time for eff
 
         @RunWithLock
         class SomeTask(gokart.TaskOnKart):
-            def run(self):            
+            def run(self):
+                ...            
 
 
-3. Set ``redis_fail_on_collision`` parameter to true. This parameter will affect the behavior when the task’s lock is taken by other application. By setting ``redis_fail_on_collision=True``, task will be failed if the task’s lock is taken by other application. The locked task will be skipped and other independent task will be done first. If ``redis_fail_on_collision=False``, it will wait until the lock of other application is released.
+3. Set ``redis_fail_on_collision`` parameter to true.
+
+    This parameter will affect the behavior when the task's lock is taken by other applications or nodes.
+    Setting ``redis_fail_on_collision=True`` will make the task to be failed if the task's lock is taken by others.
 
     The parameter can be set by config file.
     
@@ -75,11 +101,12 @@ Settings in this section will prevent running ``run()`` at the same time for eff
         redis_port=6379
         redis_fail_on_collision=true
 
-4. Set retry parameters. Set following parameters to retry when task
-   failed. Values of ``retry_count`` and ``retry_delay``\ can be set to
-   any value depends on your situation.
+4. Set retry parameters
 
-    ::
+    Set following parameters to retry when task failed.
+    Values of ``retry_count`` and ``retry_delay`` are set in seconds.
+
+    .. code:: 
 
         [scheduler]
         retry_count=10000
