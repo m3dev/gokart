@@ -16,6 +16,7 @@ class _DummyTask(gokart.TaskOnKart):
 
 
 class RunTest(unittest.TestCase):
+
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
         luigi.mock.MockFileSystem().clear()

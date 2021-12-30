@@ -4,6 +4,7 @@ import luigi
 
 
 class RunWithLock:
+
     def __init__(self, func):
         self._func = func
 

@@ -28,6 +28,7 @@ class ExplicitParsing(gokart.TaskOnKart):
 
 
 class TestExplicitBoolParameter(unittest.TestCase):
+
     def test_bool_default(self):
         self.assertTrue(WithDefaultTrue().param)
         self.assertFalse(WithDefaultFalse().param)

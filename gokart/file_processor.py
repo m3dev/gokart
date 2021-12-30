@@ -17,6 +17,7 @@ logger = getLogger(__name__)
 
 
 class FileProcessor(object):
+
     @abstractmethod
     def format(self):
         pass
@@ -41,6 +42,7 @@ class BinaryFileProcessor(FileProcessor):
     BinaryFileProcessor().dump(figure_binary.read())
     ```
     """
+
     def format(self):
         return luigi.format.Nop
 
@@ -52,6 +54,7 @@ class BinaryFileProcessor(FileProcessor):
 
 
 class _ChunkedLargeFileReader(object):
+
     def __init__(self, file) -> None:
         self._file = file
 
@@ -74,6 +77,7 @@ class _ChunkedLargeFileReader(object):
 
 
 class PickleFileProcessor(FileProcessor):
+
     def format(self):
         return luigi.format.Nop
 
@@ -99,6 +103,7 @@ class PickleFileProcessor(FileProcessor):
 
 
 class TextFileProcessor(FileProcessor):
+
     def format(self):
         return None
 
@@ -114,6 +119,7 @@ class TextFileProcessor(FileProcessor):
 
 
 class CsvFileProcessor(FileProcessor):
+
     def __init__(self, sep=','):
         self._sep = sep
         super(CsvFileProcessor, self).__init__()
@@ -134,6 +140,7 @@ class CsvFileProcessor(FileProcessor):
 
 
 class GzipFileProcessor(FileProcessor):
+
     def format(self):
         return luigi.format.Gzip
 
@@ -149,6 +156,7 @@ class GzipFileProcessor(FileProcessor):
 
 
 class JsonFileProcessor(FileProcessor):
+
     def format(self):
         return None
 
@@ -167,6 +175,7 @@ class JsonFileProcessor(FileProcessor):
 
 
 class XmlFileProcessor(FileProcessor):
+
     def format(self):
         return None
 
@@ -182,6 +191,7 @@ class XmlFileProcessor(FileProcessor):
 
 
 class NpzFileProcessor(FileProcessor):
+
     def format(self):
         return luigi.format.Nop
 
@@ -194,6 +204,7 @@ class NpzFileProcessor(FileProcessor):
 
 
 class ParquetFileProcessor(FileProcessor):
+
     def __init__(self, engine='pyarrow', compression=None):
         self._engine = engine
         self._compression = compression
@@ -214,6 +225,7 @@ class ParquetFileProcessor(FileProcessor):
 
 
 class FeatherFileProcessor(FileProcessor):
+
     def __init__(self, store_index_in_feather: bool):
         super(FeatherFileProcessor, self).__init__()
         self._store_index_in_feather = store_index_in_feather

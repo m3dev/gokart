@@ -6,6 +6,7 @@ from gokart.redis_lock import RedisClient, RedisParams, make_redis_key, make_red
 
 
 class TestRedisClient(unittest.TestCase):
+
     @staticmethod
     def _get_randint(host, port):
         return random.randint(0, 100000)
@@ -25,12 +26,14 @@ class TestRedisClient(unittest.TestCase):
 
 
 class TestMakeRedisKey(unittest.TestCase):
+
     def test_make_redis_key(self):
         result = make_redis_key(file_path='gs://test_ll/dir/fname.pkl', unique_id='12345')
         self.assertEqual(result, 'fname_12345')
 
 
 class TestMakeRedisParams(unittest.TestCase):
+
     def test_make_redis_params_with_valid_host(self):
         result = make_redis_params(file_path='gs://aaa.pkl',
                                    unique_id='123',

@@ -42,6 +42,7 @@ class _DummyFailedTask(gokart.TaskOnKart):
 
 
 class _ParallelRunner(gokart.TaskOnKart):
+
     def requires(self):
         return [_DummyTask(param=str(i)) for i in range(10)]
 
@@ -50,6 +51,7 @@ class _ParallelRunner(gokart.TaskOnKart):
 
 
 class RunTest(unittest.TestCase):
+
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
         self.config_paths = copy(luigi.configuration.LuigiConfigParser._config_paths)
@@ -90,6 +92,7 @@ class RunTest(unittest.TestCase):
 
 
 class LoggerConfigTest(unittest.TestCase):
+
     def test_logger_config(self):
         for level, enable_expected, disable_expected in (
             (logging.INFO, logging.INFO, logging.DEBUG),

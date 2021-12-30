@@ -10,12 +10,14 @@ from gokart.pandas_type_config import PandasTypeError
 
 
 class _DummyPandasTypeConfig(PandasTypeConfig):
+
     @classmethod
     def type_dict(cls) -> Dict[str, Any]:
         return {'int_column': int, 'datetime_column': datetime, 'array_column': np.ndarray}
 
 
 class TestPandasTypeConfig(TestCase):
+
     def test_int_fail(self):
         df = pd.DataFrame(dict(int_column=['1']))
         with self.assertRaises(PandasTypeError):

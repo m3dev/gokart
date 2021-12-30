@@ -9,6 +9,7 @@ import gokart
 
 
 class DummyModel:
+
     def apply(self, x):
         return x + 1
 
@@ -64,6 +65,7 @@ class DummyWorkFlowWithoutError(gokart.TaskOnKart):
 
 
 class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
+
     def test_run_without_error(self):
         argv = [f'{__name__}.DummyWorkFlowWithoutError', '--local-scheduler', '--test-run-pandas', '--log-level=CRITICAL', '--no-lock']
         logger = logging.getLogger('gokart.testing.check_if_run_with_empty_data_frame')

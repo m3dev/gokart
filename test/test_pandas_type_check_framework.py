@@ -57,6 +57,7 @@ class _DummySuccessTask(gokart.TaskOnKart):
 
 
 class TestPandasTypeCheckFramework(unittest.TestCase):
+
     def setUp(self) -> None:
         MockFileSystem().clear()
 

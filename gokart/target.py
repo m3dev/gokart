@@ -21,6 +21,7 @@ logger = getLogger(__name__)
 
 
 class TargetOnKart(luigi.Target):
+
     def exists(self) -> bool:
         return self._exists()
 
@@ -75,6 +76,7 @@ class TargetOnKart(luigi.Target):
 
 
 class SingleFileTarget(TargetOnKart):
+
     def __init__(
         self,
         target: luigi.target.FileSystemTarget,
@@ -111,6 +113,7 @@ class SingleFileTarget(TargetOnKart):
 
 
 class ModelTarget(TargetOnKart):
+
     def __init__(
         self,
         file_path: str,
@@ -168,6 +171,7 @@ class ModelTarget(TargetOnKart):
 
 
 class LargeDataFrameProcessor(object):
+
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
 

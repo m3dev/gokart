@@ -23,8 +23,10 @@ def _slack_response(token, data):
 
 
 class TestSlackAPI(unittest.TestCase):
+
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_initialization_with_invalid_token(self, patch):
+
         def _conversations_list(params={}):
             return _slack_response(token='invalid', data={'ok': False, 'error': 'error_reason'})
 
@@ -38,6 +40,7 @@ class TestSlackAPI(unittest.TestCase):
 
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_invalid_channel(self, patch):
+
         def _conversations_list(params={}):
             return _slack_response(token='valid',
                                    data={
@@ -62,6 +65,7 @@ class TestSlackAPI(unittest.TestCase):
 
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_send_snippet_with_invalid_token(self, patch):
+
         def _conversations_list(params={}):
             return _slack_response(token='valid',
                                    data={
@@ -91,6 +95,7 @@ class TestSlackAPI(unittest.TestCase):
 
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_send(self, patch):
+
         def _conversations_list(params={}):
             return _slack_response(token='valid',
                                    data={

@@ -15,6 +15,7 @@ class PandasTypeError(Exception):
 
 
 class PandasTypeConfig(luigi.Config):
+
     @classmethod
     @abstractmethod
     def type_dict(cls) -> Dict[str, Any]:
@@ -37,6 +38,7 @@ class PandasTypeConfig(luigi.Config):
 
 class PandasTypeConfigMap(luigi.Config):
     """To initialize this class only once, this inherits luigi.Config."""
+
     def __init__(self, *args, **kwargs) -> None:
         super(PandasTypeConfigMap, self).__init__(*args, **kwargs)
         task_names = Register.task_names()
