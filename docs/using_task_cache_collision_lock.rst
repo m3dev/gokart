@@ -104,7 +104,8 @@ This setting must be done to each gokart task which you want to lock the ``run()
 4. Set retry parameters
 
     Set following parameters to retry when task failed.
-    Values of ``retry_count`` and ``retry_delay`` are set in seconds.
+    * ``retry_count``: the max number of retries
+    * ``retry_delay``: this value is set in seconds
 
     .. code:: 
 
