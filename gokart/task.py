@@ -297,6 +297,10 @@ class TaskOnKart(luigi.Task):
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id()) if task.significant else None
+
+            if not isinstance(task, luigi.Task):
+                raise ValueError(f"Task.requires method returns {type(task)}. You should return some kind of GokartTask.")
+
             return task.to_str_params(only_significant=True)
 
         dependencies = [_to_str_params(task) for task in luigi.task.flatten(self.requires())]
