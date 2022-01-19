@@ -299,7 +299,7 @@ class TaskOnKart(luigi.Task):
                 return str(task.make_unique_id()) if task.significant else None
 
             if not isinstance(task, luigi.Task):
-                raise ValueError(f"Task.requires method returns {type(task)}. You should return some kind of GokartTask.")
+                raise ValueError(f"Task.requires method returns {type(task)}. You should return luigi.Task.")
 
             return task.to_str_params(only_significant=True)
 
