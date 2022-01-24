@@ -102,7 +102,7 @@ class SingleFileTarget(TargetOnKart):
             self._processor.dump(obj, f)
 
     def _remove(self) -> None:
-        if self._target.exists():
+        if self._exists():
             self._target.remove()
 
     def _last_modification_time(self) -> datetime:
@@ -149,7 +149,8 @@ class ModelTarget(TargetOnKart):
         self._remove_temporary_directory()
 
     def _remove(self) -> None:
-        self._zip_client.remove()
+        if self._exists():
+            self._zip_client.remove()
 
     def _last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._zip_client.path)
