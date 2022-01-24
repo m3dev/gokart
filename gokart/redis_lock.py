@@ -87,6 +87,8 @@ def make_redis_params(file_path: str,
                       redis_fail_on_collision: bool = False):
     redis_key = make_redis_key(file_path, unique_id)
     should_redis_lock = redis_host is not None and redis_port is not None
+    if redis_timeout is not None:
+        assert redis_timeout >= 10, f'`redis_timeout` must be set greater or equal to 10, not {redis_timeout}.'
     redis_params = RedisParams(redis_host=redis_host,
                                redis_port=redis_port,
                                redis_key=redis_key,
