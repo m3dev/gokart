@@ -1,6 +1,7 @@
+import functools
 import os
 from logging import getLogger
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -41,28 +42,39 @@ class RedisClient:
         return self._redis_client
 
 
-def with_lock(func, redis_params: RedisParams):
+def _extend_lock(redis_lock: redis.lock.Lock, redis_timeout: int):
+    redis_lock.extend(additional_time=redis_timeout, replace_ttl=True)
+
+
+def _set_redis_lock(redis_params: RedisParams) -> RedisClient:
+    redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
+    blocking = not redis_params.redis_fail_on_collision
+    redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, thread_local=False)
+    if not redis_lock.acquire(blocking=blocking):
+        raise TaskLockException('Lock already taken by other task.')
+    return redis_lock
+
+
+def _set_lock_scheduler(redis_lock: redis.lock.Lock, redis_params: RedisParams) -> BackgroundScheduler:
+    scheduler = BackgroundScheduler()
+    extend_lock = functools.partial(_extend_lock, redis_lock=redis_lock, redis_timeout=redis_params.redis_timeout)
+    scheduler.add_job(extend_lock,
+                      'interval',
+                      seconds=redis_params.lock_extend_seconds,
+                      max_instances=999999999,
+                      misfire_grace_time=redis_params.redis_timeout,
+                      coalesce=False)
+    scheduler.start()
+    return scheduler
+
+
+def _wrap_with_lock(func, redis_params: RedisParams):
     if not redis_params.should_redis_lock:
         return func
 
     def wrapper(*args, **kwargs):
-        redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
-        blocking = not redis_params.redis_fail_on_collision
-        redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, thread_local=False)
-        if not redis_lock.acquire(blocking=blocking):
-            raise TaskLockException('Lock already taken by other task.')
-
-        def extend_lock():
-            redis_lock.extend(additional_time=redis_params.redis_timeout, replace_ttl=True)
-
-        scheduler = BackgroundScheduler()
-        scheduler.add_job(extend_lock,
-                          'interval',
-                          seconds=redis_params.lock_extend_seconds,
-                          max_instances=999999999,
-                          misfire_grace_time=redis_params.redis_timeout,
-                          coalesce=False)
-        scheduler.start()
+        redis_lock = _set_redis_lock(redis_params=redis_params)
+        scheduler = _set_lock_scheduler(redis_lock=redis_lock, redis_params=redis_params)
 
         try:
             logger.debug(f'Task lock of {redis_params.redis_key} locked.')
@@ -78,6 +90,70 @@ def with_lock(func, redis_params: RedisParams):
             raise e
 
     return wrapper
+
+
+def wrap_with_run_lock(func, redis_params: RedisParams):
+    return _wrap_with_lock(func=func, redis_params=redis_params)
+
+
+def wrap_with_dump_lock(func: Callable, redis_params: RedisParams, exist_check: Callable):
+    # When TargetOnKart.dump() is called, dump() must be wrapped with redis lock and cache existance check.
+    # https://github.com/m3dev/gokart/issues/265
+
+    if not redis_params.should_redis_lock:
+        return func
+
+    def wrapper(*args, **kwargs):
+        redis_lock = _set_redis_lock(redis_params=redis_params)
+        scheduler = _set_lock_scheduler(redis_lock=redis_lock, redis_params=redis_params)
+
+        try:
+            logger.debug(f'Task lock of {redis_params.redis_key} locked.')
+            if not exist_check():
+                func(*args, **kwargs)
+            redis_lock.release()
+            logger.debug(f'Task lock of {redis_params.redis_key} released.')
+            scheduler.shutdown()
+        except BaseException as e:
+            logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
+            redis_lock.release()
+            scheduler.shutdown()
+            raise e
+
+    return wrapper
+
+
+def wrap_with_load_lock(func, redis_params: RedisParams):
+    # When TargetOnKart.load() is called, redis lock must locked and released before load().
+    # https://github.com/m3dev/gokart/issues/265
+
+    if not redis_params.should_redis_lock:
+        return func
+
+    def wrapper(*args, **kwargs):
+        redis_lock = _set_redis_lock(redis_params=redis_params)
+        scheduler = _set_lock_scheduler(redis_lock=redis_lock, redis_params=redis_params)
+
+        try:
+            logger.debug(f'Task lock of {redis_params.redis_key} locked.')
+            redis_lock.release()
+            logger.debug(f'Task lock of {redis_params.redis_key} released.')
+            scheduler.shutdown()
+            result = func(*args, **kwargs)
+            return result
+        except BaseException as e:
+            logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
+            redis_lock.release()
+            scheduler.shutdown()
+            raise e
+
+    return wrapper
+
+
+def wrap_with_remove_lock(func, redis_params: RedisParams):
+    # When TargetOnKart.remove() is called, remove() must be simply wrapped with redis lock.
+    # https://github.com/m3dev/gokart/issues/265
+    return _wrap_with_lock(func=func, redis_params=redis_params)
 
 
 def make_redis_key(file_path: str, unique_id: str):
