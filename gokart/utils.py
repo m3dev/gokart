@@ -26,15 +26,15 @@ class BasicEnvironmentInterpolation(Interpolation):
                 parts.append(value)
                 break
             envvar = match.groups()[0]
+            start, end = match.span()
             if envvar in os.environ:
                 envval = os.environ[envvar]
-                start, end = match.span()
                 parts.append(value[:start])
                 parts.append(envval)
                 value = value[end:]
             else:
-                parts.append(value)
-                break
+                parts.append(value[:end])
+                value = value[end:]
         return "".join(parts)
 
 
