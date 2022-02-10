@@ -16,7 +16,7 @@ It is recommended to use the config file since it does not change much.
 
     # base.ini
     [TaskOnKart]
-    workspace_directory=%(TASK_WORKSPACE_DIRECTORY)s
+    workspace_directory=${TASK_WORKSPACE_DIRECTORY}
 
 .. code:: python
 
