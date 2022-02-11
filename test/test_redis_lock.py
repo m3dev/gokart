@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import fakeredis
-
 from gokart.redis_lock import RedisClient, RedisParams, make_redis_key, make_redis_params, with_lock
 
 
@@ -132,6 +131,48 @@ class TestWithLock(unittest.TestCase):
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=redis_params.redis_host, port=redis_params.redis_port)
             try:
                 with_lock(func=self._sample_func_with_error, redis_params=redis_params)(123, b='abc')
+            except Exception:
+                fake_redis = fakeredis.FakeStrictRedis(server=server)
+                with self.assertRaises(KeyError):
+                    fake_redis[redis_params.redis_key]
+
+
+class TestMakeRedisKey(unittest.TestCase):
+
+    def test_lock_is_removed_after_func_is_finished(self):
+        redis_params = make_redis_params(
+            file_path='test_dir/test_file.pkl',
+            unique_id='123abc',
+            redis_host='0.0.0.0',
+            redis_port=12345,
+        )
+
+        server = fakeredis.FakeServer()
+
+        with patch('gokart.redis_lock.redis.Redis') as redis_mock:
+            redis_mock.return_value = fakeredis.FakeRedis(server=server, host=redis_params.redis_host, port=redis_params.redis_port)
+            resulted = with_lock(func=self._sample_func, redis_params=redis_params)(a=123, b='abc')
+            expected = self._sample_func(a=123, b='abc')
+            self.assertEqual(resulted, expected)
+
+            fake_redis = fakeredis.FakeStrictRedis(server=server)
+            with self.assertRaises(KeyError):
+                fake_redis[redis_params.redis_key]
+
+    def test_lock_is_removed_after_func_is_finished_with_error(self):
+        redis_params = make_redis_params(
+            file_path='test_dir/test_file.pkl',
+            unique_id='123abc',
+            redis_host='0.0.0.0',
+            redis_port=12345,
+        )
+
+        server = fakeredis.FakeServer()
+
+        with patch('gokart.redis_lock.redis.Redis') as redis_mock:
+            redis_mock.return_value = fakeredis.FakeRedis(server=server, host=redis_params.redis_host, port=redis_params.redis_port)
+            try:
+                with_lock(func=self._sample_func_with_error, redis_params=redis_params)(a=123, b='abc')
             except Exception:
                 fake_redis = fakeredis.FakeStrictRedis(server=server)
                 with self.assertRaises(KeyError):
