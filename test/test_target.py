@@ -20,6 +20,7 @@ def _get_temporary_directory():
 
 
 class LocalTargetTest(unittest.TestCase):
+
     def tearDown(self):
         shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 
@@ -171,6 +172,7 @@ class LocalTargetTest(unittest.TestCase):
 
 
 class S3TargetTest(unittest.TestCase):
+
     @mock_s3
     def test_save_on_s3(self):
         conn = boto3.resource('s3', region_name='us-east-1')
@@ -210,6 +212,7 @@ class S3TargetTest(unittest.TestCase):
 
 
 class ModelTargetTest(unittest.TestCase):
+
     def tearDown(self):
         shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 
