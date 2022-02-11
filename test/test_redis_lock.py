@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 import fakeredis
+
 from gokart.redis_lock import RedisClient, RedisParams, make_redis_key, make_redis_params, with_lock
 
 
