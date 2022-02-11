@@ -68,16 +68,6 @@ class TestWithLock(unittest.TestCase):
             expected = self._sample_func(a=123, b='abc')
             self.assertEqual(resulted, expected)
 
-    def test_assert_when_redis_timeout_is_too_short(self):
-        with self.assertRaises(AssertionError):
-            make_redis_params(
-                file_path='test_dir/test_file.pkl',
-                unique_id='123abc',
-                redis_host='0.0.0.0',
-                redis_port=12345,
-                redis_timeout=2,
-            )
-
     def test_check_lock_extended(self):
         redis_params = make_redis_params(
             file_path='test_dir/test_file.pkl',
@@ -174,3 +164,13 @@ class TestMakeRedisParams(unittest.TestCase):
                                redis_fail_on_collision=False,
                                lock_extend_seconds=10)
         self.assertEqual(result, expected)
+
+    def test_assert_when_redis_timeout_is_too_short(self):
+        with self.assertRaises(AssertionError):
+            make_redis_params(
+                file_path='test_dir/test_file.pkl',
+                unique_id='123abc',
+                redis_host='0.0.0.0',
+                redis_port=12345,
+                redis_timeout=2,
+            )
