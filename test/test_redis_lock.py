@@ -47,12 +47,14 @@ class TestWithLock(unittest.TestCase):
             redis_port=None,
         )
         mock_func = MagicMock()
-        with_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
+        resulted = with_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
 
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
         self.assertTupleEqual(called_args, (123, ))
         self.assertDictEqual(called_kwargs, dict(b='abc'))
+
+        self.assertEqual(resulted, mock_func())
 
     def test_use_redis(self):
         redis_params = make_redis_params(
@@ -65,12 +67,14 @@ class TestWithLock(unittest.TestCase):
         with patch('gokart.redis_lock.redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             mock_func = MagicMock()
-            with_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
+            resulted = with_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123, ))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
+
+            self.assertEqual(resulted, mock_func())
 
     def test_check_lock_extended(self):
         redis_params = make_redis_params(
@@ -101,12 +105,14 @@ class TestWithLock(unittest.TestCase):
         with patch('gokart.redis_lock.redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=redis_params.redis_host, port=redis_params.redis_port)
             mock_func = MagicMock()
-            with_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
+            resulted = with_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123, ))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
+
+            self.assertEqual(resulted, mock_func())
 
             fake_redis = fakeredis.FakeStrictRedis(server=server)
             with self.assertRaises(KeyError):
