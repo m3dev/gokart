@@ -173,7 +173,7 @@ class TestMakeRedisKey(unittest.TestCase):
         with patch('gokart.redis_lock.redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=redis_params.redis_host, port=redis_params.redis_port)
             try:
-                with_lock(func=self._sample_func_with_error, redis_params=redis_params)(a=123, b='abc')
+                with_lock(func=self._sample_func_with_error, redis_params=redis_params)(123, b='abc')
             except Exception:
                 fake_redis = fakeredis.FakeStrictRedis(server=server)
                 with self.assertRaises(KeyError):
