@@ -36,7 +36,9 @@ moto = "*"
 testfixtures = "*"
 coverage = "*"
 isort = "^5.7"
-yapf = "^0.31"
+yapf = ">=0.32"
+lupa = "^1.10"
+fakeredis = "^1.7.0"
 
 [tool.yapf]
 based_on_style = "pep8"

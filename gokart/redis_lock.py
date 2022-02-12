@@ -15,6 +15,7 @@ class RedisParams(NamedTuple):
     redis_key: str
     should_redis_lock: bool
     redis_fail_on_collision: bool
+    lock_extend_seconds: int
 
 
 class TaskLockException(Exception):
@@ -55,7 +56,12 @@ def with_lock(func, redis_params: RedisParams):
             redis_lock.extend(additional_time=redis_params.redis_timeout, replace_ttl=True)
 
         scheduler = BackgroundScheduler()
-        scheduler.add_job(extend_lock, 'interval', seconds=10, max_instances=999999999, misfire_grace_time=redis_params.redis_timeout, coalesce=False)
+        scheduler.add_job(extend_lock,
+                          'interval',
+                          seconds=redis_params.lock_extend_seconds,
+                          max_instances=999999999,
+                          misfire_grace_time=redis_params.redis_timeout,
+                          coalesce=False)
         scheduler.start()
 
         try:
@@ -84,15 +90,17 @@ def make_redis_params(file_path: str,
                       redis_host: str = None,
                       redis_port: str = None,
                       redis_timeout: int = None,
-                      redis_fail_on_collision: bool = False):
+                      redis_fail_on_collision: bool = False,
+                      lock_extend_seconds: int = 10):
     redis_key = make_redis_key(file_path, unique_id)
     should_redis_lock = redis_host is not None and redis_port is not None
     if redis_timeout is not None:
-        assert redis_timeout >= 10, f'`redis_timeout` must be set greater or equal to 10, not {redis_timeout}.'
+        assert redis_timeout > lock_extend_seconds, f'`redis_timeout` must be set greater than lock_extend_seconds:{lock_extend_seconds}, not {redis_timeout}.'
     redis_params = RedisParams(redis_host=redis_host,
                                redis_port=redis_port,
                                redis_key=redis_key,
                                should_redis_lock=should_redis_lock,
                                redis_timeout=redis_timeout,
-                               redis_fail_on_collision=redis_fail_on_collision)
+                               redis_fail_on_collision=redis_fail_on_collision,
+                               lock_extend_seconds=lock_extend_seconds)
     return redis_params

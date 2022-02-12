@@ -12,7 +12,6 @@ from matplotlib import pyplot
 from moto import mock_s3
 
 from gokart.file_processor import _ChunkedLargeFileReader
-from gokart.redis_lock import RedisParams
 from gokart.target import make_model_target, make_target
 
 
