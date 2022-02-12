@@ -40,10 +40,10 @@ It can also be loaded from environment variable as the following code:
 ::
 
     [sample.SomeTask]
-    param=%(PARAMS)s
+    param=${PARAMS}
 
     [TaskOnKart]
-    workspace_directory=%(WORKSPACE_DIRECTORY)s
+    workspace_directory=${WORKSPACE_DIRECTORY}
 
 The advantages of using environment variables are 1) important information will not be logged 2) common settings can be used.
 
