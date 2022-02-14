@@ -35,7 +35,8 @@ class TargetOnKart(luigi.Target):
             self._dump(obj)
 
     def remove(self) -> None:
-        return self.wrap_with_lock(self._remove)()
+        if self.exists():
+            self.wrap_with_lock(self._remove)()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
@@ -102,8 +103,7 @@ class SingleFileTarget(TargetOnKart):
             self._processor.dump(obj, f)
 
     def _remove(self) -> None:
-        if self._target.exists():
-            self._target.remove()
+        self._target.remove()
 
     def _last_modification_time(self) -> datetime:
         return _get_last_modification_time(self._target.path)
