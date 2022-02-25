@@ -35,7 +35,8 @@ class TargetOnKart(luigi.Target):
             self._dump(obj)
 
     def remove(self) -> None:
-        wrap_with_remove_lock(self._remove, redis_params=self._get_redis_params())()
+        if self.exists():
+            wrap_with_remove_lock(self._remove, redis_params=self._get_redis_params())()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
