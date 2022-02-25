@@ -33,7 +33,7 @@ def _sample_func_with_error(a: int, b: str = None):
 
 
 def _sample_long_func(a: int, b: str = None):
-    time.sleep(3)
+    time.sleep(2.7)
     return dict(a=a, b=b)
 
 
