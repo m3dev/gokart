@@ -24,6 +24,12 @@ class TestMakeRequiresInfo(unittest.TestCase):
         expected = [RequiredTask(name=require.__class__.__name__, unique_id=require.make_unique_id()) for require in requires]
         self.assertEqual(resulted, expected)
 
+    def test_make_requires_info_with_generator(self):
+        requires_gen = lambda: (_RequiredTaskExampleTaskA() for _ in range(2))
+        resulted = _make_requires_info(requires=requires_gen())
+        expected = [RequiredTask(name=require.__class__.__name__, unique_id=require.make_unique_id()) for require in requires_gen()]
+        self.assertEqual(resulted, expected)
+
     def test_make_requires_info_with_dict(self):
         requires = dict(taskA=_RequiredTaskExampleTaskA())
         resulted = _make_requires_info(requires=requires)
@@ -31,6 +37,6 @@ class TestMakeRequiresInfo(unittest.TestCase):
         self.assertEqual(resulted, expected)
 
     def test_make_requires_info_with_invalid(self):
-        requires = pd.DataFrame()
+        requires = [1, 2]
         with self.assertRaises(TypeError):
             _make_requires_info(requires=requires)

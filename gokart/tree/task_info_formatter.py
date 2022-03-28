@@ -1,11 +1,10 @@
+import typing
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List, NamedTuple, Optional, Set, Union
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Union
 
 import luigi
-import pandas as pd
 
-from gokart.target import make_target
 from gokart.task import TaskOnKart
 
 
@@ -49,14 +48,12 @@ class RequiredTask(NamedTuple):
 def _make_requires_info(requires):
     if isinstance(requires, TaskOnKart):
         return RequiredTask(name=requires.__class__.__name__, unique_id=requires.make_unique_id())
-
-    if isinstance(requires, list) or isinstance(requires, tuple):
+    elif isinstance(requires, dict):
+        return {key: _make_requires_info(requires=item) for key, item in requires.items()}
+    elif isinstance(requires, typing.Iterable):
         return [_make_requires_info(requires=item) for item in requires]
 
-    if isinstance(requires, dict):
-        return {key: _make_requires_info(requires=item) for key, item in requires.items()}
-
-    raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `List[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
+    raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `Iterarble[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 
 
 def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]] = None) -> TaskInfo:
