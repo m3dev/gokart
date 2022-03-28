@@ -81,8 +81,8 @@ This setting must be done to each gokart task which you want to lock the ``run()
 
         from gokart.run_with_lock import RunWithLock
 
-        @RunWithLock
         class SomeTask(gokart.TaskOnKart):
+            @RunWithLock
             def run(self):
                 ...            
 
