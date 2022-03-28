@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
-from gokart.redis_lock import RedisParams, make_redis_params, with_lock
+from gokart.redis_lock import RedisParams, make_redis_params, wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock, wrap_with_run_lock
 from gokart.zip_client_util import make_zip_client
 
 logger = getLogger(__name__)
@@ -26,17 +26,17 @@ class TargetOnKart(luigi.Target):
         return self._exists()
 
     def load(self) -> Any:
-        return self.wrap_with_lock(self._load)()
+        return wrap_with_load_lock(func=self._load, redis_params=self._get_redis_params())()
 
     def dump(self, obj, lock_at_dump: bool = True) -> None:
         if lock_at_dump:
-            self.wrap_with_lock(self._dump)(obj)
+            wrap_with_dump_lock(func=self._dump, redis_params=self._get_redis_params(), exist_check=self.exists)(obj)
         else:
             self._dump(obj)
 
     def remove(self) -> None:
         if self.exists():
-            self.wrap_with_lock(self._remove)()
+            wrap_with_remove_lock(self._remove, redis_params=self._get_redis_params())()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
@@ -45,7 +45,7 @@ class TargetOnKart(luigi.Target):
         return self._path()
 
     def wrap_with_lock(self, func):
-        return with_lock(func=func, redis_params=self._get_redis_params())
+        return wrap_with_run_lock(func=func, redis_params=self._get_redis_params())
 
     @abstractmethod
     def _exists(self) -> bool:
