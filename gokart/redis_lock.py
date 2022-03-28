@@ -93,12 +93,18 @@ def _wrap_with_lock(func, redis_params: RedisParams):
 
 
 def wrap_with_run_lock(func, redis_params: RedisParams):
+    """Redis lock wrapper function for RunWithLock.
+    When a fucntion is wrapped by RunWithLock, the wrapped function will be simply wrapped with redis lock.
+    https://github.com/m3dev/gokart/issues/265
+    """
     return _wrap_with_lock(func=func, redis_params=redis_params)
 
 
 def wrap_with_dump_lock(func: Callable, redis_params: RedisParams, exist_check: Callable):
-    # When TargetOnKart.dump() is called, dump() must be wrapped with redis lock and cache existance check.
-    # https://github.com/m3dev/gokart/issues/265
+    """Redis lock wrapper function for TargetOnKart.dump().
+    When TargetOnKart.dump() is called, dump() will be wrapped with redis lock and cache existance check.
+    https://github.com/m3dev/gokart/issues/265
+    """
 
     if not redis_params.should_redis_lock:
         return func
@@ -124,8 +130,10 @@ def wrap_with_dump_lock(func: Callable, redis_params: RedisParams, exist_check: 
 
 
 def wrap_with_load_lock(func, redis_params: RedisParams):
-    # When TargetOnKart.load() is called, redis lock must locked and released before load().
-    # https://github.com/m3dev/gokart/issues/265
+    """Redis lock wrapper function for TargetOnKart.load().
+    When TargetOnKart.load() is called, redis lock will be locked and released before load().
+    https://github.com/m3dev/gokart/issues/265
+    """
 
     if not redis_params.should_redis_lock:
         return func
@@ -151,8 +159,10 @@ def wrap_with_load_lock(func, redis_params: RedisParams):
 
 
 def wrap_with_remove_lock(func, redis_params: RedisParams):
-    # When TargetOnKart.remove() is called, remove() must be simply wrapped with redis lock.
-    # https://github.com/m3dev/gokart/issues/265
+    """Redis lock wrapper function for TargetOnKart.remove().
+    When TargetOnKart.remove() is called, remove() will be simply wrapped with redis lock.
+    https://github.com/m3dev/gokart/issues/265
+    """
     return _wrap_with_lock(func=func, redis_params=redis_params)
 
 
