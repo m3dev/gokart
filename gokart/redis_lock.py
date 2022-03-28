@@ -117,14 +117,10 @@ def wrap_with_dump_lock(func: Callable, redis_params: RedisParams, exist_check: 
             logger.debug(f'Task lock of {redis_params.redis_key} locked.')
             if not exist_check():
                 func(*args, **kwargs)
-            redis_lock.release()
+        finally:
             logger.debug(f'Task lock of {redis_params.redis_key} released.')
-            scheduler.shutdown()
-        except BaseException as e:
-            logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
             redis_lock.release()
             scheduler.shutdown()
-            raise e
 
     return wrapper
 
@@ -142,18 +138,12 @@ def wrap_with_load_lock(func, redis_params: RedisParams):
         redis_lock = _set_redis_lock(redis_params=redis_params)
         scheduler = _set_lock_scheduler(redis_lock=redis_lock, redis_params=redis_params)
 
-        try:
-            logger.debug(f'Task lock of {redis_params.redis_key} locked.')
-            redis_lock.release()
-            logger.debug(f'Task lock of {redis_params.redis_key} released.')
-            scheduler.shutdown()
-            result = func(*args, **kwargs)
-            return result
-        except BaseException as e:
-            logger.debug(f'Task lock of {redis_params.redis_key} released with BaseException.')
-            redis_lock.release()
-            scheduler.shutdown()
-            raise e
+        logger.debug(f'Task lock of {redis_params.redis_key} locked.')
+        redis_lock.release()
+        logger.debug(f'Task lock of {redis_params.redis_key} released.')
+        scheduler.shutdown()
+        result = func(*args, **kwargs)
+        return result
 
     return wrapper
 
