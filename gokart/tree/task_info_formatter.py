@@ -1,5 +1,4 @@
 import typing
-from functools import lru_cache
 import warnings
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Union
@@ -57,20 +56,25 @@ def _make_requires_info(requires):
     raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `Iterarble[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 
 
-@lru_cache(maxsize=None)
-def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]] = None) -> TaskInfo:
+def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]] = None, cache: Optional[Dict[str, TaskInfo]] = None) -> TaskInfo:
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
         is_task_complete = task.complete()
 
     name = task.__class__.__name__
     unique_id = task.make_unique_id()
+    is_complete = ('COMPLETE' if is_task_complete else 'PENDING')
+
+    cache = cache or {}
+    cache_id = f'{name}_{unique_id}_{is_complete}'
+    if cache_id in cache:
+        return cache[cache_id]
+
     output_paths = [t.path() for t in luigi.task.flatten(task.output())]
     params = task.get_info(only_significant=True)
     processing_time = task.get_processing_time()
     if type(processing_time) == float:
         processing_time = str(processing_time) + 's'
-    is_complete = ('COMPLETE' if is_task_complete else 'PENDING')
     task_log = dict(task.get_task_log())
     requires = _make_requires_info(task.requires())
 
@@ -78,16 +82,20 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
     children_task_infos: List[TaskInfo] = []
     for child in children:
         if ignore_task_names is None or child.__class__.__name__ not in ignore_task_names:
-            children_task_infos.append(make_task_info_tree(child, ignore_task_names=ignore_task_names))
-    return TaskInfo(name=name,
-                    unique_id=unique_id,
-                    output_paths=output_paths,
-                    params=params,
-                    processing_time=processing_time,
-                    is_complete=is_complete,
-                    task_log=task_log,
-                    requires=requires,
-                    children_task_infos=children_task_infos)
+            children_task_infos.append(make_task_info_tree(child, ignore_task_names=ignore_task_names, cache=cache))
+
+    task_info =  TaskInfo(name=name,
+                          unique_id=unique_id,
+                          output_paths=output_paths,
+                          params=params,
+                          processing_time=processing_time,
+                          is_complete=is_complete,
+                          task_log=task_log,
+                          requires=requires,
+                          children_task_infos=children_task_infos)
+    cache[cache_id] = task_info
+
+    return task_info
 
 
 def make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, abbr: bool, visited_tasks: Set[str]):
