@@ -1,4 +1,5 @@
 import typing
+from functools import lru_cache
 import warnings
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Union
@@ -56,6 +57,7 @@ def _make_requires_info(requires):
     raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `Iterarble[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 
 
+@lru_cache(maxsize=None)
 def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]] = None) -> TaskInfo:
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
