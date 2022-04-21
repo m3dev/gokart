@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 from logging import getLogger
 from typing import List, Optional
 
@@ -21,10 +22,13 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 logger = getLogger(__name__)
 
 tracer_provider = TracerProvider()
-cloud_trace_exporter = CloudTraceSpanExporter()
-tracer_provider.add_span_processor(
-    BatchSpanProcessor(cloud_trace_exporter)
-)
+try:
+    cloud_trace_exporter = CloudTraceSpanExporter()
+    tracer_provider.add_span_processor(
+        BatchSpanProcessor(cloud_trace_exporter)
+    )
+except:
+    traceback.print_exc()
 trace.set_tracer_provider(tracer_provider)
 
 tracer = trace.get_tracer(__name__)
