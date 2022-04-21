@@ -29,6 +29,9 @@ google-api-python-client = "*"
 APScheduler = "*"
 redis = "*"
 matplotlib = "*"
+opentelemetry-api = "^1.11.0"
+opentelemetry-sdk = "^1.11.0"
+opentelemetry-exporter-gcp-trace = "^1.2.0"
 
 [tool.poetry.dev-dependencies]
 tox = "*"

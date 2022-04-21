@@ -12,7 +12,35 @@ import gokart
 import gokart.slack
 from gokart.object_storage import ObjectStorage
 
+from opentelemetry import trace
+from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+
 logger = getLogger(__name__)
+
+tracer_provider = TracerProvider()
+cloud_trace_exporter = CloudTraceSpanExporter()
+tracer_provider.add_span_processor(
+    BatchSpanProcessor(cloud_trace_exporter)
+)
+trace.set_tracer_provider(tracer_provider)
+
+tracer = trace.get_tracer(__name__)
+
+
+@luigi.Task.event_handler(luigi.Event.START)
+def _start(task):
+    task.trace_span = tracer.start_span(str(task))
+
+@luigi.Task.event_handler(luigi.Event.SUCCESS)
+def _success(task):
+    task.trace_span.end()
+
+@luigi.Task.event_handler(luigi.Event.FAILURE)
+def _failure(task):
+    task.trace_span.end()
 
 
 def _run_tree_info(cmdline_args, details):
@@ -80,24 +108,25 @@ def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAP
 
 
 def run(cmdline_args=None, set_retcode=True):
-    cmdline_args = cmdline_args or sys.argv[1:]
+    with tracer.start_as_current_span("gokart.run"):
+        cmdline_args = cmdline_args or sys.argv[1:]
 
-    if set_retcode:
-        luigi.retcodes.retcode.already_running = 10
-        luigi.retcodes.retcode.missing_data = 20
-        luigi.retcodes.retcode.not_run = 30
-        luigi.retcodes.retcode.task_failed = 40
-        luigi.retcodes.retcode.scheduling_error = 50
+        if set_retcode:
+            luigi.retcodes.retcode.already_running = 10
+            luigi.retcodes.retcode.missing_data = 20
+            luigi.retcodes.retcode.not_run = 30
+            luigi.retcodes.retcode.task_failed = 40
+            luigi.retcodes.retcode.scheduling_error = 50
 
-    _try_tree_info(cmdline_args)
-    _try_to_delete_unnecessary_output_file(cmdline_args)
-    gokart.testing.try_to_run_test_for_empty_data_frame(cmdline_args)
+        _try_tree_info(cmdline_args)
+        _try_to_delete_unnecessary_output_file(cmdline_args)
+        gokart.testing.try_to_run_test_for_empty_data_frame(cmdline_args)
 
-    slack_api = _try_get_slack_api(cmdline_args)
-    event_aggregator = gokart.slack.EventAggregator()
-    try:
-        event_aggregator.set_handlers()
-        luigi.cmdline.luigi_run(cmdline_args)
-    except SystemExit as e:
-        _try_to_send_event_summary_to_slack(slack_api, event_aggregator, cmdline_args)
-        sys.exit(e.code)
+        slack_api = _try_get_slack_api(cmdline_args)
+        event_aggregator = gokart.slack.EventAggregator()
+        try:
+            event_aggregator.set_handlers()
+            luigi.cmdline.luigi_run(cmdline_args)
+        except SystemExit as e:
+            _try_to_send_event_summary_to_slack(slack_api, event_aggregator, cmdline_args)
+            sys.exit(e.code)
