@@ -55,14 +55,28 @@ Please refer to :func:`~gokart.task.TaskOnKart.load_data_frame`.
 Fail on empty DataFrame
 -----------------------
 
-The :func:`~gokart.task.TaskOnKart.fail_on_empty_dump` method is `AssertionError` on trying to dump empty ``pandas.DataFrame``.
+When the :attr:`~gokart.task.TaskOnKart.fail_on_empty_dump` parameter is true, the :func:`~gokart.task.TaskOnKart.dump()` method is `AssertionError` on trying to dump empty ``pandas.DataFrame``.
+
 
 .. code:: python
 
-    def run(self):
-        df = pd.DataFrame()
-        self.fail_on_empty_dump(df)  # AssertionError
+    import gokart
+
+
+    class EmptyTask(gokart.TaskOnKart):
+        def run(self):
+            df = pd.DataFrame()
+            self.dump(df)
+
+
+::
+
+    $ python main.py EmptyTask --fail-on-empty-dump true
+    # AssertionError
+    $ python main.py EmptyTask
+    # Task will be ran and outputs an empty dataframe
+
 
 Empty caches sometimes hide bugs and let us spend much time debugging. This feature notifies us some bugs (including wrong datasources) in the early stage.
 
-Please refer to :func:`~gokart.task.TaskOnKart.fail_on_empty_dump`.
+Please refer to :attr:`~gokart.task.TaskOnKart.fail_on_empty_dump`.
