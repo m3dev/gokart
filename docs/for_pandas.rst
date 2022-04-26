@@ -74,7 +74,7 @@ When the :attr:`~gokart.task.TaskOnKart.fail_on_empty_dump` parameter is true, t
     $ python main.py EmptyTask --fail-on-empty-dump true
     # AssertionError
     $ python main.py EmptyTask
-    # Task will be running and output empty dataframe
+    # Task will be ran and outputs an empty dataframe
 
 
 Empty caches sometimes hide bugs and let us spend much time debugging. This feature notifies us some bugs (including wrong datasources) in the early stage.
