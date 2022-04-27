@@ -65,7 +65,6 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
     unique_id = task.make_unique_id()
     output_paths = [t.path() for t in luigi.task.flatten(task.output())]
 
-
     cache = {} if cache is None else cache
     cache_id = f'{name}_{unique_id}_{is_task_complete}'
     if cache_id in cache:
@@ -85,14 +84,14 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
         if ignore_task_names is None or child.__class__.__name__ not in ignore_task_names:
             children_task_infos.append(make_task_info_tree(child, ignore_task_names=ignore_task_names, cache=cache))
     task_info = TaskInfo(name=name,
-                            unique_id=unique_id,
-                            output_paths=output_paths,
-                            params=params,
-                            processing_time=processing_time,
-                            is_complete=is_complete,
-                            task_log=task_log,
-                            requires=requires,
-                            children_task_infos=children_task_infos)
+                         unique_id=unique_id,
+                         output_paths=output_paths,
+                         params=params,
+                         processing_time=processing_time,
+                         is_complete=is_complete,
+                         task_log=task_log,
+                         requires=requires,
+                         children_task_infos=children_task_infos)
     cache[cache_id] = task_info
     return task_info
 
