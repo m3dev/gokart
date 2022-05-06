@@ -6,7 +6,7 @@ import luigi.mock
 from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
-from gokart.tree.task_info import dump_task_info_table, dump_task_info_tree, make_task_info_as_tree_str
+from gokart.tree.task_info import dump_task_info_table, dump_task_info_tree, make_task_info_as_tree_str, make_task_info_tree
 
 
 class _SubTask(gokart.TaskOnKart):
@@ -124,6 +124,17 @@ class TestInfo(unittest.TestCase):
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""
         self.assertRegex(tree, expected)
+
+    @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
+    def test_make_tree_info_with_cache(self):
+        task = _DoubleLoadSubTask(
+            sub1=_Task(param=1, sub=_SubTask(param=2)),
+            sub2=_Task(param=1, sub=_SubTask(param=2)),
+        )
+
+        # check child task_info is the same object
+        tree = make_task_info_tree(task)
+        self.assertTrue(tree.children_task_infos[0] is tree.children_task_infos[1])
 
 
 class _TaskInfoExampleTaskA(gokart.TaskOnKart):
