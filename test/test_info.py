@@ -31,7 +31,7 @@ class TestInfo(unittest.TestCase):
         task = _Task(param=1, sub=_SubTask(param=2))
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
+        gokart.build(task, reset_register=False)
         tree = gokart.info.make_tree_info(task)
         expected = r"""
 └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
@@ -46,7 +46,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
+        gokart.build(task, reset_register=False)
         tree = gokart.info.make_tree_info(task)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
@@ -64,7 +64,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
+        gokart.build(task, reset_register=False)
         tree = gokart.info.make_tree_info(task, abbr=False)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
@@ -82,7 +82,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
+        gokart.build(task, reset_register=False)
         tree = gokart.info.make_tree_info(task, abbr=False, ignore_task_names=['_Task'])
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""
