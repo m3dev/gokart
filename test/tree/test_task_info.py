@@ -83,7 +83,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True)
+        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
         tree = make_task_info_as_tree_str(task)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
@@ -101,7 +101,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True)
+        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
         tree = make_task_info_as_tree_str(task, abbr=False)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
@@ -119,7 +119,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True)
+        luigi.build([task], local_scheduler=True, log_level='CRITICAL')
         tree = make_task_info_as_tree_str(task, abbr=False, ignore_task_names=['_Task'])
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""
