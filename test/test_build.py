@@ -53,6 +53,8 @@ class _ParallelRunner(gokart.TaskOnKart):
 class RunTest(unittest.TestCase):
 
     def setUp(self):
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
         luigi.configuration.LuigiConfigParser._instance = None
         self.config_paths = copy(luigi.configuration.LuigiConfigParser._config_paths)
         luigi.mock.MockFileSystem().clear()
@@ -61,6 +63,8 @@ class RunTest(unittest.TestCase):
     def tearDown(self):
         luigi.configuration.LuigiConfigParser._config_paths = self.config_paths
         os.environ.clear()
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
 
     def test_build(self):
         text = 'test'
@@ -88,7 +92,7 @@ class RunTest(unittest.TestCase):
 
     def test_failed_task(self):
         with self.assertRaises(GokartBuildError):
-            gokart.build(_DummyFailedTask(), reset_register=False)
+            gokart.build(_DummyFailedTask(), reset_register=False, log_level=logging.CRITICAL)
 
 
 class LoggerConfigTest(unittest.TestCase):
