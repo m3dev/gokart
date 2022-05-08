@@ -2,8 +2,8 @@ import unittest
 from logging import getLogger
 from typing import Any, Dict
 from unittest.mock import patch
-import luigi
 
+import luigi
 import pandas as pd
 from luigi.mock import MockFileSystem, MockTarget
 
