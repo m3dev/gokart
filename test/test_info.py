@@ -14,6 +14,12 @@ class TestInfo(unittest.TestCase):
 
     def setUp(self) -> None:
         MockFileSystem().clear()
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
+
+    def tearDown(self) -> None:
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
 
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
     def test_make_tree_info_pending(self):
