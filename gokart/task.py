@@ -53,7 +53,8 @@ class TaskOnKart(luigi.Task):
                                       significant=False)
     fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False)
     FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER = -42497368
-    fix_random_seed_value = luigi.IntParameter(default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.', significant=False) # should fix with OptionalIntParameter after newer luigi will be released
+    fix_random_seed_value = luigi.IntParameter(default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.',
+                                               significant=False)  # should fix with OptionalIntParameter after newer luigi will be released
 
     redis_host = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)

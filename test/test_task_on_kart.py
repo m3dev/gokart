@@ -542,6 +542,5 @@ class TaskTest(unittest.TestCase):
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
 
 
-
 if __name__ == '__main__':
     unittest.main()
