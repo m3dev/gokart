@@ -51,6 +51,12 @@ class TestInfo(unittest.TestCase):
 
     def setUp(self) -> None:
         MockFileSystem().clear()
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
+
+    def tearDown(self) -> None:
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
 
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
     def test_make_tree_info_pending(self):
@@ -68,7 +74,7 @@ class TestInfo(unittest.TestCase):
         task = _Task(param=1, sub=_SubTask(param=2))
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True)
+        gokart.build(task, reset_register=False)
         tree = make_task_info_as_tree_str(task)
         expected = r"""
 └─-\(COMPLETE\) _Task\[[a-z0-9]*\]
@@ -83,7 +89,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True)
+        gokart.build(task, reset_register=False)
         tree = make_task_info_as_tree_str(task)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
@@ -101,7 +107,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True)
+        gokart.build(task, reset_register=False)
         tree = make_task_info_as_tree_str(task, abbr=False)
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]
@@ -119,7 +125,7 @@ class TestInfo(unittest.TestCase):
         )
 
         # check after sub task runs
-        luigi.build([task], local_scheduler=True)
+        gokart.build(task, reset_register=False)
         tree = make_task_info_as_tree_str(task, abbr=False, ignore_task_names=['_Task'])
         expected = r"""
 └─-\(COMPLETE\) _DoubleLoadSubTask\[[a-z0-9]*\]$"""

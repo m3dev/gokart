@@ -3,6 +3,7 @@ from logging import getLogger
 from typing import Any, Dict
 from unittest.mock import patch
 
+import luigi
 import pandas as pd
 from luigi.mock import MockFileSystem, MockTarget
 
@@ -59,7 +60,13 @@ class _DummySuccessTask(gokart.TaskOnKart):
 class TestPandasTypeCheckFramework(unittest.TestCase):
 
     def setUp(self) -> None:
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
         MockFileSystem().clear()
+
+    def tearDown(self) -> None:
+        luigi.setup_logging.DaemonLogging._configured = False
+        luigi.setup_logging.InterfaceLogging._configured = False
 
     @patch('sys.argv', new=['main', 'test_pandas_type_check_framework._DummyFailTask', '--log-level=CRITICAL', '--local-scheduler', '--no-lock'])
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))

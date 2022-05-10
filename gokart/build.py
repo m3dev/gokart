@@ -51,7 +51,7 @@ def build(task: TaskOnKart, return_value: bool = True, reset_register: bool = Tr
     if reset_register:
         _reset_register()
     with LoggerConfig(level=log_level):
-        result = luigi.build([task], local_scheduler=True, detailed_summary=True, **env_params)
+        result = luigi.build([task], local_scheduler=True, detailed_summary=True, log_level=logging.getLevelName(log_level), **env_params)
         if result.status == luigi.LuigiStatusCode.FAILED:
             raise GokartBuildError(result.summary_text)
     return _get_output(task) if return_value else None
