@@ -536,6 +536,11 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart(list()))
         self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart((gokart.TaskOnKart(), gokart.TaskOnKart())))
 
+    def test_serialize_and_deserialize_default_values(self):
+        task = gokart.TaskOnKart()
+        deserialized: gokart.TaskOnKart = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
+        self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -52,7 +52,10 @@ class TaskOnKart(luigi.Task):
                                       description='If this is false, this task is not treated as a part of dependent tasks for the unique id.',
                                       significant=False)
     fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False)
-    fix_random_seed_value = luigi.IntParameter(default=None, description='Fix random seed method value.', significant=False)
+    FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER = -42497368
+    fix_random_seed_value = luigi.IntParameter(
+        default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.',
+        significant=False)  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
     redis_host = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
@@ -389,7 +392,7 @@ class TaskOnKart(luigi.Task):
         return success_methods
 
     def _get_random_seed(self):
-        if self.fix_random_seed_value:
+        if self.fix_random_seed_value and (not self.fix_random_seed_value == self.FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER):
             return self.fix_random_seed_value
         return int(self.make_unique_id(), 16) % (2**32 - 1)  # maximum numpy.random.seed
 
