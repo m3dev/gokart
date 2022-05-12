@@ -267,7 +267,7 @@ class TaskOnKart(luigi.Task):
             return pd.DataFrame(columns=required_columns)
         assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
         if drop_columns:
-            data = data[required_columns]
+            data = data[list(required_columns)]
         return data
 
     def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
