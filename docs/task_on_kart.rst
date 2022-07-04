@@ -244,3 +244,9 @@ TaskOnKart.fail_on_empty_dump
 Please refer to :doc:`for_pandas`.
 
 
+TaskOnKart.should_dump_supplementary_log_files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Whether to dump supplementary files (task_log, random_seed, task_params, processing_time, module_versions) or not. Default is True.
+
+Note that when set to False, task_info functions (e.g. gokart.tree.task_info.make_task_info_as_tree_str()) cannot be used.
