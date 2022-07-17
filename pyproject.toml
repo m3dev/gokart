@@ -38,7 +38,7 @@ coverage = "*"
 isort = "^5.7"
 yapf = ">=0.32"
 lupa = "^1.10"
-fakeredis = "^1.7.0"
+fakeredis = "==1.7.4"
 
 [tool.yapf]
 based_on_style = "pep8"
