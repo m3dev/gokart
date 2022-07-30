@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import luigi
 import pandas as pd
+from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
 import gokart
@@ -488,10 +489,29 @@ class TaskTest(unittest.TestCase):
         class _Task(gokart.TaskOnKart):
             task_namespace = __name__
             int_param = luigi.IntParameter()
+            private_int_param = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
             task_param = TaskInstanceParameter()
             list_task_param = ListTaskInstanceParameter()
 
-        task = _Task(int_param=1, task_param=_SubTask(), list_task_param=[_SubTask(), _SubTask()])
+        task = _Task(int_param=1, private_int_param=1, task_param=_SubTask(), list_task_param=[_SubTask(), _SubTask()])
+        sub_task_id = _SubTask().make_unique_id()
+        expected = f'{__name__}._Task(int_param=1, private_int_param=1, task_param={__name__}._SubTask({sub_task_id}), ' \
+            f'list_task_param=[{__name__}._SubTask({sub_task_id}), {__name__}._SubTask({sub_task_id})])'
+        self.assertEqual(expected, repr(task))
+
+    def test_str(self):
+
+        class _SubTask(gokart.TaskOnKart):
+            task_namespace = __name__
+
+        class _Task(gokart.TaskOnKart):
+            task_namespace = __name__
+            int_param = luigi.IntParameter()
+            private_int_param = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
+            task_param = TaskInstanceParameter()
+            list_task_param = ListTaskInstanceParameter()
+
+        task = _Task(int_param=1, private_int_param=1, task_param=_SubTask(), list_task_param=[_SubTask(), _SubTask()])
         sub_task_id = _SubTask().make_unique_id()
         expected = f'{__name__}._Task(int_param=1, task_param={__name__}._SubTask({sub_task_id}), ' \
             f'list_task_param=[{__name__}._SubTask({sub_task_id}), {__name__}._SubTask({sub_task_id})])'
