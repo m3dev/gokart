@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import luigi
 import pandas as pd
+from luigi.parameter import ParameterVisibility
 
 import gokart
 from gokart.file_processor import FileProcessor
@@ -455,6 +456,19 @@ class TaskOnKart(luigi.Task):
         """
         Build a task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
         """
+        return self._get_task_string()
+
+    def __str__(self):
+        """
+        Build a human-readable task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
+        This includes only public parameters
+        """
+        return self._get_task_string(only_public=True)
+
+    def _get_task_string(self, only_public=False):
+        """
+        Convert a task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
+        """
         params = self.get_params()
         param_values = self.get_param_values(params, [], self.param_kwargs)
 
@@ -463,7 +477,7 @@ class TaskOnKart(luigi.Task):
         param_objs = dict(params)
         for param_name, param_value in param_values:
             param_obj = param_objs[param_name]
-            if param_obj.significant:
+            if param_obj.significant and ((not only_public) or param_obj.visibility == ParameterVisibility.PUBLIC):
                 repr_parts.append(f'{param_name}={self._make_representation(param_obj, param_value)}')
 
         task_str = f'{self.get_task_family()}({", ".join(repr_parts)})'

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import luigi
 import pandas as pd
+from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
 import gokart
@@ -82,6 +83,18 @@ class _DummyTaskWithoutLock(gokart.TaskOnKart):
 
     def run(self):
         pass
+
+
+class _DummySubTaskWithPrivateParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+
+
+class _DummyTaskWithPrivateParameter(gokart.TaskOnKart):
+    task_namespace = __name__
+    int_param = luigi.IntParameter()
+    private_int_param = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
+    task_param = TaskInstanceParameter()
+    list_task_param = ListTaskInstanceParameter()
 
 
 class TaskTest(unittest.TestCase):
@@ -481,20 +494,25 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(with_task.requires()['a_task'], without_task)
 
     def test_repr(self):
+        task = _DummyTaskWithPrivateParameter(int_param=1,
+                                              private_int_param=1,
+                                              task_param=_DummySubTaskWithPrivateParameter(),
+                                              list_task_param=[_DummySubTaskWithPrivateParameter(),
+                                                               _DummySubTaskWithPrivateParameter()])
+        sub_task_id = _DummySubTaskWithPrivateParameter().make_unique_id()
+        expected = f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, private_int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), ' \
+            f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
+        self.assertEqual(expected, repr(task))
 
-        class _SubTask(gokart.TaskOnKart):
-            task_namespace = __name__
-
-        class _Task(gokart.TaskOnKart):
-            task_namespace = __name__
-            int_param = luigi.IntParameter()
-            task_param = TaskInstanceParameter()
-            list_task_param = ListTaskInstanceParameter()
-
-        task = _Task(int_param=1, task_param=_SubTask(), list_task_param=[_SubTask(), _SubTask()])
-        sub_task_id = _SubTask().make_unique_id()
-        expected = f'{__name__}._Task(int_param=1, task_param={__name__}._SubTask({sub_task_id}), ' \
-            f'list_task_param=[{__name__}._SubTask({sub_task_id}), {__name__}._SubTask({sub_task_id})])'
+    def test_str(self):
+        task = _DummyTaskWithPrivateParameter(int_param=1,
+                                              private_int_param=1,
+                                              task_param=_DummySubTaskWithPrivateParameter(),
+                                              list_task_param=[_DummySubTaskWithPrivateParameter(),
+                                                               _DummySubTaskWithPrivateParameter()])
+        sub_task_id = _DummySubTaskWithPrivateParameter().make_unique_id()
+        expected = f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), ' \
+            f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
         self.assertEqual(expected, str(task))
 
     def test_run_with_lock_decorator(self):
