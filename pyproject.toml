@@ -37,8 +37,8 @@ testfixtures = "*"
 coverage = "*"
 isort = "^5.7"
 yapf = ">=0.32"
-lupa = "^1.10"
-fakeredis = "==1.7.1"
+lupa = "*"
+fakeredis = "*"
 
 [tool.yapf]
 based_on_style = "pep8"
