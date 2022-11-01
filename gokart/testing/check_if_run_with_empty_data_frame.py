@@ -66,7 +66,7 @@ def _test_run_with_empty_data_frame(cmdline_args: List[str], test_run_params: te
     if test_run_params.namespace is not None:
         all_tasks = [t for t in all_tasks if t.task_namespace == test_run_params.namespace]
 
-    with patch('gokart.TaskOnKart.load_data_frame', new=lambda *args, required_columns=None, **kwargs: pd.DataFrame(columns=required_columns)):
+    with patch('gokart.TaskOnKart.load_data_frame', new=lambda *args, required_columns=None, **kwargs: pd.DataFrame(columns=list(required_columns))):
         with patch('gokart.TaskOnKart.dump', new=lambda *args, **kwargs: None):
             test_status_list = [_run_with_test_status(t) for t in all_tasks]
 

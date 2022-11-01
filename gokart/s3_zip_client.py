@@ -17,6 +17,9 @@ class S3ZipClient(ZipClient):
 
     def make_archive(self) -> None:
         extension = os.path.splitext(self._file_path)[1]
+        if not os.path.exists(self._temporary_directory):
+            # Check path existence since shutil.make_archive() of python 3.10+ does not check it.
+            raise FileNotFoundError(f'Temporary directory {self._temporary_directory} is not found.')
         shutil.make_archive(base_name=self._temporary_directory, format=extension[1:], root_dir=self._temporary_directory)
         self._client.put(self._temporary_file_path(), self._file_path)
 
