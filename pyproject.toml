@@ -37,12 +37,20 @@ testfixtures = "*"
 coverage = "*"
 isort = "^5.7"
 yapf = ">=0.32"
+toml = "*"
 lupa = "*"
 fakeredis = "*"
 
 [tool.yapf]
 based_on_style = "pep8"
 column_limit = 160
+
+[tool.yapfignore]
+ignore_patterns = [
+  ".venv/*",
+  ".tox/*",
+  "examples/*"
+]
 
 [tool.isort]
 line_length = 160
