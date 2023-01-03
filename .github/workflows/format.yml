@@ -1,4 +1,4 @@
-name: YAPF Formatting Check
+name: Lint
 
 on:
     push:
@@ -9,18 +9,19 @@ on:
 jobs:
   formatting-check:
 
-    name: Formatting Check
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Install dependencies
-      run: |
-        pip install toml yapf
-    - name: run YAPF to test if python code is correctly formatted
-      run: |
-        yapf --diff --recursive --verbose --exclude=**/docs/* $GITHUB_WORKSPACE
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
       with:
         python-version: 3.9
-    - uses: jamescurtin/isort-action@master
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install poetry
+        poetry install
+    - name: Run yapf and isort
+      run: |
+        poetry run tox -e yapf,isort
