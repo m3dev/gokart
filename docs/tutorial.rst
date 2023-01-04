@@ -38,7 +38,7 @@ You will have a directory tree like following:
     │   │   ├── __init__.py
     │   │   └── sample.py
     │   └── utils
-    │       └── templete.py
+    │       └── template.py
     ├── main.py
     ├── pyproject.toml
     └── test
@@ -136,7 +136,7 @@ Modify ``example/gokart_example/model/sample.py`` as follows:
 
     from logging import getLogger
     import gokart
-    from gokart_example.utils.templete import GokartTask
+    from gokart_example.utils.template import GokartTask
     logger = getLogger(__name__)
 
 
