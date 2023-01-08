@@ -7,7 +7,6 @@ import luigi.mock
 
 import gokart
 from gokart.run import _try_to_send_event_summary_to_slack
-from gokart.slack import SlackConfig
 
 
 class _DummyTask(gokart.TaskOnKart):

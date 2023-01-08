@@ -1,7 +1,7 @@
 import typing
 import warnings
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Union
+from typing import Dict, List, NamedTuple, Optional, Set, Union
 
 import luigi
 

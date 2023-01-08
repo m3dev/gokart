@@ -1,6 +1,4 @@
-import os
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
 
 from gokart.s3_config import S3Config
 

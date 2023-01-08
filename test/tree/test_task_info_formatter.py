@@ -1,7 +1,5 @@
 import unittest
 
-import pandas as pd
-
 import gokart
 from gokart.tree.task_info_formatter import RequiredTask, _make_requires_info
 

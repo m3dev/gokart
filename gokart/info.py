@@ -1,6 +1,5 @@
-import warnings
 from logging import getLogger
-from typing import List, NamedTuple, Optional, Set, Tuple
+from typing import List, Optional, Set
 
 import luigi
 

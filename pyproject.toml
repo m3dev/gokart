@@ -8,6 +8,9 @@ readme = "README.md"
 homepage = "https://github.com/m3dev/gokart"
 repository = "https://github.com/m3dev/gokart"
 documentation = "https://gokart.readthedocs.io/en/latest/"
+[tool.poetry.group.dev.dependencies]
+pyproject-flake8 = "5.0.4"
+
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -40,6 +43,10 @@ yapf = ">=0.32"
 toml = "*"
 lupa = "*"
 fakeredis = "*"
+
+[tool.flake8]
+max-line-length = 160
+exclude = "venv/*,tox/*"
 
 [tool.yapf]
 based_on_style = "pep8"
