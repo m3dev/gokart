@@ -8,8 +8,6 @@ readme = "README.md"
 homepage = "https://github.com/m3dev/gokart"
 repository = "https://github.com/m3dev/gokart"
 documentation = "https://gokart.readthedocs.io/en/latest/"
-[tool.poetry.group.dev.dependencies]
-pyproject-flake8 = "5.0.4"
 
 
 [tool.poetry-dynamic-versioning]
@@ -33,7 +31,8 @@ APScheduler = "*"
 redis = "*"
 matplotlib = "*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+pyproject-flake8 = "5.0.4"
 tox = "*"
 moto = "*"
 testfixtures = "*"
@@ -45,6 +44,9 @@ lupa = "*"
 fakeredis = "*"
 
 [tool.flake8]
+# B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.
+# B008 Do not perform function calls in argument defaults.  The call is performed only once at function definition time. All calls to your function will reuse the result of that definition-time function call.  If this is intended, assign the function call to a module-level variable and use that variable as a default value.
+ignore = "B006,B007"
 max-line-length = 160
 exclude = "venv/*,tox/*"
 
