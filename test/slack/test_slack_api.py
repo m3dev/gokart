@@ -61,7 +61,7 @@ class TestSlackAPI(unittest.TestCase):
         with LogCapture() as log:
             gokart.slack.SlackAPI(token='valid', channel='invalid_channel', to_user='test user')
             log.check(('gokart.slack.slack_api', 'WARNING',
-                     'The job will start without slack notification: Channel invalid_channel is not found in public channels.'))
+                       'The job will start without slack notification: Channel invalid_channel is not found in public channels.'))
 
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_send_snippet_with_invalid_token(self, patch):
@@ -91,7 +91,7 @@ class TestSlackAPI(unittest.TestCase):
         with LogCapture() as log:
             api = gokart.slack.SlackAPI(token='valid', channel='valid', to_user='test user')
             api.send_snippet(comment='test', title='title', content='content')
-            log.check(('gokart.slack.slack_api', 'WARNING', 'Failed to send slack notification: Error while uploading file. The error reason is "error_reason".'))
+            log.check(('gokart.slack.slack_api', 'WARNING', 'Failed to send slack notification: Error while uploading file. The error reason is "error_reason".'))  # noqa:E501
 
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_send(self, patch):
