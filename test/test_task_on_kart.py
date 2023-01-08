@@ -335,7 +335,7 @@ class TaskTest(unittest.TestCase):
         data = [x for x in task.load_generator()]
         self.assertEqual(data, [[1, 2]])
 
-    def test_load_with_keyword(self):
+    def test_load_generator_with_keyword(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
