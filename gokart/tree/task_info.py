@@ -43,7 +43,7 @@ def make_task_info_as_table(task: TaskOnKart, ignore_task_names: Optional[List[s
         List of task names to ignore.
     Returns
     -------
-    - task_info_table : pandas.DataFrame 
+    - task_info_table : pandas.DataFrame
         Formatted task dependency table.
     """
 
