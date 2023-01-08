@@ -23,8 +23,10 @@ class TestMakeRequiresInfo(unittest.TestCase):
         self.assertEqual(resulted, expected)
 
     def test_make_requires_info_with_generator(self):
+
         def _requires_gen():
             return (_RequiredTaskExampleTaskA() for _ in range(2))
+
         resulted = _make_requires_info(requires=_requires_gen())
         expected = [RequiredTask(name=require.__class__.__name__, unique_id=require.make_unique_id()) for require in _requires_gen()]
         self.assertEqual(resulted, expected)

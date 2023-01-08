@@ -91,7 +91,8 @@ class TestSlackAPI(unittest.TestCase):
         with LogCapture() as log:
             api = gokart.slack.SlackAPI(token='valid', channel='valid', to_user='test user')
             api.send_snippet(comment='test', title='title', content='content')
-            log.check(('gokart.slack.slack_api', 'WARNING', 'Failed to send slack notification: Error while uploading file. The error reason is "error_reason".'))  # noqa:E501
+            log.check(
+                ('gokart.slack.slack_api', 'WARNING', 'Failed to send slack notification: Error while uploading file. The error reason is "error_reason".'))
 
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_send(self, patch):
