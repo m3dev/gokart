@@ -22,6 +22,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install poetry
         poetry install
-    - name: Run yapf and isort
+    - name: Run yapf, isort, and flake8
       run: |
-        poetry run tox -e yapf,isort
+        poetry run tox -e yapf,isort,flake8

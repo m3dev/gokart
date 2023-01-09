@@ -1,9 +1,6 @@
 import os
-import warnings
-from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import List, Optional
 
-import luigi
 import pandas as pd
 
 from gokart.target import make_target
@@ -46,7 +43,7 @@ def make_task_info_as_table(task: TaskOnKart, ignore_task_names: Optional[List[s
         List of task names to ignore.
     Returns
     -------
-    - task_info_table : pandas.DataFrame 
+    - task_info_table : pandas.DataFrame
         Formatted task dependency table.
     """
 

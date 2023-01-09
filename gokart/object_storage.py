@@ -3,7 +3,7 @@ from datetime import datetime
 import luigi
 import luigi.contrib.gcs
 import luigi.contrib.s3
-from luigi.format import FileWrapper, Format
+from luigi.format import Format
 
 from gokart.gcs_config import GCSConfig
 from gokart.gcs_zip_client import GCSZipClient

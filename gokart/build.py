@@ -1,5 +1,4 @@
 import logging
-import sys
 from logging import getLogger
 from typing import Any, Optional
 

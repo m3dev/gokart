@@ -1,7 +1,5 @@
 import unittest
 
-import pandas as pd
-
 import gokart
 from gokart.tree.task_info_formatter import RequiredTask, _make_requires_info
 
@@ -25,9 +23,12 @@ class TestMakeRequiresInfo(unittest.TestCase):
         self.assertEqual(resulted, expected)
 
     def test_make_requires_info_with_generator(self):
-        requires_gen = lambda: (_RequiredTaskExampleTaskA() for _ in range(2))
-        resulted = _make_requires_info(requires=requires_gen())
-        expected = [RequiredTask(name=require.__class__.__name__, unique_id=require.make_unique_id()) for require in requires_gen()]
+
+        def _requires_gen():
+            return (_RequiredTaskExampleTaskA() for _ in range(2))
+
+        resulted = _make_requires_info(requires=_requires_gen())
+        expected = [RequiredTask(name=require.__class__.__name__, unique_id=require.make_unique_id()) for require in _requires_gen()]
         self.assertEqual(resulted, expected)
 
     def test_make_requires_info_with_dict(self):

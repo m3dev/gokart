@@ -7,7 +7,6 @@ import luigi.mock
 
 import gokart
 from gokart.run import _try_to_send_event_summary_to_slack
-from gokart.slack import SlackConfig
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -35,7 +34,7 @@ class RunTest(unittest.TestCase):
     def test_run_with_undefined_environ(self):
         config_file_path = os.path.join(os.path.dirname(__name__), 'config', 'test_config.ini')
         luigi.configuration.LuigiConfigParser.add_config_path(config_file_path)
-        with self.assertRaises(luigi.parameter.MissingParameterException) as missing_parameter:
+        with self.assertRaises(luigi.parameter.MissingParameterException):
             gokart.run()
 
     @patch('sys.argv',

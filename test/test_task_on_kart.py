@@ -335,7 +335,7 @@ class TaskTest(unittest.TestCase):
         data = [x for x in task.load_generator()]
         self.assertEqual(data, [[1, 2]])
 
-    def test_load_with_keyword(self):
+    def test_load_generator_with_keyword(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
@@ -501,7 +501,7 @@ class TaskTest(unittest.TestCase):
                                                                _DummySubTaskWithPrivateParameter()])
         sub_task_id = _DummySubTaskWithPrivateParameter().make_unique_id()
         expected = f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, private_int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), ' \
-            f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
+            f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'  # noqa:E501
         self.assertEqual(expected, repr(task))
 
     def test_str(self):
