@@ -54,6 +54,7 @@ class TaskInstanceParameterTest(unittest.TestCase):
         self.assertRaises(ValueError, lambda: gokart.TaskInstanceParameter(bound=1))  # not type instance
 
     def test_params_with_correct_subclass_bound(self):
+
         class _DummyPipelineA(TaskOnKart):
             task_namespace = __name__
             subtask = gokart.TaskInstanceParameter(bound=_DummySubTask)
@@ -80,6 +81,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
         self.assertRaises(ValueError, lambda: gokart.ListTaskInstanceParameter(bound=1))  # not type instance
 
     def test_list_params_with_correct_subclass_bound(self):
+
         class _DummyPipelineC(TaskOnKart):
             task_namespace = __name__
             subtask = gokart.ListTaskInstanceParameter(bound=_DummySubTask)
@@ -88,13 +90,13 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
         self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(),))
 
     def test_list_params_with_invalid_subclass_bound(self):
+
         class _DummyPipelineD(TaskOnKart):
             task_namespace = __name__
             subtask = gokart.ListTaskInstanceParameter(bound=_DummySubTask)
 
         with self.assertRaises(ValueError):
             _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask])
-
 
 
 if __name__ == '__main__':
