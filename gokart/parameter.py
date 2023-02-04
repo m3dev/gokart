@@ -1,10 +1,11 @@
 import bz2
-import gokart
 import json
 from logging import getLogger
 
 import luigi
 from luigi import task_register
+
+import gokart
 
 logger = getLogger(__name__)
 
@@ -47,7 +48,6 @@ class TaskInstanceParameter(luigi.Parameter):
 
     def normalize(self, v):
         if not isinstance(v, self._bound):
-        # if self._bound in v.mro():
             raise ValueError(f'{v} is not an instance of {self._bound}')
         return v
 
