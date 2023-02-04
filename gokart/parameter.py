@@ -1,4 +1,5 @@
 import bz2
+import gokart
 import json
 from logging import getLogger
 
@@ -9,6 +10,14 @@ logger = getLogger(__name__)
 
 
 class TaskInstanceParameter(luigi.Parameter):
+
+    def __init__(self, *args, **kwargs):
+        bound = kwargs.pop('bound', gokart.TaskOnKart)
+        if isinstance(bound, type):
+            self._bound = bound
+        else:
+            raise ValueError(f'bound must be a type, not {type(bound)}')
+        super().__init__(*args, **kwargs)
 
     @staticmethod
     def _recursive(param_dict):
@@ -36,6 +45,12 @@ class TaskInstanceParameter(luigi.Parameter):
         values = dict(type=x.get_task_family(), params=params)
         return luigi.DictParameter().serialize(values)
 
+    def normalize(self, v):
+        if not isinstance(v, self._bound):
+        # if self._bound in v.mro():
+            raise ValueError(f'{v} is not an instance of {self._bound}')
+        return v
+
 
 class _TaskInstanceEncoder(json.JSONEncoder):
 
@@ -48,11 +63,25 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 class ListTaskInstanceParameter(luigi.Parameter):
 
+    def __init__(self, *args, **kwargs):
+        bound = kwargs.pop('bound', gokart.TaskOnKart)
+        if isinstance(bound, type):
+            self._bound = bound
+        else:
+            raise ValueError(f'bound must be a type, not {type(bound)}')
+        super().__init__(*args, **kwargs)
+
     def parse(self, s):
         return [TaskInstanceParameter().parse(x) for x in list(json.loads(s))]
 
     def serialize(self, x):
         return json.dumps(x, cls=_TaskInstanceEncoder)
+
+    def normalize(self, values):
+        for v in values:
+            if not isinstance(v, self._bound):
+                raise ValueError(f'{v} is not an instance of {self._bound}')
+        return values
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
