@@ -87,7 +87,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
             subtask = gokart.ListTaskInstanceParameter(bound=_DummySubTask)
 
         task = _DummyPipelineC(subtask=[_DummyCorrectSubClassTask()])
-        self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(),))
+        self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(), ))
 
     def test_list_params_with_invalid_subclass_bound(self):
 
