@@ -153,7 +153,7 @@ To output logs of each tasks, you can pass `~log_level` parameter to `~gokart.bu
 
 .. code:: python
 
-    gokart.build(SampleTask(param='hello'), return_value=False, log_level=logginge.DEBUG)
+    gokart.build(SampleTask(param='hello'), return_value=False, log_level=logging.DEBUG)
 
 
 This feature is very useful for running `~gokart` on jupyter notebook.
