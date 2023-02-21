@@ -12,8 +12,7 @@ logger = getLogger(__name__)
 
 class TaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, *args, **kwargs):
-        bound = kwargs.pop('bound', gokart.TaskOnKart)
+    def __init__(self, bound=gokart.TaskOnKart, *args, **kwargs):
         if isinstance(bound, type):
             self._bound = bound
         else:
@@ -63,8 +62,7 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 class ListTaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, *args, **kwargs):
-        bound = kwargs.pop('bound', gokart.TaskOnKart)
+    def __init__(self, bound=gokart.TaskOnKart, *args, **kwargs):
         if isinstance(bound, type):
             self._bound = bound
         else:
