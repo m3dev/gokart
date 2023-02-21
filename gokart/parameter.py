@@ -12,11 +12,12 @@ logger = getLogger(__name__)
 
 class TaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, bound=gokart.TaskOnKart, *args, **kwargs):
-        if isinstance(bound, type):
-            self._bound = bound
+    def __init__(self, *args, **kwargs):
+        expected_type = kwargs.pop('expected_type', gokart.TaskOnKart)
+        if isinstance(expected_type, type):
+            self.expected_type = expected_type
         else:
-            raise ValueError(f'bound must be a type, not {type(bound)}')
+            raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -45,10 +46,11 @@ class TaskInstanceParameter(luigi.Parameter):
         values = dict(type=x.get_task_family(), params=params)
         return luigi.DictParameter().serialize(values)
 
-    def normalize(self, v):
-        if not isinstance(v, self._bound):
-            raise ValueError(f'{v} is not an instance of {self._bound}')
-        return v
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != TaskInstanceParameter:
+            return
+        if not isinstance(param_value, self.expected_type):
+            raise TypeError(f'{param_value} is not an instance of {self.expected_type}')
 
 
 class _TaskInstanceEncoder(json.JSONEncoder):
@@ -62,11 +64,12 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 class ListTaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, bound=gokart.TaskOnKart, *args, **kwargs):
-        if isinstance(bound, type):
-            self._bound = bound
+    def __init__(self, *args, **kwargs):
+        expected_type = kwargs.pop('expected_type', gokart.TaskOnKart)
+        if isinstance(expected_type, type):
+            self.expected_type = expected_type
         else:
-            raise ValueError(f'bound must be a type, not {type(bound)}')
+            raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
         super().__init__(*args, **kwargs)
 
     def parse(self, s):
@@ -75,11 +78,12 @@ class ListTaskInstanceParameter(luigi.Parameter):
     def serialize(self, x):
         return json.dumps(x, cls=_TaskInstanceEncoder)
 
-    def normalize(self, values):
-        for v in values:
-            if not isinstance(v, self._bound):
-                raise ValueError(f'{v} is not an instance of {self._bound}')
-        return values
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != ListTaskInstanceParameter:
+            return
+        for v in param_value:
+            if not isinstance(v, self.expected_type):
+                raise TypeError(f'{v} is not an instance of {self.expected_type}')
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
