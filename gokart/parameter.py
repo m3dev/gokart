@@ -12,11 +12,12 @@ logger = getLogger(__name__)
 
 class TaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, *args, **kwargs):
-        expected_type = kwargs.pop('expected_type', gokart.TaskOnKart)
-        if isinstance(expected_type, type):
+    def __init__(self, expected_type=None, *args, **kwargs):
+        if expected_type is None:
+            self.expected_type = gokart.TaskOnKart
+        elif isinstance(expected_type, type):
             self.expected_type = expected_type
-        else:
+        elif expected_type is not None:
             raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
         super().__init__(*args, **kwargs)
 
@@ -64,11 +65,12 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 class ListTaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, *args, **kwargs):
-        expected_type = kwargs.pop('expected_type', gokart.TaskOnKart)
-        if isinstance(expected_type, type):
+    def __init__(self, expected_type=None, *args, **kwargs):
+        if expected_type is None:
+            self.expected_type = gokart.TaskOnKart
+        elif isinstance(expected_type, type):
             self.expected_type = expected_type
-        else:
+        elif expected_type is not None:
             raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
         super().__init__(*args, **kwargs)
 
