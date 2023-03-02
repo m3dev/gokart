@@ -63,13 +63,13 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 class ListTaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, expected_element_type=None, *args, **kwargs):
-        if expected_element_type is None:
+    def __init__(self, expected_elements_type=None, *args, **kwargs):
+        if expected_elements_type is None:
             self.expected_element_type = gokart.TaskOnKart
-        elif isinstance(expected_element_type, type):
-            self.expected_element_type = expected_element_type
+        elif isinstance(expected_elements_type, type):
+            self.expected_element_type = expected_elements_type
         else:
-            raise TypeError(f'expected_element_type must be a type, not {type(expected_element_type)}')
+            raise TypeError(f'expected_elements_type must be a type, not {type(expected_elements_type)}')
         super().__init__(*args, **kwargs)
 
     def parse(self, s):
@@ -80,8 +80,8 @@ class ListTaskInstanceParameter(luigi.Parameter):
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
         for v in param_value:
-            if not isinstance(v, self.expected_element_type):
-                raise TypeError(f'{v} is not an instance of {self.expected_element_type}')
+            if not isinstance(v, self.expected_elements_type):
+                raise TypeError(f'{v} is not an instance of {self.expected_elements_type}')
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
