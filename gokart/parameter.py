@@ -65,9 +65,9 @@ class ListTaskInstanceParameter(luigi.Parameter):
 
     def __init__(self, expected_elements_type=None, *args, **kwargs):
         if expected_elements_type is None:
-            self.expected_element_type = gokart.TaskOnKart
+            self.expected_elements_type = gokart.TaskOnKart
         elif isinstance(expected_elements_type, type):
-            self.expected_element_type = expected_elements_type
+            self.expected_elements_type = expected_elements_type
         else:
             raise TypeError(f'expected_elements_type must be a type, not {type(expected_elements_type)}')
         super().__init__(*args, **kwargs)
