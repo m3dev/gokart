@@ -5,10 +5,21 @@ from logging import getLogger
 import luigi
 from luigi import task_register
 
+import gokart
+
 logger = getLogger(__name__)
 
 
 class TaskInstanceParameter(luigi.Parameter):
+
+    def __init__(self, expected_type=None, *args, **kwargs):
+        if expected_type is None:
+            self.expected_type = gokart.TaskOnKart
+        elif isinstance(expected_type, type):
+            self.expected_type = expected_type
+        else:
+            raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
+        super().__init__(*args, **kwargs)
 
     @staticmethod
     def _recursive(param_dict):
@@ -36,6 +47,10 @@ class TaskInstanceParameter(luigi.Parameter):
         values = dict(type=x.get_task_family(), params=params)
         return luigi.DictParameter().serialize(values)
 
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if not isinstance(param_value, self.expected_type):
+            raise TypeError(f'{param_value} is not an instance of {self.expected_type}')
+
 
 class _TaskInstanceEncoder(json.JSONEncoder):
 
@@ -48,11 +63,25 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 class ListTaskInstanceParameter(luigi.Parameter):
 
+    def __init__(self, expected_elements_type=None, *args, **kwargs):
+        if expected_elements_type is None:
+            self.expected_elements_type = gokart.TaskOnKart
+        elif isinstance(expected_elements_type, type):
+            self.expected_elements_type = expected_elements_type
+        else:
+            raise TypeError(f'expected_elements_type must be a type, not {type(expected_elements_type)}')
+        super().__init__(*args, **kwargs)
+
     def parse(self, s):
         return [TaskInstanceParameter().parse(x) for x in list(json.loads(s))]
 
     def serialize(self, x):
         return json.dumps(x, cls=_TaskInstanceEncoder)
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        for v in param_value:
+            if not isinstance(v, self.expected_elements_type):
+                raise TypeError(f'{v} is not an instance of {self.expected_elements_type}')
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
