@@ -48,8 +48,6 @@ class TaskInstanceParameter(luigi.Parameter):
         return luigi.DictParameter().serialize(values)
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
-        if self.__class__ != TaskInstanceParameter:
-            return
         if not isinstance(param_value, self.expected_type):
             raise TypeError(f'{param_value} is not an instance of {self.expected_type}')
 
@@ -65,13 +63,13 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 class ListTaskInstanceParameter(luigi.Parameter):
 
-    def __init__(self, expected_type=None, *args, **kwargs):
-        if expected_type is None:
-            self.expected_type = gokart.TaskOnKart
-        elif isinstance(expected_type, type):
-            self.expected_type = expected_type
-        elif expected_type is not None:
-            raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
+    def __init__(self, expected_element_type=None, *args, **kwargs):
+        if expected_element_type is None:
+            self.expected_element_type = gokart.TaskOnKart
+        elif isinstance(expected_element_type, type):
+            self.expected_element_type = expected_element_type
+        elif expected_element_type is not None:
+            raise TypeError(f'expected_element_type must be a type, not {type(expected_element_type)}')
         super().__init__(*args, **kwargs)
 
     def parse(self, s):
@@ -81,11 +79,9 @@ class ListTaskInstanceParameter(luigi.Parameter):
         return json.dumps(x, cls=_TaskInstanceEncoder)
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
-        if self.__class__ != ListTaskInstanceParameter:
-            return
         for v in param_value:
-            if not isinstance(v, self.expected_type):
-                raise TypeError(f'{v} is not an instance of {self.expected_type}')
+            if not isinstance(v, self.expected_element_type):
+                raise TypeError(f'{v} is not an instance of {self.expected_element_type}')
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
