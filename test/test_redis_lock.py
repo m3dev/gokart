@@ -28,11 +28,11 @@ class TestRedisClient(unittest.TestCase):
             self.assertEqual(redis_client_0_0.get_redis_client(), redis_client_0_1.get_redis_client())
 
 
-def _sample_func_with_error(a: int, b: str = None):
+def _sample_func_with_error(a: int, b: str):
     raise Exception()
 
 
-def _sample_long_func(a: int, b: str = None):
+def _sample_long_func(a: int, b: str):
     time.sleep(2.7)
     return dict(a=a, b=b)
 

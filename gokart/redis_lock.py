@@ -1,7 +1,7 @@
 import functools
 import os
 from logging import getLogger
-from typing import Callable, NamedTuple
+from typing import Callable, NamedTuple, Optional
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -10,9 +10,9 @@ logger = getLogger(__name__)
 
 
 class RedisParams(NamedTuple):
-    redis_host: str
-    redis_port: str
-    redis_timeout: int
+    redis_host: Optional[str]
+    redis_port: Optional[int]
+    redis_timeout: Optional[int]
     redis_key: str
     should_redis_lock: bool
     redis_fail_on_collision: bool
@@ -34,8 +34,10 @@ class RedisClient:
             cls._instances[cls][key] = super(RedisClient, cls).__new__(cls)
         return cls._instances[cls][key]
 
-    def __init__(self, host: str, port: str) -> None:
+    def __init__(self, host: Optional[str], port: Optional[int]) -> None:
         if not hasattr(self, '_redis_client'):
+            host = host or 'localhost'
+            port = port or 6379
             self._redis_client = redis.Redis(host=host, port=port)
 
     def get_redis_client(self):
@@ -46,7 +48,7 @@ def _extend_lock(redis_lock: redis.lock.Lock, redis_timeout: int):
     redis_lock.extend(additional_time=redis_timeout, replace_ttl=True)
 
 
-def _set_redis_lock(redis_params: RedisParams) -> RedisClient:
+def _set_redis_lock(redis_params: RedisParams) -> redis.lock.Lock:
     redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
     blocking = not redis_params.redis_fail_on_collision
     redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, thread_local=False)
@@ -156,16 +158,16 @@ def wrap_with_remove_lock(func, redis_params: RedisParams):
     return _wrap_with_lock(func=func, redis_params=redis_params)
 
 
-def make_redis_key(file_path: str, unique_id: str):
+def make_redis_key(file_path: str, unique_id: Optional[str]):
     basename_without_ext = os.path.splitext(os.path.basename(file_path))[0]
     return f'{basename_without_ext}_{unique_id}'
 
 
 def make_redis_params(file_path: str,
-                      unique_id: str,
-                      redis_host: str = None,
-                      redis_port: str = None,
-                      redis_timeout: int = None,
+                      unique_id: Optional[str],
+                      redis_host: Optional[str] = None,
+                      redis_port: Optional[int] = None,
+                      redis_timeout: Optional[int] = None,
                       redis_fail_on_collision: bool = False,
                       lock_extend_seconds: int = 10):
     redis_key = make_redis_key(file_path, unique_id)

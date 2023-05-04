@@ -2,6 +2,7 @@ import os
 import pathlib
 import unittest
 from datetime import datetime
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import luigi
@@ -366,7 +367,7 @@ class TaskTest(unittest.TestCase):
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: MagicMock):
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
-        kwargs = dict()
+        kwargs: Dict[str, Any] = dict()
         _DummyTask._add_configuration(kwargs, '_DummyTask')
         self.assertEqual(3, kwargs['param'])
         self.assertEqual(['c', 'd'], list(kwargs['list_param']))

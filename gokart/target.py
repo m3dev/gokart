@@ -220,7 +220,7 @@ def _get_last_modification_time(path: str) -> datetime:
 def make_target(file_path: str,
                 unique_id: Optional[str] = None,
                 processor: Optional[FileProcessor] = None,
-                redis_params: RedisParams = None,
+                redis_params: Optional[RedisParams] = None,
                 store_index_in_feather: bool = True) -> TargetOnKart:
     _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
@@ -234,7 +234,7 @@ def make_model_target(file_path: str,
                       save_function,
                       load_function,
                       unique_id: Optional[str] = None,
-                      redis_params: RedisParams = None) -> TargetOnKart:
+                      redis_params: Optional[RedisParams] = None) -> TargetOnKart:
     _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())

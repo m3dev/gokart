@@ -158,7 +158,7 @@ class TaskOnKart(luigi.Task):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: str = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+    def make_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
         formatted_relative_file_path = relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace(".", "/"),
                                                                                                               f"{type(self).__name__}.pkl")
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
@@ -176,7 +176,7 @@ class TaskOnKart(luigi.Task):
                                          redis_params=redis_params,
                                          store_index_in_feather=self.store_index_in_feather)
 
-    def make_large_data_frame_target(self, relative_file_path: str = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace(".", "/"),
                                                                                                               f"{type(self).__name__}.zip")
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
@@ -391,7 +391,7 @@ class TaskOnKart(luigi.Task):
                         m = import_module(x)
                     else:
                         m = getattr(m, x)
-                m(random_seed)
+                m(random_seed)  # type: ignore
                 success_methods.append(method_name)
             except ModuleNotFoundError:
                 pass

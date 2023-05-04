@@ -42,6 +42,8 @@ yapf = ">=0.32"
 toml = "*"
 lupa = "*"
 fakeredis = "*"
+mypy = "*"
+types-redis = "*"
 
 [tool.flake8]
 # B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.
@@ -63,6 +65,9 @@ ignore_patterns = [
 
 [tool.isort]
 line_length = 160
+
+[tool.mypy]
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry"]
