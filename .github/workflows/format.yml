@@ -24,4 +24,4 @@ jobs:
         poetry install
     - name: Run yapf, isort, and flake8
       run: |
-        poetry run tox -e yapf,isort,flake8
+        poetry run tox -e yapf,isort,flake8,mypy

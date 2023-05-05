@@ -26,7 +26,7 @@ class _TestStatus:
         self.name = type(task).__name__
         self.task_id = task.make_unique_id()
         self.status = 'OK'
-        self.message = None
+        self.message: Optional[Exception] = None
 
     def format(self) -> str:
         s = f'status={self.status}; namespace={self.namespace}; name={self.name}; id={self.task_id};'
