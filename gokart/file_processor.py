@@ -7,10 +7,10 @@ from logging import getLogger
 import luigi
 import luigi.contrib.s3
 import luigi.format
-from luigi.format import TextFormat
 import numpy as np
 import pandas as pd
 import pandas.errors
+from luigi.format import TextFormat
 
 from gokart.object_storage import ObjectStorage
 
