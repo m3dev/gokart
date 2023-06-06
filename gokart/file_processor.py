@@ -7,6 +7,7 @@ from logging import getLogger
 import luigi
 import luigi.contrib.s3
 import luigi.format
+from luigi.format import TextFormat
 import numpy as np
 import pandas as pd
 import pandas.errors
@@ -120,23 +121,24 @@ class TextFileProcessor(FileProcessor):
 
 class CsvFileProcessor(FileProcessor):
 
-    def __init__(self, sep=','):
+    def __init__(self, sep=',', encoding: str = 'utf-8'):
         self._sep = sep
+        self._encoding = encoding
         super(CsvFileProcessor, self).__init__()
 
     def format(self):
-        return None
+        return TextFormat(encoding=self._encoding)
 
     def load(self, file):
         try:
-            return pd.read_csv(file, sep=self._sep)
+            return pd.read_csv(file, sep=self._sep, encoding=self._encoding)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
     def dump(self, obj, file):
         assert isinstance(obj, (pd.DataFrame, pd.Series)), \
             f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
-        obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True)
+        obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True, encoding=self._encoding)
 
 
 class GzipFileProcessor(FileProcessor):
