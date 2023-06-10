@@ -264,7 +264,7 @@ You can dump csv file by implementing `Task.output()` method as follows:
 
 By default, csv file is dumped with `utf-8` encoding.
 
-If you want to dump csv file with other encoding, you can use `encoding` parameter as follows:
+If you want to dump csv file with other encodings, you can use `encoding` parameter as follows:
 
 .. code:: python
 
