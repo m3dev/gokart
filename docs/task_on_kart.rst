@@ -255,7 +255,7 @@ Note that when set to False, task_info functions (e.g. gokart.tree.task_info.mak
 Dump csv with encoding
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-You can dump csv file by impementing `Task.output()` method as follows: 
+You can dump csv file by implementing `Task.output()` method as follows: 
 
 .. code:: python
 
