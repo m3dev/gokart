@@ -1,8 +1,8 @@
 import tempfile
 import unittest
-from luigi import LocalTarget
 
 import pandas as pd
+from luigi import LocalTarget
 
 from gokart.file_processor import CsvFileProcessor
 
