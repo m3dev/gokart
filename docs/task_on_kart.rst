@@ -250,3 +250,25 @@ TaskOnKart.should_dump_supplementary_log_files
 Whether to dump supplementary files (task_log, random_seed, task_params, processing_time, module_versions) or not. Default is True.
 
 Note that when set to False, task_info functions (e.g. gokart.tree.task_info.make_task_info_as_tree_str()) cannot be used.
+
+
+Dump csv with encoding
+~~~~~~~~~~~~~~~~~~~~~~~
+
+You can dump csv file by implementing `Task.output()` method as follows: 
+
+.. code:: python
+
+    def output(self):
+        return self.make_target('file_name.csv')
+
+By default, csv file is dumped with `utf-8` encoding.
+
+If you want to dump csv file with other encodings, you can use `encoding` parameter as follows:
+
+.. code:: python
+
+    def output(self):
+        return self.make_target('file_name.csv', encoding='cp932')
+        # This will dump csv as 'cp932' which is used in Windows.
+        
