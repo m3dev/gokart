@@ -16,7 +16,7 @@ style = "pep440"
 pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.8,<3.13"
 luigi = "*"
 boto3 = "*"
 slack-sdk = "^3"
