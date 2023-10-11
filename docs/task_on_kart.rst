@@ -270,7 +270,7 @@ If you want to dump csv file with other encodings, you can use `encoding` parame
 
     from gokart.file_processor import CsvFileProcessor
 
-        def output(self):
-            return self.make_target('file_name.csv', processor=CsvFileProcessor(encoding='cp932'))
-            # This will dump csv as 'cp932' which is used in Windows.
+    def output(self):
+        return self.make_target('file_name.csv', processor=CsvFileProcessor(encoding='cp932'))
+        # This will dump csv as 'cp932' which is used in Windows.
             
