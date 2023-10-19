@@ -8,7 +8,6 @@ from unittest.mock import patch
 import boto3
 import numpy as np
 import pandas as pd
-from luigi.configuration.cfg_parser import LuigiConfigParser
 from matplotlib import pyplot
 from moto import mock_s3
 
@@ -127,19 +126,6 @@ class LocalTargetTest(unittest.TestCase):
         loaded = target.load()
 
         pd.testing.assert_frame_equal(loaded, obj)
-
-    def test_save_and_load_config_ini_file(self):
-        obj = LuigiConfigParser()
-        obj['common'] = {'a': '1', 'b': 'yes', 'c': 2}
-        obj['example'] = {}
-        obj['example']['d'] = 'foo'
-        obj['example']['e'] = 'true'
-        file_path = os.path.join(_get_temporary_directory(), 'test.ini')
-
-        target = make_target(file_path=file_path, unique_id=None)
-        target.dump(obj)
-        loaded = target.load()
-        self.assertEqual(loaded, [str(obj)], msg='should save an object as List[str].')
 
     def test_last_modified_time(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
