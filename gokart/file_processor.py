@@ -1,4 +1,3 @@
-import configparser
 import os
 import pickle
 import xml.etree.ElementTree as ET
@@ -12,6 +11,7 @@ import numpy as np
 import pandas as pd
 import pandas.errors
 from luigi.format import TextFormat
+from luigi.configuration.cfg_parser import LuigiConfigParser
 
 from gokart.object_storage import ObjectStorage
 
@@ -267,19 +267,19 @@ class FeatherFileProcessor(FileProcessor):
         dump_obj.to_feather(file.name)
 
 
-class IniFileProcessor(FileProcessor):
+class ConfigFileProcessor(FileProcessor):
 
     def format(self):
         return None
 
     def load(self, file):
-        config = configparser.ConfigParser()
+        config = LuigiConfigParser()
         config.read_file(file)
         return config
 
     def dump(self, obj, file):
-        assert isinstance(obj, configparser.ConfigParser), \
-            f'requires configparser.ConfigParser, but {type(obj)} is passed.'
+        assert isinstance(obj, LuigiConfigParser), \
+            f'requires LuigiConfigParser, but {type(obj)} is passed.'
         obj.write(file)
 
 
@@ -297,7 +297,7 @@ def make_file_processor(file_path: str, store_index_in_feather: bool) -> FilePro
         '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather),
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
-        '.ini': IniFileProcessor(),
+        '.ini': ConfigFileProcessor(),
     }
 
     extension = os.path.splitext(file_path)[1]
