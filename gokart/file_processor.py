@@ -278,7 +278,8 @@ class IniFileProcessor(FileProcessor):
         return config
 
     def dump(self, obj, file):
-        assert isinstance(obj, configparser.ConfigParser)
+        assert isinstance(obj, configparser.ConfigParser), \
+            f'requires configparser.ConfigParser, but {type(obj)} is passed.'
         obj.write(file)
 
 
