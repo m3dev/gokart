@@ -10,7 +10,6 @@ import luigi.format
 import numpy as np
 import pandas as pd
 import pandas.errors
-from luigi.configuration.cfg_parser import LuigiConfigParser
 from luigi.format import TextFormat
 
 from gokart.object_storage import ObjectStorage
