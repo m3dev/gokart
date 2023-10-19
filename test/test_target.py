@@ -130,7 +130,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_config_file(self):
         obj = LuigiConfigParser()
-        obj['DEFAULT'] = {'a': '1', 'b': 'yes', 'c': 2}
+        obj['common'] = {'a': '1', 'b': 'yes', 'c': 2}
         obj['example'] = {}
         obj['example']['d'] = 'foo'
         obj['example']['e'] = 'true'
