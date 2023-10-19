@@ -120,10 +120,10 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_ini(self):
         obj = configparser.ConfigParser()
-        obj['DEFAULT'] = {'a': '1', 'b': 'yes', 'c': '2'}
+        obj['DEFAULT'] = {'a': '1', 'b': 'yes', 'c': 2}
         obj['example'] = {}
         obj['example']['d'] = 'foo'
-        obj['example']['e'] = 'bar'
+        obj['example']['e'] = True
         file_path = os.path.join(_get_temporary_directory(), 'test.ini')
 
         target = make_target(file_path=file_path, unique_id=None)
