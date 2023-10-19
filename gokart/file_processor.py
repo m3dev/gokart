@@ -10,8 +10,8 @@ import luigi.format
 import numpy as np
 import pandas as pd
 import pandas.errors
-from luigi.format import TextFormat
 from luigi.configuration.cfg_parser import LuigiConfigParser
+from luigi.format import TextFormat
 
 from gokart.object_storage import ObjectStorage
 
@@ -298,6 +298,8 @@ def make_file_processor(file_path: str, store_index_in_feather: bool) -> FilePro
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
         '.ini': ConfigFileProcessor(),
+        '.cfg': ConfigFileProcessor(),
+        '.conf': ConfigFileProcessor(),
     }
 
     extension = os.path.splitext(file_path)[1]

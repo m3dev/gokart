@@ -1,4 +1,3 @@
-import configparser
 import io
 import os
 import shutil
@@ -9,6 +8,7 @@ from unittest.mock import patch
 import boto3
 import numpy as np
 import pandas as pd
+from luigi.configuration.cfg_parser import LuigiConfigParser
 from matplotlib import pyplot
 from moto import mock_s3
 
@@ -128,19 +128,30 @@ class LocalTargetTest(unittest.TestCase):
 
         pd.testing.assert_frame_equal(loaded, obj)
 
-    def test_save_and_load_ini(self):
-        obj = configparser.ConfigParser()
+    def test_save_and_load_config_file(self):
+        obj = LuigiConfigParser()
         obj['DEFAULT'] = {'a': '1', 'b': 'yes', 'c': 2}
         obj['example'] = {}
         obj['example']['d'] = 'foo'
         obj['example']['e'] = 'true'
-        file_path = os.path.join(_get_temporary_directory(), 'test.ini')
+        file_path_ini = os.path.join(_get_temporary_directory(), 'test.ini')
+        file_path_cfg = os.path.join(_get_temporary_directory(), 'test.cfg')
+        file_path_conf = os.path.join(_get_temporary_directory(), 'test.conf')
 
-        target = make_target(file_path=file_path, unique_id=None)
-        target.dump(obj)
-        loaded = target.load()
+        target_ini = make_target(file_path=file_path_ini, unique_id=None)
+        target_ini.dump(obj)
+        loaded_ini = target_ini.load()
+        self.assertEqual(loaded_ini, obj)
 
-        self.assertEqual(loaded, obj)
+        target_cfg = make_target(file_path=file_path_cfg, unique_id=None)
+        target_cfg.dump(obj)
+        loaded_cfg = target_cfg.load()
+        self.assertEqual(loaded_cfg, obj)
+
+        target_conf = make_target(file_path=file_path_conf, unique_id=None)
+        target_conf.dump(obj)
+        loaded_ini = target_conf.load()
+        self.assertEqual(loaded_ini, obj)
 
     def test_last_modified_time(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
