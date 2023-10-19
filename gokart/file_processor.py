@@ -267,22 +267,6 @@ class FeatherFileProcessor(FileProcessor):
         dump_obj.to_feather(file.name)
 
 
-class ConfigFileProcessor(FileProcessor):
-
-    def format(self):
-        return None
-
-    def load(self, file):
-        config = LuigiConfigParser()
-        config.read_file(file)
-        return config
-
-    def dump(self, obj, file):
-        assert isinstance(obj, LuigiConfigParser), \
-            f'requires LuigiConfigParser, but {type(obj)} is passed.'
-        obj.write(file)
-
-
 def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
@@ -297,9 +281,7 @@ def make_file_processor(file_path: str, store_index_in_feather: bool) -> FilePro
         '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather),
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
-        '.ini': ConfigFileProcessor(),
-        '.cfg': ConfigFileProcessor(),
-        '.conf': ConfigFileProcessor(),
+        '.ini': TextFileProcessor(),
     }
 
     extension = os.path.splitext(file_path)[1]
