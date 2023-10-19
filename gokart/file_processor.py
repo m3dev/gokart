@@ -1,3 +1,4 @@
+import configparser
 import os
 import pickle
 import xml.etree.ElementTree as ET
@@ -266,6 +267,21 @@ class FeatherFileProcessor(FileProcessor):
         dump_obj.to_feather(file.name)
 
 
+class IniFileProcessor(FileProcessor):
+
+    def format(self):
+        return None
+
+    def load(self, file):
+        config = configparser.ConfigParser()
+        config.read_file(file)
+        return config
+
+    def dump(self, obj, file):
+        assert isinstance(obj, configparser.ConfigParser)
+        obj.write(file)
+
+
 def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
@@ -280,6 +296,7 @@ def make_file_processor(file_path: str, store_index_in_feather: bool) -> FilePro
         '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather),
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
+        '.ini': IniFileProcessor(),
     }
 
     extension = os.path.splitext(file_path)[1]

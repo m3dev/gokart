@@ -1,3 +1,4 @@
+import configparser
 import io
 import os
 import shutil
@@ -116,6 +117,20 @@ class LocalTargetTest(unittest.TestCase):
         loaded = target.load()
 
         pd.testing.assert_frame_equal(loaded, obj)
+
+    def test_save_and_load_ini(self):
+        obj = configparser.ConfigParser()
+        obj['DEFAULT'] = {'a': '1', 'b': 'yes', 'c': '2'}
+        obj['example'] = {}
+        obj['example']['d'] = 'foo'
+        obj['example']['e'] = 'bar'
+        file_path = os.path.join(_get_temporary_directory(), 'test.ini')
+
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        loaded = target.load()
+
+        self.assertEqual(loaded, obj)
 
     def test_save_and_load_feather_without_store_index_in_feather(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]), index=pd.Index([33, 44], name='object_index')).reset_index()
