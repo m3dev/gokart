@@ -90,6 +90,7 @@ It is also possible to specify a file format other than pkl. The supported file 
 - .feather
 - .png
 - .jpg
+- .ini
 
 
 If dump something other than the above, can use :func:`~gokart.TaskOnKart.make_model_target`.
