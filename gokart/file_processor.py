@@ -269,6 +269,7 @@ class FeatherFileProcessor(FileProcessor):
 def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
     extension2processor = {
         '.txt': TextFileProcessor(),
+        '.ini': TextFileProcessor(),
         '.csv': CsvFileProcessor(sep=','),
         '.tsv': CsvFileProcessor(sep='\t'),
         '.pkl': PickleFileProcessor(),
