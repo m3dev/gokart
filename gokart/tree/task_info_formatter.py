@@ -72,7 +72,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
 
     params = task.get_info(only_significant=True)
     processing_time = task.get_processing_time()
-    if type(processing_time) == float:
+    if isinstance(processing_time, float):
         processing_time = str(processing_time) + 's'
     is_complete = ('COMPLETE' if is_task_complete else 'PENDING')
     task_log = dict(task.get_task_log())
