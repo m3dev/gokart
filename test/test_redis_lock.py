@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import fakeredis
 
-from gokart.redis_lock import RedisClient, RedisParams, make_redis_key, make_redis_params, wrap_with_dump_lock, wrap_with_remove_lock, wrap_with_run_lock
+from gokart.redis_lock import (RedisClient, RedisParams, make_redis_key, make_redis_params, wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock,
+                               wrap_with_run_lock)
 
 
 class TestRedisClient(unittest.TestCase):
@@ -253,7 +254,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
             redis_port=None,
         )
         mock_func = MagicMock()
-        resulted = wrap_with_run_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
+        resulted = wrap_with_load_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
 
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
@@ -273,7 +274,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
         with patch('gokart.redis_lock.redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             mock_func = MagicMock()
-            resulted = wrap_with_run_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
+            resulted = wrap_with_load_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
@@ -294,7 +295,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
 
         with patch('gokart.redis_lock.redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
-            resulted = wrap_with_run_lock(func=_sample_long_func, redis_params=redis_params)(123, b='abc')
+            resulted = wrap_with_load_lock(func=_sample_long_func, redis_params=redis_params)(123, b='abc')
             expected = dict(a=123, b='abc')
             self.assertEqual(resulted, expected)
 
@@ -311,7 +312,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
         with patch('gokart.redis_lock.redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=redis_params.redis_host, port=redis_params.redis_port)
             mock_func = MagicMock()
-            resulted = wrap_with_run_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
+            resulted = wrap_with_load_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
@@ -336,7 +337,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
         with patch('gokart.redis_lock.redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=redis_params.redis_host, port=redis_params.redis_port)
             try:
-                wrap_with_run_lock(func=_sample_func_with_error, redis_params=redis_params)(123, b='abc')
+                wrap_with_load_lock(func=_sample_func_with_error, redis_params=redis_params)(123, b='abc')
             except Exception:
                 fake_redis = fakeredis.FakeStrictRedis(server=server)
                 with self.assertRaises(KeyError):

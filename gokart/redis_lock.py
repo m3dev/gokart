@@ -94,7 +94,7 @@ def _wrap_with_lock(func, redis_params: RedisParams):
     return wrapper
 
 
-def wrap_with_run_lock(func, redis_params: RedisParams):
+def wrap_with_run_lock(func: Callable, redis_params: RedisParams):
     """Redis lock wrapper function for RunWithLock.
     When a fucntion is wrapped by RunWithLock, the wrapped function will be simply wrapped with redis lock.
     https://github.com/m3dev/gokart/issues/265

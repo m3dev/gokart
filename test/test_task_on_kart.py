@@ -522,7 +522,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_called_once()
@@ -533,7 +533,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             self.assertEqual(mock_obj.call_count, 2)
@@ -544,7 +544,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_not_called()
