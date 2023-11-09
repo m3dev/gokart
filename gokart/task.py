@@ -77,8 +77,9 @@ class TaskOnKart(luigi.Task):
         description='Whether to dump supplementary files (task_log, random_seed, task_params, processing_time, module_versions) or not. \
          Note that when set to False, task_info functions (e.g. gokart.tree.task_info.make_task_info_as_tree_str()) cannot be used.',
         significant=False)
-    complete_check_at_run: bool = ExplicitBoolParameter(
-        default=False, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False)
+    complete_check_at_run: bool = ExplicitBoolParameter(default=False,
+                                                        description='Check if output file exists at run. If exists, run() will be skipped.',
+                                                        significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')

@@ -588,6 +588,7 @@ class _DummyTaskWithCompleted(gokart.TaskOnKart):
 
 
 class TestCompleteCheckAtRun(unittest.TestCase):
+
     def test_run_when_complete_check_at_run_is_false_and_task_is_not_completed(self):
         task = _DummyTaskWithNonCompleted(complete_check_at_run=False)
         task.dump = MagicMock()
