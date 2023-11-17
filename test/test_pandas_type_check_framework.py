@@ -1,3 +1,4 @@
+import logging
 import unittest
 from logging import getLogger
 from typing import Any, Dict
@@ -81,11 +82,11 @@ class TestPandasTypeCheckFramework(unittest.TestCase):
 
     def test_fail(self):
         with self.assertRaises(GokartBuildError):
-            gokart.build(_DummyFailTask())
+            gokart.build(_DummyFailTask(), log_level=logging.CRITICAL)
 
     def test_fail_with_None(self):
         with self.assertRaises(GokartBuildError):
-            gokart.build(_DummyFailWithNoneTask())
+            gokart.build(_DummyFailWithNoneTask(), log_level=logging.CRITICAL)
 
     def test_success(self):
         gokart.build(_DummySuccessTask())
