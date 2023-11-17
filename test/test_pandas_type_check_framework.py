@@ -64,10 +64,13 @@ class TestPandasTypeCheckFramework(unittest.TestCase):
         luigi.setup_logging.DaemonLogging._configured = False
         luigi.setup_logging.InterfaceLogging._configured = False
         MockFileSystem().clear()
+        # same way as luigi https://github.com/spotify/luigi/blob/fe7ecf4acf7cf4c084bd0f32162c8e0721567630/test/helpers.py#L175
+        self._stashed_reg = luigi.task_register.Register._get_reg()
 
     def tearDown(self) -> None:
         luigi.setup_logging.DaemonLogging._configured = False
         luigi.setup_logging.InterfaceLogging._configured = False
+        luigi.task_register.Register._set_reg(self._stashed_reg)
 
     @patch('sys.argv', new=['main', 'test_pandas_type_check_framework._DummyFailTask', '--log-level=CRITICAL', '--local-scheduler', '--no-lock'])
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
@@ -77,19 +80,13 @@ class TestPandasTypeCheckFramework(unittest.TestCase):
         self.assertNotEqual(exit_code.exception.code, 0)  # raise Error
 
     def test_fail(self):
-        original_reg = luigi.task_register.Register._reg
         with self.assertRaises(GokartBuildError):
             gokart.build(_DummyFailTask())
-        luigi.task_register.Register._reg = original_reg
 
     def test_fail_with_None(self):
-        original_reg = luigi.task_register.Register._reg
         with self.assertRaises(GokartBuildError):
             gokart.build(_DummyFailWithNoneTask())
-        luigi.task_register.Register._reg = original_reg
 
     def test_success(self):
-        original_reg = luigi.task_register.Register._reg
         gokart.build(_DummySuccessTask())
         # no error
-        luigi.task_register.Register._reg = original_reg
