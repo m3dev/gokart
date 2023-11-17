@@ -2,13 +2,13 @@ import unittest
 from logging import getLogger
 from typing import Any, Dict
 from unittest.mock import patch
-from gokart.build import GokartBuildError
 
 import luigi
 import pandas as pd
 from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
+from gokart.build import GokartBuildError
 from gokart.pandas_type_config import PandasTypeConfig
 
 logger = getLogger(__name__)

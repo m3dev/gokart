@@ -3,8 +3,8 @@ from logging import getLogger
 from typing import Any, Optional
 
 import luigi
-import gokart
 
+import gokart
 from gokart.task import TaskOnKart
 
 
@@ -42,8 +42,7 @@ def _reset_register(keep={'gokart', 'luigi'}):
     """reset luigi.task_register.Register._reg everytime gokart.build called to avoid TaskClassAmbigiousException"""
     luigi.task_register.Register._reg = [
         x for x in luigi.task_register.Register._reg if ((x.__module__.split('.')[0] in keep)  # keep luigi and gokart
-                                                         or (issubclass(x, gokart.PandasTypeConfig))  # PandasTypeConfig should be kept
-                                                         )
+                                                         or (issubclass(x, gokart.PandasTypeConfig)))  # PandasTypeConfig should be kept
     ]
 
 
