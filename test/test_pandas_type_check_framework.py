@@ -69,8 +69,7 @@ class TestPandasTypeCheckFramework(unittest.TestCase):
         luigi.setup_logging.DaemonLogging._configured = False
         luigi.setup_logging.InterfaceLogging._configured = False
 
-
-    @patch('sys.argv', new=['main', 'test_pandas_type_check_framework._DummyFailTask', '--log-level=CRITICAL', '--local-scheduler',  '--no-lock'])
+    @patch('sys.argv', new=['main', 'test_pandas_type_check_framework._DummyFailTask', '--log-level=CRITICAL', '--local-scheduler', '--no-lock'])
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
     def test_fail_with_gokart_run(self):
         with self.assertRaises(SystemExit) as exit_code:
@@ -78,13 +77,19 @@ class TestPandasTypeCheckFramework(unittest.TestCase):
         self.assertNotEqual(exit_code.exception.code, 0)  # raise Error
 
     def test_fail(self):
+        original_reg = luigi.task_register.Register._reg
         with self.assertRaises(GokartBuildError):
             gokart.build(_DummyFailTask())
+        luigi.task_register.Register._reg = original_reg
 
     def test_fail_with_None(self):
+        original_reg = luigi.task_register.Register._reg
         with self.assertRaises(GokartBuildError):
             gokart.build(_DummyFailWithNoneTask())
+        luigi.task_register.Register._reg = original_reg
 
     def test_success(self):
+        original_reg = luigi.task_register.Register._reg
         gokart.build(_DummySuccessTask())
         # no error
+        luigi.task_register.Register._reg = original_reg
