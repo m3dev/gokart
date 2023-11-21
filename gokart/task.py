@@ -16,6 +16,7 @@ from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.redis_lock import make_redis_params
 from gokart.target import TargetOnKart
+from gokart.task_complete_check import task_complete_check_wrapper
 
 logger = getLogger(__name__)
 
@@ -76,6 +77,9 @@ class TaskOnKart(luigi.Task):
         description='Whether to dump supplementary files (task_log, random_seed, task_params, processing_time, module_versions) or not. \
          Note that when set to False, task_info functions (e.g. gokart.tree.task_info.make_task_info_as_tree_str()) cannot be used.',
         significant=False)
+    complete_check_at_run: bool = ExplicitBoolParameter(default=False,
+                                                        description='Check if output file exists at run. If exists, run() will be skipped.',
+                                                        significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -85,6 +89,9 @@ class TaskOnKart(luigi.Task):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
+
+        if self.complete_check_at_run:
+            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
 
     def output(self):
         return self.make_target()
