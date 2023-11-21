@@ -16,6 +16,9 @@ class RunWithLock:
     def __get__(self, instance, owner_class):
         return partial(self.__call__, instance)
 
+    def __name__(self):
+        return self._func.__name__
+
     @classmethod
     def _run_with_lock(cls, func, output_list: list):
         if len(output_list) == 0:
