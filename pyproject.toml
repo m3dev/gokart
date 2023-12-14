@@ -18,15 +18,14 @@ pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)"
 [tool.poetry.dependencies]
 python = ">=3.8,<3.12"
 luigi = "*"
-boto3 = "*"
+boto3 = {version = "*", optional = true}
 slack-sdk = "^3"
 pandas = "*"
 numpy = "*"
 tqdm = "*"
-google-auth = "*"
 pyarrow = "*"
 uritemplate = "*"
-google-api-python-client = "*"
+google-api-python-client = {version = "*", optional = true}
 APScheduler = "*"
 redis = "*"
 matplotlib = "*"
@@ -34,7 +33,7 @@ matplotlib = "*"
 [tool.poetry.group.dev.dependencies]
 pyproject-flake8 = "5.0.4"
 tox = "*"
-moto = "*"
+moto = {version = "*", optional = true}
 testfixtures = "*"
 coverage = "*"
 isort = "^5.7"
