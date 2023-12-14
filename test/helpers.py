@@ -11,11 +11,6 @@ def safe_mock_s3(func):
     This decorator is used to avoid this error.
     """
 
-    # try:
-    #     from moto import mock_s3
-    #     return mock_s3(func)
-    # except ImportError:
-    #     return func
     def wrapper(*args, **kwargs):
         from moto import mock_s3
         with mock_s3():

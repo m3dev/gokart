@@ -27,4 +27,4 @@ jobs:
         poetry run python -m pip install tox-gh-actions
         poetry install
     - name: Test with tox
-      run: poetry run tox -v
+      run: poetry run tox
