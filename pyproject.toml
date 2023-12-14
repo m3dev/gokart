@@ -54,11 +54,13 @@ s3 = ["boto3"]
 gcs = ["google-api-python-client"]
 
 [tool.pytest.ini_options]
-addopts = "--strict-markers"
+addopts = "--strict-markers -m 'not no_gcs and not no_s3'"
 testpaths = "test"
 markers = [
     "gcs",
     "s3",
+    "no_gcs",
+    "no_s3"
 ]
 
 [tool.flake8]
