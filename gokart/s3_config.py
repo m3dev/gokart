@@ -1,3 +1,9 @@
+try:
+    import botocore
+    from boto3.s3.transfer import TransferConfig
+except ImportError:
+    raise
+
 import os
 
 import luigi

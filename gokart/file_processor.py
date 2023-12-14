@@ -5,7 +5,6 @@ from abc import abstractmethod
 from logging import getLogger
 
 import luigi
-import luigi.contrib.s3
 import luigi.format
 import numpy as np
 import pandas as pd

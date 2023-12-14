@@ -1,3 +1,9 @@
+try:
+    import google.auth
+    import httplib2
+except ImportError:
+    raise
+
 import json
 import os
 
