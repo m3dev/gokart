@@ -44,8 +44,11 @@ fakeredis = "*"
 mypy = "*"
 types-redis = "*"
 
+# for dev, extra is installed by default
+[tool.poetry.group.dev-gcs]
+[tool.poetry.group.dev-gcs.dependencies]
+google-api-python-client = "*"
 [tool.poetry.group.dev-s3]
-optional = true
 [tool.poetry.group.dev-s3.dependencies]
 moto = "*"
 
