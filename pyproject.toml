@@ -29,6 +29,7 @@ google-api-python-client = {version = "*", optional = true}
 APScheduler = "*"
 redis = "*"
 matplotlib = "*"
+pytest = "*"
 
 [tool.poetry.group.dev.dependencies]
 pyproject-flake8 = "5.0.4"
@@ -43,6 +44,14 @@ lupa = "*"
 fakeredis = "*"
 mypy = "*"
 types-redis = "*"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths = "test"
+markers = [
+    "gcs",
+    "s3",
+]
 
 [tool.flake8]
 # B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.

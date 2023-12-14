@@ -2,9 +2,15 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from gokart.gcs_config import GCSConfig
+import pytest
+
+try:
+    from gokart.gcs_config import GCSConfig
+except ImportError:
+    pass
 
 
+@pytest.mark.gcs
 class TestGCSConfig(unittest.TestCase):
 
     def test_get_gcs_client_without_gcs_credential_name(self):
