@@ -1,7 +1,7 @@
 try:
-    import botocore
-    from boto3.s3.transfer import TransferConfig
+    import boto3  # noqa: F401
 except ImportError:
+    # sentinal: this file should not be imported if [s3] extra is not installed.
     raise
 
 import os

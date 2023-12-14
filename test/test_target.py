@@ -17,7 +17,7 @@ from .helpers import safe_mock_s3
 
 try:
     import boto3
-except:
+except ImportError:
     pass
 
 
