@@ -45,6 +45,10 @@ fakeredis = "*"
 mypy = "*"
 types-redis = "*"
 
+[tool.poetry.extras]
+s3 = ["boto3"]
+gcs = ["google-api-python-client"]
+
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 testpaths = "test"
