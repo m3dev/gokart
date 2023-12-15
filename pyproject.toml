@@ -45,11 +45,8 @@ mypy = "*"
 types-redis = "*"
 
 # for dev, extra is installed by default
-[tool.poetry.group.dev-gcs]
-[tool.poetry.group.dev-gcs.dependencies]
+[tool.poetry.group.dev-extra.dependencies]
 google-api-python-client = "*"
-[tool.poetry.group.dev-s3]
-[tool.poetry.group.dev-s3.dependencies]
 moto = "*"
 
 [tool.poetry.extras]
