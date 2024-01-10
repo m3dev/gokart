@@ -87,10 +87,10 @@ This setting must be done to each gokart task which you want to lock the ``run()
                 ...            
 
 
-3. Set ``redis_fail_on_collision`` parameter to true.
+3. Set ``raise_task_lock_exception_on_collision`` parameter to true.
 
     This parameter will affect the behavior when the task's lock is taken by other applications or nodes.
-    Setting ``redis_fail_on_collision=True`` will make the task to be failed if the task's lock is taken by others.
+    Setting ``raise_task_lock_exception_on_collision=True`` will make the task to be failed if the task's lock is taken by others.
 
     The parameter can be set by config file.
     
@@ -99,7 +99,7 @@ This setting must be done to each gokart task which you want to lock the ``run()
         [TaskOnKart]
         redis_host=localhost
         redis_port=6379
-        redis_fail_on_collision=true
+        raise_task_lock_exception_on_collision=true
 
 4. Set retry parameters
 
