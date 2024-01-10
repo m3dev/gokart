@@ -192,7 +192,7 @@ class TaskOnKart(luigi.Task):
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
                                          raise_task_lock_exception_on_collision=False)
-        
+
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
