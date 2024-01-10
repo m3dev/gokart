@@ -456,13 +456,13 @@ class TestMakeRedisParams(unittest.TestCase):
                                    redis_host='0.0.0.0',
                                    redis_port='12345',
                                    redis_timeout=180,
-                                   redis_fail_on_collision=False)
+                                   raise_task_lock_exception_on_collision=False)
         expected = RedisParams(redis_host='0.0.0.0',
                                redis_port='12345',
                                redis_key='aaa_123',
                                should_redis_lock=True,
                                redis_timeout=180,
-                               redis_fail_on_collision=False,
+                               raise_task_lock_exception_on_collision=False,
                                lock_extend_seconds=10)
         self.assertEqual(result, expected)
 
@@ -472,13 +472,13 @@ class TestMakeRedisParams(unittest.TestCase):
                                    redis_host=None,
                                    redis_port='12345',
                                    redis_timeout=180,
-                                   redis_fail_on_collision=False)
+                                   raise_task_lock_exception_on_collision=False)
         expected = RedisParams(redis_host=None,
                                redis_port='12345',
                                redis_key='aaa_123',
                                should_redis_lock=False,
                                redis_timeout=180,
-                               redis_fail_on_collision=False,
+                               raise_task_lock_exception_on_collision=False,
                                lock_extend_seconds=10)
         self.assertEqual(result, expected)
 
