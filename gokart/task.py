@@ -62,10 +62,7 @@ class TaskOnKart(luigi.Task):
     redis_host = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
-    raise_task_lock_exception_on_collision: bool = luigi.BoolParameter(
-        default=False,
-        description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
-        significant=False)
+
     fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
     store_index_in_feather: bool = ExplicitBoolParameter(default=True,
                                                          description='Wether to store index when using feather as a output object.',
@@ -176,7 +173,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         raise_task_lock_exception_on_collision=self.raise_task_lock_exception_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_target(file_path=file_path,
                                          unique_id=unique_id,
                                          processor=processor,
@@ -193,7 +191,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         raise_task_lock_exception_on_collision=self.raise_task_lock_exception_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
@@ -222,7 +221,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         raise_task_lock_exception_on_collision=self.raise_task_lock_exception_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
