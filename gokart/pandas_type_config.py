@@ -49,5 +49,5 @@ class PandasTypeConfigMap(luigi.Config):
         }
 
     def check(self, obj, task_namespace: str):
-        if type(obj) == pd.DataFrame and task_namespace in self._map:
+        if isinstance(obj, pd.DataFrame) and task_namespace in self._map:
             self._map[task_namespace].check(obj)

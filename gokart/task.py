@@ -346,7 +346,7 @@ class TaskOnKart(luigi.Task):
         params = dict(self.get_params())
         for param_name, param_value in self.param_kwargs.items():
             if (not only_significant) or params[param_name].significant:
-                if type(params[param_name]) == gokart.TaskInstanceParameter:
+                if isinstance(params[param_name], gokart.TaskInstanceParameter):
                     params_str[param_name] = type(param_value).__name__ + '-' + param_value.make_unique_id()
                 else:
                     params_str[param_name] = params[param_name].serialize(param_value)
@@ -452,7 +452,7 @@ class TaskOnKart(luigi.Task):
         for x in set([x.split('.')[0] for x in globals().keys() if isinstance(x, types.ModuleType) and '_' not in x]):
             module = import_module(x)
             if '__version__' in dir(module):
-                if type(module.__version__) == str:
+                if isinstance(module.__version__, str):
                     version = module.__version__.split(" ")[0]
                 else:
                     version = '.'.join([str(v) for v in module.__version__])
