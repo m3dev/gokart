@@ -16,6 +16,7 @@ from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.redis_lock import make_redis_params
 from gokart.target import TargetOnKart
+from gokart.task_complete_check import task_complete_check_wrapper
 
 logger = getLogger(__name__)
 
@@ -61,10 +62,7 @@ class TaskOnKart(luigi.Task):
     redis_host = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
-    redis_fail_on_collision: bool = luigi.BoolParameter(
-        default=False,
-        description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
-        significant=False)
+
     fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
     store_index_in_feather: bool = ExplicitBoolParameter(default=True,
                                                          description='Wether to store index when using feather as a output object.',
@@ -76,6 +74,9 @@ class TaskOnKart(luigi.Task):
         description='Whether to dump supplementary files (task_log, random_seed, task_params, processing_time, module_versions) or not. \
          Note that when set to False, task_info functions (e.g. gokart.tree.task_info.make_task_info_as_tree_str()) cannot be used.',
         significant=False)
+    complete_check_at_run: bool = ExplicitBoolParameter(default=False,
+                                                        description='Check if output file exists at run. If exists, run() will be skipped.',
+                                                        significant=False)
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -85,6 +86,9 @@ class TaskOnKart(luigi.Task):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
+
+        if self.complete_check_at_run:
+            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
 
     def output(self):
         return self.make_target()
@@ -169,7 +173,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail_on_collision=self.redis_fail_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_target(file_path=file_path,
                                          unique_id=unique_id,
                                          processor=processor,
@@ -186,7 +191,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail_on_collision=self.redis_fail_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
@@ -215,7 +221,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail_on_collision=self.redis_fail_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,

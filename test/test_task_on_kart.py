@@ -522,7 +522,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_called_once()
@@ -533,7 +533,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             self.assertEqual(mock_obj.call_count, 2)
@@ -544,7 +544,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_not_called()
@@ -559,6 +559,67 @@ class TaskTest(unittest.TestCase):
         task = gokart.TaskOnKart()
         deserialized: gokart.TaskOnKart = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
+
+
+class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
+
+    def dump(self, obj):
+        # overrive dump() to do nothing.
+        pass
+
+    def run(self):
+        self.dump('hello')
+
+    def complete(self):
+        return False
+
+
+class _DummyTaskWithCompleted(gokart.TaskOnKart):
+
+    def dump(self, obj):
+        # overrive dump() to do nothing.
+        pass
+
+    def run(self):
+        self.dump('hello')
+
+    def complete(self):
+        return True
+
+
+class TestCompleteCheckAtRun(unittest.TestCase):
+
+    def test_run_when_complete_check_at_run_is_false_and_task_is_not_completed(self):
+        task = _DummyTaskWithNonCompleted(complete_check_at_run=False)
+        task.dump = MagicMock()
+        task.run()
+
+        # since run() is called, dump() should be called.
+        task.dump.assert_called_once()
+
+    def test_run_when_complete_check_at_run_is_false_and_task_is_completed(self):
+        task = _DummyTaskWithCompleted(complete_check_at_run=False)
+        task.dump = MagicMock()
+        task.run()
+
+        # even task is completed, since run() is called, dump() should be called.
+        task.dump.assert_called_once()
+
+    def test_run_when_complete_check_at_run_is_true_and_task_is_not_completed(self):
+        task = _DummyTaskWithNonCompleted(complete_check_at_run=True)
+        task.dump = MagicMock()
+        task.run()
+
+        # since task is not completed, when run() is called, dump() should be called.
+        task.dump.assert_called_once()
+
+    def test_run_when_complete_check_at_run_is_true_and_task_is_completed(self):
+        task = _DummyTaskWithCompleted(complete_check_at_run=True)
+        task.dump = MagicMock()
+        task.run()
+
+        # since task is completed, even when run() is called, dump() should not be called.
+        task.dump.assert_not_called()
 
 
 if __name__ == '__main__':
