@@ -1,8 +1,14 @@
 import unittest
 
-from gokart.s3_config import S3Config
+import pytest
+
+try:
+    from gokart.s3_config import S3Config
+except ImportError:
+    pass
 
 
+@pytest.mark.s3
 class TestS3Config(unittest.TestCase):
 
     def test_get_same_s3_client(self):

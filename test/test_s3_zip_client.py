@@ -2,22 +2,29 @@ import os
 import shutil
 import unittest
 
-import boto3
-from moto import mock_s3
+import pytest
 
-from gokart.s3_zip_client import S3ZipClient
+from .helpers import safe_mock_s3
+
+try:
+    import boto3
+
+    from gokart.s3_zip_client import S3ZipClient
+except ImportError:
+    pass
 
 
 def _get_temporary_directory():
     return os.path.abspath(os.path.join(os.path.dirname(__name__), 'temporary'))
 
 
+@pytest.mark.s3
 class TestS3ZipClient(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 
-    @mock_s3
+    @safe_mock_s3
     def test_make_archive(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -34,7 +41,7 @@ class TestS3ZipClient(unittest.TestCase):
         os.makedirs(temporary_directory, exist_ok=True)
         zip_client.make_archive()
 
-    @mock_s3
+    @safe_mock_s3
     def test_unpack_archive(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')

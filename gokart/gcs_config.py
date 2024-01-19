@@ -1,3 +1,9 @@
+try:
+    import googleapiclient  # noqa: F401
+except ImportError:
+    # sentinal: this file should not be imported if [gcs] extra is not installed.
+    raise
+
 import json
 import os
 

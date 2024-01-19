@@ -5,14 +5,20 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch
 
-import boto3
 import numpy as np
 import pandas as pd
+import pytest
 from matplotlib import pyplot
-from moto import mock_s3
 
 from gokart.file_processor import _ChunkedLargeFileReader
 from gokart.target import make_model_target, make_target
+
+from .helpers import safe_mock_s3
+
+try:
+    import boto3
+except ImportError:
+    pass
 
 
 def _get_temporary_directory():
@@ -171,9 +177,10 @@ class LocalTargetTest(unittest.TestCase):
             wrap_with_lock_mock.assert_not_called()
 
 
+@pytest.mark.s3
 class S3TargetTest(unittest.TestCase):
 
-    @mock_s3
+    @safe_mock_s3
     def test_save_on_s3(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -187,7 +194,7 @@ class S3TargetTest(unittest.TestCase):
 
         self.assertEqual(loaded, obj)
 
-    @mock_s3
+    @safe_mock_s3
     def test_last_modified_time(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -200,7 +207,7 @@ class S3TargetTest(unittest.TestCase):
         t = target.last_modification_time()
         self.assertIsInstance(t, datetime)
 
-    @mock_s3
+    @safe_mock_s3
     def test_last_modified_time_without_file(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -238,7 +245,8 @@ class ModelTargetTest(unittest.TestCase):
 
         self.assertEqual(loaded, obj)
 
-    @mock_s3
+    @pytest.mark.s3
+    @safe_mock_s3
     def test_model_target_on_s3(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
