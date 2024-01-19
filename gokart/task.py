@@ -62,10 +62,7 @@ class TaskOnKart(luigi.Task):
     redis_host = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
-    redis_fail_on_collision: bool = luigi.BoolParameter(
-        default=False,
-        description='True for failing the task immediately when the cache is locked, instead of waiting for the lock to be released',
-        significant=False)
+
     fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
     store_index_in_feather: bool = ExplicitBoolParameter(default=True,
                                                          description='Wether to store index when using feather as a output object.',
@@ -176,7 +173,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail_on_collision=self.redis_fail_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_target(file_path=file_path,
                                          unique_id=unique_id,
                                          processor=processor,
@@ -193,7 +191,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail_on_collision=self.redis_fail_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
@@ -222,7 +221,8 @@ class TaskOnKart(luigi.Task):
                                          redis_host=self.redis_host,
                                          redis_port=self.redis_port,
                                          redis_timeout=self.redis_timeout,
-                                         redis_fail_on_collision=self.redis_fail_on_collision)
+                                         raise_task_lock_exception_on_collision=False)
+
         return gokart.target.make_model_target(file_path=file_path,
                                                temporary_directory=self.local_temporary_directory,
                                                unique_id=unique_id,
@@ -346,7 +346,7 @@ class TaskOnKart(luigi.Task):
         params = dict(self.get_params())
         for param_name, param_value in self.param_kwargs.items():
             if (not only_significant) or params[param_name].significant:
-                if type(params[param_name]) == gokart.TaskInstanceParameter:
+                if isinstance(params[param_name], gokart.TaskInstanceParameter):
                     params_str[param_name] = type(param_value).__name__ + '-' + param_value.make_unique_id()
                 else:
                     params_str[param_name] = params[param_name].serialize(param_value)
@@ -452,7 +452,7 @@ class TaskOnKart(luigi.Task):
         for x in set([x.split('.')[0] for x in globals().keys() if isinstance(x, types.ModuleType) and '_' not in x]):
             module = import_module(x)
             if '__version__' in dir(module):
-                if type(module.__version__) == str:
+                if isinstance(module.__version__, str):
                     version = module.__version__.split(" ")[0]
                 else:
                     version = '.'.join([str(v) for v in module.__version__])

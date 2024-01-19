@@ -16,7 +16,7 @@ style = "pep440"
 pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.9,<3.13"
 luigi = "*"
 boto3 = {version = "*", optional = true}
 slack-sdk = "^3"
@@ -31,7 +31,7 @@ redis = "*"
 matplotlib = "*"
 
 [tool.poetry.group.dev.dependencies]
-pyproject-flake8 = "5.0.4"
+pyproject-flake8 = "^6.1.0"
 tox = "*"
 testfixtures = "*"
 coverage = "*"

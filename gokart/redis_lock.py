@@ -15,7 +15,7 @@ class RedisParams(NamedTuple):
     redis_timeout: Optional[int]
     redis_key: str
     should_redis_lock: bool
-    redis_fail_on_collision: bool
+    raise_task_lock_exception_on_collision: bool
     lock_extend_seconds: int
 
 
@@ -50,7 +50,7 @@ def _extend_lock(redis_lock: redis.lock.Lock, redis_timeout: int):
 
 def _set_redis_lock(redis_params: RedisParams) -> redis.lock.Lock:
     redis_client = RedisClient(host=redis_params.redis_host, port=redis_params.redis_port).get_redis_client()
-    blocking = not redis_params.redis_fail_on_collision
+    blocking = not redis_params.raise_task_lock_exception_on_collision
     redis_lock = redis.lock.Lock(redis=redis_client, name=redis_params.redis_key, timeout=redis_params.redis_timeout, thread_local=False)
     if not redis_lock.acquire(blocking=blocking):
         raise TaskLockException('Lock already taken by other task.')
@@ -168,7 +168,7 @@ def make_redis_params(file_path: str,
                       redis_host: Optional[str] = None,
                       redis_port: Optional[int] = None,
                       redis_timeout: Optional[int] = None,
-                      redis_fail_on_collision: bool = False,
+                      raise_task_lock_exception_on_collision: bool = False,
                       lock_extend_seconds: int = 10):
     redis_key = make_redis_key(file_path, unique_id)
     should_redis_lock = redis_host is not None and redis_port is not None
@@ -179,6 +179,6 @@ def make_redis_params(file_path: str,
                                redis_key=redis_key,
                                should_redis_lock=should_redis_lock,
                                redis_timeout=redis_timeout,
-                               redis_fail_on_collision=redis_fail_on_collision,
+                               raise_task_lock_exception_on_collision=raise_task_lock_exception_on_collision,
                                lock_extend_seconds=lock_extend_seconds)
     return redis_params
