@@ -32,14 +32,14 @@ def assert_gcs_available():
     if GCS_AVAILABLE:
         return
 
-    raise ImportError('gs:// is not available. Please install gokart[gcs]')
+    raise ImportError('gs:// is not available. You may need `pip install gokart[gcs]`')
 
 
 def assert_s3_available():
     if S3_AVAILABLE:
         return
 
-    raise ImportError('s3:// is not available. Please install gokart[s3]')
+    raise ImportError('s3:// is not available. You may need `pip install gokart[s3]`')
 
 
 class ObjectStorage(object):

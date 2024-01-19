@@ -10,6 +10,10 @@ Within the activated Python environment, use the following command to install go
 .. code:: sh
 
     pip install gokart
+    # or
+    pip install gokart[s3]  # to use `s3://`
+    # or
+    pip install gokart[gcs] # to use `gs://`
 
 
 

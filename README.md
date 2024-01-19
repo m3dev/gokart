@@ -87,6 +87,22 @@ Please See [Documentation](https://gokart.readthedocs.io/en/latest/) .
 
 Have a good gokart life.
 
+# Contributing to gokart
+
+install
+
+```bash
+git clone https://github.com/m3dev/gokart.git # or your own fork
+
+poetry install --extras=s3 --extras=gcs --with=dev-s3
+```
+
+test
+
+```bash
+poetry run pytest  # see `tox.ini` for specific extras
+```
+
 # Achievements
 
 Gokart is a proven product.

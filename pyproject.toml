@@ -29,7 +29,6 @@ google-api-python-client = {version = "*", optional = true}
 APScheduler = "*"
 redis = "*"
 matplotlib = "*"
-pytest = "*"
 
 [tool.poetry.group.dev.dependencies]
 pyproject-flake8 = "5.0.4"
@@ -43,10 +42,11 @@ lupa = "*"
 fakeredis = "*"
 mypy = "*"
 types-redis = "*"
+pytest = "*"
 
-# for dev, extra is installed by default
-[tool.poetry.group.dev-extra.dependencies]
-google-api-python-client = "*"
+[tool.poetry.group.dev-s3]
+optional = true
+[tool.poetry.group.dev-s3.dependencies]
 moto = "*"
 
 [tool.poetry.extras]
