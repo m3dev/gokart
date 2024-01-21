@@ -1,12 +1,20 @@
-import random  # noqa: I001
+import random
 import time
 import unittest
 from unittest.mock import MagicMock, patch
 
 import fakeredis
 
-from gokart.redis_lock import (RedisClient, RedisParams, make_redis_key, make_redis_params, wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock,
-                               wrap_with_run_lock)
+from gokart.redis_lock import (
+    RedisClient,
+    RedisParams,
+    make_redis_key,
+    make_redis_params,
+    wrap_with_dump_lock,
+    wrap_with_load_lock,
+    wrap_with_remove_lock,
+    wrap_with_run_lock,
+)
 
 
 class TestRedisClient(unittest.TestCase):
