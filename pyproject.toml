@@ -56,7 +56,6 @@ select = [
 ignore = ["B006", "B008"]
 
 line-length = 160
-indent-width = 4
 exclude = ["venv/*", "tox/*"]
 
 [tool.yapf]
