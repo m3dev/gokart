@@ -8,7 +8,6 @@ import gokart
 
 
 class _DummyTask(gokart.TaskOnKart):
-
     def requires(self):
         return _DummyTaskDep()
 
@@ -17,7 +16,6 @@ class _DummyTask(gokart.TaskOnKart):
 
 
 class _DummyTaskDep(gokart.TaskOnKart):
-
     param = luigi.Parameter()
 
     def run(self):
@@ -25,7 +23,6 @@ class _DummyTaskDep(gokart.TaskOnKart):
 
 
 class CacheUniqueIDTest(unittest.TestCase):
-
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
         luigi.mock.MockFileSystem().clear()

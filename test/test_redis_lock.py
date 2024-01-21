@@ -18,7 +18,6 @@ from gokart.redis_lock import (
 
 
 class TestRedisClient(unittest.TestCase):
-
     @staticmethod
     def _get_randint(host, port):
         return random.randint(0, 100000)
@@ -47,7 +46,6 @@ def _sample_long_func(a: int, b: str):
 
 
 class TestWrapWithRunLock(unittest.TestCase):
-
     def test_no_redis(self):
         redis_params = make_redis_params(
             file_path='test_dir/test_file.pkl',
@@ -60,7 +58,7 @@ class TestWrapWithRunLock(unittest.TestCase):
 
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
-        self.assertTupleEqual(called_args, (123, ))
+        self.assertTupleEqual(called_args, (123,))
         self.assertDictEqual(called_kwargs, dict(b='abc'))
         self.assertEqual(resulted, mock_func())
 
@@ -79,7 +77,7 @@ class TestWrapWithRunLock(unittest.TestCase):
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
             self.assertEqual(resulted, mock_func())
 
@@ -116,7 +114,7 @@ class TestWrapWithRunLock(unittest.TestCase):
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
             self.assertEqual(resulted, mock_func())
 
@@ -145,7 +143,6 @@ class TestWrapWithRunLock(unittest.TestCase):
 
 
 class TestWrapWithDumpLock(unittest.TestCase):
-
     def test_no_redis(self):
         redis_params = make_redis_params(
             file_path='test_dir/test_file.pkl',
@@ -158,7 +155,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
 
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
-        self.assertTupleEqual(called_args, (123, ))
+        self.assertTupleEqual(called_args, (123,))
         self.assertDictEqual(called_kwargs, dict(b='abc'))
 
     def test_use_redis(self):
@@ -176,7 +173,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
 
     def test_if_func_is_skipped_when_cache_already_exists(self):
@@ -225,7 +222,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
 
             fake_redis = fakeredis.FakeStrictRedis(server=server)
@@ -253,7 +250,6 @@ class TestWrapWithDumpLock(unittest.TestCase):
 
 
 class TestWrapWithLoadLock(unittest.TestCase):
-
     def test_no_redis(self):
         redis_params = make_redis_params(
             file_path='test_dir/test_file.pkl',
@@ -266,7 +262,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
 
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
-        self.assertTupleEqual(called_args, (123, ))
+        self.assertTupleEqual(called_args, (123,))
         self.assertDictEqual(called_kwargs, dict(b='abc'))
 
         self.assertEqual(resulted, mock_func())
@@ -286,7 +282,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
 
             self.assertEqual(resulted, mock_func())
@@ -324,7 +320,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
             self.assertEqual(resulted, mock_func())
 
@@ -353,7 +349,6 @@ class TestWrapWithLoadLock(unittest.TestCase):
 
 
 class TestWrapWithRemoveLock(unittest.TestCase):
-
     def test_no_redis(self):
         redis_params = make_redis_params(
             file_path='test_dir/test_file.pkl',
@@ -366,7 +361,7 @@ class TestWrapWithRemoveLock(unittest.TestCase):
 
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
-        self.assertTupleEqual(called_args, (123, ))
+        self.assertTupleEqual(called_args, (123,))
         self.assertDictEqual(called_kwargs, dict(b='abc'))
         self.assertEqual(resulted, mock_func())
 
@@ -385,7 +380,7 @@ class TestWrapWithRemoveLock(unittest.TestCase):
 
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
             self.assertEqual(resulted, mock_func())
 
@@ -421,7 +416,7 @@ class TestWrapWithRemoveLock(unittest.TestCase):
             resulted = wrap_with_remove_lock(func=mock_func, redis_params=redis_params)(123, b='abc')
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
-            self.assertTupleEqual(called_args, (123, ))
+            self.assertTupleEqual(called_args, (123,))
             self.assertDictEqual(called_kwargs, dict(b='abc'))
             self.assertEqual(resulted, mock_func())
 
@@ -450,44 +445,40 @@ class TestWrapWithRemoveLock(unittest.TestCase):
 
 
 class TestMakeRedisKey(unittest.TestCase):
-
     def test_make_redis_key(self):
         result = make_redis_key(file_path='gs://test_ll/dir/fname.pkl', unique_id='12345')
         self.assertEqual(result, 'fname_12345')
 
 
 class TestMakeRedisParams(unittest.TestCase):
-
     def test_make_redis_params_with_valid_host(self):
-        result = make_redis_params(file_path='gs://aaa.pkl',
-                                   unique_id='123',
-                                   redis_host='0.0.0.0',
-                                   redis_port='12345',
-                                   redis_timeout=180,
-                                   raise_task_lock_exception_on_collision=False)
-        expected = RedisParams(redis_host='0.0.0.0',
-                               redis_port='12345',
-                               redis_key='aaa_123',
-                               should_redis_lock=True,
-                               redis_timeout=180,
-                               raise_task_lock_exception_on_collision=False,
-                               lock_extend_seconds=10)
+        result = make_redis_params(
+            file_path='gs://aaa.pkl', unique_id='123', redis_host='0.0.0.0', redis_port='12345', redis_timeout=180, raise_task_lock_exception_on_collision=False
+        )
+        expected = RedisParams(
+            redis_host='0.0.0.0',
+            redis_port='12345',
+            redis_key='aaa_123',
+            should_redis_lock=True,
+            redis_timeout=180,
+            raise_task_lock_exception_on_collision=False,
+            lock_extend_seconds=10,
+        )
         self.assertEqual(result, expected)
 
     def test_make_redis_params_with_no_host(self):
-        result = make_redis_params(file_path='gs://aaa.pkl',
-                                   unique_id='123',
-                                   redis_host=None,
-                                   redis_port='12345',
-                                   redis_timeout=180,
-                                   raise_task_lock_exception_on_collision=False)
-        expected = RedisParams(redis_host=None,
-                               redis_port='12345',
-                               redis_key='aaa_123',
-                               should_redis_lock=False,
-                               redis_timeout=180,
-                               raise_task_lock_exception_on_collision=False,
-                               lock_extend_seconds=10)
+        result = make_redis_params(
+            file_path='gs://aaa.pkl', unique_id='123', redis_host=None, redis_port='12345', redis_timeout=180, raise_task_lock_exception_on_collision=False
+        )
+        expected = RedisParams(
+            redis_host=None,
+            redis_port='12345',
+            redis_key='aaa_123',
+            should_redis_lock=False,
+            redis_timeout=180,
+            raise_task_lock_exception_on_collision=False,
+            lock_extend_seconds=10,
+        )
         self.assertEqual(result, expected)
 
     def test_assert_when_redis_timeout_is_too_short(self):

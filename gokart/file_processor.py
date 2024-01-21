@@ -18,7 +18,6 @@ logger = getLogger(__name__)
 
 
 class FileProcessor(object):
-
     @abstractmethod
     def format(self):
         pass
@@ -55,7 +54,6 @@ class BinaryFileProcessor(FileProcessor):
 
 
 class _ChunkedLargeFileReader(object):
-
     def __init__(self, file) -> None:
         self._file = file
 
@@ -70,7 +68,7 @@ class _ChunkedLargeFileReader(object):
             while idx < n:
                 batch_size = min(n - idx, 1 << 31 - 1)
                 logger.info(f'reading bytes [{idx}, {idx + batch_size})...')
-                buffer[idx:idx + batch_size] = self._file.read(batch_size)
+                buffer[idx : idx + batch_size] = self._file.read(batch_size)
                 idx += batch_size
             logger.info('done.')
             return buffer
@@ -78,7 +76,6 @@ class _ChunkedLargeFileReader(object):
 
 
 class PickleFileProcessor(FileProcessor):
-
     def format(self):
         return luigi.format.Nop
 
@@ -98,13 +95,12 @@ class PickleFileProcessor(FileProcessor):
             logger.info(f'writing a file with total_bytes={n}...')
             batch_size = min(n - idx, 1 << 31 - 1)
             logger.info(f'writing bytes [{idx}, {idx + batch_size})')
-            file.write(buffer[idx:idx + batch_size])
+            file.write(buffer[idx : idx + batch_size])
             idx += batch_size
         logger.info('done')
 
 
 class TextFileProcessor(FileProcessor):
-
     def format(self):
         return None
 
@@ -120,7 +116,6 @@ class TextFileProcessor(FileProcessor):
 
 
 class CsvFileProcessor(FileProcessor):
-
     def __init__(self, sep=',', encoding: str = 'utf-8'):
         self._sep = sep
         self._encoding = encoding
@@ -136,13 +131,11 @@ class CsvFileProcessor(FileProcessor):
             return pd.DataFrame()
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame, pd.Series)), \
-            f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
+        assert isinstance(obj, (pd.DataFrame, pd.Series)), f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
         obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True, encoding=self._encoding)
 
 
 class GzipFileProcessor(FileProcessor):
-
     def format(self):
         return luigi.format.Gzip
 
@@ -158,7 +151,6 @@ class GzipFileProcessor(FileProcessor):
 
 
 class JsonFileProcessor(FileProcessor):
-
     def format(self):
         return None
 
@@ -169,15 +161,15 @@ class JsonFileProcessor(FileProcessor):
             return pd.DataFrame()
 
     def dump(self, obj, file):
-        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict), \
-            f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
+        assert (
+            isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict)
+        ), f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
         obj.to_json(file)
 
 
 class XmlFileProcessor(FileProcessor):
-
     def format(self):
         return None
 
@@ -193,7 +185,6 @@ class XmlFileProcessor(FileProcessor):
 
 
 class NpzFileProcessor(FileProcessor):
-
     def format(self):
         return luigi.format.Nop
 
@@ -206,7 +197,6 @@ class NpzFileProcessor(FileProcessor):
 
 
 class ParquetFileProcessor(FileProcessor):
-
     def __init__(self, engine='pyarrow', compression=None):
         self._engine = engine
         self._compression = compression
@@ -220,14 +210,12 @@ class ParquetFileProcessor(FileProcessor):
         return pd.read_parquet(file.name)
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame)), \
-            f'requires pd.DataFrame, but {type(obj)} is passed.'
+        assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
         # MEMO: to_parquet only supports a filepath as string (not a file handle)
         obj.to_parquet(file.name, index=False, compression=self._compression)
 
 
 class FeatherFileProcessor(FileProcessor):
-
     def __init__(self, store_index_in_feather: bool):
         super(FeatherFileProcessor, self).__init__()
         self._store_index_in_feather = store_index_in_feather
@@ -241,17 +229,16 @@ class FeatherFileProcessor(FileProcessor):
 
         if self._store_index_in_feather:
             if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
-                index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[:len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
+                index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
                 index_column = index_columns[0]
-                index_name = index_column[len(self.INDEX_COLUMN_PREFIX):]
+                index_name = index_column[len(self.INDEX_COLUMN_PREFIX) :]
                 loaded_df.index = pd.Index(loaded_df[index_column], name=index_name)
                 loaded_df = loaded_df.drop(columns={index_column})
 
         return loaded_df
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame)), \
-            f'requires pd.DataFrame, but {type(obj)} is passed.'
+        assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
         dump_obj = obj.copy()
 
         if self._store_index_in_feather:

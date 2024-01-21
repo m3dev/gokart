@@ -6,7 +6,6 @@ from gokart.zip_client import ZipClient, _unzip_file
 
 
 class S3ZipClient(ZipClient):
-
     def __init__(self, file_path: str, temporary_directory: str) -> None:
         self._file_path = file_path
         self._temporary_directory = temporary_directory

@@ -20,7 +20,6 @@ def _get_temporary_directory():
 
 
 class LocalTargetTest(unittest.TestCase):
-
     def tearDown(self):
         shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 
@@ -172,7 +171,6 @@ class LocalTargetTest(unittest.TestCase):
 
 
 class S3TargetTest(unittest.TestCase):
-
     @mock_s3
     def test_save_on_s3(self):
         conn = boto3.resource('s3', region_name='us-east-1')
@@ -212,7 +210,6 @@ class S3TargetTest(unittest.TestCase):
 
 
 class ModelTargetTest(unittest.TestCase):
-
     def tearDown(self):
         shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 
@@ -228,10 +225,9 @@ class ModelTargetTest(unittest.TestCase):
         obj = 1
         file_path = os.path.join(_get_temporary_directory(), 'test.zip')
 
-        target = make_model_target(file_path=file_path,
-                                   temporary_directory=_get_temporary_directory(),
-                                   save_function=self._save_function,
-                                   load_function=self._load_function)
+        target = make_model_target(
+            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function
+        )
 
         target.dump(obj)
         loaded = target.load()
@@ -246,10 +242,9 @@ class ModelTargetTest(unittest.TestCase):
         obj = 1
         file_path = os.path.join('s3://test/', 'test.zip')
 
-        target = make_model_target(file_path=file_path,
-                                   temporary_directory=_get_temporary_directory(),
-                                   save_function=self._save_function,
-                                   load_function=self._load_function)
+        target = make_model_target(
+            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function
+        )
 
         target.dump(obj)
         loaded = target.load()

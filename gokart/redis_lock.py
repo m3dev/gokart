@@ -60,12 +60,14 @@ def _set_redis_lock(redis_params: RedisParams) -> redis.lock.Lock:
 def _set_lock_scheduler(redis_lock: redis.lock.Lock, redis_params: RedisParams) -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
     extend_lock = functools.partial(_extend_lock, redis_lock=redis_lock, redis_timeout=redis_params.redis_timeout)
-    scheduler.add_job(extend_lock,
-                      'interval',
-                      seconds=redis_params.lock_extend_seconds,
-                      max_instances=999999999,
-                      misfire_grace_time=redis_params.redis_timeout,
-                      coalesce=False)
+    scheduler.add_job(
+        extend_lock,
+        'interval',
+        seconds=redis_params.lock_extend_seconds,
+        max_instances=999999999,
+        misfire_grace_time=redis_params.redis_timeout,
+        coalesce=False,
+    )
     scheduler.start()
     return scheduler
 
@@ -163,22 +165,26 @@ def make_redis_key(file_path: str, unique_id: Optional[str]):
     return f'{basename_without_ext}_{unique_id}'
 
 
-def make_redis_params(file_path: str,
-                      unique_id: Optional[str],
-                      redis_host: Optional[str] = None,
-                      redis_port: Optional[int] = None,
-                      redis_timeout: Optional[int] = None,
-                      raise_task_lock_exception_on_collision: bool = False,
-                      lock_extend_seconds: int = 10):
+def make_redis_params(
+    file_path: str,
+    unique_id: Optional[str],
+    redis_host: Optional[str] = None,
+    redis_port: Optional[int] = None,
+    redis_timeout: Optional[int] = None,
+    raise_task_lock_exception_on_collision: bool = False,
+    lock_extend_seconds: int = 10,
+):
     redis_key = make_redis_key(file_path, unique_id)
     should_redis_lock = redis_host is not None and redis_port is not None
     if redis_timeout is not None:
         assert redis_timeout > lock_extend_seconds, f'`redis_timeout` must be set greater than lock_extend_seconds:{lock_extend_seconds}, not {redis_timeout}.'
-    redis_params = RedisParams(redis_host=redis_host,
-                               redis_port=redis_port,
-                               redis_key=redis_key,
-                               should_redis_lock=should_redis_lock,
-                               redis_timeout=redis_timeout,
-                               raise_task_lock_exception_on_collision=raise_task_lock_exception_on_collision,
-                               lock_extend_seconds=lock_extend_seconds)
+    redis_params = RedisParams(
+        redis_host=redis_host,
+        redis_port=redis_port,
+        redis_key=redis_key,
+        should_redis_lock=should_redis_lock,
+        redis_timeout=redis_timeout,
+        raise_task_lock_exception_on_collision=raise_task_lock_exception_on_collision,
+        lock_extend_seconds=lock_extend_seconds,
+    )
     return redis_params

@@ -9,7 +9,6 @@ from gokart.task import TaskOnKart
 
 
 class LoggerConfig:
-
     def __init__(self, level: int):
         self.logger = getLogger(__name__)
         self.default_level = self.logger.level
@@ -41,8 +40,12 @@ def _get_output(task: TaskOnKart) -> Any:
 def _reset_register(keep={'gokart', 'luigi'}):
     """reset luigi.task_register.Register._reg everytime gokart.build called to avoid TaskClassAmbigiousException"""
     luigi.task_register.Register._reg = [
-        x for x in luigi.task_register.Register._reg if ((x.__module__.split('.')[0] in keep)  # keep luigi and gokart
-                                                         or (issubclass(x, gokart.PandasTypeConfig)))  # PandasTypeConfig should be kept
+        x
+        for x in luigi.task_register.Register._reg
+        if (
+            (x.__module__.split('.')[0] in keep)  # keep luigi and gokart
+            or (issubclass(x, gokart.PandasTypeConfig))
+        )  # PandasTypeConfig should be kept
     ]
 
 

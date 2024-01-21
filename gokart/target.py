@@ -21,7 +21,6 @@ logger = getLogger(__name__)
 
 
 class TargetOnKart(luigi.Target):
-
     def exists(self) -> bool:
         return self._exists()
 
@@ -77,7 +76,6 @@ class TargetOnKart(luigi.Target):
 
 
 class SingleFileTarget(TargetOnKart):
-
     def __init__(
         self,
         target: luigi.target.FileSystemTarget,
@@ -113,7 +111,6 @@ class SingleFileTarget(TargetOnKart):
 
 
 class ModelTarget(TargetOnKart):
-
     def __init__(
         self,
         file_path: str,
@@ -171,7 +168,6 @@ class ModelTarget(TargetOnKart):
 
 
 class LargeDataFrameProcessor(object):
-
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
 
@@ -186,7 +182,7 @@ class LargeDataFrameProcessor(object):
         split_size = df.values.nbytes // self.max_byte + 1
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
         for i, idx in tqdm(list(enumerate(np.array_split(range(df.shape[0]), split_size)))):
-            df.iloc[idx[0]:idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
+            df.iloc[idx[0] : idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
 
     @staticmethod
     def load(file_path: str) -> pd.DataFrame:
@@ -217,11 +213,13 @@ def _get_last_modification_time(path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 
-def make_target(file_path: str,
-                unique_id: Optional[str] = None,
-                processor: Optional[FileProcessor] = None,
-                redis_params: Optional[RedisParams] = None,
-                store_index_in_feather: bool = True) -> TargetOnKart:
+def make_target(
+    file_path: str,
+    unique_id: Optional[str] = None,
+    processor: Optional[FileProcessor] = None,
+    redis_params: Optional[RedisParams] = None,
+    store_index_in_feather: bool = True,
+) -> TargetOnKart:
     _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
@@ -229,17 +227,12 @@ def make_target(file_path: str,
     return SingleFileTarget(target=file_system_target, processor=processor, redis_params=_redis_params)
 
 
-def make_model_target(file_path: str,
-                      temporary_directory: str,
-                      save_function,
-                      load_function,
-                      unique_id: Optional[str] = None,
-                      redis_params: Optional[RedisParams] = None) -> TargetOnKart:
+def make_model_target(
+    file_path: str, temporary_directory: str, save_function, load_function, unique_id: Optional[str] = None, redis_params: Optional[RedisParams] = None
+) -> TargetOnKart:
     _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
-    return ModelTarget(file_path=file_path,
-                       temporary_directory=temporary_directory,
-                       save_function=save_function,
-                       load_function=load_function,
-                       redis_params=_redis_params)
+    return ModelTarget(
+        file_path=file_path, temporary_directory=temporary_directory, save_function=save_function, load_function=load_function, redis_params=_redis_params
+    )

@@ -60,7 +60,6 @@ class _DummySuccessTask(gokart.TaskOnKart):
 
 
 class TestPandasTypeCheckFramework(unittest.TestCase):
-
     def setUp(self) -> None:
         luigi.setup_logging.DaemonLogging._configured = False
         luigi.setup_logging.InterfaceLogging._configured = False
