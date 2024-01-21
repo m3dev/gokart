@@ -1,4 +1,4 @@
-import random
+import random  # noqa: I001
 import time
 import unittest
 from unittest.mock import MagicMock, patch

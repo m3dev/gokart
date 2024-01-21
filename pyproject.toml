@@ -32,12 +32,11 @@ redis = "*"
 matplotlib = "*"
 
 [tool.poetry.group.dev.dependencies]
-pyproject-flake8 = "^6.1.0"
+ruff = "*"
 tox = "*"
 moto = "*"
 testfixtures = "*"
 coverage = "*"
-isort = "^5.7"
 yapf = ">=0.32"
 toml = "*"
 lupa = "*"
@@ -45,13 +44,20 @@ fakeredis = "*"
 mypy = "*"
 types-redis = "*"
 
-[tool.flake8]
+[tool.ruff]
+select = [
+  "E4", "E7", "E9", "F", # ruff's default. see https://docs.astral.sh/ruff/settings/#select
+  "B", # bugbear
+  "I" # isort
+]
+
 # B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.
 # B008 Do not perform function calls in argument defaults.  The call is performed only once at function definition time. All calls to your function will reuse the result of that definition-time function call.  If this is intended, assign the function call to a module-level variable and use that variable as a default value.
-# W503 line break before binary operator. We use W504(line break after binary operator) rather than W503
-ignore = "B006,B008,W503"
-max-line-length = 160
-exclude = "venv/*,tox/*"
+ignore = ["B006", "B008"]
+
+line-length = 160
+indent-width = 4
+exclude = ["venv/*", "tox/*"]
 
 [tool.yapf]
 based_on_style = "pep8"
@@ -63,9 +69,6 @@ ignore_patterns = [
   ".tox/*",
   "examples/*"
 ]
-
-[tool.isort]
-line_length = 160
 
 [tool.mypy]
 ignore_missing_imports = true
