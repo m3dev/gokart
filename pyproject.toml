@@ -45,8 +45,8 @@ mypy = "*"
 types-redis = "*"
 
 [tool.ruff]
-select = [
-  "E4", "E7", "E9", "F", # ruff's default. see https://docs.astral.sh/ruff/settings/#select
+# All the rules are listed on https://docs.astral.sh/ruff/rules/
+extend-select = [
   "B", # bugbear
   "I" # isort
 ]
