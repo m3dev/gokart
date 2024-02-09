@@ -6,7 +6,6 @@ import gokart
 
 
 class TestPandasAssert(unittest.TestCase):
-
     def test_assert_frame_contents_equal(self):
         expected = pd.DataFrame(data=dict(f1=[1, 2, 3], f3=[111, 222, 333], f2=[4, 5, 6]), index=[0, 1, 2])
         resulted = pd.DataFrame(data=dict(f2=[5, 4, 6], f1=[2, 1, 3], f3=[222, 111, 333]), index=[1, 0, 2])

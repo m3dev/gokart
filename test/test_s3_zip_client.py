@@ -13,7 +13,6 @@ def _get_temporary_directory():
 
 
 class TestS3ZipClient(unittest.TestCase):
-
     def tearDown(self):
         shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 

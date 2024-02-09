@@ -30,14 +30,16 @@ class TaskInfo:
         return f'(parameter={self.params}, output={self.output_paths}, time={self.processing_time}, task_log={self.task_log})'
 
     def task_info_dict(self):
-        return dict(name=self.name,
-                    unique_id=self.unique_id,
-                    output_paths=self.output_paths,
-                    params=self.params,
-                    processing_time=self.processing_time,
-                    is_complete=self.is_complete,
-                    task_log=self.task_log,
-                    requires=self.requires)
+        return dict(
+            name=self.name,
+            unique_id=self.unique_id,
+            output_paths=self.output_paths,
+            params=self.params,
+            processing_time=self.processing_time,
+            is_complete=self.is_complete,
+            task_log=self.task_log,
+            requires=self.requires,
+        )
 
 
 class RequiredTask(NamedTuple):
@@ -74,7 +76,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
     processing_time = task.get_processing_time()
     if isinstance(processing_time, float):
         processing_time = str(processing_time) + 's'
-    is_complete = ('COMPLETE' if is_task_complete else 'PENDING')
+    is_complete = 'COMPLETE' if is_task_complete else 'PENDING'
     task_log = dict(task.get_task_log())
     requires = _make_requires_info(task.requires())
 
@@ -83,15 +85,17 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
     for child in children:
         if ignore_task_names is None or child.__class__.__name__ not in ignore_task_names:
             children_task_infos.append(make_task_info_tree(child, ignore_task_names=ignore_task_names, cache=cache))
-    task_info = TaskInfo(name=name,
-                         unique_id=unique_id,
-                         output_paths=output_paths,
-                         params=params,
-                         processing_time=processing_time,
-                         is_complete=is_complete,
-                         task_log=task_log,
-                         requires=requires,
-                         children_task_infos=children_task_infos)
+    task_info = TaskInfo(
+        name=name,
+        unique_id=unique_id,
+        output_paths=output_paths,
+        params=params,
+        processing_time=processing_time,
+        is_complete=is_complete,
+        task_log=task_log,
+        requires=requires,
+        children_task_infos=children_task_infos,
+    )
     cache[cache_id] = task_info
     return task_info
 

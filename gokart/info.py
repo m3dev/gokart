@@ -9,13 +9,15 @@ from gokart.tree.task_info import make_task_info_as_tree_str
 logger = getLogger(__name__)
 
 
-def make_tree_info(task: TaskOnKart,
-                   indent: str = '',
-                   last: bool = True,
-                   details: bool = False,
-                   abbr: bool = True,
-                   visited_tasks: Optional[Set[str]] = None,
-                   ignore_task_names: Optional[List[str]] = None) -> str:
+def make_tree_info(
+    task: TaskOnKart,
+    indent: str = '',
+    last: bool = True,
+    details: bool = False,
+    abbr: bool = True,
+    visited_tasks: Optional[Set[str]] = None,
+    ignore_task_names: Optional[List[str]] = None,
+) -> str:
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
 

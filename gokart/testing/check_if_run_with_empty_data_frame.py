@@ -15,12 +15,12 @@ test_logger.setLevel(logging.INFO)
 
 class test_run(gokart.TaskOnKart):
     pandas: bool = luigi.BoolParameter()
-    namespace: Optional[str] = luigi.OptionalParameter(default=None,
-                                                       description='When task namespace is not defined explicitly, please use "__not_user_specified".')
+    namespace: Optional[str] = luigi.OptionalParameter(
+        default=None, description='When task namespace is not defined explicitly, please use "__not_user_specified".'
+    )
 
 
 class _TestStatus:
-
     def __init__(self, task: gokart.TaskOnKart) -> None:
         self.namespace = task.task_namespace
         self.name = type(task).__name__

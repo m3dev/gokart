@@ -22,6 +22,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install poetry
         poetry install
-    - name: Run yapf, ruff, and mypy
+    - name: Run ruff and mypy
       run: |
-        poetry run tox -e yapf,ruff,mypy
+        poetry run tox -e ruff,mypy

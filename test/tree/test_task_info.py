@@ -48,7 +48,6 @@ class _DoubleLoadSubTask(gokart.TaskOnKart):
 
 
 class TestInfo(unittest.TestCase):
-
     def setUp(self) -> None:
         MockFileSystem().clear()
         luigi.setup_logging.DaemonLogging._configured = False
@@ -162,7 +161,6 @@ class _TaskInfoExampleTaskC(gokart.TaskOnKart):
 
 
 class TestTaskInfoTable(unittest.TestCase):
-
     def test_dump_task_info_table(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
             self.dumped_data = None
@@ -174,12 +172,12 @@ class TestTaskInfoTable(unittest.TestCase):
             dump_task_info_table(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.csv', ignore_task_names=['_TaskInfoExampleTaskB'])
 
             self.assertEqual(set(self.dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
-            self.assertEqual(set(self.dumped_data.columns),
-                             {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log', 'requires'})
+            self.assertEqual(
+                set(self.dumped_data.columns), {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log', 'requires'}
+            )
 
 
 class TestTaskInfoTree(unittest.TestCase):
-
     def test_dump_task_info_tree(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
             self.dumped_data = None

@@ -37,7 +37,6 @@ tox = "*"
 moto = "*"
 testfixtures = "*"
 coverage = "*"
-yapf = ">=0.32"
 toml = "*"
 lupa = "*"
 fakeredis = "*"
@@ -58,16 +57,8 @@ ignore = ["B006", "B008"]
 line-length = 160
 exclude = ["venv/*", "tox/*"]
 
-[tool.yapf]
-based_on_style = "pep8"
-column_limit = 160
-
-[tool.yapfignore]
-ignore_patterns = [
-  ".venv/*",
-  ".tox/*",
-  "examples/*"
-]
+[tool.ruff.format]
+quote-style = "single"
 
 [tool.mypy]
 ignore_missing_imports = true

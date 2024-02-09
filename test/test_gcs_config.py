@@ -6,7 +6,6 @@ from gokart.gcs_config import GCSConfig
 
 
 class TestGCSConfig(unittest.TestCase):
-
     def test_get_gcs_client_without_gcs_credential_name(self):
         mock = MagicMock()
         os.environ['env_name'] = ''

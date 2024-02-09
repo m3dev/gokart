@@ -15,7 +15,6 @@ object_storage_path_prefix = ['s3://', 'gs://']
 
 
 class ObjectStorage(object):
-
     @staticmethod
     def if_object_storage_path(path: str) -> bool:
         for prefix in object_storage_path_prefix:

@@ -6,7 +6,6 @@ logger = getLogger(__name__)
 
 
 def task_complete_check_wrapper(run_func: Callable, complete_check_func: Callable):
-
     @functools.wraps(run_func)
     def wrapper(*args, **kwargs):
         if complete_check_func():

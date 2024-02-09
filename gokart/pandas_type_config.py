@@ -15,7 +15,6 @@ class PandasTypeError(Exception):
 
 
 class PandasTypeConfig(luigi.Config):
-
     @classmethod
     @abstractmethod
     def type_dict(cls) -> Dict[str, Any]:
@@ -44,8 +43,7 @@ class PandasTypeConfigMap(luigi.Config):
         task_names = Register.task_names()
         task_classes = [Register.get_task_cls(task_name) for task_name in task_names]
         self._map = {
-            task_class.task_namespace: task_class
-            for task_class in task_classes if issubclass(task_class, PandasTypeConfig) and task_class != PandasTypeConfig
+            task_class.task_namespace: task_class for task_class in task_classes if issubclass(task_class, PandasTypeConfig) and task_class != PandasTypeConfig
         }
 
     def check(self, obj, task_namespace: str):
