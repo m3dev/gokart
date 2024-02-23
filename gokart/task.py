@@ -95,9 +95,6 @@ class TaskOnKart(luigi.Task):
         if self.complete_check_at_run:
             self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
 
-        if self.should_lock_run:
-            self.run = wrap_run_with_lock(run_func=self.run, task_self=self)
-
     def output(self):
         return self.make_target()
 
