@@ -81,7 +81,6 @@ class TaskOnKart(luigi.Task):
     complete_check_at_run: bool = ExplicitBoolParameter(
         default=False, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
-    should_lock_run: bool = ExplicitBoolParameter(default=None, significant=False, description='Whether to use redis lock or not at task run.')
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
