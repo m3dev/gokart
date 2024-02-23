@@ -11,10 +11,10 @@ import pandas as pd
 from luigi.parameter import ParameterVisibility
 
 import gokart
+from gokart.collision_lock.redis_lock import make_redis_params
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
-from gokart.redis_lock import make_redis_params
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
 
@@ -81,6 +81,7 @@ class TaskOnKart(luigi.Task):
     complete_check_at_run: bool = ExplicitBoolParameter(
         default=False, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
+    should_lock_run: bool = ExplicitBoolParameter(default=None, significant=False, description='Whether to use redis lock or not at task run.')
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -93,6 +94,9 @@ class TaskOnKart(luigi.Task):
 
         if self.complete_check_at_run:
             self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
+
+        if self.should_lock_run:
+            self.run = wrap_run_with_lock(run_func=self.run, task_self=self)
 
     def output(self):
         return self.make_target()
