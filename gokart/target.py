@@ -12,7 +12,14 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from gokart.collision_lock.redis_lock import RedisParams, make_redis_params, wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock, wrap_with_run_lock
+from gokart.conflict_prevention_lock.task_conflict_prevention_lock import (
+    RedisParams,
+    make_redis_params,
+    wrap_with_dump_lock,
+    wrap_with_load_lock,
+    wrap_with_remove_lock,
+    wrap_with_run_lock,
+)
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client_util import make_zip_client

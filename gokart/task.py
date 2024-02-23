@@ -11,7 +11,7 @@ import pandas as pd
 from luigi.parameter import ParameterVisibility
 
 import gokart
-from gokart.collision_lock.redis_lock import make_redis_params
+from gokart.conflict_prevention_lock.task_conflict_prevention_lock import make_redis_params
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
