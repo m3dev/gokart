@@ -60,25 +60,6 @@ class _DummyTaskD(gokart.TaskOnKart):
     task_namespace = __name__
 
 
-class _DummyTaskWithLock(gokart.TaskOnKart):
-    task_namespace = __name__
-
-    @RunWithLock
-    def run(self):
-        pass
-
-
-class _DummyTaskWithLockMultipleOutput(gokart.TaskOnKart):
-    task_namespace = __name__
-
-    @RunWithLock
-    def run(self):
-        pass
-
-    def output(self):
-        return dict(dataA=self.make_target('fileA.pkl'), dataB=self.make_target('fileB.pkl'))
-
-
 class _DummyTaskWithoutLock(gokart.TaskOnKart):
     task_namespace = __name__
 
@@ -515,39 +496,6 @@ class TaskTest(unittest.TestCase):
             f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
         )
         self.assertEqual(expected, str(task))
-
-    def test_run_with_lock_decorator(self):
-        task = _DummyTaskWithLock()
-
-        def _wrap(func):
-            return func
-
-        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
-            mock_obj.side_effect = _wrap
-            task.run()
-            mock_obj.assert_called_once()
-
-    def test_run_with_lock_decorator_multiple_output(self):
-        task = _DummyTaskWithLockMultipleOutput()
-
-        def _wrap(func):
-            return func
-
-        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
-            mock_obj.side_effect = _wrap
-            task.run()
-            self.assertEqual(mock_obj.call_count, 2)
-
-    def test_run_without_lock_decorator(self):
-        task = _DummyTaskWithoutLock()
-
-        def _wrap(func):
-            return func
-
-        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
-            mock_obj.side_effect = _wrap
-            task.run()
-            mock_obj.assert_not_called()
 
     def test_is_task_on_kart(self):
         self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart(gokart.TaskOnKart()))

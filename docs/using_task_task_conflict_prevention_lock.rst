@@ -1,7 +1,7 @@
-Task cache collision lock
+Task conflict prevention lock
 =========================
 
-If there is a possibility of multiple worker nodes executing the same task, cache collision may happen.
+If there is a possibility of multiple worker nodes executing the same task, task cache conflict may happen.
 Specifically, while node A is loading the cache of a task, node B may be writing to it.
 This can lead to reading an inappropriate data and other unwanted behaviors.
 

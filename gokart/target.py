@@ -13,7 +13,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
-from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock, wrap_with_run_lock
+from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client_util import make_zip_client
@@ -43,9 +43,6 @@ class TargetOnKart(luigi.Target):
 
     def path(self) -> str:
         return self._path()
-
-    def wrap_with_run_lock(self, func):
-        return wrap_with_run_lock(func=func, task_lock_params=self._get_task_lock_params())
 
     @abstractmethod
     def _exists(self) -> bool:
