@@ -1,7 +1,7 @@
 import functools
 import os
 from logging import getLogger
-from typing import Callable, NamedTuple, Optional
+from typing import NamedTuple, Optional
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
