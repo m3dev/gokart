@@ -13,7 +13,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
-from gokart.conflict_prevention_lock.wrap_target_on_kart_dump import wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock, wrap_with_run_lock
+from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock, wrap_with_run_lock
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client_util import make_zip_client
