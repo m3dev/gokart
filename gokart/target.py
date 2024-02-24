@@ -12,14 +12,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from gokart.conflict_prevention_lock.task_conflict_prevention_lock import (
-    RedisParams,
-    make_redis_params,
-    wrap_with_dump_lock,
-    wrap_with_load_lock,
-    wrap_with_remove_lock,
-    wrap_with_run_lock,
-)
+from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
+from gokart.conflict_prevention_lock.wrap_target_on_kart_dump import wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock, wrap_with_run_lock
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client_util import make_zip_client
@@ -32,17 +26,17 @@ class TargetOnKart(luigi.Target):
         return self._exists()
 
     def load(self) -> Any:
-        return wrap_with_load_lock(func=self._load, redis_params=self._get_redis_params())()
+        return wrap_with_load_lock(func=self._load, task_lock_params=self._get_task_lock_params())()
 
     def dump(self, obj, lock_at_dump: bool = True) -> None:
         if lock_at_dump:
-            wrap_with_dump_lock(func=self._dump, redis_params=self._get_redis_params(), exist_check=self.exists)(obj)
+            wrap_with_dump_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(obj)
         else:
             self._dump(obj)
 
     def remove(self) -> None:
         if self.exists():
-            wrap_with_remove_lock(self._remove, redis_params=self._get_redis_params())()
+            wrap_with_remove_lock(self._remove, task_lock_params=self._get_task_lock_params())()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
@@ -51,14 +45,14 @@ class TargetOnKart(luigi.Target):
         return self._path()
 
     def wrap_with_run_lock(self, func):
-        return wrap_with_run_lock(func=func, redis_params=self._get_redis_params())
+        return wrap_with_run_lock(func=func, task_lock_params=self._get_task_lock_params())
 
     @abstractmethod
     def _exists(self) -> bool:
         pass
 
     @abstractmethod
-    def _get_redis_params(self) -> RedisParams:
+    def _get_task_lock_params(self) -> TaskLockParams:
         pass
 
     @abstractmethod
@@ -87,17 +81,17 @@ class SingleFileTarget(TargetOnKart):
         self,
         target: luigi.target.FileSystemTarget,
         processor: FileProcessor,
-        redis_params: RedisParams,
+        task_lock_params: TaskLockParams,
     ) -> None:
         self._target = target
         self._processor = processor
-        self._redis_params = redis_params
+        self._task_lock_params = task_lock_params
 
     def _exists(self) -> bool:
         return self._target.exists()
 
-    def _get_redis_params(self) -> RedisParams:
-        return self._redis_params
+    def _get_task_lock_params(self) -> TaskLockParams:
+        return self._task_lock_params
 
     def _load(self) -> Any:
         with self._target.open('r') as f:
@@ -124,19 +118,19 @@ class ModelTarget(TargetOnKart):
         temporary_directory: str,
         load_function,
         save_function,
-        redis_params: RedisParams,
+        task_lock_params: TaskLockParams,
     ) -> None:
         self._zip_client = make_zip_client(file_path, temporary_directory)
         self._temporary_directory = temporary_directory
         self._save_function = save_function
         self._load_function = load_function
-        self._redis_params = redis_params
+        self._task_lock_params = task_lock_params
 
     def _exists(self) -> bool:
         return self._zip_client.exists()
 
-    def _get_redis_params(self) -> RedisParams:
-        return self._redis_params
+    def _get_task_lock_params(self) -> TaskLockParams:
+        return self._task_lock_params
 
     def _load(self) -> Any:
         self._zip_client.unpack_archive()
@@ -224,22 +218,31 @@ def make_target(
     file_path: str,
     unique_id: Optional[str] = None,
     processor: Optional[FileProcessor] = None,
-    redis_params: Optional[RedisParams] = None,
+    task_lock_params: Optional[TaskLockParams] = None,
     store_index_in_feather: bool = True,
 ) -> TargetOnKart:
-    _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
+    _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
     file_system_target = _make_file_system_target(file_path, processor=processor, store_index_in_feather=store_index_in_feather)
-    return SingleFileTarget(target=file_system_target, processor=processor, redis_params=_redis_params)
+    return SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params)
 
 
 def make_model_target(
-    file_path: str, temporary_directory: str, save_function, load_function, unique_id: Optional[str] = None, redis_params: Optional[RedisParams] = None
+    file_path: str,
+    temporary_directory: str,
+    save_function,
+    load_function,
+    unique_id: Optional[str] = None,
+    task_lock_params: Optional[TaskLockParams] = None,
 ) -> TargetOnKart:
-    _redis_params = redis_params if redis_params is not None else make_redis_params(file_path=file_path, unique_id=unique_id)
+    _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
     return ModelTarget(
-        file_path=file_path, temporary_directory=temporary_directory, save_function=save_function, load_function=load_function, redis_params=_redis_params
+        file_path=file_path,
+        temporary_directory=temporary_directory,
+        save_function=save_function,
+        load_function=load_function,
+        task_lock_params=_task_lock_params,
     )

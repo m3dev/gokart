@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, patch
 
 import fakeredis
 
-from gokart.conflict_prevention_lock.task_conflict_prevention_lock import (
+from gokart.conflict_prevention_lock.task_lock import (
     RedisClient,
-    RedisParams,
-    make_redis_key,
-    make_redis_params,
+    TaskLockParams,
+    make_task_lock_key,
+    make_task_lock_params,
     wrap_with_dump_lock,
     wrap_with_load_lock,
     wrap_with_remove_lock,
@@ -47,7 +47,7 @@ def _sample_long_func(a: int, b: str):
 
 class TestWrapWithRunLock(unittest.TestCase):
     def test_no_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host=None,
@@ -63,7 +63,7 @@ class TestWrapWithRunLock(unittest.TestCase):
         self.assertEqual(resulted, mock_func())
 
     def test_use_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -82,7 +82,7 @@ class TestWrapWithRunLock(unittest.TestCase):
             self.assertEqual(resulted, mock_func())
 
     def test_check_lock_extended(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -98,7 +98,7 @@ class TestWrapWithRunLock(unittest.TestCase):
             self.assertEqual(resulted, expected)
 
     def test_lock_is_removed_after_func_is_finished(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -123,7 +123,7 @@ class TestWrapWithRunLock(unittest.TestCase):
                 fake_redis[redis_params.redis_key]
 
     def test_lock_is_removed_after_func_is_finished_with_error(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -144,7 +144,7 @@ class TestWrapWithRunLock(unittest.TestCase):
 
 class TestWrapWithDumpLock(unittest.TestCase):
     def test_no_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host=None,
@@ -159,7 +159,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
         self.assertDictEqual(called_kwargs, dict(b='abc'))
 
     def test_use_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -177,7 +177,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
             self.assertDictEqual(called_kwargs, dict(b='abc'))
 
     def test_if_func_is_skipped_when_cache_already_exists(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -192,7 +192,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
             mock_func.assert_not_called()
 
     def test_check_lock_extended(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -206,7 +206,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
             wrap_with_dump_lock(func=_sample_long_func, redis_params=redis_params, exist_check=lambda: False)(123, b='abc')
 
     def test_lock_is_removed_after_func_is_finished(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -230,7 +230,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
                 fake_redis[redis_params.redis_key]
 
     def test_lock_is_removed_after_func_is_finished_with_error(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -251,7 +251,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
 
 class TestWrapWithLoadLock(unittest.TestCase):
     def test_no_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host=None,
@@ -268,7 +268,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
         self.assertEqual(resulted, mock_func())
 
     def test_use_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -288,7 +288,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
             self.assertEqual(resulted, mock_func())
 
     def test_check_lock_extended(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -304,7 +304,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
             self.assertEqual(resulted, expected)
 
     def test_lock_is_removed_after_func_is_finished(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -329,7 +329,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
                 fake_redis[redis_params.redis_key]
 
     def test_lock_is_removed_after_func_is_finished_with_error(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -350,7 +350,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
 
 class TestWrapWithRemoveLock(unittest.TestCase):
     def test_no_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host=None,
@@ -366,7 +366,7 @@ class TestWrapWithRemoveLock(unittest.TestCase):
         self.assertEqual(resulted, mock_func())
 
     def test_use_redis(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -385,7 +385,7 @@ class TestWrapWithRemoveLock(unittest.TestCase):
             self.assertEqual(resulted, mock_func())
 
     def test_check_lock_extended(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -401,7 +401,7 @@ class TestWrapWithRemoveLock(unittest.TestCase):
             self.assertEqual(resulted, expected)
 
     def test_lock_is_removed_after_func_is_finished(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -425,7 +425,7 @@ class TestWrapWithRemoveLock(unittest.TestCase):
                 fake_redis[redis_params.redis_key]
 
     def test_lock_is_removed_after_func_is_finished_with_error(self):
-        redis_params = make_redis_params(
+        redis_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
             unique_id='123abc',
             redis_host='0.0.0.0',
@@ -446,20 +446,20 @@ class TestWrapWithRemoveLock(unittest.TestCase):
 
 class TestMakeRedisKey(unittest.TestCase):
     def test_make_redis_key(self):
-        result = make_redis_key(file_path='gs://test_ll/dir/fname.pkl', unique_id='12345')
+        result = make_task_lock_key(file_path='gs://test_ll/dir/fname.pkl', unique_id='12345')
         self.assertEqual(result, 'fname_12345')
 
 
 class TestMakeRedisParams(unittest.TestCase):
     def test_make_redis_params_with_valid_host(self):
-        result = make_redis_params(
+        result = make_task_lock_params(
             file_path='gs://aaa.pkl', unique_id='123', redis_host='0.0.0.0', redis_port='12345', redis_timeout=180, raise_task_lock_exception_on_collision=False
         )
-        expected = RedisParams(
+        expected = TaskLockParams(
             redis_host='0.0.0.0',
             redis_port='12345',
             redis_key='aaa_123',
-            should_redis_lock=True,
+            should_task_lock=True,
             redis_timeout=180,
             raise_task_lock_exception_on_collision=False,
             lock_extend_seconds=10,
@@ -467,14 +467,14 @@ class TestMakeRedisParams(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def test_make_redis_params_with_no_host(self):
-        result = make_redis_params(
+        result = make_task_lock_params(
             file_path='gs://aaa.pkl', unique_id='123', redis_host=None, redis_port='12345', redis_timeout=180, raise_task_lock_exception_on_collision=False
         )
-        expected = RedisParams(
+        expected = TaskLockParams(
             redis_host=None,
             redis_port='12345',
             redis_key='aaa_123',
-            should_redis_lock=False,
+            should_task_lock=False,
             redis_timeout=180,
             raise_task_lock_exception_on_collision=False,
             lock_extend_seconds=10,
@@ -483,7 +483,7 @@ class TestMakeRedisParams(unittest.TestCase):
 
     def test_assert_when_redis_timeout_is_too_short(self):
         with self.assertRaises(AssertionError):
-            make_redis_params(
+            make_task_lock_params(
                 file_path='test_dir/test_file.pkl',
                 unique_id='123abc',
                 redis_host='0.0.0.0',
