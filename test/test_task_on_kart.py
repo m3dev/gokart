@@ -11,7 +11,6 @@ from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
 import gokart
-from gokart.conflict_prevention_lock.run_with_lock import RunWithLock
 from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
