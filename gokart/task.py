@@ -11,10 +11,10 @@ import pandas as pd
 from luigi.parameter import ParameterVisibility
 
 import gokart
+from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
-from gokart.redis_lock import make_redis_params
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
 
@@ -173,7 +173,7 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
 
-        redis_params = make_redis_params(
+        task_lock_params = make_task_lock_params(
             file_path=file_path,
             unique_id=unique_id,
             redis_host=self.redis_host,
@@ -183,7 +183,7 @@ class TaskOnKart(luigi.Task):
         )
 
         return gokart.target.make_target(
-            file_path=file_path, unique_id=unique_id, processor=processor, redis_params=redis_params, store_index_in_feather=self.store_index_in_feather
+            file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
 
     def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
@@ -192,7 +192,7 @@ class TaskOnKart(luigi.Task):
         )
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        redis_params = make_redis_params(
+        task_lock_params = make_task_lock_params(
             file_path=file_path,
             unique_id=unique_id,
             redis_host=self.redis_host,
@@ -207,7 +207,7 @@ class TaskOnKart(luigi.Task):
             unique_id=unique_id,
             save_function=gokart.target.LargeDataFrameProcessor(max_byte=max_byte).save,
             load_function=gokart.target.LargeDataFrameProcessor.load,
-            redis_params=redis_params,
+            task_lock_params=task_lock_params,
         )
 
     def make_model_target(
@@ -224,7 +224,7 @@ class TaskOnKart(luigi.Task):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
-        redis_params = make_redis_params(
+        task_lock_params = make_task_lock_params(
             file_path=file_path,
             unique_id=unique_id,
             redis_host=self.redis_host,
@@ -239,7 +239,7 @@ class TaskOnKart(luigi.Task):
             unique_id=unique_id,
             save_function=save_function,
             load_function=load_function,
-            redis_params=redis_params,
+            task_lock_params=task_lock_params,
         )
 
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
