@@ -12,7 +12,6 @@ def _unzip_file(fp: Union[str, IO, os.PathLike], extract_dir: str) -> None:
 
 
 class ZipClient(object):
-
     @abstractmethod
     def exists(self) -> bool:
         pass
@@ -36,7 +35,6 @@ class ZipClient(object):
 
 
 class LocalZipClient(ZipClient):
-
     def __init__(self, file_path: str, temporary_directory: str) -> None:
         self._file_path = file_path
         self._temporary_directory = temporary_directory

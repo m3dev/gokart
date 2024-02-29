@@ -11,7 +11,6 @@ import gokart.info
 
 
 class TestInfo(unittest.TestCase):
-
     def setUp(self) -> None:
         MockFileSystem().clear()
         luigi.setup_logging.DaemonLogging._configured = False

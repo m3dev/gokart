@@ -4,7 +4,6 @@ import luigi
 
 
 class RunWithLock:
-
     def __init__(self, func):
         self._func = func
 
@@ -22,5 +21,5 @@ class RunWithLock:
             return func()
 
         output = output_list.pop()
-        wrapped_func = output.wrap_with_lock(func)
+        wrapped_func = output.wrap_with_run_lock(func)
         return cls._run_with_lock(func=wrapped_func, output_list=output_list)

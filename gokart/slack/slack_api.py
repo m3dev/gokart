@@ -18,7 +18,6 @@ class FileNotUploadedError(RuntimeError):
 
 
 class SlackAPI(object):
-
     def __init__(self, token, channel: str, to_user: str) -> None:
         self._client = slack_sdk.WebClient(token=token)
         self._channel_id = self._get_channel_id(channel)
@@ -39,10 +38,9 @@ class SlackAPI(object):
 
     def send_snippet(self, comment, title, content):
         try:
-            request_body = dict(channels=self._channel_id,
-                                initial_comment=f'<{self._to_user}> {comment}' if self._to_user else comment,
-                                content=content,
-                                title=title)
+            request_body = dict(
+                channels=self._channel_id, initial_comment=f'<{self._to_user}> {comment}' if self._to_user else comment, content=content, title=title
+            )
             response = self._client.api_call('files.upload', data=request_body)
             if not response['ok']:
                 raise FileNotUploadedError(f'Error while uploading file. The error reason is "{response["error"]}".')

@@ -34,7 +34,6 @@ class _DummyListTask(TaskOnKart):
 
 
 class TaskInstanceParameterTest(unittest.TestCase):
-
     def setUp(self):
         _DummyTask.clear_instance_cache()
 
@@ -54,7 +53,6 @@ class TaskInstanceParameterTest(unittest.TestCase):
         self.assertRaises(TypeError, lambda: gokart.TaskInstanceParameter(expected_type=1))  # not type instance
 
     def test_params_with_correct_param_type(self):
-
         class _DummyPipelineA(TaskOnKart):
             task_namespace = __name__
             subtask = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
@@ -63,7 +61,6 @@ class TaskInstanceParameterTest(unittest.TestCase):
         self.assertEqual(task.requires()['subtask'], _DummyCorrectSubClassTask())
 
     def test_params_with_invalid_param_type(self):
-
         class _DummyPipelineB(TaskOnKart):
             task_namespace = __name__
             subtask = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
@@ -73,7 +70,6 @@ class TaskInstanceParameterTest(unittest.TestCase):
 
 
 class ListTaskInstanceParameterTest(unittest.TestCase):
-
     def setUp(self):
         _DummyTask.clear_instance_cache()
 
@@ -81,16 +77,14 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
         self.assertRaises(TypeError, lambda: gokart.ListTaskInstanceParameter(expected_elements_type=1))  # not type instance
 
     def test_list_params_with_correct_param_types(self):
-
         class _DummyPipelineC(TaskOnKart):
             task_namespace = __name__
             subtask = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         task = _DummyPipelineC(subtask=[_DummyCorrectSubClassTask()])
-        self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(), ))
+        self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(),))
 
     def test_list_params_with_invalid_param_types(self):
-
         class _DummyPipelineD(TaskOnKart):
             task_namespace = __name__
             subtask = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)

@@ -11,9 +11,9 @@ from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
 import gokart
+from gokart.conflict_prevention_lock.run_with_lock import RunWithLock
 from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
-from gokart.run_with_lock import RunWithLock
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
 
 
@@ -99,7 +99,6 @@ class _DummyTaskWithPrivateParameter(gokart.TaskOnKart):
 
 
 class TaskTest(unittest.TestCase):
-
     def setUp(self):
         _DummyTask.clear_instance_cache()
         _DummyTaskA.clear_instance_cache()
@@ -148,7 +147,7 @@ class TaskTest(unittest.TestCase):
         self.assertFalse(task.complete())
 
     def test_complete_when_modification_time_equals_output(self):
-        """ Test the case that modification time of input equals that of output.
+        """Test the case that modification time of input equals that of output.
         The case is occurred when input and output targets are same.
         """
         input_target = MagicMock(spec=TargetOnKart)
@@ -197,7 +196,6 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.pkl', pathlib.Path(default_target._target.path).name)
 
     def test_clone_with_special_params(self):
-
         class _DummyTaskRerun(gokart.TaskOnKart):
             a = luigi.BoolParameter(default=False)
 
@@ -233,11 +231,10 @@ class TaskTest(unittest.TestCase):
 
     def test_get_own_code(self):
         task = _DummyTask()
-        task_scripts = "def output(self):\nreturn None\n"
+        task_scripts = 'def output(self):\nreturn None\n'
         self.assertEqual(task.get_own_code().replace(' ', ''), task_scripts.replace(' ', ''))
 
     def test_make_unique_id_with_own_code(self):
-
         class _MyDummyTaskA(gokart.TaskOnKart):
             _visible_in_registry = False
 
@@ -456,9 +453,7 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(task_c.requires().requires().complete())  # This is an instance of _DummyTaskA.
 
     def test_significant_flag(self):
-
         def _make_task(significant: bool, has_required_task: bool):
-
             class _MyDummyTaskA(gokart.TaskOnKart):
                 task_namespace = f'{__name__}_{significant}_{has_required_task}'
 
@@ -480,7 +475,6 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(y_task.make_unique_id(), z_task.make_unique_id())
 
     def test_default_requires(self):
-
         class _WithoutTaskInstanceParameter(gokart.TaskOnKart):
             task_namespace = __name__
 
@@ -495,25 +489,31 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(with_task.requires()['a_task'], without_task)
 
     def test_repr(self):
-        task = _DummyTaskWithPrivateParameter(int_param=1,
-                                              private_int_param=1,
-                                              task_param=_DummySubTaskWithPrivateParameter(),
-                                              list_task_param=[_DummySubTaskWithPrivateParameter(),
-                                                               _DummySubTaskWithPrivateParameter()])
+        task = _DummyTaskWithPrivateParameter(
+            int_param=1,
+            private_int_param=1,
+            task_param=_DummySubTaskWithPrivateParameter(),
+            list_task_param=[_DummySubTaskWithPrivateParameter(), _DummySubTaskWithPrivateParameter()],
+        )
         sub_task_id = _DummySubTaskWithPrivateParameter().make_unique_id()
-        expected = f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, private_int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), ' \
-            f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'  # noqa:E501
+        expected = (
+            f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, private_int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), '
+            f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
+        )  # noqa:E501
         self.assertEqual(expected, repr(task))
 
     def test_str(self):
-        task = _DummyTaskWithPrivateParameter(int_param=1,
-                                              private_int_param=1,
-                                              task_param=_DummySubTaskWithPrivateParameter(),
-                                              list_task_param=[_DummySubTaskWithPrivateParameter(),
-                                                               _DummySubTaskWithPrivateParameter()])
+        task = _DummyTaskWithPrivateParameter(
+            int_param=1,
+            private_int_param=1,
+            task_param=_DummySubTaskWithPrivateParameter(),
+            list_task_param=[_DummySubTaskWithPrivateParameter(), _DummySubTaskWithPrivateParameter()],
+        )
         sub_task_id = _DummySubTaskWithPrivateParameter().make_unique_id()
-        expected = f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), ' \
+        expected = (
+            f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), '
             f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
+        )
         self.assertEqual(expected, str(task))
 
     def test_run_with_lock_decorator(self):
@@ -522,7 +522,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_called_once()
@@ -533,7 +533,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             self.assertEqual(mock_obj.call_count, 2)
@@ -544,7 +544,7 @@ class TaskTest(unittest.TestCase):
         def _wrap(func):
             return func
 
-        with patch('gokart.target.TargetOnKart.wrap_with_lock') as mock_obj:
+        with patch('gokart.target.TargetOnKart.wrap_with_run_lock') as mock_obj:
             mock_obj.side_effect = _wrap
             task.run()
             mock_obj.assert_not_called()
@@ -559,6 +559,64 @@ class TaskTest(unittest.TestCase):
         task = gokart.TaskOnKart()
         deserialized: gokart.TaskOnKart = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
+
+
+class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
+    def dump(self, obj):
+        # overrive dump() to do nothing.
+        pass
+
+    def run(self):
+        self.dump('hello')
+
+    def complete(self):
+        return False
+
+
+class _DummyTaskWithCompleted(gokart.TaskOnKart):
+    def dump(self, obj):
+        # overrive dump() to do nothing.
+        pass
+
+    def run(self):
+        self.dump('hello')
+
+    def complete(self):
+        return True
+
+
+class TestCompleteCheckAtRun(unittest.TestCase):
+    def test_run_when_complete_check_at_run_is_false_and_task_is_not_completed(self):
+        task = _DummyTaskWithNonCompleted(complete_check_at_run=False)
+        task.dump = MagicMock()
+        task.run()
+
+        # since run() is called, dump() should be called.
+        task.dump.assert_called_once()
+
+    def test_run_when_complete_check_at_run_is_false_and_task_is_completed(self):
+        task = _DummyTaskWithCompleted(complete_check_at_run=False)
+        task.dump = MagicMock()
+        task.run()
+
+        # even task is completed, since run() is called, dump() should be called.
+        task.dump.assert_called_once()
+
+    def test_run_when_complete_check_at_run_is_true_and_task_is_not_completed(self):
+        task = _DummyTaskWithNonCompleted(complete_check_at_run=True)
+        task.dump = MagicMock()
+        task.run()
+
+        # since task is not completed, when run() is called, dump() should be called.
+        task.dump.assert_called_once()
+
+    def test_run_when_complete_check_at_run_is_true_and_task_is_completed(self):
+        task = _DummyTaskWithCompleted(complete_check_at_run=True)
+        task.dump = MagicMock()
+        task.run()
+
+        # since task is completed, even when run() is called, dump() should not be called.
+        task.dump.assert_not_called()
 
 
 if __name__ == '__main__':

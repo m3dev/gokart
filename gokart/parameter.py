@@ -11,7 +11,6 @@ logger = getLogger(__name__)
 
 
 class TaskInstanceParameter(luigi.Parameter):
-
     def __init__(self, expected_type=None, *args, **kwargs):
         if expected_type is None:
             self.expected_type = gokart.TaskOnKart
@@ -53,7 +52,6 @@ class TaskInstanceParameter(luigi.Parameter):
 
 
 class _TaskInstanceEncoder(json.JSONEncoder):
-
     def default(self, obj):
         if isinstance(obj, luigi.Task):
             return TaskInstanceParameter().serialize(obj)
@@ -62,7 +60,6 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 
 
 class ListTaskInstanceParameter(luigi.Parameter):
-
     def __init__(self, expected_elements_type=None, *args, **kwargs):
         if expected_elements_type is None:
             self.expected_elements_type = gokart.TaskOnKart
@@ -85,7 +82,6 @@ class ListTaskInstanceParameter(luigi.Parameter):
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
-
     def __init__(self, *args, **kwargs):
         luigi.Parameter.__init__(self, *args, **kwargs)
 

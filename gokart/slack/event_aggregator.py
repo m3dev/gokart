@@ -13,7 +13,6 @@ class FailureEvent(TypedDict):
 
 
 class EventAggregator(object):
-
     def __init__(self) -> None:
         self._success_events: List[str] = []
         self._failure_events: List[FailureEvent] = []
@@ -24,7 +23,7 @@ class EventAggregator(object):
             luigi.Task.event_handler(event)(handler)
 
     def get_summary(self) -> str:
-        return f"Success: {len(self._success_events)}; Failure: {len(self._failure_events)}"
+        return f'Success: {len(self._success_events)}; Failure: {len(self._failure_events)}'
 
     def get_event_list(self) -> str:
         message = ''

@@ -16,7 +16,7 @@ style = "pep440"
 pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.9,<3.13"
 luigi = "*"
 boto3 = "*"
 slack-sdk = "^3"
@@ -33,39 +33,33 @@ matplotlib = "*"
 dill = "*"
 
 [tool.poetry.group.dev.dependencies]
-pyproject-flake8 = "5.0.4"
+ruff = "*"
 tox = "*"
 moto = "*"
 testfixtures = "*"
 coverage = "*"
-isort = "^5.7"
-yapf = ">=0.32"
 toml = "*"
 lupa = "*"
 fakeredis = "*"
 mypy = "*"
 types-redis = "*"
 
-[tool.flake8]
-# B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.
-# B008 Do not perform function calls in argument defaults.  The call is performed only once at function definition time. All calls to your function will reuse the result of that definition-time function call.  If this is intended, assign the function call to a module-level variable and use that variable as a default value.
-ignore = "B006,B008"
-max-line-length = 160
-exclude = "venv/*,tox/*"
-
-[tool.yapf]
-based_on_style = "pep8"
-column_limit = 160
-
-[tool.yapfignore]
-ignore_patterns = [
-  ".venv/*",
-  ".tox/*",
-  "examples/*"
+[tool.ruff]
+# All the rules are listed on https://docs.astral.sh/ruff/rules/
+extend-select = [
+  "B", # bugbear
+  "I" # isort
 ]
 
-[tool.isort]
-line_length = 160
+# B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.
+# B008 Do not perform function calls in argument defaults.  The call is performed only once at function definition time. All calls to your function will reuse the result of that definition-time function call.  If this is intended, assign the function call to a module-level variable and use that variable as a default value.
+ignore = ["B006", "B008"]
+
+line-length = 160
+exclude = ["venv/*", "tox/*"]
+
+[tool.ruff.format]
+quote-style = "single"
 
 [tool.mypy]
 ignore_missing_imports = true

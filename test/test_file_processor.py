@@ -9,7 +9,7 @@ from gokart.file_processor import CsvFileProcessor, PickleFileProcessor
 
 class TestCsvFileProcessor(unittest.TestCase):
     def test_dump_csv_with_utf8(self):
-        df = pd.DataFrame({"あ": [1, 2, 3], "い": [4, 5, 6]})
+        df = pd.DataFrame({'あ': [1, 2, 3], 'い': [4, 5, 6]})
         processor = CsvFileProcessor()
 
         with tempfile.TemporaryDirectory() as temp_dir:
