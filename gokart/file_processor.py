@@ -1,5 +1,5 @@
 import os
-import pickle
+import dill as pickle
 import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from logging import getLogger
