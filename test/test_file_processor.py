@@ -1,6 +1,6 @@
 import tempfile
-from typing import Callable
 import unittest
+from typing import Callable
 
 import pandas as pd
 from luigi import LocalTarget

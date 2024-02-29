@@ -1,9 +1,9 @@
 import os
-import dill as pickle
 import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from logging import getLogger
 
+import dill as pickle
 import luigi
 import luigi.contrib.s3
 import luigi.format
