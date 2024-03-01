@@ -8,10 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/m3dev/gokart"
 repository = "https://github.com/m3dev/gokart"
 documentation = "https://gokart.readthedocs.io/en/latest/"
-packages = [
-  {include = "gokart"},
-  {include = "gokart/py.typed"},
-]
+
 
 [tool.poetry-dynamic-versioning]
 enable = true
