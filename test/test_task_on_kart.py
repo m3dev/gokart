@@ -507,6 +507,22 @@ class TaskTest(unittest.TestCase):
         deserialized: gokart.TaskOnKart = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
 
+    def test_should_lock_run_when_set(self):
+        class _DummyTaskWithLock(gokart.TaskOnKart):
+            def run(self):
+                self.dump('hello')
+
+        task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True)
+        self.assertEqual(task.run.__wrapped__.__name__, 'run')
+
+    def test_should_fail_lock_run_when_host_unset(self):
+        with self.assertRaises(AssertionError):
+            gokart.TaskOnKart(redis_port=123, redis_timeout=180, should_lock_run=True)
+
+    def test_should_fail_lock_run_when_port_unset(self):
+        with self.assertRaises(AssertionError):
+            gokart.TaskOnKart(redis_host='host', redis_timeout=180, should_lock_run=True)
+
 
 class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
     def dump(self, obj):

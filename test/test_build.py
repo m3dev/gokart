@@ -2,12 +2,14 @@ import logging
 import os
 import unittest
 from copy import copy
+from unittest.mock import MagicMock, patch
 
 import luigi
 import luigi.mock
 
 import gokart
 from gokart.build import GokartBuildError, LoggerConfig
+from gokart.conflict_prevention_lock.task_lock import TaskLockException
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -104,6 +106,31 @@ class LoggerConfigTest(unittest.TestCase):
                 with LoggerConfig(level) as lc:
                     self.assertTrue(lc.logger.isEnabledFor(enable_expected))
                     self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
+
+
+class FailedCounter:
+    def __init__(self):
+        self.failed_counter = 0
+
+    def decrement(self):
+        self.failed_counter -= 1
+
+
+class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.failed_counter = 0
+
+    def run(self):
+        if self.failed_counter < 3:
+            self.failed_counter += 1
+            raise TaskLockException()
+        self.dump('done')
+
+
+class TestBuildHasLockedTaskException(unittest.TestCase):
+    def test_build_expo_backoff_when_luigi_failed_due_to_locked_task(self):
+        gokart.build(_FailThreeTimesAndSuccessTask(), reset_register=False, log_level=logging.INFO)
 
 
 if __name__ == '__main__':
