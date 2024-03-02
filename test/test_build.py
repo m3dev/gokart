@@ -2,7 +2,6 @@ import logging
 import os
 import unittest
 from copy import copy
-from unittest.mock import MagicMock, patch
 
 import luigi
 import luigi.mock
