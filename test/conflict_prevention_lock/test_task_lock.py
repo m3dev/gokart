@@ -1,8 +1,8 @@
 import random
 import unittest
 from unittest.mock import patch
-import gokart
 
+import gokart
 from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams, make_task_lock_key, make_task_lock_params, make_task_lock_params_for_run
 
 
