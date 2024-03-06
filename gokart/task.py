@@ -12,7 +12,7 @@ from luigi.parameter import ParameterVisibility
 
 import gokart
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
-from gokart.conflict_prevention_lock.wrap_run_with_lock import wrap_run_with_lock
+from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
