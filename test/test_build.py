@@ -107,14 +107,6 @@ class LoggerConfigTest(unittest.TestCase):
                     self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
 
 
-class FailedCounter:
-    def __init__(self):
-        self.failed_counter = 0
-
-    def decrement(self):
-        self.failed_counter -= 1
-
-
 class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
