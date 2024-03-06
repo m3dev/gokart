@@ -17,7 +17,7 @@ def _sample_long_func(a: int, b: str):
     return dict(a=a, b=b)
 
 
-class TestWrapWithDumpLock(unittest.TestCase):
+class TestWrapDumpWithLock(unittest.TestCase):
     def test_no_redis(self):
         task_lock_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
@@ -124,7 +124,7 @@ class TestWrapWithDumpLock(unittest.TestCase):
                     fake_redis[task_lock_params.redis_key]
 
 
-class TestWrapWithLoadLock(unittest.TestCase):
+class TestWrapLoadWithLock(unittest.TestCase):
     def test_no_redis(self):
         task_lock_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
@@ -223,7 +223,7 @@ class TestWrapWithLoadLock(unittest.TestCase):
                     fake_redis[task_lock_params.redis_key]
 
 
-class TestWrapWithRemoveLock(unittest.TestCase):
+class TestWrapRemoveWithLock(unittest.TestCase):
     def test_no_redis(self):
         task_lock_params = make_task_lock_params(
             file_path='test_dir/test_file.pkl',
