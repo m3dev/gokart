@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from logging import getLogger
 
-import dill as pickle
+import dill
 import luigi
 import luigi.contrib.s3
 import luigi.format
@@ -81,11 +81,11 @@ class PickleFileProcessor(FileProcessor):
 
     def load(self, file):
         if not ObjectStorage.is_buffered_reader(file):
-            return pickle.loads(file.read())
-        return pickle.load(_ChunkedLargeFileReader(file))
+            return dill.loads(file.read())
+        return dill.load(_ChunkedLargeFileReader(file))
 
     def dump(self, obj, file):
-        self._write(pickle.dumps(obj, protocol=4), file)
+        self._write(dill.dumps(obj, protocol=4), file)
 
     @staticmethod
     def _write(buffer, file):
