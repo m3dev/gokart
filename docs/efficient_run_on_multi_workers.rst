@@ -15,7 +15,7 @@ When `gokart.TaskOnKart.should_lock_run` is set to True, the task will fail if t
 By failing the task, other tasks that can be executed at that time are given priority.
 After that, the failed task is automatically re-executed.
 
-.. code:: bash
+.. code:: python
 
     class SampleTask2(gokart.TaskOnKart):
         should_lock_run = True
