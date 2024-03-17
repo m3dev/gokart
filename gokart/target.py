@@ -13,7 +13,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
-from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_with_dump_lock, wrap_with_load_lock, wrap_with_remove_lock, wrap_with_run_lock
+from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client_util import make_zip_client
@@ -26,26 +26,23 @@ class TargetOnKart(luigi.Target):
         return self._exists()
 
     def load(self) -> Any:
-        return wrap_with_load_lock(func=self._load, task_lock_params=self._get_task_lock_params())()
+        return wrap_load_with_lock(func=self._load, task_lock_params=self._get_task_lock_params())()
 
     def dump(self, obj, lock_at_dump: bool = True) -> None:
         if lock_at_dump:
-            wrap_with_dump_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(obj)
+            wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(obj)
         else:
             self._dump(obj)
 
     def remove(self) -> None:
         if self.exists():
-            wrap_with_remove_lock(self._remove, task_lock_params=self._get_task_lock_params())()
+            wrap_remove_with_lock(self._remove, task_lock_params=self._get_task_lock_params())()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
 
     def path(self) -> str:
         return self._path()
-
-    def wrap_with_run_lock(self, func):
-        return wrap_with_run_lock(func=func, task_lock_params=self._get_task_lock_params())
 
     @abstractmethod
     def _exists(self) -> bool:

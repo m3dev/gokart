@@ -30,6 +30,7 @@ google-api-python-client = "*"
 APScheduler = "*"
 redis = "*"
 matplotlib = "*"
+backoff = "^2.2.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
