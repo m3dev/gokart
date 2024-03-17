@@ -5,7 +5,6 @@ If multiple worker nodes are running similar gokart pipelines in parallel, it is
 (For example, when training multiple machine learning models with different parameters, the feature creation task in the first stage is expected to be exactly the same.)
 
 It is inefficient to execute the same task on each of multiple worker nodes, so we want to avoid this.
-
 Here we introduce `should_lock_run` feature to improve this inefficiency.
 
 Suppress run() of the same task with `should_lock_run`
