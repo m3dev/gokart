@@ -7,6 +7,8 @@ If multiple worker nodes are running similar gokart pipelines in parallel, it is
 It is inefficient to execute the same task on each of multiple worker nodes, so we want to avoid this.
 Here we introduce `should_lock_run` feature to improve this inefficiency.
 
+
+
 Suppress run() of the same task with `should_lock_run`
 ------------------------------------------------------
 When `gokart.TaskOnKart.should_lock_run` is set to True, the task will fail if the same task is run()-ing by another worker.
