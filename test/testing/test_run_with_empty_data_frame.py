@@ -38,6 +38,8 @@ class DummyWorkFlowWithError(gokart.TaskOnKart):
     task_namespace = __name__
     rerun = True
 
+    complete_check_at_run = False
+
     def requires(self):
         return dict(model=DummyModelTask(), data_a=DummyPandasDataFrameTask(param='a'))
 
