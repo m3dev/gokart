@@ -100,3 +100,20 @@ def make_task_lock_params(
         lock_extend_seconds=lock_extend_seconds,
     )
     return task_lock_params
+
+
+def make_task_lock_params_for_run(task_self, lock_extend_seconds: int = 10) -> TaskLockParams:
+    task_path_name = os.path.join(task_self.__module__.replace('.', '/'), f'{type(task_self).__name__}')
+    unique_id = task_self.make_unique_id() + '-run'
+    task_lock_key = make_task_lock_key(file_path=task_path_name, unique_id=unique_id)
+
+    should_task_lock = task_self.redis_host is not None and task_self.redis_port is not None
+    return TaskLockParams(
+        redis_host=task_self.redis_host,
+        redis_port=task_self.redis_port,
+        redis_key=task_lock_key,
+        should_task_lock=should_task_lock,
+        redis_timeout=task_self.redis_timeout,
+        raise_task_lock_exception_on_collision=True,
+        lock_extend_seconds=lock_extend_seconds,
+    )
