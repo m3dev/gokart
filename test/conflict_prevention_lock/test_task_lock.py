@@ -2,7 +2,8 @@ import random
 import unittest
 from unittest.mock import patch
 
-from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams, make_task_lock_key, make_task_lock_params
+import gokart
+from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams, make_task_lock_key, make_task_lock_params, make_task_lock_params_for_run
 
 
 class TestRedisClient(unittest.TestCase):
@@ -70,3 +71,28 @@ class TestMakeRedisParams(unittest.TestCase):
                 redis_port=12345,
                 redis_timeout=2,
             )
+
+
+class TestMakeTaskLockParamsForRun(unittest.TestCase):
+    def test_make_task_lock_params_for_run(self):
+        class _SampleDummyTask(gokart.TaskOnKart):
+            pass
+
+        task_self = _SampleDummyTask(
+            redis_host='0.0.0.0',
+            redis_port='12345',
+            redis_timeout=180,
+        )
+
+        result = make_task_lock_params_for_run(task_self=task_self, lock_extend_seconds=10)
+        expected = TaskLockParams(
+            redis_host='0.0.0.0',
+            redis_port='12345',
+            redis_timeout=180,
+            redis_key='_SampleDummyTask_7e857f231830ca0fd6cf829d99f43961-run',
+            should_task_lock=True,
+            raise_task_lock_exception_on_collision=True,
+            lock_extend_seconds=10,
+        )
+
+        self.assertEqual(result, expected)

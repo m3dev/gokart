@@ -152,7 +152,7 @@ class LocalTargetTest(unittest.TestCase):
         pd.testing.assert_series_equal(loaded['column_name'], obj)
 
     def test_dump_with_lock(self):
-        with patch('gokart.target.wrap_with_dump_lock') as wrap_with_lock_mock:
+        with patch('gokart.target.wrap_dump_with_lock') as wrap_with_lock_mock:
             obj = 1
             file_path = os.path.join(_get_temporary_directory(), 'test.pkl')
             target = make_target(file_path=file_path, unique_id=None)
@@ -161,7 +161,7 @@ class LocalTargetTest(unittest.TestCase):
             wrap_with_lock_mock.assert_called_once()
 
     def test_dump_without_lock(self):
-        with patch('gokart.target.wrap_with_dump_lock') as wrap_with_lock_mock:
+        with patch('gokart.target.wrap_dump_with_lock') as wrap_with_lock_mock:
             obj = 1
             file_path = os.path.join(_get_temporary_directory(), 'test.pkl')
             target = make_target(file_path=file_path, unique_id=None)

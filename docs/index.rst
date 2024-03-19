@@ -60,7 +60,8 @@ User Guide
    task_information
    logging
    slack_notification
-   using_task_cache_collision_lock
+   using_task_task_conflict_prevention_lock
+   efficient_run_on_multi_workers
    for_pandas
 
 API References
