@@ -232,7 +232,9 @@ class FeatherFileProcessor(FileProcessor):
                 index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
                 index_column = index_columns[0]
                 index_name = index_column[len(self.INDEX_COLUMN_PREFIX) :]
-                loaded_df.index = pd.Index(loaded_df[index_column], name=index_name)
+                if index_name == 'None':
+                    index_name = None
+                loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
                 loaded_df = loaded_df.drop(columns={index_column})
 
         return loaded_df
