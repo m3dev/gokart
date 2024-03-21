@@ -247,6 +247,7 @@ class FeatherFileProcessor(FileProcessor):
             index_column_name = f'{self.INDEX_COLUMN_PREFIX}{dump_obj.index.name}'
             assert index_column_name not in dump_obj.columns, f'column name {index_column_name} already exists in dump_obj. \
                 Consider not saving index by setting store_index_in_feather=False.'
+            assert dump_obj.index.name != 'None', 'index name is "None", which is not allowed in gokart. Consider setting another index name.'
 
             dump_obj[index_column_name] = dump_obj.index
             dump_obj = dump_obj.reset_index(drop=True)
