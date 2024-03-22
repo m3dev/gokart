@@ -10,6 +10,7 @@ from typing import Any, Optional
 import luigi
 import numpy as np
 import pandas as pd
+import pandera as pa
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
@@ -78,6 +79,7 @@ class SingleFileTarget(TargetOnKart):
         target: luigi.target.FileSystemTarget,
         processor: FileProcessor,
         task_lock_params: TaskLockParams,
+        expected_dataframe_type: Optional[pa.DataFrameModel] = None,
     ) -> None:
         self._target = target
         self._processor = processor
@@ -91,9 +93,16 @@ class SingleFileTarget(TargetOnKart):
 
     def _load(self) -> Any:
         with self._target.open('r') as f:
-            return self._processor.load(f)
+            obj = self._processor.load(f)
+            if self.expected_dataframe_type is not None:
+                return self.expected_dataframe_type(obj)
+
+            return obj
 
     def _dump(self, obj) -> None:
+        if self.expected_dataframe_type is not None:
+            self.expected_dataframe_type.validate(obj)
+
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
 
