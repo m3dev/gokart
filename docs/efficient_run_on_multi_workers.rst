@@ -19,3 +19,19 @@ After that, the failed task is automatically re-executed.
 
     class SampleTask2(gokart.TaskOnKart):
         should_lock_run = True
+
+
+Additional Option
+------------------
+
+Skip completed tasks with `complete_check_at_run`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+By setting `gokart.TaskOnKart.complete_check_at_run` to True, the existence of the cache can be rechecked at run() time.
+
+Default is True, but if the check takes too much time, you can set to False to inactivate the check.
+
+.. code:: python
+
+    class SampleTask1(gokart.TaskOnKart):
+        complete_check_at_run = False
+    
