@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import luigi
 import pandas as pd
+import pandera as pa
 from luigi.parameter import ParameterVisibility
 
 import gokart
@@ -83,6 +84,7 @@ class TaskOnKart(luigi.Task):
         default=True, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
     should_lock_run: bool = ExplicitBoolParameter(default=False, significant=False, description='Whether to use redis lock or not at task run.')
+    expected_output_dataframe_type: Optional[type[pa.DataFrameModel]] = None
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
@@ -192,7 +194,12 @@ class TaskOnKart(luigi.Task):
         )
 
         return gokart.target.make_target(
-            file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
+            file_path=file_path,
+            unique_id=unique_id,
+            processor=processor,
+            task_lock_params=task_lock_params,
+            store_index_in_feather=self.store_index_in_feather,
+            expected_dataframe_type=self.expected_output_dataframe_type,
         )
 
     def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:

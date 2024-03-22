@@ -1,18 +1,22 @@
 import io
 import os
 import shutil
+import tempfile
 import unittest
 from datetime import datetime
 from unittest.mock import patch
 
 import boto3
+import luigi
 import numpy as np
 import pandas as pd
+import pandera as pa
 from matplotlib import pyplot
 from moto import mock_s3
 
-from gokart.file_processor import _ChunkedLargeFileReader
-from gokart.target import make_model_target, make_target
+from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
+from gokart.file_processor import _ChunkedLargeFileReader, make_file_processor
+from gokart.target import SingleFileTarget, make_model_target, make_target
 
 
 def _get_temporary_directory():
@@ -250,6 +254,45 @@ class ModelTargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, obj)
+
+
+class SingleFileTargetTest(unittest.TestCase):
+    class DummyDataFrameSchema(pa.DataFrameModel):
+        a: pa.typing.Series[int] = pa.Field()
+
+    def test_typed_target(self):
+        test_case = pd.DataFrame(dict(a=[1, 2]))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = os.path.join(temp_dir, 'test.csv')
+            unique_id = 'test_unique_id'
+            _task_lock_params = make_task_lock_params(file_path=file_path, unique_id=unique_id)
+            processor = make_file_processor(file_path, store_index_in_feather=False)
+            file_system_target = luigi.LocalTarget(file_path, format=processor.format())
+            file_target = SingleFileTarget(
+                target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema
+            )
+
+            file_target.dump(test_case)
+            dumped_data = file_target.load()
+            self.assertIsInstance(dumped_data, pa.typing.DataFrame)
+            self.DummyDataFrameSchema.validate(dumped_data)
+
+    def test_invalid_typed_target(self):
+        test_case = pd.DataFrame(dict(a=['1', '2']))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = os.path.join(temp_dir, 'test.csv')
+            unique_id = 'test_unique_id'
+            _task_lock_params = make_task_lock_params(file_path=file_path, unique_id=unique_id)
+            processor = make_file_processor(file_path, store_index_in_feather=False)
+            file_system_target = luigi.LocalTarget(file_path, format=processor.format())
+            file_target = SingleFileTarget(
+                target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema
+            )
+
+            with self.assertRaises(pa.errors.SchemaError):
+                file_target.dump(test_case)
 
 
 if __name__ == '__main__':
