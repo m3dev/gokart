@@ -31,6 +31,7 @@ APScheduler = "*"
 redis = "*"
 matplotlib = "*"
 backoff = "^2.2.1"
+pandera = "^0.18.3"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
