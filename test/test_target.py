@@ -14,6 +14,7 @@ import pandas as pd
 from matplotlib import pyplot
 from moto import mock_s3
 
+from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import _ChunkedLargeFileReader, make_file_processor
 from gokart.target import SingleFileTarget, make_model_target, make_target
 
@@ -263,22 +264,26 @@ class SingleFileTargetTest(unittest.TestCase):
         test_case = pd.DataFrame(dict(a=[1, 2]))
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            _task_lock_params = None
             file_path = os.path.join(temp_dir, 'test.csv')
+            unique_id = 'test_unique_id'
+            _task_lock_params = make_task_lock_params(file_path=file_path, unique_id=unique_id)
             processor = make_file_processor(file_path, store_index_in_feather=False)
             file_system_target = luigi.LocalTarget(file_path, format=processor.format())
             file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema)
 
             file_target.dump(test_case)
             dumped_data = file_target.load()
-            self.assertIsInstance(dumped_data, self.DummyDataFrameSchema)
+            self.assertIsInstance(dumped_data, pa.typing.DataFrame)
+            self.DummyDataFrameSchema.validate(dumped_data)
+
 
     def test_invalid_typed_target(self):
         test_case = pd.DataFrame(dict(a=['1', '2']))
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            _task_lock_params = None
             file_path = os.path.join(temp_dir, 'test.csv')
+            unique_id = 'test_unique_id'
+            _task_lock_params = make_task_lock_params(file_path=file_path, unique_id=unique_id)
             processor = make_file_processor(file_path, store_index_in_feather=False)
             file_system_target = luigi.LocalTarget(file_path, format=processor.format())
             file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema)

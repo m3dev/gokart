@@ -80,11 +80,12 @@ class SingleFileTarget(TargetOnKart):
         target: luigi.target.FileSystemTarget,
         processor: FileProcessor,
         task_lock_params: TaskLockParams,
-        expected_dataframe_type: Optional[pa.DataFrameModel] = None,
+        expected_dataframe_type: Optional[type[pa.DataFrameModel]] = None,
     ) -> None:
         self._target = target
         self._processor = processor
         self._task_lock_params = task_lock_params
+        self._expected_dataframe_type = expected_dataframe_type
 
     def _exists(self) -> bool:
         return self._target.exists()
@@ -95,14 +96,14 @@ class SingleFileTarget(TargetOnKart):
     def _load(self) -> Any:
         with self._target.open('r') as f:
             obj = self._processor.load(f)
-            if self.expected_dataframe_type is not None:
-                return self.expected_dataframe_type(obj)
+            if self._expected_dataframe_type is not None:
+                return pa.typing.DataFrame[self._expected_dataframe_type](obj)
 
             return obj
 
     def _dump(self, obj) -> None:
-        if self.expected_dataframe_type is not None:
-            self.expected_dataframe_type.validate(obj)
+        if self._expected_dataframe_type is not None:
+            self._expected_dataframe_type.validate(obj)
 
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
