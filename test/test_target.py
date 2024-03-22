@@ -9,8 +9,8 @@ from unittest.mock import patch
 import boto3
 import luigi
 import numpy as np
-import pandera as pa
 import pandas as pd
+import pandera as pa
 from matplotlib import pyplot
 from moto import mock_s3
 
