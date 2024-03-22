@@ -227,7 +227,7 @@ def make_target(
     processor: Optional[FileProcessor] = None,
     task_lock_params: Optional[TaskLockParams] = None,
     store_index_in_feather: bool = True,
-    expected_dataframe_type: Optional[pa.DataFrameModel] = None,
+    expected_dataframe_type: Optional[type[pa.DataFrameModel]] = None,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)

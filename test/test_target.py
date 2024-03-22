@@ -269,13 +269,14 @@ class SingleFileTargetTest(unittest.TestCase):
             _task_lock_params = make_task_lock_params(file_path=file_path, unique_id=unique_id)
             processor = make_file_processor(file_path, store_index_in_feather=False)
             file_system_target = luigi.LocalTarget(file_path, format=processor.format())
-            file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema)
+            file_target = SingleFileTarget(
+                target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema
+            )
 
             file_target.dump(test_case)
             dumped_data = file_target.load()
             self.assertIsInstance(dumped_data, pa.typing.DataFrame)
             self.DummyDataFrameSchema.validate(dumped_data)
-
 
     def test_invalid_typed_target(self):
         test_case = pd.DataFrame(dict(a=['1', '2']))
@@ -286,11 +287,12 @@ class SingleFileTargetTest(unittest.TestCase):
             _task_lock_params = make_task_lock_params(file_path=file_path, unique_id=unique_id)
             processor = make_file_processor(file_path, store_index_in_feather=False)
             file_system_target = luigi.LocalTarget(file_path, format=processor.format())
-            file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema)
+            file_target = SingleFileTarget(
+                target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema
+            )
 
             with self.assertRaises(pa.errors.SchemaError):
                 file_target.dump(test_case)
-            
 
 
 if __name__ == '__main__':

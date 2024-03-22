@@ -341,11 +341,11 @@ class TaskTest(unittest.TestCase):
         # fail
         task = _DummyTask(fail_on_empty_dump=True)
         self.assertRaises(AssertionError, lambda: task.dump(pd.DataFrame()))
-    
+
     def test_fail_with_type_check(self):
-        
         class _DummyTypeSchema(pa.DataFrameModel):
             a: pa.typing.Series[int] = pa.Field()
+
         class _DummyTaskWithType(gokart.TaskOnKart):
             expected_output_dataframe_type = _DummyTypeSchema
 
@@ -353,7 +353,7 @@ class TaskTest(unittest.TestCase):
         # fail
         with self.assertRaises(pa.errors.SchemaError):
             task.dump(pd.DataFrame(dict(a=['1', '2', '3'])))
-    
+
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: MagicMock):
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
