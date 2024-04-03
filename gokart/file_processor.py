@@ -207,11 +207,14 @@ class ParquetFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        # FIXME(mamo3gr): enable streaming (chunked) read.
+        # FIXME(mamo3gr): enable streaming (chunked) read with S3.
         # pandas.read_parquet accepts file-like object
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
         # which is needed for pandas to read a file in chunks.
-        return pd.read_parquet(BytesIO(file.read()))
+        if ObjectStorage.is_buffered_reader(file):
+            return pd.read_parquet(_ChunkedLargeFileReader(file))
+        else:
+            return pd.read_parquet(BytesIO(file.read()))
 
     def dump(self, obj, file):
         assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
@@ -229,11 +232,14 @@ class FeatherFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        # FIXME(mamo3gr): enable streaming (chunked) read.
+        # FIXME(mamo3gr): enable streaming (chunked) read with S3.
         # pandas.read_feather accepts file-like object
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
         # which is needed for pandas to read a file in chunks.
-        loaded_df = pd.read_feather(BytesIO(file.read()))
+        if ObjectStorage.is_buffered_reader(file):
+            loaded_df = pd.read_feather(_ChunkedLargeFileReader(file))
+        else:
+            loaded_df = pd.read_feather(BytesIO(file.read()))
 
         if self._store_index_in_feather:
             if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
