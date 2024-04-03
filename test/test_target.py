@@ -208,6 +208,34 @@ class S3TargetTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             target.last_modification_time()
 
+    @mock_s3
+    def test_save_on_s3_feather(self):
+        conn = boto3.resource('s3', region_name='us-east-1')
+        conn.create_bucket(Bucket='test')
+
+        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        file_path = os.path.join('s3://test/', 'test.feather')
+
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        loaded = target.load()
+
+        pd.testing.assert_frame_equal(loaded, obj)
+
+    @mock_s3
+    def test_save_on_s3_parquet(self):
+        conn = boto3.resource('s3', region_name='us-east-1')
+        conn.create_bucket(Bucket='test')
+
+        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        file_path = os.path.join('s3://test/', 'test.parquet')
+
+        target = make_target(file_path=file_path, unique_id=None)
+        target.dump(obj)
+        loaded = target.load()
+
+        pd.testing.assert_frame_equal(loaded, obj)
+
 
 class ModelTargetTest(unittest.TestCase):
     def tearDown(self):
