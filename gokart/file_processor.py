@@ -212,7 +212,7 @@ class ParquetFileProcessor(FileProcessor):
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
         # which is needed for pandas to read a file in chunks.
         if ObjectStorage.is_buffered_reader(file):
-            return pd.read_parquet(_ChunkedLargeFileReader(file))
+            return pd.read_parquet(file.name)
         else:
             return pd.read_parquet(BytesIO(file.read()))
 
@@ -237,7 +237,7 @@ class FeatherFileProcessor(FileProcessor):
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
         # which is needed for pandas to read a file in chunks.
         if ObjectStorage.is_buffered_reader(file):
-            loaded_df = pd.read_feather(_ChunkedLargeFileReader(file))
+            loaded_df = pd.read_feather(file.name)
         else:
             loaded_df = pd.read_feather(BytesIO(file.read()))
 
