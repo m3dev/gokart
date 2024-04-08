@@ -17,14 +17,14 @@ T = TypeVar('T')
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
 
-    FlattableItems: TypeAlias = T | Iterable['FlattableItems[T]'] | dict[str, 'FlattableItems[T]']
+    FlattenableItems: TypeAlias = T | Iterable['FlattenableItems[T]'] | dict[str, 'FlattenableItems[T]']
 else:
     from typing import Union
 
-    FlattableItems = Union[T, Iterable['FlattableItems[T]'], dict[str, 'FlattableItems[T]']]
+    FlattenableItems = Union[T, Iterable['FlattenableItems[T]'], dict[str, 'FlattenableItems[T]']]
 
 
-def flatten(targets: FlattableItems[T]) -> list[T]:
+def flatten(targets: FlattenableItems[T]) -> list[T]:
     """
     Creates a flat list of all items in structured output (dicts, lists, items):
 

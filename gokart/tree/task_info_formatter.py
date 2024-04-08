@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List, NamedTuple, Optional, Set
 
 from gokart.task import TaskOnKart
-from gokart.utils import FlattableItems, flatten
+from gokart.utils import FlattenableItems, flatten
 
 
 @dataclass
@@ -16,7 +16,7 @@ class TaskInfo:
     processing_time: str
     is_complete: str
     task_log: dict
-    requires: FlattableItems['RequiredTask']
+    requires: FlattenableItems['RequiredTask']
     children_task_infos: List['TaskInfo']
 
     def get_task_id(self):

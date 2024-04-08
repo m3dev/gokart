@@ -19,7 +19,7 @@ from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
-from gokart.utils import FlattableItems, flatten
+from gokart.utils import FlattenableItems, flatten
 
 logger = getLogger(__name__)
 
@@ -105,13 +105,13 @@ class TaskOnKart(luigi.Task):
             task_lock_params = make_task_lock_params_for_run(task_self=self)
             self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)
 
-    def input(self) -> FlattableItems[TargetOnKart]:
+    def input(self) -> FlattenableItems[TargetOnKart]:
         return super().input()
 
-    def output(self) -> FlattableItems[TargetOnKart]:
+    def output(self) -> FlattenableItems[TargetOnKart]:
         return self.make_target()
 
-    def requires(self) -> FlattableItems['TaskOnKart']:
+    def requires(self) -> FlattenableItems['TaskOnKart']:
         tasks = self.make_task_instance_dictionary()
         return tasks or []  # when tasks is empty dict, then this returns empty list.
 
@@ -347,13 +347,13 @@ class TaskOnKart(luigi.Task):
             dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
-    def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> FlattableItems[TargetOnKart]:
+    def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> FlattenableItems[TargetOnKart]:
         if target is None:
             return self.input()
         if isinstance(target, str):
             input = self.input()
             assert isinstance(input, dict), f'input must be dict[str, TargetOnKart], but {type(input)} is passed.'
-            result: FlattableItems[TargetOnKart] = input[target]
+            result: FlattenableItems[TargetOnKart] = input[target]
             return result
         return target
 
