@@ -1,11 +1,10 @@
 import typing
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List, NamedTuple, Optional, Set, Union
-
-import luigi
+from typing import Dict, List, NamedTuple, Optional, Set
 
 from gokart.task import TaskOnKart
+from gokart.utils import FlattableItems, flatten
 
 
 @dataclass
@@ -17,7 +16,7 @@ class TaskInfo:
     processing_time: str
     is_complete: str
     task_log: dict
-    requires: Union['RequiredTask', List['RequiredTask'], Dict[str, 'RequiredTask']]
+    requires: FlattableItems['RequiredTask']
     children_task_infos: List['TaskInfo']
 
     def get_task_id(self):
@@ -65,7 +64,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
 
     name = task.__class__.__name__
     unique_id = task.make_unique_id()
-    output_paths: List[str] = [t.path() for t in luigi.task.flatten(task.output())]
+    output_paths: List[str] = [t.path() for t in flatten(task.output())]
 
     cache = {} if cache is None else cache
     cache_id = f'{name}_{unique_id}_{is_task_complete}'
@@ -80,7 +79,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
     task_log = dict(task.get_task_log())
     requires = _make_requires_info(task.requires())
 
-    children = luigi.task.flatten(task.requires())
+    children = flatten(task.requires())
     children_task_infos: List[TaskInfo] = []
     for child in children:
         if ignore_task_names is None or child.__class__.__name__ not in ignore_task_names:

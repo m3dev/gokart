@@ -7,6 +7,7 @@ import pandas as pd
 from luigi.cmdline_parser import CmdlineParser
 
 import gokart
+from gokart.utils import flatten
 
 test_logger = logging.getLogger(__name__)
 test_logger.addHandler(logging.StreamHandler())
@@ -39,7 +40,10 @@ class _TestStatus:
 
 
 def _get_all_tasks(task: gokart.TaskOnKart) -> List[gokart.TaskOnKart]:
-    return luigi.task.flatten([_get_all_tasks(o) for o in luigi.task.flatten(task.requires()) if isinstance(o, gokart.TaskOnKart)] + [task])
+    result = [task]
+    for o in flatten(task.requires()):
+        result.extend(_get_all_tasks(o))
+    return result
 
 
 def _run_with_test_status(task: gokart.TaskOnKart):
