@@ -12,7 +12,7 @@ from gokart.task import TaskOnKart
 class TaskInfo:
     name: str
     unique_id: str
-    output_paths: List[TaskOnKart]
+    output_paths: List[str]
     params: dict
     processing_time: str
     is_complete: str
@@ -65,7 +65,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
 
     name = task.__class__.__name__
     unique_id = task.make_unique_id()
-    output_paths = [t.path() for t in luigi.task.flatten(task.output())]
+    output_paths: List[str] = [t.path() for t in luigi.task.flatten(task.output())]
 
     cache = {} if cache is None else cache
     cache_id = f'{name}_{unique_id}_{is_task_complete}'
