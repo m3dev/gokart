@@ -38,6 +38,8 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
         ['foo']
         >>> flatten(42)
         [42]
+
+    This method is copied and modified from [luigi.task.flatten](https://github.com/spotify/luigi/blob/367edc2e3a099b8a0c2d15b1676269e33ad06117/luigi/task.py#L958) in accordance with [Apache License 2.0](https://github.com/spotify/luigi/blob/367edc2e3a099b8a0c2d15b1676269e33ad06117/LICENSE).
     """
     if targets is None:
         return []
