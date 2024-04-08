@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from typing import Iterable, TypeAlias, TypeVar
+import sys
+from typing import Iterable, TypeVar
 
 import luigi
 
@@ -13,7 +14,14 @@ def add_config(file_path: str):
 
 
 T = TypeVar('T')
-FlattableItems: TypeAlias = T | Iterable['FlattableItems[T]'] | dict[str, 'FlattableItems[T]']
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+
+    FlattableItems: TypeAlias = T | Iterable['FlattableItems[T]'] | dict[str, 'FlattableItems[T]']
+else:
+    from typing import Union
+
+    FlattableItems = Union[T, Iterable['FlattableItems[T]'], dict[str, 'FlattableItems[T]']]
 
 
 def flatten(targets: FlattableItems[T]) -> list[T]:
