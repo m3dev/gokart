@@ -3,16 +3,15 @@ import os
 import pathlib
 from logging import getLogger
 
-import luigi
-
 import gokart
+from gokart.utils import flatten
 
 logger = getLogger(__name__)
 
 
 def _get_all_output_file_paths(task: gokart.TaskOnKart):
-    output_paths = [t.path() for t in luigi.task.flatten(task.output())]
-    children = luigi.task.flatten(task.requires())
+    output_paths = [t.path() for t in flatten(task.output())]
+    children = flatten(task.requires())
     output_paths.extend(itertools.chain.from_iterable([_get_all_output_file_paths(child) for child in children]))
     return output_paths
 
