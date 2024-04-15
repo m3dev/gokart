@@ -43,6 +43,7 @@ fakeredis = "*"
 mypy = "*"
 types-redis = "*"
 matplotlib = "*"
+typing-extensions = "^4.11.0"
 
 [tool.ruff]
 # All the rules are listed on https://docs.astral.sh/ruff/rules/
