@@ -17,7 +17,6 @@ class LoggerConfig:
         self.logger = getLogger(__name__)
         self.default_level = self.logger.level
         self.level = level
-        print(f'LoggerConfig: {self.default_level} -> {self.level}')
 
     def __enter__(self):
         logging.disable(self.level - 10)  # subtract 10 to disable below self.level
