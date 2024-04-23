@@ -29,6 +29,7 @@ uritemplate = "*"
 google-api-python-client = "*"
 APScheduler = "*"
 redis = "*"
+dill = "*"
 backoff = "^2.2.1"
 
 [tool.poetry.group.dev.dependencies]
