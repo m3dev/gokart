@@ -115,6 +115,7 @@ class TestPickleFileProcessor(unittest.TestCase):
 
         self.assertEqual(loaded.run(), obj.run())
 
+
 class TestFeatherFileProcessor(unittest.TestCase):
     def test_feather_should_return_same_dataframe(self):
         df = pd.DataFrame({'a': [1]})
