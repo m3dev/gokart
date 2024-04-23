@@ -29,7 +29,6 @@ uritemplate = "*"
 google-api-python-client = "*"
 APScheduler = "*"
 redis = "*"
-matplotlib = "*"
 dill = "*"
 backoff = "^2.2.1"
 
@@ -44,6 +43,7 @@ lupa = "*"
 fakeredis = "*"
 mypy = "*"
 types-redis = "*"
+matplotlib = "*"
 
 [tool.ruff]
 # All the rules are listed on https://docs.astral.sh/ruff/rules/

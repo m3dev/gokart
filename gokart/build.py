@@ -8,6 +8,7 @@ import luigi
 
 import gokart
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
+from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
 
 
@@ -16,7 +17,6 @@ class LoggerConfig:
         self.logger = getLogger(__name__)
         self.default_level = self.logger.level
         self.level = level
-        print(f'LoggerConfig: {self.default_level} -> {self.level}')
 
     def __enter__(self):
         logging.disable(self.level - 10)  # subtract 10 to disable below self.level
@@ -43,11 +43,14 @@ class TaskLockExceptionRaisedFlag:
 
 def _get_output(task: TaskOnKart) -> Any:
     output = task.output()
+    # FIXME: currently, nested output is not supported
     if isinstance(output, list) or isinstance(output, tuple):
-        return [t.load() for t in output]
+        return [t.load() for t in output if isinstance(t, TargetOnKart)]
     if isinstance(output, dict):
-        return {k: t.load() for k, t in output.items()}
-    return output.load()
+        return {k: t.load() for k, t in output.items() if isinstance(t, TargetOnKart)}
+    if isinstance(output, TargetOnKart):
+        return output.load()
+    raise ValueError(f'output type is not supported: {type(output)}')
 
 
 def _reset_register(keep={'gokart', 'luigi'}):

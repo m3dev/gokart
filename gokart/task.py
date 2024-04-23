@@ -11,6 +11,7 @@ import pandas as pd
 from luigi.parameter import ParameterVisibility
 
 import gokart
+import gokart.target
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
 from gokart.file_processor import FileProcessor
@@ -18,6 +19,7 @@ from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
+from gokart.utils import FlattenableItems, flatten
 
 logger = getLogger(__name__)
 
@@ -80,7 +82,7 @@ class TaskOnKart(luigi.Task):
         significant=False,
     )
     complete_check_at_run: bool = ExplicitBoolParameter(
-        default=False, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
+        default=True, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
     should_lock_run: bool = ExplicitBoolParameter(default=False, significant=False, description='Whether to use redis lock or not at task run.')
 
@@ -103,10 +105,13 @@ class TaskOnKart(luigi.Task):
             task_lock_params = make_task_lock_params_for_run(task_self=self)
             self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)
 
-    def output(self):
+    def input(self) -> FlattenableItems[TargetOnKart]:
+        return super().input()
+
+    def output(self) -> FlattenableItems[TargetOnKart]:
         return self.make_target()
 
-    def requires(self):
+    def requires(self) -> FlattenableItems['TaskOnKart']:
         tasks = self.make_task_instance_dictionary()
         return tasks or []  # when tasks is empty dict, then this returns empty list.
 
@@ -130,16 +135,16 @@ class TaskOnKart(luigi.Task):
 
     def complete(self) -> bool:
         if self._rerun_state:
-            for target in luigi.task.flatten(self.output()):
+            for target in flatten(self.output()):
                 target.remove()
             self._rerun_state = False
             return False
 
-        is_completed = all([t.exists() for t in luigi.task.flatten(self.output())])
+        is_completed = all([t.exists() for t in flatten(self.output())])
 
         if self.strict_check or self.modification_time_check:
-            requirements = luigi.task.flatten(self.requires())
-            inputs = luigi.task.flatten(self.input())
+            requirements = flatten(self.requires())
+            inputs = flatten(self.input())
             is_completed = is_completed and all([task.complete() for task in requirements]) and all([i.exists() for i in inputs])
 
         if not self.modification_time_check or not is_completed or not self.input():
@@ -148,9 +153,9 @@ class TaskOnKart(luigi.Task):
         return self._check_modification_time()
 
     def _check_modification_time(self):
-        common_path = set(t.path() for t in luigi.task.flatten(self.input())) & set(t.path() for t in luigi.task.flatten(self.output()))
-        input_tasks = [t for t in luigi.task.flatten(self.input()) if t.path() not in common_path]
-        output_tasks = [t for t in luigi.task.flatten(self.output()) if t.path() not in common_path]
+        common_path = set(t.path() for t in flatten(self.input())) & set(t.path() for t in flatten(self.output()))
+        input_tasks = [t for t in flatten(self.input()) if t.path() not in common_path]
+        output_tasks = [t for t in flatten(self.output()) if t.path() not in common_path]
 
         input_modification_time = max([target.last_modification_time() for target in input_tasks]) if input_tasks else None
         output_modification_time = min([target.last_modification_time() for target in output_tasks]) if output_tasks else None
@@ -334,7 +339,7 @@ class TaskOnKart(luigi.Task):
 
             return task.to_str_params(only_significant=True)
 
-        dependencies = [_to_str_params(task) for task in luigi.task.flatten(self.requires())]
+        dependencies = [_to_str_params(task) for task in flatten(self.requires())]
         dependencies = [d for d in dependencies if d is not None]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
@@ -342,18 +347,27 @@ class TaskOnKart(luigi.Task):
             dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
-    def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> Union[TargetOnKart, List[TargetOnKart]]:
+    def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> FlattenableItems[TargetOnKart]:
         if target is None:
             return self.input()
         if isinstance(target, str):
-            return self.input()[target]
+            input = self.input()
+            assert isinstance(input, dict), f'input must be dict[str, TargetOnKart], but {type(input)} is passed.'
+            result: FlattenableItems[TargetOnKart] = input[target]
+            return result
         return target
 
     def _get_output_target(self, target: Union[None, str, TargetOnKart]) -> TargetOnKart:
         if target is None:
-            return self.output()
+            output = self.output()
+            assert isinstance(output, TargetOnKart), f'output must be TargetOnKart, but {type(output)} is passed.'
+            return output
         if isinstance(target, str):
-            return self.output()[target]
+            output = self.output()
+            assert isinstance(output, dict), f'output must be dict[str, TargetOnKart], but {type(output)} is passed.'
+            result = output[target]
+            assert isinstance(result, TargetOnKart), f'output must be dict[str, TargetOnKart], but {type(output)} is passed.'
+            return result
         return target
 
     def get_info(self, only_significant=False):
@@ -380,7 +394,7 @@ class TaskOnKart(luigi.Task):
 
     @luigi.Task.event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
-        self.task_log['file_path'] = [target.path() for target in luigi.task.flatten(self.output())]
+        self.task_log['file_path'] = [target.path() for target in flatten(self.output())]
         if self.should_dump_supplementary_log_files:
             self.dump(self.task_log, self._get_task_log_target())
 
