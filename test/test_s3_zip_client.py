@@ -3,7 +3,7 @@ import shutil
 import unittest
 
 import boto3
-from moto import mock_s3
+from moto import mock_aws
 
 from gokart.s3_zip_client import S3ZipClient
 
@@ -16,7 +16,7 @@ class TestS3ZipClient(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
 
-    @mock_s3
+    @mock_aws
     def test_make_archive(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -33,7 +33,7 @@ class TestS3ZipClient(unittest.TestCase):
         os.makedirs(temporary_directory, exist_ok=True)
         zip_client.make_archive()
 
-    @mock_s3
+    @mock_aws
     def test_unpack_archive(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')

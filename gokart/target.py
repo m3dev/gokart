@@ -10,7 +10,6 @@ from typing import Any, Optional
 import luigi
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
@@ -179,7 +178,7 @@ class LargeDataFrameProcessor(object):
 
         split_size = df.values.nbytes // self.max_byte + 1
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
-        for i, idx in tqdm(list(enumerate(np.array_split(range(df.shape[0]), split_size)))):
+        for i, idx in list(enumerate(np.array_split(range(df.shape[0]), split_size))):
             df.iloc[idx[0] : idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
 
     @staticmethod
