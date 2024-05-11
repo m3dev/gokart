@@ -9,7 +9,7 @@ import boto3
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot
-from moto import mock_s3
+from moto import mock_aws
 
 from gokart.file_processor import _ChunkedLargeFileReader
 from gokart.target import make_model_target, make_target
@@ -171,7 +171,7 @@ class LocalTargetTest(unittest.TestCase):
 
 
 class S3TargetTest(unittest.TestCase):
-    @mock_s3
+    @mock_aws
     def test_save_on_s3(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -185,7 +185,7 @@ class S3TargetTest(unittest.TestCase):
 
         self.assertEqual(loaded, obj)
 
-    @mock_s3
+    @mock_aws
     def test_last_modified_time(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -198,7 +198,7 @@ class S3TargetTest(unittest.TestCase):
         t = target.last_modification_time()
         self.assertIsInstance(t, datetime)
 
-    @mock_s3
+    @mock_aws
     def test_last_modified_time_without_file(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -208,7 +208,7 @@ class S3TargetTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             target.last_modification_time()
 
-    @mock_s3
+    @mock_aws
     def test_save_on_s3_feather(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -222,7 +222,7 @@ class S3TargetTest(unittest.TestCase):
 
         pd.testing.assert_frame_equal(loaded, obj)
 
-    @mock_s3
+    @mock_aws
     def test_save_on_s3_parquet(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
@@ -262,7 +262,7 @@ class ModelTargetTest(unittest.TestCase):
 
         self.assertEqual(loaded, obj)
 
-    @mock_s3
+    @mock_aws
     def test_model_target_on_s3(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
