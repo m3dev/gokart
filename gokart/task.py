@@ -1,6 +1,7 @@
 import hashlib
 import inspect
 import os
+import random
 import types
 from importlib import import_module
 from logging import getLogger
@@ -85,6 +86,10 @@ class TaskOnKart(luigi.Task):
         default=True, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
     should_lock_run: bool = ExplicitBoolParameter(default=False, significant=False, description='Whether to use redis lock or not at task run.')
+
+    @property
+    def priority(self):
+        return random.Random().random()  # seed is fixed, so we need to use random.Random().random() instead f random.random()
 
     def __init__(self, *args, **kwargs):
         self._add_configuration(kwargs, 'TaskOnKart')
