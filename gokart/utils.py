@@ -2,9 +2,17 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Iterable, TypeVar
+from typing import Any, Iterable, Protocol, TypeVar, Union
 
+import dill
 import luigi
+import pandas as pd
+
+
+class FileLike(Protocol):
+    def read(self, n: int) -> bytes: ...
+
+    def readline(self) -> bytes: ...
 
 
 def add_config(file_path: str):
@@ -58,3 +66,14 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     for result in targets:
         flat += flatten(result)
     return flat
+
+
+def load_dill_with_pandas_backward_compatibility(file: FileLike) -> Any:
+    """Load binary dumped by dill with pandas backward compatibility.
+    pd.read_pickle can load binary dumped in backward pandas version, and also any objects dumped by pickle.
+    It is unclear whether all objects dumped by dill can be loaded by pd.read_pickle, we use dill.load as a fallback.
+    """
+    try:
+        return pd.read_pickle(file)
+    except Exception:
+        return dill.load(file)

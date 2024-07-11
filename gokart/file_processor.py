@@ -14,6 +14,7 @@ import pandas.errors
 from luigi.format import TextFormat
 
 from gokart.object_storage import ObjectStorage
+from gokart.utils import load_dill_with_pandas_backward_compatibility
 
 logger = getLogger(__name__)
 
@@ -82,8 +83,9 @@ class PickleFileProcessor(FileProcessor):
 
     def load(self, file):
         if not ObjectStorage.is_buffered_reader(file):
-            return dill.loads(file.read())
-        return dill.load(_ChunkedLargeFileReader(file))
+            # we cannot use dill.load(file) because ReadableS3File does not have 'readline' method
+            return load_dill_with_pandas_backward_compatibility(BytesIO(file.read()))
+        return load_dill_with_pandas_backward_compatibility(_ChunkedLargeFileReader(file))
 
     def dump(self, obj, file):
         self._write(dill.dumps(obj, protocol=4), file)
