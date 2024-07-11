@@ -82,7 +82,8 @@ class PickleFileProcessor(FileProcessor):
 
     def load(self, file):
         if not ObjectStorage.is_buffered_reader(file):
-            return dill.loads(file.read())
+            # we cannot use dill.load(file) because ReadableS3File does not have 'readline' method
+            return dill.load(BytesIO(file.read()))
         return dill.load(_ChunkedLargeFileReader(file))
 
     def dump(self, obj, file):
