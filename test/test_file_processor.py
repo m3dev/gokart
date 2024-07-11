@@ -1,11 +1,15 @@
+import os
 import tempfile
 import unittest
 from typing import Callable
 
+import boto3
 import pandas as pd
 from luigi import LocalTarget
+from moto import mock_aws
 
 from gokart.file_processor import CsvFileProcessor, FeatherFileProcessor, PickleFileProcessor
+from gokart.object_storage import ObjectStorage
 
 
 class TestCsvFileProcessor(unittest.TestCase):
@@ -114,6 +118,23 @@ class TestPickleFileProcessor(unittest.TestCase):
                 loaded = processor.load(f)
 
         self.assertEqual(loaded.run(), obj.run())
+
+    @mock_aws
+    def test_dump_and_load_with_readables3file(self):
+        conn = boto3.resource('s3', region_name='us-east-1')
+        conn.create_bucket(Bucket='test')
+        file_path = os.path.join('s3://test/', 'test.pkl')
+
+        var = 'abc'
+        processor = PickleFileProcessor()
+
+        target = ObjectStorage.get_object_storage_target(file_path, processor.format())
+        with target.open('w') as f:
+            processor.dump(var, f)
+        with target.open('r') as f:
+            loaded = processor.load(f)
+
+        self.assertEqual(loaded, var)
 
 
 class TestFeatherFileProcessor(unittest.TestCase):
