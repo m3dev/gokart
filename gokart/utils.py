@@ -14,6 +14,8 @@ class FileLike(Protocol):
 
     def readline(self) -> bytes: ...
 
+    def seek(self, offset: int) -> None: ...
+
 
 def add_config(file_path: str):
     _, ext = os.path.splitext(file_path)
