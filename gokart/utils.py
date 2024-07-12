@@ -76,4 +76,5 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike) -> Any:
     try:
         return pd.read_pickle(file)
     except Exception:
+        file.seek(0)
         return dill.load(file)
