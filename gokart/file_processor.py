@@ -82,7 +82,7 @@ class PickleFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        if not ObjectStorage.is_buffered_reader(file):
+        if not ObjectStorage.is_buffered_reader(file) or not file.seekable():
             # we cannot use dill.load(file) because ReadableS3File does not have 'readline' method
             return load_dill_with_pandas_backward_compatibility(BytesIO(file.read()))
         return load_dill_with_pandas_backward_compatibility(_ChunkedLargeFileReader(file))
