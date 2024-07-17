@@ -78,5 +78,6 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike) -> Any:
     try:
         return dill.load(file)
     except Exception:
+        assert file.seekable(), f'{file} is not seekable.'
         file.seek(0)
         return pd.read_pickle(file)
