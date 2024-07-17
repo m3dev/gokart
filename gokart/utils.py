@@ -16,6 +16,8 @@ class FileLike(Protocol):
 
     def seek(self, offset: int) -> None: ...
 
+    def seekable(self) -> bool: ...
+
 
 def add_config(file_path: str):
     _, ext = os.path.splitext(file_path)
@@ -29,8 +31,6 @@ if sys.version_info >= (3, 10):
 
     FlattenableItems: TypeAlias = T | Iterable['FlattenableItems[T]'] | dict[str, 'FlattenableItems[T]']
 else:
-    from typing import Union
-
     FlattenableItems = Union[T, Iterable['FlattenableItems[T]'], dict[str, 'FlattenableItems[T]']]
 
 
