@@ -76,7 +76,7 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike) -> Any:
     It is unclear whether all objects dumped by dill can be loaded by pd.read_pickle, we use dill.load as a fallback.
     """
     try:
-        return pd.read_pickle(file)
+        return dill.load(file)
     except Exception:
         file.seek(0)
-        return dill.load(file)
+        return pd.read_pickle(file)
