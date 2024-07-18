@@ -14,6 +14,10 @@ class FileLike(Protocol):
 
     def readline(self) -> bytes: ...
 
+    def seek(self, offset: int) -> None: ...
+
+    def seekable(self) -> bool: ...
+
 
 def add_config(file_path: str):
     _, ext = os.path.splitext(file_path)
@@ -27,8 +31,6 @@ if sys.version_info >= (3, 10):
 
     FlattenableItems: TypeAlias = T | Iterable['FlattenableItems[T]'] | dict[str, 'FlattenableItems[T]']
 else:
-    from typing import Union
-
     FlattenableItems = Union[T, Iterable['FlattenableItems[T]'], dict[str, 'FlattenableItems[T]']]
 
 
@@ -74,6 +76,8 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike) -> Any:
     It is unclear whether all objects dumped by dill can be loaded by pd.read_pickle, we use dill.load as a fallback.
     """
     try:
-        return pd.read_pickle(file)
-    except Exception:
         return dill.load(file)
+    except Exception:
+        assert file.seekable(), f'{file} is not seekable.'
+        file.seek(0)
+        return pd.read_pickle(file)
