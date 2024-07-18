@@ -83,7 +83,9 @@ class PickleFileProcessor(FileProcessor):
 
     def load(self, file):
         if not file.seekable():
-            # ReadableS3File is not seekable, therefor we need to wrap with BytesIO
+            # load_dill_with_pandas_backward_compatibility() requires file with seek() and readlines() implemented.
+            # Therefore, we need to wrap with BytesIO which makes file seekable and readlinesable.
+            # For example, ReadableS3File is not a seekable file.
             return load_dill_with_pandas_backward_compatibility(BytesIO(file.read()))
         return load_dill_with_pandas_backward_compatibility(_ChunkedLargeFileReader(file))
 
