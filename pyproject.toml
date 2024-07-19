@@ -64,6 +64,7 @@ quote-style = "single"
 
 [tool.mypy]
 ignore_missing_imports = true
+plugins = ["gokart.mypy:plugin"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
