@@ -6,7 +6,7 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 
 from __future__ import annotations
 
-from typing import Callable, Final, Iterator, Literal
+from typing import Callable, Final, Iterator, Literal, Optional
 
 from mypy.expandtype import expand_type, expand_type_by_instance
 from mypy.nodes import (
@@ -199,7 +199,7 @@ class TaskOnKartTransformer:
             elif isinstance(stmt, IfStmt):
                 yield from self._get_assignment_statements_from_if_statement(stmt)
 
-    def collect_attributes(self) -> list[TaskOnKartAttribute] | None:
+    def collect_attributes(self) -> Optional[list[TaskOnKartAttribute]]:
         """Collect all attributes declared in the task and its parents.
 
         All assignments of the form
@@ -209,7 +209,7 @@ class TaskOnKartTransformer:
 
         are collected.
 
-        Return None if some  base class hasn't been processed
+        Return None if some base class hasn't been processed
         yet and thus we'll need to ask for another pass.
         """
         cls = self._cls
