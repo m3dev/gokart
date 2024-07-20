@@ -210,6 +210,7 @@ class TaskOnKartTransformer:
         # then the object default __init__ with an empty signature will be present anyway.
         if ('__init__' not in info.names or info.names['__init__'].plugin_generated) and attributes:
             args = [attr.to_argument(info, of='__init__') for attr in attributes]
+            print('aaaaaa', self._cls.name, [(arg.variable.name, arg.type_annotation) for arg in args])
             add_method_to_class(self._api, self._cls, '__init__', args=args, return_type=NoneType())
 
         info.metadata[METADATA_TAG] = {
@@ -296,7 +297,7 @@ class TaskOnKartTransformer:
                 continue
 
             node = sym.node
-            assert not isinstance(node, PlaceholderNode)
+            assert not isinstance(node, PlaceholderNode), type(node)
 
             assert isinstance(node, Var)
 

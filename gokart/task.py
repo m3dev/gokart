@@ -322,12 +322,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return data
 
     @overload
-    def dump(self, obj: T, target: None = None) -> None:
-        ...
+    def dump(self, obj: T, target: None = None) -> None: ...
 
     @overload
-    def dump(self, obj: Any, target: Union[str, TargetOnKart]) -> None:
-        ...
+    def dump(self, obj: T, target: Union[str, TargetOnKart]) -> None: ...
 
     def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
