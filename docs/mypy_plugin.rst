@@ -34,7 +34,7 @@ For example the following code linted by Mypy:
     class Foo(gokart.TaskOnKart):
         # NOTE: must all the parameters be annotated
         foo: int = luigi.IntParameter(default=1)
-        bar: str = luigi.IntParameter(default=2)
+        bar: str = luigi.IntParameter()
 
 
 
