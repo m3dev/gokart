@@ -1,3 +1,6 @@
 [tool.mypy]
-ignore_missing_imports = true
 plugins = ["gokart.mypy:plugin"]
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = ["pandas.*", "apscheduler.*", "dill.*", "boto3.*", "testfixtures.*", "luigi.*"]
