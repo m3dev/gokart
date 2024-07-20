@@ -6,6 +6,7 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 
 from __future__ import annotations
 
+import re
 from typing import Callable, Final, Iterator, Literal, Optional
 
 from mypy.expandtype import expand_type, expand_type_by_instance
@@ -33,11 +34,7 @@ from mypy.nodes import (
     TypeInfo,
     Var,
 )
-from mypy.plugin import (
-    ClassDefContext,
-    Plugin,
-    SemanticAnalyzerPluginInterface,
-)
+from mypy.plugin import ClassDefContext, FunctionContext, Plugin, SemanticAnalyzerPluginInterface
 from mypy.plugins.common import (
     add_method_to_class,
     deserialize_and_fixup_type,
@@ -58,6 +55,8 @@ from mypy.typevars import fill_typevars
 
 METADATA_TAG: Final[str] = 'task_on_kart'
 
+PARAMETER_FULLNAME_MATCHER: Final = re.compile(r'^(gokart|luigi)(\.parameter)?\.\w*Parameter$')
+
 
 class TaskOnKartPlugin(Plugin):
     def get_base_class_hook(self, fullname: str) -> Callable[[ClassDefContext], None] | None:
@@ -72,9 +71,43 @@ class TaskOnKartPlugin(Plugin):
                 return self._task_on_kart_class_maker_callback
         return None
 
+    def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
+        """Adjust the return type of the `Parameters` function."""
+        if PARAMETER_FULLNAME_MATCHER.match(fullname):
+            return self._task_on_kart_parameter_field_callback
+        return None
+
     def _task_on_kart_class_maker_callback(self, ctx: ClassDefContext) -> None:
         transformer = TaskOnKartTransformer(ctx.cls, ctx.reason, ctx.api)
         transformer.transform()
+
+    def _task_on_kart_parameter_field_callback(self, ctx: FunctionContext) -> Type:
+        """Extract the type of the `default` argument from the Field function, and use it as the return type.
+
+        In particular:
+        * Retrieve the type of the argument which is specified, and use it as return type for the function.
+        * If no default argument is specified, return AnyType with unannotated type instead of parameter types like `luigi.Parameter()`
+          This makes mypy avoid conflict between the type annotation and the parameter type.
+          e.g.
+          ```python
+          foo: int = luigi.IntParameter()
+          ```
+        """
+
+        default_args = ctx.args[0]
+
+        if default_args:
+            default_type = ctx.arg_types[0][0]
+            default_arg = default_args[0]
+
+            # Fallback to default Any type if the field is required
+            if not isinstance(default_arg, EllipsisExpr):
+                return default_type
+        # NOTE: This is a workaround to avoid the error between type annotation and parameter type.
+        #       As the following code snippet, the type of `foo` is `int` but the assigned value is `luigi.IntParameter()`.
+        #       foo: int = luigi.IntParameter()
+        # TODO: infer mypy type from the parameter type.
+        return AnyType(TypeOfAny.unannotated)
 
 
 class TaskOnKartAttribute:
@@ -162,13 +195,13 @@ class TaskOnKartTransformer:
         """Apply all the necessary transformations to the underlying gokart.TaskOnKart"""
         info = self._cls.info
         attributes = self.collect_attributes()
+
         if attributes is None:
             # Some definitions are not ready. We need another pass.
             return False
         for attr in attributes:
             if attr.type is None:
                 return False
-
         # If there are no attributes, it may be that the semantic analyzer has not
         # processed them yet. In order to work around this, we can simply skip generating
         # __init__ if there are no attributes, because if the user truly did not define any,
@@ -286,7 +319,8 @@ class TaskOnKartTransformer:
 
             current_attr_names.add(lhs.name)
             with state.strict_optional_set(self._api.options.strict_optional):
-                init_type = self._infer_task_on_kart_attr_init_type(sym, lhs.name, stmt)
+                init_type = self._infer_task_on_kart_attr_init_type(sym, stmt)
+
             found_attrs[lhs.name] = TaskOnKartAttribute(
                 name=lhs.name,
                 has_default=has_default,
@@ -318,7 +352,7 @@ class TaskOnKartTransformer:
             return True, args
         return False, {}
 
-    def _infer_task_on_kart_attr_init_type(self, sym: SymbolTableNode, name: str, context: Context) -> Type | None:
+    def _infer_task_on_kart_attr_init_type(self, sym: SymbolTableNode, context: Context) -> Type | None:
         """Infer __init__ argument type for an attribute.
 
         In particular, possibly use the signature of __set__.
@@ -361,12 +395,18 @@ class TaskOnKartTransformer:
 
 
 def is_parameter_call(expr: Expression) -> bool:
-    """
-    Checks if the expression is a call to luigi.Parameter()
-    """
-    if isinstance(expr, CallExpr) and isinstance(expr.callee, MemberExpr):
-        if expr.callee.name.endswith('Parameter') and isinstance(expr.callee.expr, NameExpr) and expr.callee.expr.name in {'luigi', 'gokart'}:
+    """Checks if the expression is a call to luigi.Parameter()"""
+    if not isinstance(expr, CallExpr):
+        return False
+
+    callee = expr.callee
+    if isinstance(callee, MemberExpr):
+        type_info = callee.node
+        if type_info is None and isinstance(callee.expr, NameExpr):
+            return PARAMETER_FULLNAME_MATCHER.match(f'{callee.expr.name}.{callee.name}') is not None
+        if isinstance(type_info, TypeInfo) and PARAMETER_FULLNAME_MATCHER.match(type_info.fullname):
             return True
+        return False
     return False
 
 
