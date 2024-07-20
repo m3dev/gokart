@@ -63,8 +63,11 @@ ignore = ["B006", "B008"]
 quote-style = "single"
 
 [tool.mypy]
-ignore_missing_imports = true
 plugins = ["gokart.mypy:plugin"]
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = ["pandas.*", "apscheduler.*", "dill.*", "boto3.*", "testfixtures.*", "luigi.*"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
