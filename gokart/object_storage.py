@@ -23,7 +23,7 @@ class ObjectStorage(object):
         return False
 
     @staticmethod
-    def get_object_storage_target(path: str, format: Format) -> luigi.Target:
+    def get_object_storage_target(path: str, format: Format) -> luigi.target.FileSystemTarget:
         if path.startswith('s3://'):
             return luigi.contrib.s3.S3Target(path, client=S3Config().get_s3_client(), format=format)
         elif path.startswith('gs://'):
