@@ -5,7 +5,7 @@ import random
 import types
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, Generator, Generic, List, Optional, Protocol, Set, TypeVar, Union, overload
 
 import luigi
 import pandas as pd
@@ -25,7 +25,16 @@ from gokart.utils import FlattenableItems, flatten
 logger = getLogger(__name__)
 
 
-class TaskOnKart(luigi.Task):
+T = TypeVar('T')
+
+T_cont = TypeVar('T_cont', contravariant=True)
+
+
+class TaskOnKartProtocol(Protocol[T_cont]):
+    def dump(self, obj: T_cont, target: Union[None, str, TargetOnKart]) -> None: ...
+
+
+class TaskOnKart(luigi.Task, Generic[T]):
     """
     This is a wrapper class of luigi.Task.
 
@@ -282,7 +291,7 @@ class TaskOnKart(luigi.Task):
             return list(data.values())[0]
         return data
 
-    def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Any:
+    def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Generator[Any, None, None]:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 for t in targets:
@@ -318,7 +327,13 @@ class TaskOnKart(luigi.Task):
             data = data[list(required_columns)]
         return data
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None) -> None:
+    @overload
+    def dump(self, obj: T, target: Union[None, str, TargetOnKart] = None) -> None: ...
+
+    @overload
+    def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None: ...
+
+    def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
@@ -336,13 +351,13 @@ class TaskOnKart(luigi.Task):
         own_codes = self.get_code(self)
         return ''.join(sorted(list(own_codes - gokart_codes)))
 
-    def make_unique_id(self):
+    def make_unique_id(self) -> str:
         unique_id = self.task_unique_id or self._make_hash_id()
         if self.cache_unique_id:
             self.task_unique_id = unique_id
         return unique_id
 
-    def _make_hash_id(self):
+    def _make_hash_id(self) -> str:
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id()) if task.significant else None
