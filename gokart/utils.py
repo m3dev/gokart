@@ -21,7 +21,7 @@ class FileLike(Protocol):
 
 def add_config(file_path: str):
     _, ext = os.path.splitext(file_path)
-    luigi.configuration.core.parser = ext
+    luigi.configuration.core.parser = ext  # type: ignore
     assert luigi.configuration.add_config_path(file_path)
 
 
