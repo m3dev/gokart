@@ -81,8 +81,7 @@ def _test_run_with_empty_data_frame(cmdline_args: List[str], test_run_params: te
 
 def try_to_run_test_for_empty_data_frame(cmdline_args: List[str]):
     with CmdlineParser.global_instance(cmdline_args):
-        # NOTE: parameters passed by command line cannot be linted by mypy.
-        test_run_params = test_run()  # type: ignore
+        test_run_params = test_run()
 
     if test_run_params.pandas:
         cmdline_args = [a for a in cmdline_args if not a.startswith('--test-run-')]

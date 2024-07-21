@@ -40,13 +40,14 @@ class MyTask(gokart.TaskOnKart):
     foo: int = luigi.IntParameter() # type: ignore
     bar: str = luigi.Parameter() # type: ignore
 
-MyTask(foo='1') # foo is int, but it is str and bar is missing.
+# issue: foo is int
+# not issue: bar is missing, because it can be set by config file.
+MyTask(foo='1')
         """
 
         with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
             test_file.write(test_code.encode('utf-8'))
             test_file.flush()
             result = api.run(['--config-file', str(PYPROJECT_TOML), test_file.name])
-            self.assertIn('error: Missing named argument "bar" for "MyTask"  [call-arg]', result[0])
             self.assertIn('error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"  [arg-type]', result[0])
-            self.assertIn('Found 2 errors in 1 file (checked 1 source file)', result[0])
+            self.assertIn('Found 1 error in 1 file (checked 1 source file)', result[0])

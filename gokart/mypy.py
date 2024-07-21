@@ -10,7 +10,6 @@ from typing import Callable, Final, Iterator, Literal, Optional
 
 from mypy.expandtype import expand_type, expand_type_by_instance
 from mypy.nodes import (
-    ARG_NAMED,
     ARG_NAMED_OPT,
     ARG_POS,
     Argument,
@@ -99,10 +98,9 @@ class TaskOnKartAttribute:
 
     def to_argument(self, current_info: TypeInfo, *, of: Literal['__init__',]) -> Argument:
         if of == '__init__':
-            # All arguments to __init__ are keyword-only.
-            arg_kind = ARG_NAMED
-            if self.has_default:
-                arg_kind = ARG_NAMED_OPT
+            # All arguments to __init__ are keyword-only and optional
+            # This is because gokart can set parameters by configuration'
+            arg_kind = ARG_NAMED_OPT
         return Argument(
             variable=self.to_var(current_info),
             type_annotation=self.expand_type(current_info),
