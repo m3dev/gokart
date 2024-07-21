@@ -59,7 +59,7 @@ def set_task_lock(task_lock_params: TaskLockParams) -> redis.lock.Lock:
 
 def set_lock_scheduler(task_lock: redis.lock.Lock, task_lock_params: TaskLockParams) -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
-    extend_lock = functools.partial(_extend_lock, task_lock=task_lock, redis_timeout=task_lock_params.redis_timeout)
+    extend_lock = functools.partial(_extend_lock, task_lock=task_lock, redis_timeout=task_lock_params.redis_timeout or 0)
     scheduler.add_job(
         extend_lock,
         'interval',
