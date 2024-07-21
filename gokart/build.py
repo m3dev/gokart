@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 from logging import getLogger
-from typing import Literal, Optional, TypeVar, cast, overload
+from typing import Literal, Optional, cast, overload
 
 import backoff
 import luigi
@@ -9,9 +9,7 @@ import luigi
 import gokart
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
 from gokart.target import TargetOnKart
-from gokart.task import TaskOnKart
-
-T = TypeVar('T')
+from gokart.task import T, TaskOnKart
 
 
 class LoggerConfig:

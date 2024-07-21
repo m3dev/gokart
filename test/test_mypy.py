@@ -80,8 +80,6 @@ bar = Bar(str_foo=StrFoo())
 import gokart
 
 class IntFoo(gokart.TaskOnKart[int]):
-    # NOTE: mypy shows attr-defined error for the following lines, so we need to ignore it.
-    a: str = luigi.Parameter() # type: ignore
     def run(self):
         self.dump(1)
 

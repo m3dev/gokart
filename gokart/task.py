@@ -5,7 +5,7 @@ import random
 import types
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, Generic, List, Optional, Set, TypeVar, Union, overload
+from typing import Any, Callable, Dict, Generator, Generic, List, Optional, Protocol, Set, TypeVar, Union, overload
 
 import luigi
 import pandas as pd
@@ -26,6 +26,12 @@ logger = getLogger(__name__)
 
 
 T = TypeVar('T')
+
+T_cont = TypeVar('T_cont', contravariant=True)
+
+
+class TaskOnKartProtocol(Protocol[T_cont]):
+    def dump(self, obj: T_cont, target: Union[None, str, TargetOnKart]) -> None: ...
 
 
 class TaskOnKart(luigi.Task, Generic[T]):
@@ -322,12 +328,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return data
 
     @overload
-    def dump(self, obj: T, target: None = None) -> None: ...
+    def dump(self, obj: T, target: Union[None, str, TargetOnKart] = None) -> None: ...
 
     @overload
-    def dump(self, obj: T, target: Union[str, TargetOnKart]) -> None: ...
+    def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None: ...
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None) -> None:
+    def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty

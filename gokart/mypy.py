@@ -27,7 +27,6 @@ from mypy.nodes import (
     JsonDict,
     MemberExpr,
     NameExpr,
-    PlaceholderNode,
     RefExpr,
     Statement,
     SymbolTableNode,
@@ -72,15 +71,24 @@ class TaskOnKartPlugin(Plugin):
                 return self._task_on_kart_class_maker_callback
         return None
 
-    def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
-        """Adjust the return type of the `Parameters` function."""
-        if PARAMETER_FULLNAME_MATCHER.match(fullname):
-            return self._task_on_kart_parameter_field_callback
-        return None
+    # def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
+    #     """Adjust the return type of the `Parameters` function."""
+    #     if PARAMETER_FULLNAME_MATCHER.match(fullname):
+    #         return self._task_on_kart_parameter_field_callback
+    #     if 'TaskOnKart' in fullname:
+    #         print("aaaaaaaaaaaa")
+    #         return self._task_on_kart_class_callback
+    #     return None
 
     def _task_on_kart_class_maker_callback(self, ctx: ClassDefContext) -> None:
         transformer = TaskOnKartTransformer(ctx.cls, ctx.reason, ctx.api)
+        print(ctx.cls.is_generic)
         transformer.transform()
+
+    def _task_on_kart_class_callback(self, ctx: FunctionContext) -> Type:
+        """Return the type of the `TaskOnKart` class."""
+        print(ctx.default_return_type)
+        return AnyType(TypeOfAny.implementation_artifact)
 
     def _task_on_kart_parameter_field_callback(self, ctx: FunctionContext) -> Type:
         """Extract the type of the `default` argument from the Field function, and use it as the return type.
@@ -210,7 +218,7 @@ class TaskOnKartTransformer:
         # then the object default __init__ with an empty signature will be present anyway.
         if ('__init__' not in info.names or info.names['__init__'].plugin_generated) and attributes:
             args = [attr.to_argument(info, of='__init__') for attr in attributes]
-            print('aaaaaa', self._cls.name, [(arg.variable.name, arg.type_annotation) for arg in args])
+            # print('aaaaaa', self._cls.name, [(arg.variable.name, arg.type_annotation) for arg in args])
             add_method_to_class(self._api, self._cls, '__init__', args=args, return_type=NoneType())
 
         info.metadata[METADATA_TAG] = {
@@ -297,9 +305,12 @@ class TaskOnKartTransformer:
                 continue
 
             node = sym.node
-            assert not isinstance(node, PlaceholderNode), type(node)
+            # if isinstance(node, PlaceholderNode):
+            #     continue
+            #     print(cls.name)
+            #     continue
 
-            assert isinstance(node, Var)
+            # assert isinstance(node, Var)
 
             has_parameter_call, parameter_args = self._collect_parameter_args(stmt.rvalue)
             has_default = False
