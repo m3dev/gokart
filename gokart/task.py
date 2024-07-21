@@ -37,38 +37,46 @@ class TaskOnKart(luigi.Task):
     * :py:meth:`dump` - this save a object as output of this task.
     """
 
-    workspace_directory = luigi.Parameter(
+    workspace_directory: str = luigi.Parameter(
         default='./resources/', description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.', significant=False
-    )  # type: str
-    local_temporary_directory = luigi.Parameter(default='./resources/tmp/', description='A directory to save temporary files.', significant=False)  # type: str
-    rerun = luigi.BoolParameter(default=False, description='If this is true, this task will run even if all output files exist.', significant=False)
-    strict_check = luigi.BoolParameter(
+    )
+    local_temporary_directory: str = luigi.Parameter(default='./resources/tmp/', description='A directory to save temporary files.', significant=False)
+    rerun: bool = luigi.BoolParameter(default=False, description='If this is true, this task will run even if all output files exist.', significant=False)
+    strict_check: bool = luigi.BoolParameter(
         default=False, description='If this is true, this task will not run only if all input and output files exist.', significant=False
     )
-    modification_time_check = luigi.BoolParameter(
+    modification_time_check: bool = luigi.BoolParameter(
         default=False,
         description='If this is true, this task will not run only if all input and output files exist,'
         ' and all input files are modified before output file are modified.',
         significant=False,
     )
-    serialized_task_definition_check = luigi.BoolParameter(
+    serialized_task_definition_check: bool = luigi.BoolParameter(
         default=False,
         description='If this is true, even if all outputs are present,' 'this task will be executed if any changes have been made to the code.',
         significant=False,
     )
-    delete_unnecessary_output_files = luigi.BoolParameter(default=False, description='If this is true, delete unnecessary output files.', significant=False)
-    significant = luigi.BoolParameter(
+    delete_unnecessary_output_files: bool = luigi.BoolParameter(
+        default=False, description='If this is true, delete unnecessary output files.', significant=False
+    )
+    significant: bool = luigi.BoolParameter(
         default=True, description='If this is false, this task is not treated as a part of dependent tasks for the unique id.', significant=False
     )
-    fix_random_seed_methods = luigi.ListParameter(default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False)
+    fix_random_seed_methods: tuple[str] = luigi.ListParameter(
+        default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False
+    )
     FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER = -42497368
-    fix_random_seed_value = luigi.IntParameter(
+    fix_random_seed_value: int = luigi.IntParameter(
         default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.', significant=False
     )  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
-    redis_host = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
-    redis_port = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
-    redis_timeout = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
+    redis_host: Optional[str] = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_port: Optional[int] = luigi.OptionalIntParameter(
+        default=None,
+        description='Task lock check is deactivated, when None.',
+        significant=False,
+    )
+    redis_timeout: int = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
 
     fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
     store_index_in_feather: bool = ExplicitBoolParameter(
@@ -310,7 +318,7 @@ class TaskOnKart(luigi.Task):
             data = data[list(required_columns)]
         return data
 
-    def dump(self, obj, target: Union[None, str, TargetOnKart] = None) -> None:
+    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty

@@ -1,5 +1,4 @@
 import unittest
-from test.tree.test_task_info import _DoubleLoadSubTask, _SubTask, _Task
 from unittest.mock import patch
 
 import luigi
@@ -8,6 +7,7 @@ from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
 import gokart.info
+from test.tree.test_task_info import _DoubleLoadSubTask, _SubTask, _Task
 
 
 class TestInfo(unittest.TestCase):

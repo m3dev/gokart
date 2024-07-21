@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 
 import luigi
 import luigi.contrib.gcs
@@ -18,7 +19,7 @@ class GCSConfig(luigi.Config):
     def _get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
         return luigi.contrib.gcs.GCSClient(oauth_credentials=self._load_oauth_credentials())
 
-    def _load_oauth_credentials(self) -> Credentials:
+    def _load_oauth_credentials(self) -> Optional[Credentials]:
         json_str = os.environ.get(self.gcs_credential_name)
         if not json_str:
             return None

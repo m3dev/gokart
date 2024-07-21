@@ -1,0 +1,3 @@
+[tool.mypy]
+ignore_missing_imports = true
+plugins = ["gokart.mypy:plugin"]
