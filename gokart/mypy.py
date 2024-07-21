@@ -337,24 +337,27 @@ class TaskOnKartTransformer:
         if not isinstance(t, Instance):
             return default
         setter = t.type.get('__set__')
-        if setter:
-            if isinstance(setter.node, FuncDef):
-                super_info = t.type.get_containing_type_info('__set__')
-                assert super_info
-                if setter.type:
-                    setter_type = get_proper_type(map_type_from_supertype(setter.type, t.type, super_info))
-                else:
-                    return AnyType(TypeOfAny.unannotated)
-                if isinstance(setter_type, CallableType) and setter_type.arg_kinds == [
-                    ARG_POS,
-                    ARG_POS,
-                    ARG_POS,
-                ]:
-                    return expand_type_by_instance(setter_type.arg_types[2], t)
-                else:
-                    self._api.fail(f'Unsupported signature for "__set__" in "{t.type.name}"', context)
+
+        if not setter:
+            return default
+
+        if isinstance(setter.node, FuncDef):
+            super_info = t.type.get_containing_type_info('__set__')
+            assert super_info
+            if setter.type:
+                setter_type = get_proper_type(map_type_from_supertype(setter.type, t.type, super_info))
             else:
-                self._api.fail(f'Unsupported "__set__" in "{t.type.name}"', context)
+                return AnyType(TypeOfAny.unannotated)
+            if isinstance(setter_type, CallableType) and setter_type.arg_kinds == [
+                ARG_POS,
+                ARG_POS,
+                ARG_POS,
+            ]:
+                return expand_type_by_instance(setter_type.arg_types[2], t)
+            else:
+                self._api.fail(f'Unsupported signature for "__set__" in "{t.type.name}"', context)
+        else:
+            self._api.fail(f'Unsupported "__set__" in "{t.type.name}"', context)
 
         return default
 
