@@ -5,12 +5,11 @@ from abc import abstractmethod
 from datetime import datetime
 from glob import glob
 from logging import getLogger
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import luigi
 import numpy as np
 import pandas as pd
-import pandera as pa
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
@@ -79,11 +78,12 @@ class SingleFileTarget(TargetOnKart):
         target: luigi.target.FileSystemTarget,
         processor: FileProcessor,
         task_lock_params: TaskLockParams,
-        expected_dataframe_type: Optional[pa.DataFrameModel] = None,
+        validator: Callable[[Any], bool] = lambda x: True,
     ) -> None:
         self._target = target
         self._processor = processor
         self._task_lock_params = task_lock_params
+        self._validator = validator
 
     def _exists(self) -> bool:
         return self._target.exists()
@@ -94,14 +94,12 @@ class SingleFileTarget(TargetOnKart):
     def _load(self) -> Any:
         with self._target.open('r') as f:
             obj = self._processor.load(f)
-            if self.expected_dataframe_type is not None:
-                return self.expected_dataframe_type(obj)
+            self._validator(obj)
 
             return obj
 
     def _dump(self, obj) -> None:
-        if self.expected_dataframe_type is not None:
-            self.expected_dataframe_type.validate(obj)
+        self._validator(obj)
 
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
@@ -225,12 +223,13 @@ def make_target(
     processor: Optional[FileProcessor] = None,
     task_lock_params: Optional[TaskLockParams] = None,
     store_index_in_feather: bool = True,
+    validator: Callable[[Any], bool] = lambda x: True,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
     file_system_target = _make_file_system_target(file_path, processor=processor, store_index_in_feather=store_index_in_feather)
-    return SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params)
+    return SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, validator=validator)
 
 
 def make_model_target(

@@ -193,7 +193,13 @@ class TaskOnKart(luigi.Task):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+    def make_target(
+        self,
+        relative_file_path: Optional[str] = None,
+        use_unique_id: bool = True,
+        processor: Optional[FileProcessor] = None,
+        validator: Callable[[Any], bool] = lambda x: True,
+    ) -> TargetOnKart:
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.pkl')
         )
@@ -210,7 +216,12 @@ class TaskOnKart(luigi.Task):
         )
 
         return gokart.target.make_target(
-            file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
+            file_path=file_path,
+            unique_id=unique_id,
+            processor=processor,
+            task_lock_params=task_lock_params,
+            store_index_in_feather=self.store_index_in_feather,
+            validator=validator,
         )
 
     def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:

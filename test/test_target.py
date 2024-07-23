@@ -9,8 +9,8 @@ from unittest.mock import patch
 import boto3
 import luigi
 import numpy as np
-import pandera as pa
 import pandas as pd
+import pandera as pa
 from matplotlib import pyplot
 from moto import mock_aws
 
@@ -284,24 +284,27 @@ class ModelTargetTest(unittest.TestCase):
 
 
 class SingleFileTargetTest(unittest.TestCase):
-    class DummyDataFrameSchema(pa.DataFrameModel):
-        a: pa.typing.Series[int] = pa.Field()
-
     def test_typed_target(self):
+        def validate_dataframe(x):
+            return isinstance(x, pd.DataFrame)
+
         test_case = pd.DataFrame(dict(a=[1, 2]))
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _task_lock_params = None
-            file_path = os.path.join(temp_dir, 'test.csv')
+            file_path = os.path.join(temp_dir, 'test.pkl')
             processor = make_file_processor(file_path, store_index_in_feather=False)
             file_system_target = luigi.LocalTarget(file_path, format=processor.format())
-            file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema)
+            file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, validator=validate_dataframe)
 
             file_target.dump(test_case)
             dumped_data = file_target.load()
             self.assertIsInstance(dumped_data, self.DummyDataFrameSchema)
 
     def test_invalid_typed_target(self):
+        def validate_int(x):
+            return isinstance(x, int)
+
         test_case = pd.DataFrame(dict(a=['1', '2']))
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -309,11 +312,12 @@ class SingleFileTargetTest(unittest.TestCase):
             file_path = os.path.join(temp_dir, 'test.csv')
             processor = make_file_processor(file_path, store_index_in_feather=False)
             file_system_target = luigi.LocalTarget(file_path, format=processor.format())
-            file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=self.DummyDataFrameSchema)
+            file_target = SingleFileTarget(
+                target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=validate_int
+            )
 
             with self.assertRaises(pa.errors.SchemaError):
                 file_target.dump(test_case)
-            
 
 
 if __name__ == '__main__':
