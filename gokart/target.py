@@ -94,12 +94,14 @@ class SingleFileTarget(TargetOnKart):
     def _load(self) -> Any:
         with self._target.open('r') as f:
             obj = self._processor.load(f)
-            self._validator(obj)
+            if not self._validator(obj):
+                raise ValueError(f'Validator error: Loaded object is invalid: {obj}')
 
             return obj
 
     def _dump(self, obj) -> None:
-        self._validator(obj)
+        if not self._validator(obj):
+            raise ValueError(f'Validator error: Dumped object is invalid: {obj}')
 
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
