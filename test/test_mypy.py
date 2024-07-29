@@ -19,7 +19,10 @@ class MyTask(gokart.TaskOnKart):
     bar: str = luigi.Parameter() # type: ignore
     baz: bool = gokart.ExplicitBoolParameter()
 
-MyTask(foo=1, bar='bar', baz=False)
+
+# TaskOnKart parameters:
+#   - `complete_check_at_run`
+MyTask(foo=1, bar='bar', baz=False, complete_check_at_run=False)
 """
 
         with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
@@ -42,7 +45,9 @@ class MyTask(gokart.TaskOnKart):
 
 # issue: foo is int
 # not issue: bar is missing, because it can be set by config file.
-MyTask(foo='1', baz='not bool')
+# TaskOnKart parameters:
+#   - `complete_check_at_run`
+MyTask(foo='1', baz='not bool', complete_check_at_run='not bool')
         """
 
         with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
@@ -51,4 +56,5 @@ MyTask(foo='1', baz='not bool')
             result = api.run(['--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
             self.assertIn('error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"  [arg-type]', result[0])
             self.assertIn('error: Argument "baz" to "MyTask" has incompatible type "str"; expected "bool"  [arg-type]', result[0])
-            self.assertIn('Found 2 errors in 1 file (checked 1 source file)', result[0])
+            self.assertIn('error: Argument "complete_check_at_run" to "MyTask" has incompatible type "str"; expected "bool"  [arg-type]', result[0])
+            self.assertIn('Found 3 errors in 1 file (checked 1 source file)', result[0])
