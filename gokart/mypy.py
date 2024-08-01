@@ -60,9 +60,11 @@ PARAMETER_FULLNAME_MATCHER: Final = re.compile(r'^(gokart|luigi)(\.parameter)?\.
 
 class TaskOnKartPlugin(Plugin):
     def get_base_class_hook(self, fullname: str) -> Callable[[ClassDefContext], None] | None:
-        if 'gokart.task.luigi.Task' in fullname:
-            # gather attibutes from gokart.TaskOnKart
-            # the transformation does not affect because the class has `__init__` method
+        # The following gathers attributes from gokart.TaskOnKart such as `workspace_directory`
+        # the transformation does not affect because the class has `__init__` method of `gokart.TaskOnKart`.
+        #
+        # NOTE: `gokart.task.luigi.Task` condition is required for the release of luigi versions without py.typed
+        if fullname in {'gokart.task.luigi.Task', 'luigi.task.Task'}:
             return self._task_on_kart_class_maker_callback
 
         sym = self.lookup_fully_qualified(fullname)
@@ -209,7 +211,6 @@ class TaskOnKartTransformer:
         if ('__init__' not in info.names or info.names['__init__'].plugin_generated) and attributes:
             args = [attr.to_argument(info, of='__init__') for attr in attributes]
             add_method_to_class(self._api, self._cls, '__init__', args=args, return_type=NoneType())
-
         info.metadata[METADATA_TAG] = {
             'attributes': [attr.serialize() for attr in attributes],
         }
@@ -330,6 +331,7 @@ class TaskOnKartTransformer:
                 info=cls.info,
                 api=self._api,
             )
+
         return list(found_attrs.values())
 
     def _collect_parameter_args(self, expr: Expression) -> tuple[bool, dict[str, Expression]]:
@@ -404,9 +406,13 @@ def is_parameter_call(expr: Expression) -> bool:
         type_info = callee.node
         if type_info is None and isinstance(callee.expr, NameExpr):
             return PARAMETER_FULLNAME_MATCHER.match(f'{callee.expr.name}.{callee.name}') is not None
-        if isinstance(type_info, TypeInfo) and PARAMETER_FULLNAME_MATCHER.match(type_info.fullname):
-            return True
+    elif isinstance(callee, NameExpr):
+        type_info = callee.node
+    else:
         return False
+
+    if isinstance(type_info, TypeInfo):
+        return PARAMETER_FULLNAME_MATCHER.match(type_info.fullname) is not None
     return False
 
 
