@@ -109,14 +109,14 @@ class TaskOnKart(luigi.Task):
         self._lock_at_dump = True
 
         if self.complete_check_at_run:
-            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
+            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)  # type: ignore
 
         if self.should_lock_run:
             self._lock_at_dump = False
             assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
             task_lock_params = make_task_lock_params_for_run(task_self=self)
-            self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)
+            self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
 
     def input(self) -> FlattenableItems[TargetOnKart]:
         return super().input()
@@ -424,7 +424,7 @@ class TaskOnKart(luigi.Task):
     def _set_random_seed(self):
         if self.should_dump_supplementary_log_files:
             random_seed = self._get_random_seed()
-            seed_methods = self.try_set_seed(self.fix_random_seed_methods, random_seed)
+            seed_methods = self.try_set_seed(list(self.fix_random_seed_methods), random_seed)
             self.dump({'seed': random_seed, 'seed_methods': seed_methods}, self._get_random_seeds_target())
 
     def _get_random_seeds_target(self):
@@ -432,7 +432,7 @@ class TaskOnKart(luigi.Task):
 
     @staticmethod
     def try_set_seed(methods: List[str], random_seed: int) -> List[str]:
-        success_methods = []
+        success_methods: List[str] = []
         for method_name in methods:
             try:
                 for i, x in enumerate(method_name.split('.')):

@@ -90,7 +90,7 @@ class TestPickleFileProcessor(unittest.TestCase):
     def test_dump_and_load_class(self):
         import functools
 
-        def plus1(func: Callable[[], int]) -> Callable[[], int]:
+        def plus1(func: Callable[..., int]) -> Callable[..., int]:
             @functools.wraps(func)
             def wrapped() -> int:
                 ret = func()
@@ -99,12 +99,10 @@ class TestPickleFileProcessor(unittest.TestCase):
             return wrapped
 
         class A:
-            run: Callable[[], int]
-
             def __init__(self) -> None:
-                self.run = plus1(self.run)
+                self.run = plus1(self.run)  # type: ignore
 
-            def run(self) -> int:
+            def run(self) -> int:  # type: ignore
                 return 1
 
         obj = A()

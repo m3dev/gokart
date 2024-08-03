@@ -13,7 +13,7 @@ logger = getLogger(__name__)
 class TaskInstanceParameter(luigi.Parameter):
     def __init__(self, expected_type=None, *args, **kwargs):
         if expected_type is None:
-            self.expected_type = gokart.TaskOnKart
+            self.expected_type: type = gokart.TaskOnKart
         elif isinstance(expected_type, type):
             self.expected_type = expected_type
         else:
@@ -62,7 +62,7 @@ class _TaskInstanceEncoder(json.JSONEncoder):
 class ListTaskInstanceParameter(luigi.Parameter):
     def __init__(self, expected_elements_type=None, *args, **kwargs):
         if expected_elements_type is None:
-            self.expected_elements_type = gokart.TaskOnKart
+            self.expected_elements_type: type = gokart.TaskOnKart
         elif isinstance(expected_elements_type, type):
             self.expected_elements_type = expected_elements_type
         else:

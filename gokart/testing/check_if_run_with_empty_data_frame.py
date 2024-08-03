@@ -49,7 +49,7 @@ def _get_all_tasks(task: gokart.TaskOnKart) -> List[gokart.TaskOnKart]:
 def _run_with_test_status(task: gokart.TaskOnKart):
     test_message = _TestStatus(task)
     try:
-        task.run()
+        task.run()  # type: ignore
     except Exception as e:
         test_message.status = 'NG'
         test_message.message = e

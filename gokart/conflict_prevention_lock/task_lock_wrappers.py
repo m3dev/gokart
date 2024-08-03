@@ -1,6 +1,6 @@
 import functools
 from logging import getLogger
-from typing import Callable
+from typing import Any, Callable
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, set_lock_scheduler, set_task_lock
 
@@ -83,7 +83,7 @@ def wrap_remove_with_lock(func, task_lock_params: TaskLockParams):
     return wrapper
 
 
-def wrap_run_with_lock(run_func: Callable[[], None], task_lock_params: TaskLockParams):
+def wrap_run_with_lock(run_func: Callable[[], Any], task_lock_params: TaskLockParams):
     @functools.wraps(run_func)
     def wrapped():
         task_lock = set_task_lock(task_lock_params=task_lock_params)
