@@ -1,4 +1,5 @@
 import unittest
+from typing import Any
 from unittest.mock import patch
 
 import luigi
@@ -163,7 +164,7 @@ class _TaskInfoExampleTaskC(gokart.TaskOnKart):
 class TestTaskInfoTable(unittest.TestCase):
     def test_dump_task_info_table(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
-            self.dumped_data = None
+            self.dumped_data: Any = None
 
             def _side_effect(obj, lock_at_dump):
                 self.dumped_data = obj
@@ -180,7 +181,7 @@ class TestTaskInfoTable(unittest.TestCase):
 class TestTaskInfoTree(unittest.TestCase):
     def test_dump_task_info_tree(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
-            self.dumped_data = None
+            self.dumped_data: Any = None
 
             def _side_effect(obj, lock_at_dump):
                 self.dumped_data = obj

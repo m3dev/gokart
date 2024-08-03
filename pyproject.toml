@@ -66,6 +66,8 @@ quote-style = "single"
 ignore_missing_imports = true
 plugins = ["gokart.mypy:plugin"]
 
+check_untyped_defs = true
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
