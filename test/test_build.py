@@ -1,7 +1,14 @@
 import logging
 import os
+import sys
 import unittest
 from copy import copy
+from typing import Dict
+
+if sys.version_info >= (3, 11):
+    from typing import assert_type
+else:
+    from typing_extensions import assert_type
 
 import luigi
 import luigi.mock
@@ -11,9 +18,9 @@ from gokart.build import GokartBuildError, LoggerConfig
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
 
 
-class _DummyTask(gokart.TaskOnKart):
+class _DummyTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
-    param = luigi.Parameter()
+    param: str = luigi.Parameter()
 
     def output(self):
         return self.make_target('./test/dummy.pkl')
@@ -22,10 +29,10 @@ class _DummyTask(gokart.TaskOnKart):
         self.dump(self.param)
 
 
-class _DummyTaskTwoOutputs(gokart.TaskOnKart):
+class _DummyTaskTwoOutputs(gokart.TaskOnKart[Dict[str, str]]):
     task_namespace = __name__
-    param1 = luigi.Parameter()
-    param2 = luigi.Parameter()
+    param1: str = luigi.Parameter()
+    param2: str = luigi.Parameter()
 
     def output(self):
         return {'out1': self.make_target('./test/dummy1.pkl'), 'out2': self.make_target('./test/dummy2.pkl')}
@@ -42,7 +49,7 @@ class _DummyFailedTask(gokart.TaskOnKart):
         raise RuntimeError
 
 
-class _ParallelRunner(gokart.TaskOnKart):
+class _ParallelRunner(gokart.TaskOnKart[str]):
     def requires(self):
         return [_DummyTask(param=str(i)) for i in range(10)]
 
@@ -79,6 +86,7 @@ class RunTest(unittest.TestCase):
         config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'test_config.ini')
         gokart.utils.add_config(config_file_path)
         output = gokart.build(_DummyTask(), reset_register=False)
+        assert_type(output, str)
         self.assertEqual(output, 'test')
 
     def test_build_dict_outputs(self):
@@ -87,6 +95,7 @@ class RunTest(unittest.TestCase):
             'out2': 'test2',
         }
         output = gokart.build(_DummyTaskTwoOutputs(param1=param_dict['out1'], param2=param_dict['out2']), reset_register=False)
+        assert_type(output, Dict[str, str])
         self.assertEqual(output, param_dict)
 
     def test_failed_task(self):
