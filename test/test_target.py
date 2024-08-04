@@ -1,18 +1,21 @@
 import io
 import os
 import shutil
+import tempfile
 import unittest
 from datetime import datetime
 from unittest.mock import patch
 
 import boto3
+import luigi
 import numpy as np
 import pandas as pd
+import pandera as pa
 from matplotlib import pyplot
 from moto import mock_aws
 
-from gokart.file_processor import _ChunkedLargeFileReader
-from gokart.target import make_model_target, make_target
+from gokart.file_processor import _ChunkedLargeFileReader, make_file_processor
+from gokart.target import SingleFileTarget, make_model_target, make_target
 
 
 def _get_temporary_directory():
@@ -278,6 +281,43 @@ class ModelTargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, obj)
+
+
+class SingleFileTargetTest(unittest.TestCase):
+    def test_typed_target(self):
+        def validate_dataframe(x):
+            return isinstance(x, pd.DataFrame)
+
+        test_case = pd.DataFrame(dict(a=[1, 2]))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _task_lock_params = None
+            file_path = os.path.join(temp_dir, 'test.pkl')
+            processor = make_file_processor(file_path, store_index_in_feather=False)
+            file_system_target = luigi.LocalTarget(file_path, format=processor.format())
+            file_target = SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params, validator=validate_dataframe)
+
+            file_target.dump(test_case)
+            dumped_data = file_target.load()
+            self.assertIsInstance(dumped_data, self.DummyDataFrameSchema)
+
+    def test_invalid_typed_target(self):
+        def validate_int(x):
+            return isinstance(x, int)
+
+        test_case = pd.DataFrame(dict(a=['1', '2']))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _task_lock_params = None
+            file_path = os.path.join(temp_dir, 'test.csv')
+            processor = make_file_processor(file_path, store_index_in_feather=False)
+            file_system_target = luigi.LocalTarget(file_path, format=processor.format())
+            file_target = SingleFileTarget(
+                target=file_system_target, processor=processor, task_lock_params=_task_lock_params, expected_dataframe_type=validate_int
+            )
+
+            with self.assertRaises(pa.errors.SchemaError):
+                file_target.dump(test_case)
 
 
 if __name__ == '__main__':
