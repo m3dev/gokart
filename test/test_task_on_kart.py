@@ -305,6 +305,17 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(data['target_key_1'], 1)
         self.assertEqual(data['target_key_2'], 2)
 
+    def test_load_with_task_on_kart(self):
+        task = _DummyTask()
+
+        task2 = MagicMock(spec=gokart.TaskOnKart)
+        task2_output = MagicMock(spec=TargetOnKart)
+        task2.output.return_value = task2_output
+        task2_output.load.return_value = 1
+
+        actual = task.load(task2)
+        self.assertEqual(actual, 1)
+
     def test_load_generator_with_single_target(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)

@@ -26,6 +26,7 @@ logger = getLogger(__name__)
 
 
 T = TypeVar('T')
+K = TypeVar('K')
 
 
 class TaskOnKart(luigi.Task, Generic[T]):
@@ -272,7 +273,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
             task_lock_params=task_lock_params,
         )
 
-    def load(self, target: Union[None, str, TargetOnKart] = None) -> Any:
+    @overload
+    def load(self, target: Union[None, str, TargetOnKart] = None) -> Any: ...
+
+    @overload
+    def load(self, target: 'TaskOnKart[K]') -> K: ...
+
+    def load(self, target: Union[None, str, TargetOnKart, 'TaskOnKart[K]'] = None) -> Any:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
@@ -369,7 +376,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
-    def _get_input_targets(self, target: Union[None, str, TargetOnKart]) -> FlattenableItems[TargetOnKart]:
+    def _get_input_targets(self, target: Union[None, str, TargetOnKart, 'TaskOnKart']) -> FlattenableItems[TargetOnKart]:
         if target is None:
             return self.input()
         if isinstance(target, str):
@@ -377,6 +384,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
             assert isinstance(input, dict), f'input must be dict[str, TargetOnKart], but {type(input)} is passed.'
             result: FlattenableItems[TargetOnKart] = input[target]
             return result
+        if isinstance(target, TaskOnKart):
+            return target.output()
         return target
 
     def _get_output_target(self, target: Union[None, str, TargetOnKart]) -> TargetOnKart:
