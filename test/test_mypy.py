@@ -10,6 +10,7 @@ class TestMyMypyPlugin(unittest.TestCase):
     def test_plugin_no_issue(self):
         test_code = """
 import luigi
+from luigi import Parameter
 import gokart
 
 
@@ -18,11 +19,12 @@ class MyTask(gokart.TaskOnKart):
     foo: int = luigi.IntParameter() # type: ignore
     bar: str = luigi.Parameter() # type: ignore
     baz: bool = gokart.ExplicitBoolParameter()
+    qux: str = Parameter()
 
 
 # TaskOnKart parameters:
 #   - `complete_check_at_run`
-MyTask(foo=1, bar='bar', baz=False, complete_check_at_run=False)
+MyTask(foo=1, bar='bar', baz=False, qux='qux', complete_check_at_run=False)
 """
 
         with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
