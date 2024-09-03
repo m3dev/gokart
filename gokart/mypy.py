@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from typing import Callable, Final, Iterator, Literal, Optional
 
+import luigi
 from mypy.expandtype import expand_type, expand_type_by_instance
 from mypy.nodes import (
     ARG_NAMED_OPT,
@@ -56,6 +57,7 @@ from mypy.typevars import fill_typevars
 METADATA_TAG: Final[str] = 'task_on_kart'
 
 PARAMETER_FULLNAME_MATCHER: Final = re.compile(r'^(gokart|luigi)(\.parameter)?\.\w*Parameter$')
+PARAMETER_TMP_MATCHER: Final = re.compile(r'^\w*Parameter$')
 
 
 class TaskOnKartPlugin(Plugin):
@@ -413,6 +415,16 @@ def is_parameter_call(expr: Expression) -> bool:
 
     if isinstance(type_info, TypeInfo):
         return PARAMETER_FULLNAME_MATCHER.match(type_info.fullname) is not None
+
+    # Currently, luigi doesn't provide py.typed. it will be released next to 3.5.1.
+    # https://github.com/spotify/luigi/pull/3297
+    # With the following code, we can't assume correctly.
+    #
+    # from luigi import Parameter
+    # class MyTask(gokart.TaskOnKart):
+    #     param = Parameter()
+    if isinstance(type_info, Var) and luigi.__version__ <= '3.5.1':
+        return PARAMETER_TMP_MATCHER.match(type_info.name) is not None
     return False
 
 
