@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 from logging import getLogger
-from typing import Any, Optional
+from typing import Literal, Optional, TypeVar, cast, overload
 
 import backoff
 import luigi
@@ -10,6 +10,8 @@ import gokart
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
 from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
+
+T = TypeVar('T')
 
 
 class LoggerConfig:
@@ -41,13 +43,13 @@ class TaskLockExceptionRaisedFlag:
         self.flag: bool = False
 
 
-def _get_output(task: TaskOnKart) -> Any:
+def _get_output(task: TaskOnKart[T]) -> T:
     output = task.output()
     # FIXME: currently, nested output is not supported
     if isinstance(output, list) or isinstance(output, tuple):
-        return [t.load() for t in output if isinstance(t, TargetOnKart)]
+        return cast(T, [t.load() for t in output if isinstance(t, TargetOnKart)])
     if isinstance(output, dict):
-        return {k: t.load() for k, t in output.items() if isinstance(t, TargetOnKart)}
+        return cast(T, {k: t.load() for k, t in output.items() if isinstance(t, TargetOnKart)})
     if isinstance(output, TargetOnKart):
         return output.load()
     raise ValueError(f'output type is not supported: {type(output)}')
@@ -65,15 +67,39 @@ def _reset_register(keep={'gokart', 'luigi'}):
     ]
 
 
+@overload
 def build(
-    task: TaskOnKart,
+    task: TaskOnKart[T],
+    return_value: Literal[True] = True,
+    reset_register: bool = True,
+    log_level: int = logging.ERROR,
+    task_lock_exception_max_tries: int = 10,
+    task_lock_exception_max_wait_seconds: int = 600,
+    **env_params,
+) -> T: ...
+
+
+@overload
+def build(
+    task: TaskOnKart[T],
+    return_value: Literal[False],
+    reset_register: bool = True,
+    log_level: int = logging.ERROR,
+    task_lock_exception_max_tries: int = 10,
+    task_lock_exception_max_wait_seconds: int = 600,
+    **env_params,
+) -> None: ...
+
+
+def build(
+    task: TaskOnKart[T],
     return_value: bool = True,
     reset_register: bool = True,
     log_level: int = logging.ERROR,
     task_lock_exception_max_tries: int = 10,
     task_lock_exception_max_wait_seconds: int = 600,
     **env_params,
-) -> Optional[Any]:
+) -> Optional[T]:
     """
     Run gokart task for local interpreter.
     Sharing the most of its parameters with luigi.build (see https://luigi.readthedocs.io/en/stable/api/luigi.html?highlight=build#luigi.build)
