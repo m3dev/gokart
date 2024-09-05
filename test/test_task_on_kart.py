@@ -311,12 +311,30 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
 
         task2 = MagicMock(spec=gokart.TaskOnKart)
+        task2.make_unique_id.return_value = 'task2'
         task2_output = MagicMock(spec=TargetOnKart)
         task2.output.return_value = task2_output
         task2_output.load.return_value = 1
 
+        # task2 should be in requires' return values
+        task.requires = lambda: {'task2': task2}  # type: ignore
+
         actual = task.load(task2)
         self.assertEqual(actual, 1)
+
+    def test_load_with_task_on_kart_should_fail_when_task_on_kart_is_not_in_requires(self):
+        """
+        if load args is not in requires, it should raise an error.
+        """
+        task = _DummyTask()
+
+        task2 = MagicMock(spec=gokart.TaskOnKart)
+        task2_output = MagicMock(spec=TargetOnKart)
+        task2.output.return_value = task2_output
+        task2_output.load.return_value = 1
+
+        with self.assertRaises(AssertionError):
+            task.load(task2)
 
     def test_load_generator_with_single_target(self):
         task = _DummyTask()

@@ -385,6 +385,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
             result: FlattenableItems[TargetOnKart] = input[target]
             return result
         if isinstance(target, TaskOnKart):
+            requires_unique_ids = [task.make_unique_id() for task in flatten(self.requires())]
+            assert target.make_unique_id() in requires_unique_ids, f'{target} should be in requires method'
             return target.output()
         return target
 
