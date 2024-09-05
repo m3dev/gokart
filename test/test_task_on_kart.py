@@ -2,7 +2,7 @@ import os
 import pathlib
 import unittest
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, cast
 from unittest.mock import MagicMock, patch
 
 import luigi
@@ -191,7 +191,8 @@ class TaskTest(unittest.TestCase):
         task = _DummyTaskD()
         default_large_dataframe_target = task.make_large_data_frame_target()
         self.assertIsInstance(default_large_dataframe_target, ModelTarget)
-        self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.zip', pathlib.Path(default_large_dataframe_target._zip_client._file_path).name)
+        target = cast(ModelTarget, default_large_dataframe_target)
+        self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.zip', pathlib.Path(target._zip_client.path).name)
 
     def test_make_target(self):
         task = _DummyTask()
@@ -199,15 +200,16 @@ class TaskTest(unittest.TestCase):
         self.assertIsInstance(target, SingleFileTarget)
 
     def test_make_target_without_id(self):
-        path = _DummyTask().make_target('test.txt', use_unique_id=False)._target.path
+        path = _DummyTask().make_target('test.txt', use_unique_id=False).path()
         self.assertEqual(path, os.path.join(_DummyTask().workspace_directory, 'test.txt'))
 
     def test_make_target_with_processor(self):
         task = _DummyTask()
         processor = XmlFileProcessor()
         target = task.make_target('test.dummy', processor=processor)
-        self.assertEqual(target._processor, processor)
         self.assertIsInstance(target, SingleFileTarget)
+        target = cast(SingleFileTarget, target)
+        self.assertEqual(target._processor, processor)
 
     def test_get_own_code(self):
         task = _DummyTask()
@@ -238,8 +240,8 @@ class TaskTest(unittest.TestCase):
         self.assertNotEqual(task_modified_with_code_unique_id, task_with_code_unique_id)
 
     def test_compare_targets_of_different_tasks(self):
-        path1 = _DummyTask(param=1).make_target('test.txt')._target.path
-        path2 = _DummyTask(param=2).make_target('test.txt')._target.path
+        path1 = _DummyTask(param=1).make_target('test.txt').path()
+        path2 = _DummyTask(param=2).make_target('test.txt').path()
         self.assertNotEqual(path1, path2, msg='different tasks must generate different targets.')
 
     def test_make_model_target(self):

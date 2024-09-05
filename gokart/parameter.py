@@ -85,5 +85,5 @@ class ExplicitBoolParameter(luigi.BoolParameter):
     def __init__(self, *args, **kwargs):
         luigi.Parameter.__init__(self, *args, **kwargs)
 
-    def _parser_kwargs(self, *args, **kwargs):
+    def _parser_kwargs(self, *args, **kwargs):  # type: ignore
         return luigi.Parameter._parser_kwargs(*args, *kwargs)

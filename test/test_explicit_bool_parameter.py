@@ -24,7 +24,7 @@ class ExplicitParsing(gokart.TaskOnKart):
     param = gokart.ExplicitBoolParameter()
 
     def run(self):
-        ExplicitParsing._param = self.param
+        ExplicitParsing._param = self.param  # type: ignore
 
 
 class TestExplicitBoolParameter(unittest.TestCase):
