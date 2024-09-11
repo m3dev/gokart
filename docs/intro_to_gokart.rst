@@ -23,7 +23,7 @@ A minimal gokart tasks looks something like this:
 
     import gokart
 
-    class Example(gokart.TaskOnKart):
+    class Example(gokart.TaskOnKart[str]):
         def run(self):
             self.dump('Hello, world!')
 
@@ -61,7 +61,7 @@ A minimal gokart tasks looks something like this:
             └── Example_8441c59b5ce0113396d53509f19371fb.pkl
 
 
-The result of dumping the task will be saved in the ``__name__`` directory. 
+The result of dumping the task will be saved in the ``__name__`` directory.
 
 
 .. code:: python
@@ -108,7 +108,7 @@ The :func:`~gokart.run` is running on shell.
     import gokart
     import luigi
 
-    class SampleTask(gokart.TaskOnKart):
+    class SampleTask(gokart.TaskOnKart[str]):
         param = luigi.Parameter()
 
         def run(self):
@@ -140,7 +140,7 @@ The :func:`~gokart.build` is inline code.
     import gokart
     import luigi
 
-    class SampleTask(gokart.TaskOnKart):
+    class SampleTask(gokart.TaskOnKart[str]):
         param = luigi.Parameter()
 
         def run(self):

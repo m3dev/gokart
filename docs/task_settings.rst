@@ -59,7 +59,7 @@ When used from an argument as follows:
 .. code:: python
 
     # main.py
-    class Task(gokart.TaskOnKart):
+    class Task(gokart.TaskOnKart[str]):
         def run(self):
             self.dump('hello')
 
@@ -101,7 +101,7 @@ Every task has a parameter named :attr:`~gokart.task.TaskOnKart.fix_random_seed_
     import numpy
     import torch
 
-    class Task(gokart.TaskOnKart):
+    class Task(gokart.TaskOnKart[dict[str, Any]]):
         def run(self):
             x = [random.randint(0, 100) for _ in range(0, 10)]
             y = [np.random.randint(0, 100) for _ in range(0, 10)]

@@ -21,7 +21,7 @@ Please refer to `luigi document <https://luigi.readthedocs.io/en/stable/api/luig
 Gokart Parameter
 ================
 
-There are also parameters provided by gokart. 
+There are also parameters provided by gokart.
 
 - gokart.TaskInstanceParameter
 - gokart.ListTaskInstanceParameter
@@ -36,12 +36,12 @@ The :func:`~gokart.parameter.TaskInstanceParameter` executes a task using the re
 
 .. code:: python
 
-    class TaskA(gokart.TaskOnKart):
+    class TaskA(gokart.TaskOnKart[str]):
         def run(self):
             self.dump('Hello')
 
 
-    class TaskB(gokart.TaskOnKart):
+    class TaskB(gokart.TaskOnKart[str]):
         require_task = gokart.TaskInstanceParameter()
 
         def requires(self):
