@@ -2,7 +2,7 @@ import os
 import pathlib
 import unittest
 from datetime import datetime
-from typing import Any, Dict, cast
+from typing import Any, Dict, List, cast
 from unittest.mock import MagicMock, patch
 
 import luigi
@@ -336,6 +336,28 @@ class TaskTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             task.load(task2)
 
+    def test_load_with_task_on_kart_list(self):
+        task = _DummyTask()
+
+        task2 = MagicMock(spec=gokart.TaskOnKart[int])
+        task2.make_unique_id.return_value = 'task2'
+        task2_output = MagicMock(spec=TargetOnKart)
+        task2.output.return_value = task2_output
+        task2_output.load.return_value = 1
+
+        task3 = MagicMock(spec=gokart.TaskOnKart[int])
+        task3.make_unique_id.return_value = 'task3'
+        task3_output = MagicMock(spec=TargetOnKart)
+        task3.output.return_value = task3_output
+        task3_output.load.return_value = 2
+
+        # task2 should be in requires' return values
+        task.requires = lambda: {'tasks': [task2, task3]}  # type: ignore
+
+        load_args: List[gokart.TaskOnKart[int]] = [task2, task3]
+        actual = task.load(load_args)
+        self.assertEqual(actual, [1, 2])
+
     def test_load_generator_with_single_target(self):
         task = _DummyTask()
         target = MagicMock(spec=TargetOnKart)
@@ -351,6 +373,28 @@ class TaskTest(unittest.TestCase):
         task.input = MagicMock(return_value={'target_key': target})  # type: ignore
         data = [x for x in task.load_generator('target_key')]
         self.assertEqual(data, [[1, 2]])
+
+    def test_load_generator_with_list_task_on_kart(self):
+        task = _DummyTask()
+
+        task2 = MagicMock(spec=gokart.TaskOnKart)
+        task2.make_unique_id.return_value = 'task2'
+        task2_output = MagicMock(spec=TargetOnKart)
+        task2.output.return_value = task2_output
+        task2_output.load.return_value = 1
+
+        task3 = MagicMock(spec=gokart.TaskOnKart)
+        task3.make_unique_id.return_value = 'task3'
+        task3_output = MagicMock(spec=TargetOnKart)
+        task3.output.return_value = task3_output
+        task3_output.load.return_value = 2
+
+        # task2 should be in requires' return values
+        task.requires = lambda: {'tasks': [task2, task3]}  # type: ignore
+
+        load_args: List[gokart.TaskOnKart[int]] = [task2, task3]
+        actual = [x for x in task.load_generator(load_args)]
+        self.assertEqual(actual, [1, 2])
 
     def test_dump(self):
         task = _DummyTask()

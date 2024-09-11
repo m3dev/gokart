@@ -5,7 +5,7 @@ import random
 import types
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, Generic, List, Optional, Set, TypeVar, Union, overload
+from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
 
 import luigi
 import pandas as pd
@@ -279,7 +279,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
     @overload
     def load(self, target: 'TaskOnKart[K]') -> K: ...
 
-    def load(self, target: Union[None, str, TargetOnKart, 'TaskOnKart[K]'] = None) -> Any:
+    @overload
+    def load(self, target: 'List[TaskOnKart[K]]') -> List[K]: ...
+
+    def load(self, target: Union[None, str, TargetOnKart, 'TaskOnKart[K]', 'List[TaskOnKart[K]]'] = None) -> Any:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
@@ -292,7 +295,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return list(data.values())[0]
         return data
 
-    def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Generator[Any, None, None]:
+    @overload
+    def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Generator[Any, None, None]: ...
+
+    @overload
+    def load_generator(self, target: 'List[TaskOnKart[K]]') -> Generator[K, None, None]: ...
+
+    def load_generator(self, target: Union[None, str, TargetOnKart, 'List[TaskOnKart[K]]'] = None) -> Generator[Any, None, None]:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 for t in targets:
@@ -376,7 +385,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
-    def _get_input_targets(self, target: Union[None, str, TargetOnKart, 'TaskOnKart']) -> FlattenableItems[TargetOnKart]:
+    def _get_input_targets(self, target: Union[None, str, TargetOnKart, 'TaskOnKart', 'List[TaskOnKart]']) -> FlattenableItems[TargetOnKart]:
         if target is None:
             return self.input()
         if isinstance(target, str):
@@ -384,6 +393,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
             assert isinstance(input, dict), f'input must be dict[str, TargetOnKart], but {type(input)} is passed.'
             result: FlattenableItems[TargetOnKart] = input[target]
             return result
+        if isinstance(target, Iterable):
+            return [self._get_input_targets(t) for t in target]
         if isinstance(target, TaskOnKart):
             requires_unique_ids = [task.make_unique_id() for task in flatten(self.requires())]
             assert target.make_unique_id() in requires_unique_ids, f'{target} should be in requires method'
