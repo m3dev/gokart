@@ -3,7 +3,7 @@ import pathlib
 import unittest
 from datetime import datetime
 from typing import Any, Dict, List, cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import Mock, patch
 
 import luigi
 import pandas as pd
@@ -95,12 +95,12 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(task.complete(), msg='"rerun" flag should be changed.')
 
     def test_complete_with_uncompleted_input(self):
-        uncompleted_target = MagicMock(spec=TargetOnKart)
+        uncompleted_target = Mock(spec=TargetOnKart)
         uncompleted_target.exists.return_value = False
 
         # depends on an uncompleted target.
         task = _DummyTask()
-        task.input = MagicMock(return_value=uncompleted_target)  # type: ignore
+        task.input = Mock(return_value=uncompleted_target)  # type: ignore
         self.assertTrue(task.complete(), msg='task does not care input targets.')
 
         # make a task check its inputs.
@@ -108,18 +108,18 @@ class TaskTest(unittest.TestCase):
         self.assertFalse(task.complete())
 
     def test_complete_with_modified_input(self):
-        input_target = MagicMock(spec=TargetOnKart)
+        input_target = Mock(spec=TargetOnKart)
         input_target.exists.return_value = True
         input_target.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
-        output_target = MagicMock(spec=TargetOnKart)
+        output_target = Mock(spec=TargetOnKart)
         output_target.exists.return_value = True
         output_target.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
 
         # depends on an uncompleted target.
         task = _DummyTask()
         task.modification_time_check = False
-        task.input = MagicMock(return_value=input_target)  # type: ignore
-        task.output = MagicMock(return_value=output_target)  # type: ignore
+        task.input = Mock(return_value=input_target)  # type: ignore
+        task.output = Mock(return_value=output_target)  # type: ignore
         self.assertTrue(task.complete(), msg='task does not care modified time')
 
         # make a task check its inputs.
@@ -130,43 +130,43 @@ class TaskTest(unittest.TestCase):
         """Test the case that modification time of input equals that of output.
         The case is occurred when input and output targets are same.
         """
-        input_target = MagicMock(spec=TargetOnKart)
+        input_target = Mock(spec=TargetOnKart)
         input_target.exists.return_value = True
         input_target.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
-        output_target = MagicMock(spec=TargetOnKart)
+        output_target = Mock(spec=TargetOnKart)
         output_target.exists.return_value = True
         output_target.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
 
         task = _DummyTask()
         task.modification_time_check = True
-        task.input = MagicMock(return_value=input_target)  # type: ignore
-        task.output = MagicMock(return_value=output_target)  # type: ignore
+        task.input = Mock(return_value=input_target)  # type: ignore
+        task.output = Mock(return_value=output_target)  # type: ignore
         self.assertTrue(task.complete())
 
     def test_complete_when_input_and_output_equal(self):
-        target1 = MagicMock(spec=TargetOnKart)
+        target1 = Mock(spec=TargetOnKart)
         target1.exists.return_value = True
         target1.path.return_value = 'path1.pkl'
         target1.last_modification_time.return_value = datetime(2018, 1, 1, 10, 0, 0)
 
-        target2 = MagicMock(spec=TargetOnKart)
+        target2 = Mock(spec=TargetOnKart)
         target2.exists.return_value = True
         target2.path.return_value = 'path2.pkl'
         target2.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
 
-        target3 = MagicMock(spec=TargetOnKart)
+        target3 = Mock(spec=TargetOnKart)
         target3.exists.return_value = True
         target3.path.return_value = 'path3.pkl'
         target3.last_modification_time.return_value = datetime(2018, 1, 1, 9, 0, 0)
 
         task = _DummyTask()
         task.modification_time_check = True
-        task.input = MagicMock(return_value=[target1, target2])  # type: ignore
-        task.output = MagicMock(return_value=[target1, target2])  # type: ignore
+        task.input = Mock(return_value=[target1, target2])  # type: ignore
+        task.output = Mock(return_value=[target1, target2])  # type: ignore
         self.assertTrue(task.complete())
 
-        task.input = MagicMock(return_value=[target1, target2])  # type: ignore
-        task.output = MagicMock(return_value=[target2, target3])  # type: ignore
+        task.input = Mock(return_value=[target1, target2])  # type: ignore
+        task.output = Mock(return_value=[target2, target3])  # type: ignore
         self.assertFalse(task.complete())
 
     def test_default_target(self):
@@ -246,14 +246,14 @@ class TaskTest(unittest.TestCase):
 
     def test_make_model_target(self):
         task = _DummyTask()
-        target = task.make_model_target('test.zip', save_function=MagicMock(), load_function=MagicMock())
+        target = task.make_model_target('test.zip', save_function=Mock(), load_function=Mock())
         self.assertIsInstance(target, ModelTarget)
 
     def test_load_with_single_target(self):
         task = _DummyTask()
-        target = MagicMock(spec=TargetOnKart)
+        target = Mock(spec=TargetOnKart)
         target.load.return_value = 1
-        task.input = MagicMock(return_value=target)  # type: ignore
+        task.input = Mock(return_value=target)  # type: ignore
 
         data = task.load()
         target.load.assert_called_once()
@@ -261,9 +261,9 @@ class TaskTest(unittest.TestCase):
 
     def test_load_with_single_dict_target(self):
         task = _DummyTask()
-        target = MagicMock(spec=TargetOnKart)
+        target = Mock(spec=TargetOnKart)
         target.load.return_value = 1
-        task.input = MagicMock(return_value={'target_key': target})  # type: ignore
+        task.input = Mock(return_value={'target_key': target})  # type: ignore
 
         data = task.load()
         target.load.assert_called_once()
@@ -271,9 +271,9 @@ class TaskTest(unittest.TestCase):
 
     def test_load_with_keyword(self):
         task = _DummyTask()
-        target = MagicMock(spec=TargetOnKart)
+        target = Mock(spec=TargetOnKart)
         target.load.return_value = 1
-        task.input = MagicMock(return_value={'target_key': target})  # type: ignore
+        task.input = Mock(return_value={'target_key': target})  # type: ignore
 
         data = task.load('target_key')
         target.load.assert_called_once()
@@ -281,11 +281,11 @@ class TaskTest(unittest.TestCase):
 
     def test_load_tuple(self):
         task = _DummyTask()
-        target1 = MagicMock(spec=TargetOnKart)
+        target1 = Mock(spec=TargetOnKart)
         target1.load.return_value = 1
-        target2 = MagicMock(spec=TargetOnKart)
+        target2 = Mock(spec=TargetOnKart)
         target2.load.return_value = 2
-        task.input = MagicMock(return_value=(target1, target2))  # type: ignore
+        task.input = Mock(return_value=(target1, target2))  # type: ignore
 
         data = task.load()
         target1.load.assert_called_once()
@@ -295,11 +295,11 @@ class TaskTest(unittest.TestCase):
 
     def test_load_dictionary_at_once(self):
         task = _DummyTask()
-        target1 = MagicMock(spec=TargetOnKart)
+        target1 = Mock(spec=TargetOnKart)
         target1.load.return_value = 1
-        target2 = MagicMock(spec=TargetOnKart)
+        target2 = Mock(spec=TargetOnKart)
         target2.load.return_value = 2
-        task.input = MagicMock(return_value={'target_key_1': target1, 'target_key_2': target2})  # type: ignore
+        task.input = Mock(return_value={'target_key_1': target1, 'target_key_2': target2})  # type: ignore
 
         data = task.load()
         target1.load.assert_called_once()
@@ -310,9 +310,9 @@ class TaskTest(unittest.TestCase):
     def test_load_with_task_on_kart(self):
         task = _DummyTask()
 
-        task2 = MagicMock(spec=gokart.TaskOnKart)
+        task2 = Mock(spec=gokart.TaskOnKart)
         task2.make_unique_id.return_value = 'task2'
-        task2_output = MagicMock(spec=TargetOnKart)
+        task2_output = Mock(spec=TargetOnKart)
         task2.output.return_value = task2_output
         task2_output.load.return_value = 1
 
@@ -328,8 +328,8 @@ class TaskTest(unittest.TestCase):
         """
         task = _DummyTask()
 
-        task2 = MagicMock(spec=gokart.TaskOnKart)
-        task2_output = MagicMock(spec=TargetOnKart)
+        task2 = Mock(spec=gokart.TaskOnKart)
+        task2_output = Mock(spec=TargetOnKart)
         task2.output.return_value = task2_output
         task2_output.load.return_value = 1
 
@@ -339,15 +339,15 @@ class TaskTest(unittest.TestCase):
     def test_load_with_task_on_kart_list(self):
         task = _DummyTask()
 
-        task2 = MagicMock(spec=gokart.TaskOnKart[int])
+        task2 = Mock(spec=gokart.TaskOnKart)
         task2.make_unique_id.return_value = 'task2'
-        task2_output = MagicMock(spec=TargetOnKart)
+        task2_output = Mock(spec=TargetOnKart)
         task2.output.return_value = task2_output
         task2_output.load.return_value = 1
 
-        task3 = MagicMock(spec=gokart.TaskOnKart[int])
+        task3 = Mock(spec=gokart.TaskOnKart)
         task3.make_unique_id.return_value = 'task3'
-        task3_output = MagicMock(spec=TargetOnKart)
+        task3_output = Mock(spec=TargetOnKart)
         task3.output.return_value = task3_output
         task3_output.load.return_value = 2
 
@@ -360,32 +360,32 @@ class TaskTest(unittest.TestCase):
 
     def test_load_generator_with_single_target(self):
         task = _DummyTask()
-        target = MagicMock(spec=TargetOnKart)
+        target = Mock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
-        task.input = MagicMock(return_value=target)  # type: ignore
+        task.input = Mock(return_value=target)  # type: ignore
         data = [x for x in task.load_generator()]
         self.assertEqual(data, [[1, 2]])
 
     def test_load_generator_with_keyword(self):
         task = _DummyTask()
-        target = MagicMock(spec=TargetOnKart)
+        target = Mock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
-        task.input = MagicMock(return_value={'target_key': target})  # type: ignore
+        task.input = Mock(return_value={'target_key': target})  # type: ignore
         data = [x for x in task.load_generator('target_key')]
         self.assertEqual(data, [[1, 2]])
 
     def test_load_generator_with_list_task_on_kart(self):
         task = _DummyTask()
 
-        task2 = MagicMock(spec=gokart.TaskOnKart)
+        task2 = Mock(spec=gokart.TaskOnKart)
         task2.make_unique_id.return_value = 'task2'
-        task2_output = MagicMock(spec=TargetOnKart)
+        task2_output = Mock(spec=TargetOnKart)
         task2.output.return_value = task2_output
         task2_output.load.return_value = 1
 
-        task3 = MagicMock(spec=gokart.TaskOnKart)
+        task3 = Mock(spec=gokart.TaskOnKart)
         task3.make_unique_id.return_value = 'task3'
-        task3_output = MagicMock(spec=TargetOnKart)
+        task3_output = Mock(spec=TargetOnKart)
         task3.output.return_value = task3_output
         task3_output.load.return_value = 2
 
@@ -398,8 +398,8 @@ class TaskTest(unittest.TestCase):
 
     def test_dump(self):
         task = _DummyTask()
-        target = MagicMock(spec=TargetOnKart)
-        task.output = MagicMock(return_value=target)  # type: ignore
+        target = Mock(spec=TargetOnKart)
+        task.output = Mock(return_value=target)  # type: ignore
 
         task.dump(1)  # type: ignore
         target.dump.assert_called_once()
@@ -407,8 +407,8 @@ class TaskTest(unittest.TestCase):
     def test_fail_on_empty_dump(self):
         # do not fail
         task = _DummyTask(fail_on_empty_dump=False)
-        target = MagicMock(spec=TargetOnKart)
-        task.output = MagicMock(return_value=target)  # type: ignore
+        target = Mock(spec=TargetOnKart)
+        task.output = Mock(return_value=target)  # type: ignore
         task.dump(pd.DataFrame())
         target.dump.assert_called_once()
 
@@ -417,7 +417,7 @@ class TaskTest(unittest.TestCase):
         self.assertRaises(AssertionError, lambda: task.dump(pd.DataFrame()))
 
     @patch('luigi.configuration.get_config')
-    def test_add_configuration(self, mock_config: MagicMock):
+    def test_add_configuration(self, mock_config: Mock):
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
         kwargs: Dict[str, Any] = dict()
         _DummyTask._add_configuration(kwargs, '_DummyTask')
@@ -426,7 +426,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(True, kwargs['bool_param'])
 
     @patch('luigi.cmdline_parser.CmdlineParser.get_instance')
-    def test_add_cofigureation_evaluation_order(self, mock_cmdline: MagicMock):
+    def test_add_cofigureation_evaluation_order(self, mock_cmdline: Mock):
         """
         in case TaskOnKart._add_configuration will break evaluation order
         @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
@@ -444,7 +444,7 @@ class TaskTest(unittest.TestCase):
 
     def test_load_list_of_list_pandas(self):
         task = _DummyTask()
-        task.load = MagicMock(return_value=[pd.DataFrame(dict(a=[1])), [pd.DataFrame(dict(a=[2])), pd.DataFrame(dict(a=[3]))]])  # type: ignore
+        task.load = Mock(return_value=[pd.DataFrame(dict(a=[1])), [pd.DataFrame(dict(a=[2])), pd.DataFrame(dict(a=[3]))]])  # type: ignore
 
         df = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
@@ -452,7 +452,7 @@ class TaskTest(unittest.TestCase):
 
     def test_load_single_value_dict_of_dataframe(self):
         task = _DummyTask()
-        task.load = MagicMock(return_value={'a': pd.DataFrame(dict(a=[1]))})  # type: ignore
+        task.load = Mock(return_value={'a': pd.DataFrame(dict(a=[1]))})  # type: ignore
 
         df = task.load_data_frame()
         self.assertIsInstance(df, pd.DataFrame)
@@ -460,7 +460,7 @@ class TaskTest(unittest.TestCase):
 
     def test_load_data_frame_drop_columns(self):
         task = _DummyTask()
-        task.load = MagicMock(return_value=pd.DataFrame(dict(a=[1], b=[2], c=[3])))  # type: ignore
+        task.load = Mock(return_value=pd.DataFrame(dict(a=[1], b=[2], c=[3])))  # type: ignore
 
         df = task.load_data_frame(required_columns={'a', 'c'}, drop_columns=True)
         self.assertIsInstance(df, pd.DataFrame)
@@ -469,7 +469,7 @@ class TaskTest(unittest.TestCase):
 
     def test_load_data_frame_empty_input(self):
         task = _DummyTask()
-        task.load = MagicMock(return_value=pd.DataFrame(dict(a=[], b=[], c=[])))  # type: ignore
+        task.load = Mock(return_value=pd.DataFrame(dict(a=[], b=[], c=[])))  # type: ignore
 
         df = task.load_data_frame(required_columns={'a', 'c'})
         self.assertIsInstance(df, pd.DataFrame)
@@ -478,7 +478,7 @@ class TaskTest(unittest.TestCase):
 
     def test_load_index_only_dataframe(self):
         task = _DummyTask()
-        task.load = MagicMock(return_value=pd.DataFrame(index=range(3)))  # type: ignore
+        task.load = Mock(return_value=pd.DataFrame(index=range(3)))  # type: ignore
 
         # connnot load index only frame with required_columns
         self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={'a', 'c'}))
@@ -626,7 +626,7 @@ class _DummyTaskWithCompleted(gokart.TaskOnKart):
 class TestCompleteCheckAtRun(unittest.TestCase):
     def test_run_when_complete_check_at_run_is_false_and_task_is_not_completed(self):
         task = _DummyTaskWithNonCompleted(complete_check_at_run=False)
-        task.dump = MagicMock()  # type: ignore
+        task.dump = Mock()  # type: ignore
         task.run()
 
         # since run() is called, dump() should be called.
@@ -634,7 +634,7 @@ class TestCompleteCheckAtRun(unittest.TestCase):
 
     def test_run_when_complete_check_at_run_is_false_and_task_is_completed(self):
         task = _DummyTaskWithCompleted(complete_check_at_run=False)
-        task.dump = MagicMock()  # type: ignore
+        task.dump = Mock()  # type: ignore
         task.run()
 
         # even task is completed, since run() is called, dump() should be called.
@@ -642,7 +642,7 @@ class TestCompleteCheckAtRun(unittest.TestCase):
 
     def test_run_when_complete_check_at_run_is_true_and_task_is_not_completed(self):
         task = _DummyTaskWithNonCompleted(complete_check_at_run=True)
-        task.dump = MagicMock()  # type: ignore
+        task.dump = Mock()  # type: ignore
         task.run()
 
         # since task is not completed, when run() is called, dump() should be called.
@@ -650,7 +650,7 @@ class TestCompleteCheckAtRun(unittest.TestCase):
 
     def test_run_when_complete_check_at_run_is_true_and_task_is_completed(self):
         task = _DummyTaskWithCompleted(complete_check_at_run=True)
-        task.dump = MagicMock()  # type: ignore
+        task.dump = Mock()  # type: ignore
         task.run()
 
         # since task is completed, even when run() is called, dump() should not be called.
