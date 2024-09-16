@@ -146,7 +146,7 @@ class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):
 
 class TestBuildHasLockedTaskException(unittest.TestCase):
     def test_build_expo_backoff_when_luigi_failed_due_to_locked_task(self):
-        gokart.build(_FailThreeTimesAndSuccessTask(), reset_register=False, log_level=logging.INFO)
+        gokart.build(_FailThreeTimesAndSuccessTask(), reset_register=False)
 
 
 if __name__ == '__main__':
