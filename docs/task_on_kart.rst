@@ -147,6 +147,15 @@ The `load` method loads individual task input by passing a key of an input dicti
         data_b = self.load('b')
 
 
+As an alternative, the `load` method loads individual task input by passing an instance of TaskOnKart as follows:
+
+.. code:: python
+
+    def run(self):
+        data_a = self.load(TaskA())
+        data_b = self.load(TaskB())
+
+
 We can also omit the :func:`~gokart.task.TaskOnKart.requires` and write the task used by :func:`~gokart.parameter.TaskInstanceParameter`.
 Extensions include :func:`~gokart.task.TaskOnKart.load_data_frame` and :func:`~gokart.task.TaskOnKart.load_generator`. Please refer to :func:`~gokart.task.TaskOnKart.load`, :doc:`task_parameters`, and described later Advanced Features section.
 
