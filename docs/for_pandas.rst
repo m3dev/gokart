@@ -25,7 +25,7 @@ Pandas has a feature that converts the type of column(s) automatically. This fea
             return {'int_column': int}
 
 
-    class SampleTask(gokart.TaskOnKart):
+    class SampleTask(gokart.TaskOnKart[pd.DataFrame]):
 
         def run(self):
             # [PandasTypeError] because expected type is `int`, but `str` is passed.

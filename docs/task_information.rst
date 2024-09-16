@@ -96,26 +96,26 @@ example
     import luigi
     import gokart
 
-    class TaskA(gokart.TaskOnKart):
+    class TaskA(gokart.TaskOnKart[str]):
         param = luigi.Parameter()
         def run(self):
             self.dump(f'{self.param}')
 
-    class TaskB(gokart.TaskOnKart):
-        task = gokart.TaskInstanceParameter()
+    class TaskB(gokart.TaskOnKart[str]):
+        task: gokart.TaskOnKart[str] = gokart.TaskInstanceParameter()
         def run(self):
             task = self.load('task')
             self.dump(task + ' taskB')
 
-    class TaskC(gokart.TaskOnKart):
-        task = gokart.TaskInstanceParameter()
+    class TaskC(gokart.TaskOnKart[str]):
+        task: gokart.TaskOnKart[str] = gokart.TaskInstanceParameter()
         def run(self):
             task = self.load('task')
             self.dump(task + ' taskC')
 
     class TaskD(gokart.TaskOnKart):
-        task1 = gokart.TaskInstanceParameter()
-        task2 = gokart.TaskInstanceParameter()
+        task1: gokart.TaskOnKart[str] = gokart.TaskInstanceParameter()
+        task2: gokart.TaskOnKart[str] = gokart.TaskInstanceParameter()
         def run(self):
             task = [self.load('task1'), self.load('task2')]
             self.dump(','.join(task))
@@ -181,7 +181,7 @@ This table contains `task name`, `cache unique id`, `cache file path`, `task par
     #     List of task names to ignore.
     # Returns
     # -------
-    # - task_info_table : pandas.DataFrame 
+    # - task_info_table : pandas.DataFrame
     #     Formatted task dependency table.
     # """
 
@@ -273,4 +273,3 @@ the output could be like:
 Delete Unnecessary Output Files
 --------------------------------
 To delete output files which are not necessary to run a task, add option ``--delete-unnecessary-output-files``. This option is supported only when a task outputs files in local storage not S3 for now.
-

@@ -57,6 +57,17 @@ class _ParallelRunner(gokart.TaskOnKart[str]):
         self.dump('done')
 
 
+class _LoadRequires(gokart.TaskOnKart[str]):
+    task: gokart.TaskOnKart[str] = gokart.TaskInstanceParameter()
+
+    def requires(self):
+        return self.task
+
+    def run(self):
+        s = self.load(self.task)
+        self.dump(s)
+
+
 class RunTest(unittest.TestCase):
     def setUp(self):
         luigi.setup_logging.DaemonLogging._configured = False
@@ -101,6 +112,11 @@ class RunTest(unittest.TestCase):
     def test_failed_task(self):
         with self.assertRaises(GokartBuildError):
             gokart.build(_DummyFailedTask(), reset_register=False, log_level=logging.CRITICAL)
+
+    def test_load_requires(self):
+        text = 'test'
+        output = gokart.build(_LoadRequires(task=_DummyTask(param=text)), reset_register=False)
+        self.assertEqual(output, text)
 
 
 class LoggerConfigTest(unittest.TestCase):
