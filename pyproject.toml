@@ -44,6 +44,8 @@ mypy = "*"
 types-redis = "*"
 matplotlib = "*"
 typing-extensions = "^4.11.0"
+pytest = "*"
+pytest-cov = "*"
 
 [tool.ruff]
 line-length = 160
@@ -72,3 +74,18 @@ check_untyped_defs = true
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = "-s -v --durations=0"
+
+[tool.coverage.run]
+branch = true
+source = ["gokart"]
+command_line = "-m pytest"
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
