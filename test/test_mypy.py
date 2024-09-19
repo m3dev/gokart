@@ -12,6 +12,7 @@ class TestMyMypyPlugin(unittest.TestCase):
 import luigi
 from luigi import Parameter
 import gokart
+import datetime
 
 
 class MyTask(gokart.TaskOnKart):
@@ -20,6 +21,9 @@ class MyTask(gokart.TaskOnKart):
     bar: str = luigi.Parameter() # type: ignore
     baz: bool = gokart.ExplicitBoolParameter()
     qux: str = Parameter()
+    # https://github.com/m3dev/gokart/issues/395
+    datetime: datetime.datetime = luigi.DateMinuteParameter(interval=10, default=datetime.datetime(2021, 1, 1))
+
 
 
 # TaskOnKart parameters:
