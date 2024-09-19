@@ -97,8 +97,13 @@ class TaskOnKartPlugin(Plugin):
           foo: int = luigi.IntParameter()
           ```
         """
+        try:
+            default_idx = ctx.callee_arg_names.index('default')
+        # if no `default` argument is found, return AnyType with unannotated type.
+        except ValueError:
+            return AnyType(TypeOfAny.unannotated)
 
-        default_args = ctx.args[0]
+        default_args = ctx.args[default_idx]
 
         if default_args:
             default_type = ctx.arg_types[0][0]
