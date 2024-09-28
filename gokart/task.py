@@ -291,8 +291,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return targets.load()
 
         data = _load(self._get_input_targets(target))
-        if target is None and isinstance(data, dict) and len(data) == 1:
-            return list(data.values())[0]
         return data
 
     @overload
