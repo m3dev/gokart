@@ -290,8 +290,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 return {k: _load(t) for k, t in targets.items()}
             return targets.load()
 
-        data = _load(self._get_input_targets(target))
-        return data
+        return _load(self._get_input_targets(target))
 
     @overload
     def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Generator[Any, None, None]: ...
