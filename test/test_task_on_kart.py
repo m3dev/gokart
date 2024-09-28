@@ -267,7 +267,7 @@ class TaskTest(unittest.TestCase):
 
         data = task.load()
         target.load.assert_called_once()
-        self.assertEqual(data, 1)
+        self.assertEqual(data, {'target_key': 1})
 
     def test_load_with_keyword(self):
         task = _DummyTask()
