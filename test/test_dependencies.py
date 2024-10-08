@@ -32,6 +32,7 @@ def build_bar(foo: Foo = gokart.Depends(build_foo)) -> Bar:
 
 
 class DummyTask(gokart.TaskOnKart[None]):
+    task_namespace = __name__
     version: str = luigi.Parameter()
 
     def run(self, foo: Foo = gokart.Depends(build_foo), bar: Bar = gokart.Depends(build_bar)):
