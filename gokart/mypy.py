@@ -57,6 +57,7 @@ from mypy.typevars import fill_typevars
 METADATA_TAG: Final[str] = 'task_on_kart'
 
 PARAMETER_FULLNAME_MATCHER: Final = re.compile(r'^(gokart|luigi)(\.parameter)?\.\w*Parameter$')
+DEPENDS_FULLNAME = 'gokart.dependencies.Depends'
 PARAMETER_TMP_MATCHER: Final = re.compile(r'^\w*Parameter$')
 
 
@@ -79,11 +80,18 @@ class TaskOnKartPlugin(Plugin):
         """Adjust the return type of the `Parameters` function."""
         if PARAMETER_FULLNAME_MATCHER.match(fullname):
             return self._task_on_kart_parameter_field_callback
+        if fullname == DEPENDS_FULLNAME:
+            return self._depends_field_callback
         return None
 
     def _task_on_kart_class_maker_callback(self, ctx: ClassDefContext) -> None:
         transformer = TaskOnKartTransformer(ctx.cls, ctx.reason, ctx.api)
         transformer.transform()
+
+    def _depends_field_callback(self, ctx: FunctionContext) -> Type:
+        func_type = ctx.arg_types[0][0]
+        assert isinstance(func_type, CallableType)
+        return func_type.ret_type
 
     def _task_on_kart_parameter_field_callback(self, ctx: FunctionContext) -> Type:
         """Extract the type of the `default` argument from the Field function, and use it as the return type.
