@@ -112,7 +112,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
-        self.run = resolve_run_dependencies_wrapper(self.run, self.param_kwargs)  # type: ignore
 
         if self.complete_check_at_run:
             self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)  # type: ignore
@@ -123,6 +122,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
             task_lock_params = make_task_lock_params_for_run(task_self=self)
             self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
+
+        self.run = resolve_run_dependencies_wrapper(self.run, self.param_kwargs)  # type: ignore
 
     def input(self) -> FlattenableItems[TargetOnKart]:
         return super().input()

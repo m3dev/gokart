@@ -52,7 +52,6 @@ class _DummyFailedTask(gokart.TaskOnKart):
 class _ParallelRunner(gokart.TaskOnKart[str]):
     def requires(self):
         return [_DummyTask(param=str(i)) for i in range(10)]
-        # return [_DummyTask(param=str(i), complete_check_at_run=i % 2 == 0) for i in range(10)]
 
     def run(self):
         self.dump('done')
