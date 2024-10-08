@@ -15,6 +15,7 @@ import gokart
 import gokart.target
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
+from gokart.dependencies import resolve_run_dependencies_wrapper
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
@@ -111,6 +112,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
+        self.run = resolve_run_dependencies_wrapper(self.run, self.param_kwargs)  # type: ignore
 
         if self.complete_check_at_run:
             self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)  # type: ignore
