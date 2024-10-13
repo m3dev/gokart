@@ -3,9 +3,10 @@ import inspect
 import os
 import random
 import types
+from functools import partial
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
+from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Protocol, Set, TypeVar, Union, overload
 
 import luigi
 import pandas as pd
@@ -27,6 +28,10 @@ logger = getLogger(__name__)
 
 T = TypeVar('T')
 K = TypeVar('K')
+
+
+class RunWrapperFunc(Protocol):
+    def __call__(self, run_func: Callable[[], None]) -> Callable[[], None]: ...
 
 
 class TaskOnKart(luigi.Task, Generic[T]):
@@ -111,16 +116,23 @@ class TaskOnKart(luigi.Task, Generic[T]):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
+        # store callbacks to wrap `run`
+        self._wrapper_funcs: List[RunWrapperFunc] = []
 
         if self.complete_check_at_run:
-            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)  # type: ignore
+            self._wrapper_funcs.append(partial(task_complete_check_wrapper, complete_check_func=self.complete))
 
         if self.should_lock_run:
             self._lock_at_dump = False
             assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
             task_lock_params = make_task_lock_params_for_run(task_self=self)
-            self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
+            self._wrapper_funcs.append(partial(wrap_run_with_lock, task_lock_params=task_lock_params))
+
+        wrapped_run = self.run
+        for func in self._wrapper_funcs[::-1]:
+            wrapped_run = func(wrapped_run)
+        self.run = wrapped_run  # type: ignore
 
     def input(self) -> FlattenableItems[TargetOnKart]:
         return super().input()
@@ -566,3 +578,29 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if isinstance(param_obj, ListTaskInstanceParameter):
             return f"[{', '.join(f'{v.get_task_family()}({v.make_unique_id()})' for v in param_value)}]"
         return param_obj.serialize(param_value)
+
+    def __getstate__(self):
+        """NOTE: overwrite __getstate__ to avoid pickling error
+
+        `run` method is wrapped by some functions with instance parameters.
+        This shows `it's not the same object as` error when pickling.
+        """
+        state = self.__dict__.copy()
+        while hasattr(state['run'], '__wrapped__'):
+            state['run'] = state['run'].__wrapped__
+        return state
+
+    def __setstate__(self, state):
+        """NOTE: overwrite __setstate__ to avoid pickling error
+
+        `run` method is wrapped by some functions with instance parameters.
+        This shows `it's not the same object as` error when pickling.
+        """
+        run = state.pop('run')
+        if '_wrapper_funcs' not in state:
+            return self.__dict__.update(state)
+
+        for func in state['_wrapper_funcs'][::-1]:
+            run = func(run)
+        state['run'] = run
+        self.__dict__.update(state)
