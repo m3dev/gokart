@@ -1,5 +1,6 @@
 import os
 import pathlib
+import pickle
 import unittest
 from datetime import datetime
 from typing import Any, Dict, List, cast
@@ -655,6 +656,19 @@ class TestCompleteCheckAtRun(unittest.TestCase):
 
         # since task is completed, even when run() is called, dump() should not be called.
         task.dump.assert_not_called()
+
+
+class TestPickleTaskOnKart:
+    def test_pickle_and_unpickle(self):
+        task = _DummyTask(redis_host='0.0.0.0', redis_port=12345, redis_timeout=180, should_lock_run=True)
+        pickled = pickle.dumps(task)
+        unpickled = pickle.loads(pickled)
+        assert task.to_str_params() == unpickled.to_str_params()
+
+        task = _DummyTask(should_lock_run=False)
+        pickled = pickle.dumps(task)
+        unpickled = pickle.loads(pickled)
+        assert task.to_str_params() == unpickled.to_str_params()
 
 
 if __name__ == '__main__':
