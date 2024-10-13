@@ -1,6 +1,6 @@
 import functools
 from logging import getLogger
-from typing import Any, Callable
+from typing import Callable
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, set_lock_scheduler, set_task_lock
 
@@ -83,19 +83,18 @@ def wrap_remove_with_lock(func, task_lock_params: TaskLockParams):
     return wrapper
 
 
-def wrap_run_with_lock(run_func: Callable[[], Any], task_lock_params: TaskLockParams):
+def wrap_run_with_lock(run_func: Callable[[], None], task_lock_params: TaskLockParams) -> Callable[[], None]:
     @functools.wraps(run_func)
-    def wrapped():
+    def wrapped() -> None:
         task_lock = set_task_lock(task_lock_params=task_lock_params)
         scheduler = set_lock_scheduler(task_lock=task_lock, task_lock_params=task_lock_params)
 
         try:
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} locked.')
-            result = run_func()
+            run_func()
             task_lock.release()
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released.')
             scheduler.shutdown()
-            return result
         except BaseException as e:
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released with BaseException.')
             task_lock.release()
