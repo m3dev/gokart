@@ -50,6 +50,7 @@ from mypy.types import (
     NoneType,
     Type,
     TypeOfAny,
+    UnionType,
     get_proper_type,
 )
 from mypy.typevars import fill_typevars
@@ -329,6 +330,10 @@ class TaskOnKartTransformer:
             with state.strict_optional_set(self._api.options.strict_optional):
                 init_type = self._infer_task_on_kart_attr_init_type(sym, stmt)
 
+            # infer Parameter type
+            if init_type is None:
+                init_type = self._infer_type_from_parameters(stmt.rvalue)
+
             found_attrs[lhs.name] = TaskOnKartAttribute(
                 name=lhs.name,
                 has_default=has_default,
@@ -402,24 +407,115 @@ class TaskOnKartTransformer:
 
         return default
 
+    def _infer_type_from_parameters(self, parameter: Expression) -> Optional[Type]:
+        """
+        Generate default type from Parameter.
+        For example, when parameter is `luigi.parameter.Parameter`, this method should return `str` type.
+        """
+        parameter_name = _extract_parameter_name(parameter)
+        if parameter_name is None:
+            return None
+
+        underlying_type: Optional[Type] = None
+        if parameter_name in ['luigi.parameter.Parameter', 'luigi.parameter.OptionalParameter']:
+            underlying_type = self._api.named_type('builtins.str', [])
+        elif parameter_name in ['luigi.parameter.IntParameter', 'luigi.parameter.OptionalIntParameter']:
+            underlying_type = self._api.named_type('builtins.int', [])
+        elif parameter_name in ['luigi.parameter.FloatParameter', 'luigi.parameter.OptionalFloatParameter']:
+            underlying_type = self._api.named_type('builtins.float', [])
+        elif parameter_name in ['luigi.parameter.BoolParameter', 'luigi.parameter.OptionalBoolParameter']:
+            underlying_type = self._api.named_type('builtins.bool', [])
+        elif parameter_name in ['luigi.parameter.DateParameter', 'luigi.parameter.MonthParameter', 'luigi.parameter.YearParameter']:
+            underlying_type = self._api.named_type('datetime.date', [])
+        elif parameter_name in ['luigi.parameter.DateHourParameter', 'luigi.parameter.DateMinuteParameter', 'luigi.parameter.DateSecondParameter']:
+            underlying_type = self._api.named_type('datetime.datetime', [])
+        elif parameter_name in ['luigi.parameter.TimeDeltaParameter']:
+            underlying_type = self._api.named_type('datetime.timedelta', [])
+        elif parameter_name in ['luigi.parameter.DictParameter', 'luigi.parameter.OptionalDictParameter']:
+            underlying_type = self._api.named_type('builtins.dict', [AnyType(TypeOfAny.unannotated), AnyType(TypeOfAny.unannotated)])
+        elif parameter_name in ['luigi.parameter.ListParameter', 'luigi.parameter.OptionalListParameter']:
+            underlying_type = self._api.named_type('builtins.tuple', [AnyType(TypeOfAny.unannotated)])
+        elif parameter_name in ['luigi.parameter.TupleParameter', 'luigi.parameter.OptionalTupleParameter']:
+            underlying_type = self._api.named_type('builtins.tuple', [AnyType(TypeOfAny.unannotated)])
+        elif parameter_name in ['luigi.parameter.PathParameter', 'luigi.parameter.OptionalPathParameter']:
+            underlying_type = self._api.named_type('pathlib.Path', [])
+        elif parameter_name in ['gokart.parameter.TaskInstanceParameter']:
+            underlying_type = self._api.named_type('gokart.task.TaskOnKart', [AnyType(TypeOfAny.unannotated)])
+        elif parameter_name in ['gokart.parameter.ListTaskInstanceParameter']:
+            underlying_type = self._api.named_type('builtins.list', [self._api.named_type('gokart.task.TaskOnKart', [AnyType(TypeOfAny.unannotated)])])
+        elif parameter_name in ['gokart.parameter.ExplicitBoolParameter']:
+            underlying_type = self._api.named_type('builtins.bool', [])
+        elif parameter_name in ['luigi.parameter.NumericalParameter']:
+            underlying_type = self._get_type_from_args(parameter, 'var_type')
+        elif parameter_name in ['luigi.parameter.ChoiceParameter']:
+            underlying_type = self._get_type_from_args(parameter, 'var_type')
+        elif parameter_name in ['luigi.parameter.ChoiceListPareameter']:
+            base_type = self._get_type_from_args(parameter, 'var_type')
+            if base_type is not None:
+                underlying_type = self._api.named_type('builtins.tuple', [base_type])
+        elif parameter_name in ['luigi.parameter.EnumParameter']:
+            underlying_type = self._get_type_from_args(parameter, 'enum')
+        elif parameter_name in ['luigi.parameter.EnumListParameter']:
+            base_type = self._get_type_from_args(parameter, 'enum')
+            if base_type is not None:
+                underlying_type = self._api.named_type('builtins.tuple', [base_type])
+
+        if underlying_type is None:
+            return None
+
+        # When parameter has Optional, it can be none value.
+        if 'Optional' in parameter_name:
+            return UnionType([underlying_type, NoneType()])
+
+        return underlying_type
+
+    def _get_type_from_args(self, parameter: Expression, arg_key: str) -> Optional[Type]:
+        """
+        get type from parameter arguments.
+
+        e.x)
+        When parameter is `luigi.ChoiceParameter(var_type=int)`, this method should return `int` type.
+        """
+        ok, args = self._collect_parameter_args(parameter)
+        if not ok:
+            return None
+
+        if arg_key not in args:
+            return None
+
+        arg = args[arg_key]
+        if not isinstance(arg, NameExpr):
+            return None
+        if not isinstance(arg.node, TypeInfo):
+            return None
+        return Instance(arg.node, [])
+
 
 def is_parameter_call(expr: Expression) -> bool:
     """Checks if the expression is a call to luigi.Parameter()"""
-    if not isinstance(expr, CallExpr):
+    parameter_name = _extract_parameter_name(expr)
+    if parameter_name is None:
         return False
+    return PARAMETER_FULLNAME_MATCHER.match(parameter_name) is not None
+
+
+def _extract_parameter_name(expr: Expression) -> Optional[str]:
+    """Extract name if the expression is a call to luigi.Parameter()"""
+    if not isinstance(expr, CallExpr):
+        return None
 
     callee = expr.callee
     if isinstance(callee, MemberExpr):
         type_info = callee.node
         if type_info is None and isinstance(callee.expr, NameExpr):
-            return PARAMETER_FULLNAME_MATCHER.match(f'{callee.expr.name}.{callee.name}') is not None
+            return f'{callee.expr.name}.{callee.name}'
     elif isinstance(callee, NameExpr):
         type_info = callee.node
     else:
-        return False
+        return None
 
     if isinstance(type_info, TypeInfo):
-        return PARAMETER_FULLNAME_MATCHER.match(type_info.fullname) is not None
+        return type_info.fullname
 
     # Currently, luigi doesn't provide py.typed. it will be released next to 3.5.1.
     # https://github.com/spotify/luigi/pull/3297
@@ -429,8 +525,9 @@ def is_parameter_call(expr: Expression) -> bool:
     # class MyTask(gokart.TaskOnKart):
     #     param = Parameter()
     if isinstance(type_info, Var) and luigi.__version__ <= '3.5.1':
-        return PARAMETER_TMP_MATCHER.match(type_info.name) is not None
-    return False
+        return type_info.name
+
+    return None
 
 
 def plugin(version: str) -> type[Plugin]:
