@@ -10,19 +10,16 @@ import re
 from typing import Callable, Final, Iterator, Literal, Optional
 
 import luigi
-from mypy.expandtype import expand_type, expand_type_by_instance
+from mypy.expandtype import expand_type
 from mypy.nodes import (
     ARG_NAMED_OPT,
-    ARG_POS,
     Argument,
     AssignmentStmt,
     Block,
     CallExpr,
     ClassDef,
-    Context,
     EllipsisExpr,
     Expression,
-    FuncDef,
     IfStmt,
     JsonDict,
     MemberExpr,
@@ -30,7 +27,6 @@ from mypy.nodes import (
     PlaceholderNode,
     RefExpr,
     Statement,
-    SymbolTableNode,
     TempNode,
     TypeInfo,
     Var,
@@ -45,13 +41,11 @@ from mypy.state import state
 from mypy.typeops import map_type_from_supertype
 from mypy.types import (
     AnyType,
-    CallableType,
     Instance,
     NoneType,
     Type,
     TypeOfAny,
     UnionType,
-    get_proper_type,
 )
 from mypy.typevars import fill_typevars
 
@@ -328,7 +322,7 @@ class TaskOnKartTransformer:
 
             current_attr_names.add(lhs.name)
             with state.strict_optional_set(self._api.options.strict_optional):
-                init_type = self._infer_task_on_kart_attr_init_type(sym, stmt)
+                init_type = sym.type
 
             # infer Parameter type
             if init_type is None:
@@ -365,47 +359,6 @@ class TaskOnKartTransformer:
                 args[name] = arg
             return True, args
         return False, {}
-
-    def _infer_task_on_kart_attr_init_type(self, sym: SymbolTableNode, context: Context) -> Type | None:
-        """Infer __init__ argument type for an attribute.
-
-        In particular, possibly use the signature of __set__.
-        """
-        default = sym.type
-        if sym.implicit:
-            return default
-        t = get_proper_type(sym.type)
-
-        # Perform a simple-minded inference from the signature of __set__, if present.
-        # We can't use mypy.checkmember here, since this plugin runs before type checking.
-        # We only support some basic scanerios here, which is hopefully sufficient for
-        # the vast majority of use cases.
-        if not isinstance(t, Instance):
-            return default
-        setter = t.type.get('__set__')
-
-        if not setter:
-            return default
-
-        if isinstance(setter.node, FuncDef):
-            super_info = t.type.get_containing_type_info('__set__')
-            assert super_info
-            if setter.type:
-                setter_type = get_proper_type(map_type_from_supertype(setter.type, t.type, super_info))
-            else:
-                return AnyType(TypeOfAny.unannotated)
-            if isinstance(setter_type, CallableType) and setter_type.arg_kinds == [
-                ARG_POS,
-                ARG_POS,
-                ARG_POS,
-            ]:
-                return expand_type_by_instance(setter_type.arg_types[2], t)
-            else:
-                self._api.fail(f'Unsupported signature for "__set__" in "{t.type.name}"', context)
-        else:
-            self._api.fail(f'Unsupported "__set__" in "{t.type.name}"', context)
-
-        return default
 
     def _infer_type_from_parameters(self, parameter: Expression) -> Optional[Type]:
         """
