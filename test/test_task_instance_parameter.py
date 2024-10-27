@@ -90,7 +90,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
             subtask = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         with self.assertRaises(TypeError):
-            _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask])
+            _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask()])
 
 
 if __name__ == '__main__':
