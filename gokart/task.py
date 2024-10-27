@@ -15,6 +15,7 @@ import gokart
 import gokart.target
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
+from gokart.dependencies import resolve_run_dependencies_wrapper
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
@@ -121,6 +122,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
             task_lock_params = make_task_lock_params_for_run(task_self=self)
             self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
+
+        self.run = resolve_run_dependencies_wrapper(self.run, self.param_kwargs)  # type: ignore
 
     def input(self) -> FlattenableItems[TargetOnKart]:
         return super().input()
