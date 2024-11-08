@@ -61,7 +61,9 @@ from luigi.task import DynamicRequirements, Task, flatten
 from luigi.task_register import TaskClassException, load_task
 from luigi.task_status import RUNNING
 
-logger = logging.getLogger('luigi-interface')
+from gokart.parameter import ExplicitBoolParameter
+
+logger = logging.getLogger(__name__)
 
 # Prevent fork() from being called during a C-level getaddrinfo() which uses a process-global mutex,
 # that may not be unlocked in child process, resulting in the process being locked indefinitely.
@@ -124,6 +126,7 @@ class TaskProcess(multiprocessing.Process):
         check_unfulfilled_deps: bool = True,
         check_complete_on_run: bool = False,
         task_completion_cache: Optional[Dict[str, Any]] = None,
+        skip_if_completed_pre_run: bool = True,
     ) -> None:
         super(TaskProcess, self).__init__()
         self.task = task
@@ -136,12 +139,19 @@ class TaskProcess(multiprocessing.Process):
         self.check_unfulfilled_deps = check_unfulfilled_deps
         self.check_complete_on_run = check_complete_on_run
         self.task_completion_cache = task_completion_cache
+        self.skip_if_completed_pre_run = skip_if_completed_pre_run
 
         # completeness check using the cache
         self.check_complete = functools.partial(luigi.worker.check_complete_cached, completion_cache=task_completion_cache)
 
+    def _run_task(self) -> Optional[collections.abc.Generator]:
+        if self.skip_if_completed_pre_run and self.check_complete(self.task):
+            logger.warning(f'{self.task} is skipped because the task is already completed.')
+            return None
+        return self.task.run()
+
     def _run_get_new_deps(self) -> Optional[List[Tuple[str, str, Dict[str, str]]]]:
-        task_gen = self.task.run()
+        task_gen = self._run_task()
 
         if not isinstance(task_gen, collections.abc.Generator):
             return None
@@ -365,6 +375,11 @@ class gokart_worker(luigi.Config):
         'dynamic dependencies but assumes that the completion status does not change '
         'after it was true the first time.',
     )
+    skip_if_completed_pre_run: bool = ExplicitBoolParameter(
+        default=True, description='If true, skip running tasks that are already completed just before the Task is run.'
+    )
+
+
 class Worker:
     """
     Worker object communicates with a scheduler.
@@ -376,15 +391,22 @@ class Worker:
     """
 
     def __init__(
-        self, scheduler: Optional[Scheduler] = None, worker_id: Optional[str] = None, worker_processes: int = 1, assistant: bool = False, **kwargs: Any
+        self,
+        scheduler: Optional[Scheduler] = None,
+        worker_id: Optional[str] = None,
+        worker_processes: int = 1,
+        assistant: bool = False,
+        config: Optional[gokart_worker] = None,
     ) -> None:
         if scheduler is None:
             scheduler = Scheduler()
 
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()
-
-        self._config = luigi.worker.worker(**kwargs)
+        if config is None:
+            self._config = gokart_worker()
+        else:
+            self._config = config
 
         worker_id = worker_id or self._config.id or self._generate_worker_id(self._worker_info)
 
@@ -893,6 +915,7 @@ class Worker:
             check_unfulfilled_deps=self._config.check_unfulfilled_deps,
             check_complete_on_run=self._config.check_complete_on_run,
             task_completion_cache=self._task_completion_cache,
+            skip_if_completed_pre_run=self._config.skip_if_completed_pre_run,
         )
 
     def _purge_children(self) -> None:
