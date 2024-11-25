@@ -19,7 +19,7 @@ or by adding the following to your ``pyproject.toml`` file:
 .. code:: toml
 
     [tool.mypy]
-    plugins = ["gokart.mypy:plugin"]
+    plugins = ["gokart.mypy"]
 
 Then, run Mypy as usual.
 
