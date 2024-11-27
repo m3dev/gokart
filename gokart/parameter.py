@@ -1,6 +1,7 @@
 import bz2
 import json
 from logging import getLogger
+from typing import Generic, Protocol, TypeVar
 
 import luigi
 from luigi import task_register
@@ -87,3 +88,34 @@ class ExplicitBoolParameter(luigi.BoolParameter):
 
     def _parser_kwargs(self, *args, **kwargs):  # type: ignore
         return luigi.Parameter._parser_kwargs(*args, *kwargs)
+
+
+T = TypeVar('T')
+
+
+class Serializable(Protocol):
+    def gokart_serialize(self) -> str:
+        """Implement this method to serialize the object as an parameter
+        You can omit some fields from results of serialization if you want to ignore changes of them
+        """
+        ...
+
+    @classmethod
+    def gokart_deserialize(cls: type[T], s: str) -> T:
+        """Implement this method to deserialize the object from a string"""
+        ...
+
+
+S = TypeVar('S', bound=Serializable)
+
+
+class SerializableParameter(luigi.Parameter, Generic[S]):
+    def __init__(self, object_type: type[S], *args, **kwargs):
+        self._object_type = object_type
+        super().__init__(*args, **kwargs)
+
+    def parse(self, s: str) -> S:
+        return self._object_type.gokart_deserialize(s)
+
+    def serialize(self, x: S) -> str:
+        return x.gokart_serialize()
