@@ -79,3 +79,49 @@ The :func:`~gokart.parameter.ExplicitBoolParameter` is parameter for explicitly 
     # param will be set as False
 
 ``ExplicitBoolParameter`` solves these problems on parameters from command line.
+
+
+gokart.SerializableParameter
+----------------------------
+
+The :func:`~gokart.parameter.SerializableParameter` is a parameter for any object that can be serialized and deserialized.
+This parameter is particularly useful when you want to pass a complex object or a set of parameters to a task.
+
+The object must implement the following methods:
+
+- ``gokart_serialize``: Serialize the object to a string. This serialized string must uniquely identify the object to enable task caching.
+  Note that it is not required for deserialization.
+- ``gokart_deserialize``: Deserialize the object from a string, typically used for CLI arguments.
+
+Example
+^^^^^^^
+
+.. code-block:: python
+
+    import json
+    from dataclasses import dataclass
+
+    import gokart
+
+    @dataclass(frozen=True)
+    class Config:
+        foo: int
+        # The `bar` field does not affect the result of the task.
+        # Similar to `luigi.Parameter(significant=False)`.
+        bar: str
+
+        def gokart_serialize(self) -> str:
+            # Serialize only the `foo` field since `bar` is irrelevant for caching.
+            return json.dumps({'foo': self.foo})
+
+        @classmethod
+        def gokart_deserialize(cls, s: str) -> 'Config':
+            # Deserialize the object from the provided string.
+            return cls(**json.loads(s))
+
+    class DummyTask(gokart.TaskOnKart):
+        config: Config = gokart.SerializableParameter(object_type=Config)
+
+        def run(self):
+            # Save the `config` object as part of the task result.
+            self.dump(self.config)
