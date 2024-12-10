@@ -951,12 +951,12 @@ files = [
 
 [[package]]
 name = "luigi"
-version = "3.5.2"
+version = "3.6.0"
 description = "Workflow mgmgt + task scheduling + dependency resolution."
 optional = false
 python-versions = "*"
 files = [
-    {file = "luigi-3.5.2.tar.gz", hash = "sha256:d000fe6a6ea77c9376674fe87a045ac00c3fcf7ebe8414655a06630aa9db5111"},
+    {file = "luigi-3.6.0.tar.gz", hash = "sha256:41b14850223c619d9006b30acda733e756b883fc7e60814205576647190c96e3"},
 ]
 
 [package.dependencies]
