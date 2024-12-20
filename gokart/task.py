@@ -7,7 +7,7 @@ from importlib import import_module
 from logging import getLogger
 import sys
 from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
-if sys.version_info.minor < 13:
+if sys.version_info < (3, 13):
     from typing_extensions import deprecated
 else:
     from warning import deprecated
