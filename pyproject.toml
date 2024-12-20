@@ -30,6 +30,7 @@ APScheduler = "*"
 redis = "*"
 dill = "*"
 backoff = "^2.2.1"
+typing-extensions = "^4.11.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
@@ -43,7 +44,6 @@ fakeredis = "*"
 mypy = "*"
 types-redis = "*"
 matplotlib = "*"
-typing-extensions = "^4.11.0"
 pytest = "*"
 pytest-cov = "*"
 
