@@ -6,6 +6,7 @@ import types
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
+from typing_extensions import deprecated
 
 import luigi
 import pandas as pd
@@ -311,6 +312,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         return _load(self._get_input_targets(target))
 
+    @deprecated("""This function is deprecated. use `load` instead.
+If you want to specify `required_columns` and `drop_columns`, please extract the columns after loading. ex: `load()[['colA', 'colB']]`
+""")
     def load_data_frame(
         self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None, drop_columns: bool = False
     ) -> pd.DataFrame:

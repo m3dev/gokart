@@ -247,6 +247,9 @@ TaskOnKart.load_data_frame
 
 Please refer to :doc:`for_pandas`.
 
+.. warning::
+    This function is deprecated. Please use :func:`~gokart.task.TaskOnKart.load` instead.
+
 
 TaskOnKart.fail_on_empty_dump
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
