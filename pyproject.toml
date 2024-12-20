@@ -30,7 +30,9 @@ APScheduler = "*"
 redis = "*"
 dill = "*"
 backoff = "^2.2.1"
-typing-extensions = "^4.11.0"
+typing-extensions = [
+    {version = "^4.11.0", python = "<3.13"}
+]
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
@@ -46,6 +48,7 @@ types-redis = "*"
 matplotlib = "*"
 pytest = "*"
 pytest-cov = "*"
+typing-extensions = "^4.11.0"
 
 [tool.ruff]
 line-length = 160

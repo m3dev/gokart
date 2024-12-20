@@ -5,8 +5,12 @@ import random
 import types
 from importlib import import_module
 from logging import getLogger
+import sys
 from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
-from typing_extensions import deprecated
+if sys.version_info.minor < 13:
+    from typing_extensions import deprecated
+else:
+    from warning import deprecated
 
 import luigi
 import pandas as pd
