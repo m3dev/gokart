@@ -37,7 +37,7 @@ This is useful when dataframe has nullable columns because pandas auto-conversio
 Easy to Load DataFrame
 ----------------------
 
-The :func:`~gokart.task.TaskOnKart.load_data_frame` method is used to load input ``pandas.DataFrame``.
+The :func:`~gokart.task.TaskOnKart.load` method is used to load input ``pandas.DataFrame``.
 
 .. code:: python
 
@@ -45,11 +45,9 @@ The :func:`~gokart.task.TaskOnKart.load_data_frame` method is used to load input
         return MakeDataFrameTask()
 
     def run(self):
-        df = self.load_data_frame(required_columns={'colA', 'colB'}, drop_columns=True)
+        df = self.load()
 
-This allows us to omit ``reset_index`` and ``drop`` when loading. If there is a missing column in an example above, ``AssertionError`` will be raised. This feature is useful for pipelines based on pandas.
-
-Please refer to :func:`~gokart.task.TaskOnKart.load_data_frame`.
+Please refer to :func:`~gokart.task.TaskOnKart.load`.
 
 
 Fail on empty DataFrame
