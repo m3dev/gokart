@@ -57,6 +57,8 @@ pip install gokart
 
 # Quickstart
 
+## Minimal Example
+
 A minimal gokart tasks looks something like this:
 
 
@@ -79,6 +81,53 @@ print(output)
 Hello, world!
 ```
 
+## Type-Safe Pipeline Example
+
+We introduce type-annotations to make a gokart pipeline robust.
+Please check the following example to see how to use type-annotations on gokart.
+Before using this feature, ensure to enable [mypy plugin](https://gokart.readthedocs.io/en/latest/mypy_plugin.html) feature in your project.
+
+```python
+import gokart
+
+# `gokart.TaskOnKart[str]` means that the task dumps `str`
+class StrDumpTask(gokart.TaskOnKart[str]):
+    def run(self):
+        self.dump('Hello, world!')
+
+# `gokart.TaskOnKart[int]` means that the task dumps `int`
+class OneDumpTask(gokart.TaskOnKart[int]):
+    def run(self):
+        self.dump(1)
+
+# `gokart.TaskOnKart[int]` means that the task dumps `int`
+class TwoDumpTask(gokart.TaskOnKart[int]):
+    def run(self):
+        self.dump(2)
+
+class AddTask(gokart.TaskOnKart[int]):
+    # `a` requires a task to dump `int`
+    a: gokart.TaskOnKart[int] = gokart.TaskInstanceParameter()
+    # `b` requires a task to dump `int`
+    b: gokart.TaskOnKart[int] = gokart.TaskInstanceParameter()
+
+    def requires(self):
+        return dict(a=self.a, b=self.b)
+
+    def run(self):
+        # loading by instance parameter,
+        # `a` and `b` are treated as `int`
+        # because they are declared as `gokart.TaskOnKart[int]`
+        a = self.load(self.a)
+        b = self.load(self.b)
+        self.dump(a + b)
+
+
+valid_task = AddTask(a=OneDumpTask(), b=TwoDumpTask())
+# the next line will show type error by mypy
+# because `StrDumpTask` dumps `str` and `AddTask` requires `int`
+invalid_task = AddTask(a=OneDumpTask(), b=StrDumpTask())
+```
 
 This is an introduction to some of the gokart.
 There are still more useful features.
