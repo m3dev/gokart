@@ -51,17 +51,17 @@ class _DummyTaskToCheckSkip(gokart.TaskOnKart[None]):
 
 class TestWorkerSkipIfCompletedPreRun:
     @pytest.mark.parametrize(
-        'skip_if_completed_pre_run,is_completed,expect_skipped',
+        'task_completion_check_at_run,is_completed,expect_skipped',
         [
-            pytest.param(True, True, True, id='skipped when completed and skip_if_completed_pre_run is True'),
-            pytest.param(True, False, False, id='not skipped when not completed and skip_if_completed_pre_run is True'),
-            pytest.param(False, True, False, id='not skipped when completed and skip_if_completed_pre_run is False'),
-            pytest.param(False, False, False, id='not skipped when not completed and skip_if_completed_pre_run is False'),
+            pytest.param(True, True, True, id='skipped when completed and task_completion_check_at_run is True'),
+            pytest.param(True, False, False, id='not skipped when not completed and task_completion_check_at_run is True'),
+            pytest.param(False, True, False, id='not skipped when completed and task_completion_check_at_run is False'),
+            pytest.param(False, False, False, id='not skipped when not completed and task_completion_check_at_run is False'),
         ],
     )
-    def test_skip_task(self, monkeypatch: pytest.MonkeyPatch, skip_if_completed_pre_run: bool, is_completed: bool, expect_skipped: bool):
+    def test_skip_task(self, monkeypatch: pytest.MonkeyPatch, task_completion_check_at_run: bool, is_completed: bool, expect_skipped: bool):
         sch = scheduler.Scheduler()
-        worker = Worker(scheduler=sch, config=gokart_worker(skip_if_completed_pre_run=skip_if_completed_pre_run))
+        worker = Worker(scheduler=sch, config=gokart_worker(task_completion_check_at_run=task_completion_check_at_run))
 
         mock_complete = Mock(return_value=is_completed)
         # NOTE: set `complete_check_at_run=False` to avoid using deprecated skip logic.
