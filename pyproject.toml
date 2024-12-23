@@ -46,9 +46,9 @@ fakeredis = "*"
 mypy = "*"
 types-redis = "*"
 matplotlib = "*"
+typing-extensions = "^4.11.0"
 pytest = "*"
 pytest-cov = "*"
-typing-extensions = "^4.11.0"
 
 [tool.ruff]
 line-length = 160
