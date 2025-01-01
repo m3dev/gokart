@@ -375,7 +375,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         return unique_id
 
     def to_str_params(self, only_significant=False, only_public=False):
-        if only_significant == True and only_public == False:
+        if only_significant and (not only_public):
             # cache to_str_params to avoid too slow task creation of deep task tree
             # e.g. gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) takes O(n*n) to_str_params calls
             if self._str_params_cache is not None:
