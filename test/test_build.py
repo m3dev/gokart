@@ -117,20 +117,22 @@ class RunTest(unittest.TestCase):
         text = 'test'
         output = gokart.build(_LoadRequires(task=_DummyTask(param=text)), reset_register=False)
         self.assertEqual(output, text)
-        
+
     def test_build_with_child_task_error(self):
         class CheckException(Exception):
             pass
+
         class FailTask(gokart.TaskOnKart):
             def run(self):
                 raise CheckException()
-        
+
         try:
             t = FailTask()
             gokart.build(t, reset_register=False, log_level=logging.CRITICAL)
         except GokartBuildError as e:
             self.assertEqual(len(e.raised_exceptions), 1)
             self.assertIsInstance(e.raised_exceptions[t.make_unique_id()][0], CheckException)
+
 
 class LoggerConfigTest(unittest.TestCase):
     def test_logger_config(self):
