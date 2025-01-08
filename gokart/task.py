@@ -384,7 +384,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self._str_params_cache is None:
             self._str_params_cache = super().to_str_params(only_significant, only_public)
         return self._str_params_cache
-    
+
     def _make_hash_id(self) -> str:
         def _to_str_params(task):
             if isinstance(task, TaskOnKart):
