@@ -550,9 +550,10 @@ class TaskTest(unittest.TestCase):
             task_param=_DummySubTaskWithPrivateParameter(),
             list_task_param=[_DummySubTaskWithPrivateParameter(), _DummySubTaskWithPrivateParameter()],
         )
+        task_id = task.make_unique_id()
         sub_task_id = _DummySubTaskWithPrivateParameter().make_unique_id()
         expected = (
-            f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, private_int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), '
+            f'{__name__}._DummyTaskWithPrivateParameter[{task_id}](int_param=1, private_int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), '
             f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
         )  # noqa:E501
         self.assertEqual(expected, repr(task))
@@ -564,9 +565,10 @@ class TaskTest(unittest.TestCase):
             task_param=_DummySubTaskWithPrivateParameter(),
             list_task_param=[_DummySubTaskWithPrivateParameter(), _DummySubTaskWithPrivateParameter()],
         )
+        task_id = task.make_unique_id()
         sub_task_id = _DummySubTaskWithPrivateParameter().make_unique_id()
         expected = (
-            f'{__name__}._DummyTaskWithPrivateParameter(int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), '
+            f'{__name__}._DummyTaskWithPrivateParameter[{task_id}](int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), '
             f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
         )
         self.assertEqual(expected, str(task))
