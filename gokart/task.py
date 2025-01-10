@@ -1,3 +1,4 @@
+import functools
 import hashlib
 import inspect
 import os
@@ -118,6 +119,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         self._rerun_state = self.rerun
         self._lock_at_dump = True
         self._str_params_cache = None
+
+        # cannot use as decorator (@lru_cache) because luigi.Task uses meataclass tricks
+        self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
 
         if self.complete_check_at_run:
             self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)  # type: ignore
@@ -373,17 +377,6 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.cache_unique_id:
             self.task_unique_id = unique_id
         return unique_id
-
-    def to_str_params(self, only_significant=False, only_public=False) -> dict[str, str]:
-        _called_with_default_args: bool = (not only_public) and only_significant
-        if not _called_with_default_args:
-            return super().to_str_params(only_significant, only_public)
-
-        # cache to_str_params with default params to avoid too slow task creation of deep task tree
-        # e.g. gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) needs O(n^2) times to_str_params calls with respect to n times RecursiveTask
-        if self._str_params_cache is None:
-            self._str_params_cache = super().to_str_params(only_significant, only_public)
-        return self._str_params_cache
 
     def _make_hash_id(self) -> str:
         def _to_str_params(task):
