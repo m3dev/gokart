@@ -118,9 +118,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         super(TaskOnKart, self).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
-        self._str_params_cache = None
 
-        # cannot use as decorator (@lru_cache) because luigi.Task uses meataclass tricks
+        # Cache to_str_params to avoid slow task creation in a deep task tree.
+        # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
+        # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
 
         if self.complete_check_at_run:
