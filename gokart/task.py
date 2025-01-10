@@ -375,7 +375,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         return unique_id
 
     def to_str_params(self, only_significant=False, only_public=False) -> dict[str, str]:
-        _called_with_default_args: bool = only_public and (not only_significant)
+        _called_with_default_args: bool = (not only_public) and only_significant
         if not _called_with_default_args:
             return super().to_str_params(only_significant, only_public)
 
