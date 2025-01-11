@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+import enum
 import logging
 from functools import partial
 from logging import getLogger
@@ -12,9 +14,12 @@ from gokart import worker
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
 from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
+import gokart.tree.task_info
 
 T = TypeVar('T')
+import logging
 
+logger: logging.Logger = logging.getLogger(__name__)
 
 class LoggerConfig:
     def __init__(self, level: int):
@@ -93,6 +98,42 @@ def _reset_register(keep={'gokart', 'luigi'}):
         )  # PandasTypeConfig should be kept
     ]
 
+class TaskDumpMode(enum.Enum):
+    TREE = 'tree'
+    TABLE = 'table'
+    NONE = 'none'
+class TaskDumpOutputType(enum.Enum):
+    PRINT = 'print'
+    DUMP = 'dump'
+    NONE = 'none'
+
+@dataclass
+class TaskDumpConfig:
+    mode: TaskDumpMode = TaskDumpMode.NONE
+    output_type: TaskDumpOutputType = TaskDumpOutputType.NONE
+
+def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskDumpConfig()):
+    match task_dump_config:
+        case TaskDumpConfig(mode=TaskDumpMode.NONE, output_type=TaskDumpOutputType.NONE):
+            pass
+        case TaskDumpConfig(mode=TaskDumpMode.TREE, output_type=TaskDumpOutputType.PRINT):
+            tree = gokart.make_tree_info(task)
+            logger.info(tree)
+        case TaskDumpConfig(mode=TaskDumpMode.TABLE, output_type=TaskDumpOutputType.PRINT):
+            table = gokart.tree.task_info.make_task_info_as_table(task)
+            import io
+            output = io.StringIO()
+            table.to_csv(output, index=False, sep='\t')
+            output.seek(0)
+            logger.info(output.read())
+        case TaskDumpConfig(mode=TaskDumpMode.TREE, output_type=TaskDumpOutputType.DUMP):
+            tree = gokart.make_tree_info(task)
+            gokart.TaskOnKart().make_target(f'log/task_info/{type(task).__name__}.txt').dump(tree)
+        case TaskDumpConfig(mode=TaskDumpMode.TABLE, output_type=TaskDumpOutputType.DUMP):
+            table = gokart.tree.task_info.make_task_info_as_table(task)
+            gokart.TaskOnKart().make_target(f'log/task_info/{type(task).__name__}.pkl').dump(table)
+        case _:
+            raise ValueError(f'Unsupported TaskDumpConfig: {task_dump_config}')
 
 @overload
 def build(
@@ -125,6 +166,7 @@ def build(
     log_level: int = logging.ERROR,
     task_lock_exception_max_tries: int = 10,
     task_lock_exception_max_wait_seconds: int = 600,
+    task_dump_config: TaskDumpConfig = TaskDumpConfig(),
     **env_params,
 ) -> Optional[T]:
     """
@@ -135,8 +177,13 @@ def build(
         _reset_register()
 
     with LoggerConfig(level=log_level):
-        task_lock_exception_raised = TaskLockExceptionRaisedFlag()
+        log_handler_before_run = logging.StreamHandler()
+        logger.addHandler(log_handler_before_run)
+        process_task_info(task, task_dump_config)
+        logger.removeHandler(log_handler_before_run)
+        log_handler_before_run.close()
 
+        task_lock_exception_raised = TaskLockExceptionRaisedFlag()        
         @TaskOnKart.event_handler(luigi.Event.FAILURE)
         def when_failure(task, exception):
             if isinstance(exception, TaskLockException):
