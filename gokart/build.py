@@ -7,6 +7,7 @@ from typing import Literal, Optional, Protocol, TypeVar, cast, overload
 
 import backoff
 import luigi
+import io
 from luigi import rpc, scheduler
 
 import gokart
@@ -121,7 +122,6 @@ def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskD
             logger.info(tree)
         case TaskDumpConfig(mode=TaskDumpMode.TABLE, output_type=TaskDumpOutputType.PRINT):
             table = gokart.tree.task_info.make_task_info_as_table(task)
-            import io
             output = io.StringIO()
             table.to_csv(output, index=False, sep='\t')
             output.seek(0)
