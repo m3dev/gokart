@@ -1,26 +1,26 @@
-from dataclasses import dataclass
 import enum
+import io
 import logging
+from dataclasses import dataclass
 from functools import partial
 from logging import getLogger
 from typing import Literal, Optional, Protocol, TypeVar, cast, overload
 
 import backoff
 import luigi
-import io
 from luigi import rpc, scheduler
 
 import gokart
+import gokart.tree.task_info
 from gokart import worker
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
 from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
-import gokart.tree.task_info
 
 T = TypeVar('T')
-import logging
 
 logger: logging.Logger = logging.getLogger(__name__)
+
 
 class LoggerConfig:
     def __init__(self, level: int):
@@ -99,19 +99,24 @@ def _reset_register(keep={'gokart', 'luigi'}):
         )  # PandasTypeConfig should be kept
     ]
 
+
 class TaskDumpMode(enum.Enum):
     TREE = 'tree'
     TABLE = 'table'
     NONE = 'none'
+
+
 class TaskDumpOutputType(enum.Enum):
     PRINT = 'print'
     DUMP = 'dump'
     NONE = 'none'
 
+
 @dataclass
 class TaskDumpConfig:
     mode: TaskDumpMode = TaskDumpMode.NONE
     output_type: TaskDumpOutputType = TaskDumpOutputType.NONE
+
 
 def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskDumpConfig()):
     match task_dump_config:
@@ -134,6 +139,7 @@ def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskD
             gokart.TaskOnKart().make_target(f'log/task_info/{type(task).__name__}.pkl').dump(table)
         case _:
             raise ValueError(f'Unsupported TaskDumpConfig: {task_dump_config}')
+
 
 @overload
 def build(
@@ -183,7 +189,8 @@ def build(
         logger.removeHandler(log_handler_before_run)
         log_handler_before_run.close()
 
-        task_lock_exception_raised = TaskLockExceptionRaisedFlag()        
+        task_lock_exception_raised = TaskLockExceptionRaisedFlag()
+
         @TaskOnKart.event_handler(luigi.Event.FAILURE)
         def when_failure(task, exception):
             if isinstance(exception, TaskLockException):
