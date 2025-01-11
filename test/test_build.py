@@ -105,7 +105,7 @@ class RunTest(unittest.TestCase):
         config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'test_config.ini')
         gokart.utils.add_config(config_file_path)
         output = gokart.build(_DummyTask(), reset_register=False)
-        assert_type(output, str)
+        self.assertIsInstance(output, str)
         self.assertEqual(output, 'test')
 
     def test_build_dict_outputs(self):
