@@ -95,8 +95,9 @@ class RunTest(unittest.TestCase):
 
     def test_read_config(self):
         class _DummyTask(gokart.TaskOnKart):
-            task_namespace = "test_read_config"
+            task_namespace = 'test_read_config'
             param = luigi.Parameter()
+
             def run(self):
                 self.dump(self.param)
 
@@ -163,6 +164,7 @@ class ProcessTaskInfoTest(unittest.TestCase):
         ):
             with LoggerConfig(level=logging.INFO):
                 from gokart.build import logger
+
                 log_stream = io.StringIO()
                 handler = logging.StreamHandler(log_stream)
 
@@ -172,10 +174,8 @@ class ProcessTaskInfoTest(unittest.TestCase):
                 logger.removeHandler(handler)
                 handler.close()
 
-                self.assertIn(
-                    member=str(task.make_unique_id()), 
-                    container=log_stream.getvalue()
-                )
+                self.assertIn(member=str(task.make_unique_id()), container=log_stream.getvalue())
+
 
 class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):
     def __init__(self, *args, **kwargs):
