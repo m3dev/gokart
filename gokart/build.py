@@ -33,7 +33,9 @@ class LoggerConfig:
 
 
 class GokartBuildError(Exception):
-    pass
+    def __init__(self, messsage, raised_exceptions: dict[str, list[Exception]]):
+        super().__init__(messsage)
+        self.raised_exceptions = raised_exceptions
 
 
 class HasLockedTaskException(Exception):
@@ -133,14 +135,16 @@ def build(
     """
     if reset_register:
         _reset_register()
-
     with LoggerConfig(level=log_level):
         task_lock_exception_raised = TaskLockExceptionRaisedFlag()
+        raised_exceptions: dict[str, list[Exception]] = dict()
 
         @TaskOnKart.event_handler(luigi.Event.FAILURE)
         def when_failure(task, exception):
             if isinstance(exception, TaskLockException):
                 task_lock_exception_raised.flag = True
+            else:
+                raised_exceptions.setdefault(task.make_unique_id(), []).append(exception)
 
         @backoff.on_exception(
             partial(backoff.expo, max_value=task_lock_exception_max_wait_seconds), HasLockedTaskException, max_tries=task_lock_exception_max_tries
@@ -157,7 +161,7 @@ def build(
             if task_lock_exception_raised.flag:
                 raise HasLockedTaskException()
             if result.status == luigi.LuigiStatusCode.FAILED:
-                raise GokartBuildError(result.summary_text)
+                raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
             return _get_output(task) if return_value else None
 
         return _build_task()
