@@ -89,9 +89,9 @@ class RunTest(unittest.TestCase):
         output = gokart.build(_DummyTask(param=text), reset_register=False)
         self.assertEqual(output, text)
 
-    # def test_build_parallel(self):
-    #     output = gokart.build(_ParallelRunner(), reset_register=False, workers=20)
-    #     self.assertEqual(output, 'done')
+    def test_build_parallel(self):
+        output = gokart.build(_ParallelRunner(), reset_register=False, workers=20)
+        self.assertEqual(output, 'done')
 
     def test_read_config(self):
         class _DummyTask(gokart.TaskOnKart):
