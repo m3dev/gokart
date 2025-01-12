@@ -584,6 +584,17 @@ class TaskTest(unittest.TestCase):
         deserialized: gokart.TaskOnKart = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
 
+    def test_to_str_params_changes_on_values_and_flags(self):
+        class _DummyTaskWithParams(gokart.TaskOnKart):
+            task_namespace = __name__
+            param: str = luigi.Parameter()
+
+        t1 = _DummyTaskWithParams(param='a')
+        self.assertEqual(t1.to_str_params(), t1.to_str_params())  # cache
+        self.assertEqual(t1.to_str_params(), _DummyTaskWithParams(param='a').to_str_params())  # same value
+        self.assertNotEqual(t1.to_str_params(), _DummyTaskWithParams(param='b').to_str_params())  # different value
+        self.assertNotEqual(t1.to_str_params(), t1.to_str_params(only_significant=True))
+
     def test_should_lock_run_when_set(self):
         class _DummyTaskWithLock(gokart.TaskOnKart):
             def run(self):
