@@ -1,12 +1,11 @@
 import io
-import logging
 
 import gokart
 import gokart.tree.task_info
 from gokart.build import TaskDumpConfig, TaskDumpMode, TaskDumpOutputType
 from gokart.task import TaskOnKart
 
-logger: logging.Logger = logging.getLogger(__name__)
+from .build import logger
 
 
 def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskDumpConfig()):
