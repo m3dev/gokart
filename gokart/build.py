@@ -1,4 +1,7 @@
+import enum
 import logging
+import sys
+from dataclasses import dataclass
 from functools import partial
 from logging import getLogger
 from typing import Literal, Optional, Protocol, TypeVar, cast, overload
@@ -8,12 +11,15 @@ import luigi
 from luigi import rpc, scheduler
 
 import gokart
+import gokart.tree.task_info
 from gokart import worker
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
 from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
 
 T = TypeVar('T')
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class LoggerConfig:
@@ -96,6 +102,33 @@ def _reset_register(keep={'gokart', 'luigi'}):
     ]
 
 
+class TaskDumpMode(enum.Enum):
+    TREE = 'tree'
+    TABLE = 'table'
+    NONE = 'none'
+
+
+class TaskDumpOutputType(enum.Enum):
+    PRINT = 'print'
+    DUMP = 'dump'
+    NONE = 'none'
+
+
+@dataclass
+class TaskDumpConfig:
+    mode: TaskDumpMode = TaskDumpMode.NONE
+    output_type: TaskDumpOutputType = TaskDumpOutputType.NONE
+
+
+if sys.version_info < (3, 10):
+
+    def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskDumpConfig()):
+        logger.warning('process_task_info is not supported in Python 3.9 or lower.')
+else:
+    # FIXME: after dropping python3.9 support, change this import to direct implementation
+    from .build_process_task_info import process_task_info
+
+
 @overload
 def build(
     task: TaskOnKart[T],
@@ -127,6 +160,7 @@ def build(
     log_level: int = logging.ERROR,
     task_lock_exception_max_tries: int = 10,
     task_lock_exception_max_wait_seconds: int = 600,
+    task_dump_config: TaskDumpConfig = TaskDumpConfig(),
     **env_params,
 ) -> Optional[T]:
     """
@@ -136,6 +170,12 @@ def build(
     if reset_register:
         _reset_register()
     with LoggerConfig(level=log_level):
+        log_handler_before_run = logging.StreamHandler()
+        logger.addHandler(log_handler_before_run)
+        process_task_info(task, task_dump_config)
+        logger.removeHandler(log_handler_before_run)
+        log_handler_before_run.close()
+
         task_lock_exception_raised = TaskLockExceptionRaisedFlag()
         raised_exceptions: dict[str, list[Exception]] = dict()
 
