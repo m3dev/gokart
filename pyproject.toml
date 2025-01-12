@@ -86,6 +86,10 @@ addopts = "-s -v --durations=0"
 branch = true
 source = ["gokart"]
 command_line = "-m pytest"
+# FIXME: omit this file because it is not working with python3.9
+omit = [
+    "*/build_process_task_info.py"
+]
 
 [tool.coverage.report]
 show_missing = true
