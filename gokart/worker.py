@@ -126,7 +126,7 @@ class TaskProcess(multiprocessing.Process):
         check_unfulfilled_deps: bool = True,
         check_complete_on_run: bool = False,
         task_completion_cache: Optional[Dict[str, Any]] = None,
-        skip_if_completed_pre_run: bool = True,
+        task_completion_check_at_run: bool = True,
     ) -> None:
         super(TaskProcess, self).__init__()
         self.task = task
@@ -139,13 +139,13 @@ class TaskProcess(multiprocessing.Process):
         self.check_unfulfilled_deps = check_unfulfilled_deps
         self.check_complete_on_run = check_complete_on_run
         self.task_completion_cache = task_completion_cache
-        self.skip_if_completed_pre_run = skip_if_completed_pre_run
+        self.task_completion_check_at_run = task_completion_check_at_run
 
         # completeness check using the cache
         self.check_complete = functools.partial(luigi.worker.check_complete_cached, completion_cache=task_completion_cache)
 
     def _run_task(self) -> Optional[collections.abc.Generator]:
-        if self.skip_if_completed_pre_run and self.check_complete(self.task):
+        if self.task_completion_check_at_run and self.check_complete(self.task):
             logger.warning(f'{self.task} is skipped because the task is already completed.')
             return None
         return self.task.run()
@@ -375,8 +375,8 @@ class gokart_worker(luigi.Config):
         'dynamic dependencies but assumes that the completion status does not change '
         'after it was true the first time.',
     )
-    skip_if_completed_pre_run: bool = ExplicitBoolParameter(
-        default=True, description='If true, skip running tasks that are already completed just before the Task is run.'
+    task_completion_check_at_run: bool = ExplicitBoolParameter(
+        default=True, description='If true, tasks completeness will be re-checked just before the run, in case they are finished elsewhere.'
     )
 
 
@@ -915,7 +915,7 @@ class Worker:
             check_unfulfilled_deps=self._config.check_unfulfilled_deps,
             check_complete_on_run=self._config.check_complete_on_run,
             task_completion_cache=self._task_completion_cache,
-            skip_if_completed_pre_run=self._config.skip_if_completed_pre_run,
+            task_completion_check_at_run=self._config.task_completion_check_at_run,
         )
 
     def _purge_children(self) -> None:

@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Opti
 if sys.version_info < (3, 13):
     from typing_extensions import deprecated
 else:
-    from warning import deprecated
+    from warnings import deprecated
 
 import luigi
 import pandas as pd
@@ -546,13 +546,15 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
 
     def __repr__(self):
         """
-        Build a task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
+        Build a task representation like
+        `MyTask[aca2f28555dadd0f1e3dee3d4b973651](param1=1.5, param2='5', data_task=DataTask(c1f5d06aa580c5761c55bd83b18b0b4e))`
         """
         return self._get_task_string()
 
     def __str__(self):
         """
-        Build a human-readable task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
+        Build a human-readable task representation like
+        `MyTask[aca2f28555dadd0f1e3dee3d4b973651](param1=1.5, param2='5', data_task=DataTask(c1f5d06aa580c5761c55bd83b18b0b4e))`
         This includes only public parameters
         """
         return self._get_task_string(only_public=True)
@@ -572,7 +574,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
             if param_obj.significant and ((not only_public) or param_obj.visibility == ParameterVisibility.PUBLIC):
                 repr_parts.append(f'{param_name}={self._make_representation(param_obj, param_value)}')
 
-        task_str = f'{self.get_task_family()}({", ".join(repr_parts)})'
+        task_str = f'{self.get_task_family()}[{self.make_unique_id()}]({", ".join(repr_parts)})'
         return task_str
 
     def _make_representation(self, param_obj: luigi.Parameter, param_value):
