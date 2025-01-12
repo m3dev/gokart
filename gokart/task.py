@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Opti
 if sys.version_info < (3, 13):
     from typing_extensions import deprecated
 else:
-    from warning import deprecated
+    from warnings import deprecated
 
 import luigi
 import pandas as pd
