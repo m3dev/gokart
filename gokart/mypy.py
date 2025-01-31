@@ -402,7 +402,7 @@ class TaskOnKartTransformer:
             underlying_type = self._get_type_from_args(parameter, 'var_type')
         elif parameter_name in ['luigi.parameter.ChoiceParameter']:
             underlying_type = self._get_type_from_args(parameter, 'var_type')
-        elif parameter_name in ['luigi.parameter.ChoiceListPareameter']:
+        elif parameter_name in ['luigi.parameter.ChoiceListParameter']:
             base_type = self._get_type_from_args(parameter, 'var_type')
             if base_type is not None:
                 underlying_type = self._api.named_type('builtins.tuple', [base_type])
