@@ -16,7 +16,6 @@ import datetime
 
 
 class MyTask(gokart.TaskOnKart):
-    # NOTE: mypy shows attr-defined error for the following lines, so we need to ignore it.
     foo: int = luigi.IntParameter() # type: ignore
     bar: str = luigi.Parameter() # type: ignore
     baz: bool = gokart.ExplicitBoolParameter()
@@ -44,7 +43,6 @@ import gokart
 
 
 class MyTask(gokart.TaskOnKart):
-    # NOTE: mypy shows attr-defined error for the following lines, so we need to ignore it.
     foo: int = luigi.IntParameter() # type: ignore
     bar: str = luigi.Parameter() # type: ignore
     baz: bool = gokart.ExplicitBoolParameter()
@@ -79,7 +77,6 @@ class MyEnum(enum.Enum):
     FOO = enum.auto()
 
 class MyTask(gokart.TaskOnKart):
-    # NOTE: mypy shows attr-defined error for the following lines, so we need to ignore it.
     foo = luigi.IntParameter()
     bar = luigi.DateParameter()
     baz = gokart.TaskInstanceParameter()
@@ -110,7 +107,6 @@ import luigi
 import gokart
 
 class MyTask(gokart.TaskOnKart):
-    # NOTE: mypy shows attr-defined error for the following lines, so we need to ignore it.
     foo = luigi.IntParameter()
     bar = luigi.DateParameter()
     baz = gokart.TaskInstanceParameter()
