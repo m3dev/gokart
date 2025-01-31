@@ -7,12 +7,17 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 from __future__ import annotations
 
 import re
-from typing import Callable, Final, Iterator, Literal, Optional
+import sys
+import warnings
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Final, Iterator, Literal, Optional
 
 import luigi
 from mypy.expandtype import expand_type
 from mypy.nodes import (
+    ARG_NAMED,
     ARG_NAMED_OPT,
+    ArgKind,
     Argument,
     AssignmentStmt,
     Block,
@@ -31,6 +36,7 @@ from mypy.nodes import (
     TypeInfo,
     Var,
 )
+from mypy.options import Options
 from mypy.plugin import ClassDefContext, FunctionContext, Plugin, SemanticAnalyzerPluginInterface
 from mypy.plugins.common import (
     add_method_to_class,
@@ -55,7 +61,50 @@ PARAMETER_FULLNAME_MATCHER: Final = re.compile(r'^(gokart|luigi)(\.parameter)?\.
 PARAMETER_TMP_MATCHER: Final = re.compile(r'^\w*Parameter$')
 
 
+@dataclass
+class TaskOnKartPluginOptions:
+    # Whether to error on missing parameters in the constructor.
+    # Some projects use luigi.Config to set parameters, which does not require parameters to be explicitly passed to the constructor.
+    error_on_missing_parameters: bool = False
+
+    @classmethod
+    def _parse_toml(cls, config_file: str) -> Dict[str, Any]:
+        if sys.version_info >= (3, 11):
+            import tomllib as toml_
+        else:
+            try:
+                import tomli as toml_
+            except ImportError:  # pragma: no cover
+                warnings.warn('install tomli to parse pyproject.toml under Python 3.10', stacklevel=1)
+                return {}
+
+        with open(config_file, 'rb') as f:
+            return toml_.load(f)
+
+    @classmethod
+    def parse_config_file(cls, config_file: Optional[str]) -> 'TaskOnKartPluginOptions':
+        if not config_file:
+            return cls()
+
+        # TODO: support other configuration file formats if necessary.
+        if not config_file.endswith('.toml'):
+            warnings.warn('gokart mypy plugin can be configured by pyproject.toml', stacklevel=1)
+            return cls()
+
+        config = cls._parse_toml(config_file)
+        gokart_plugin_config = config.get('tool', {}).get('gokart-mypy', {})
+
+        error_on_missing_parameters = gokart_plugin_config.get('error_on_missing_parameters', False)
+        if not isinstance(error_on_missing_parameters, bool):
+            raise ValueError('error_on_missing_parameters must be a boolean')
+        return cls(error_on_missing_parameters=error_on_missing_parameters)
+
+
 class TaskOnKartPlugin(Plugin):
+    def __init__(self, options: Options) -> None:
+        super().__init__(options)
+        self._options = TaskOnKartPluginOptions.parse_config_file(options.config_file)
+
     def get_base_class_hook(self, fullname: str) -> Callable[[ClassDefContext], None] | None:
         # The following gathers attributes from gokart.TaskOnKart such as `workspace_directory`
         # the transformation does not affect because the class has `__init__` method of `gokart.TaskOnKart`.
@@ -77,7 +126,7 @@ class TaskOnKartPlugin(Plugin):
         return None
 
     def _task_on_kart_class_maker_callback(self, ctx: ClassDefContext) -> None:
-        transformer = TaskOnKartTransformer(ctx.cls, ctx.reason, ctx.api)
+        transformer = TaskOnKartTransformer(ctx.cls, ctx.reason, ctx.api, self._options)
         transformer.transform()
 
     def _task_on_kart_parameter_field_callback(self, ctx: FunctionContext) -> Type:
@@ -124,6 +173,7 @@ class TaskOnKartAttribute:
         type: Type | None,
         info: TypeInfo,
         api: SemanticAnalyzerPluginInterface,
+        options: TaskOnKartPluginOptions,
     ) -> None:
         self.name = name
         self.has_default = has_default
@@ -132,12 +182,12 @@ class TaskOnKartAttribute:
         self.type = type  # Type as __init__ argument
         self.info = info
         self._api = api
+        self._options = options
 
     def to_argument(self, current_info: TypeInfo, *, of: Literal['__init__',]) -> Argument:
         if of == '__init__':
-            # All arguments to __init__ are keyword-only and optional
-            # This is because gokart can set parameters by configuration'
-            arg_kind = ARG_NAMED_OPT
+            arg_kind = self._get_arg_kind_by_options()
+
         return Argument(
             variable=self.to_var(current_info),
             type_annotation=self.expand_type(current_info),
@@ -169,10 +219,10 @@ class TaskOnKartAttribute:
         }
 
     @classmethod
-    def deserialize(cls, info: TypeInfo, data: JsonDict, api: SemanticAnalyzerPluginInterface) -> TaskOnKartAttribute:
+    def deserialize(cls, info: TypeInfo, data: JsonDict, api: SemanticAnalyzerPluginInterface, options: TaskOnKartPluginOptions) -> TaskOnKartAttribute:
         data = data.copy()
         typ = deserialize_and_fixup_type(data.pop('type'), api)
-        return cls(type=typ, info=info, **data, api=api)
+        return cls(type=typ, info=info, **data, api=api, options=options)
 
     def expand_typevar_from_subtype(self, sub_type: TypeInfo) -> None:
         """Expands type vars in the context of a subtype when an attribute is inherited
@@ -180,6 +230,22 @@ class TaskOnKartAttribute:
         if self.type is not None:
             with state.strict_optional_set(self._api.options.strict_optional):
                 self.type = map_type_from_supertype(self.type, sub_type, self.info)
+
+    def _get_arg_kind_by_options(self) -> Literal[ArgKind.ARG_NAMED, ArgKind.ARG_NAMED_OPT]:
+        """Set the argument kind based on the options.
+
+        if `error_on_missing_parameters` is True, the argument kind is `ARG_NAMED` when the attribute has no default value.
+        This means the that all the parameters are passed to the constructor as keyword-only arguments.
+
+        Returns:
+            Literal[ArgKind.ARG_NAMED, ArgKind.ARG_NAMED_OPT]: The argument kind.
+        """
+        if not self._options.error_on_missing_parameters:
+            return ARG_NAMED_OPT
+        if self.has_default:
+            return ARG_NAMED_OPT
+        # required parameter
+        return ARG_NAMED
 
 
 class TaskOnKartTransformer:
@@ -190,10 +256,12 @@ class TaskOnKartTransformer:
         cls: ClassDef,
         reason: Expression | Statement,
         api: SemanticAnalyzerPluginInterface,
+        options: TaskOnKartPluginOptions,
     ) -> None:
         self._cls = cls
         self._reason = reason
         self._api = api
+        self._options = options
 
     def transform(self) -> bool:
         """Apply all the necessary transformations to the underlying gokart.TaskOnKart"""
@@ -266,7 +334,7 @@ class TaskOnKartTransformer:
             for data in info.metadata[METADATA_TAG]['attributes']:
                 name: str = data['name']
 
-                attr = TaskOnKartAttribute.deserialize(info, data, self._api)
+                attr = TaskOnKartAttribute.deserialize(info, data, self._api, self._options)
                 # TODO: We shouldn't be performing type operations during the main
                 #       semantic analysis pass, since some TypeInfo attributes might
                 #       still be in flux. This should be performed in a later phase.
@@ -336,6 +404,7 @@ class TaskOnKartTransformer:
                 type=init_type,
                 info=cls.info,
                 api=self._api,
+                options=self._options,
             )
 
         return list(found_attrs.values())
