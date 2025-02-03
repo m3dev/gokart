@@ -14,7 +14,7 @@ requires-python = ">=3.9, <4"
 dependencies = [
   "luigi",
   "boto3",
-  "slack-sdk>=3",
+  "slack-sdk",
   "pandas",
   "numpy",
   "google-auth",
