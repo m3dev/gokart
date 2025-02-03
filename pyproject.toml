@@ -47,7 +47,6 @@ Documentation = "https://gokart.readthedocs.io/en/latest/"
 
 [dependency-groups]
 test = [
-  "coverage",
   "fakeredis",
   "lupa",
   "matplotlib",
