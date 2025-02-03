@@ -622,7 +622,6 @@ lint = [
     { name = "ruff" },
 ]
 test = [
-    { name = "coverage" },
     { name = "fakeredis" },
     { name = "lupa" },
     { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -641,7 +640,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler" },
-    { name = "backoff", specifier = ">=2.2.1" },
+    { name = "backoff" },
     { name = "boto3" },
     { name = "dill" },
     { name = "google-api-python-client" },
@@ -651,7 +650,7 @@ requires-dist = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "redis" },
-    { name = "slack-sdk", specifier = ">=3" },
+    { name = "slack-sdk" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.11.0" },
     { name = "uritemplate" },
 ]
@@ -662,7 +661,6 @@ lint = [
     { name = "ruff" },
 ]
 test = [
-    { name = "coverage" },
     { name = "fakeredis" },
     { name = "lupa" },
     { name = "matplotlib" },

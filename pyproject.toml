@@ -24,7 +24,7 @@ dependencies = [
   "APScheduler",
   "redis",
   "dill",
-  "backoff>=2.2.1",
+  "backoff",
   "typing-extensions>=4.11.0; python_version<'3.13'",
 ]
 classifiers = [
