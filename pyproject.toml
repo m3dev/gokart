@@ -112,18 +112,3 @@ check_untyped_defs = true
 [tool.pytest.ini_options]
 testpaths = ["test"]
 addopts = "-n auto -s -v --durations=0"
-
-[tool.coverage.run]
-branch = true
-source = ["gokart"]
-command_line = "-m pytest"
-# FIXME: omit this file because it is not working with python3.9
-omit = [
-    "*/build_process_task_info.py"
-]
-
-[tool.coverage.report]
-show_missing = true
-
-[tool.coverage.xml]
-output = "coverage.xml"
