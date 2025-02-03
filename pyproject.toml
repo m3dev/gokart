@@ -112,7 +112,7 @@ check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-addopts = "-s -v --durations=0"
+addopts = "-n auto -s -v --durations=0"
 
 [tool.coverage.run]
 branch = true
