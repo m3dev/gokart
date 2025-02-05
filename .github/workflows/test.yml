@@ -11,7 +11,10 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        platform: [ubuntu-latest]
+        platform:
+        - ubuntu-latest
+        - macos-latest # arm64
+        - macos-13 # intel
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
