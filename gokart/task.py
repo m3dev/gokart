@@ -64,7 +64,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     )
     serialized_task_definition_check: bool = luigi.BoolParameter(
         default=False,
-        description='If this is true, even if all outputs are present,' 'this task will be executed if any changes have been made to the code.',
+        description='If this is true, even if all outputs are present,this task will be executed if any changes have been made to the code.',
         significant=False,
     )
     delete_unnecessary_output_files: bool = luigi.BoolParameter(
@@ -581,5 +581,5 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if isinstance(param_obj, TaskInstanceParameter):
             return f'{param_value.get_task_family()}({param_value.make_unique_id()})'
         if isinstance(param_obj, ListTaskInstanceParameter):
-            return f"[{', '.join(f'{v.get_task_family()}({v.make_unique_id()})' for v in param_value)}]"
+            return f'[{", ".join(f"{v.get_task_family()}({v.make_unique_id()})" for v in param_value)}]'
         return param_obj.serialize(param_value)

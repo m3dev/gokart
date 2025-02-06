@@ -1,58 +1,93 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[project]
 name = "gokart"
-version = "0.0.0"  # using poetry-dynamic-versioning
 description="Gokart solves reproducibility, task dependencies, constraints of good code, and ease of use for Machine Learning Pipeline. [Documentation](https://gokart.readthedocs.io/en/latest/)"
-authors = ["M3, inc."]
+authors = [
+  {name = "M3, inc."}
+]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/m3dev/gokart"
-repository = "https://github.com/m3dev/gokart"
-documentation = "https://gokart.readthedocs.io/en/latest/"
+requires-python = ">=3.9, <4"
+dependencies = [
+  "luigi",
+  "boto3",
+  "slack-sdk",
+  "pandas",
+  "numpy",
+  "google-auth",
+  "pyarrow",
+  "uritemplate",
+  "google-api-python-client",
+  "APScheduler",
+  "redis",
+  "dill",
+  "backoff",
+  "typing-extensions>=4.11.0; python_version<'3.13'",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 
+]
+dynamic = ["version"]
 
-[tool.poetry-dynamic-versioning]
-enable = true
-style = "pep440"
-pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)"
+[project.urls]
+Homepage = "https://github.com/m3dev/gokart"
+Repository = "https://github.com/m3dev/gokart"
+Documentation = "https://gokart.readthedocs.io/en/latest/"
 
-[tool.poetry.dependencies]
-python = ">=3.9,<4"
-luigi = "*"
-boto3 = "*"
-slack-sdk = "^3"
-pandas = "*"
-numpy = "*"
-google-auth = "*"
-pyarrow = "*"
-uritemplate = "*"
-google-api-python-client = "*"
-APScheduler = "*"
-redis = "*"
-dill = "*"
-backoff = "^2.2.1"
-typing-extensions = [
-    {version = "^4.11.0", python = "<3.13"}
+[dependency-groups]
+test = [
+  "fakeredis",
+  "lupa",
+  "matplotlib",
+  "moto",
+  "mypy",
+  "pytest",
+  "pytest-cov",
+  "pytest-xdist",
+  "testfixtures",
+  "toml",
+  "types-redis",
+  "typing-extensions>=4.11.0",
 ]
 
-[tool.poetry.group.dev.dependencies]
-ruff = "*"
-tox = "*"
-moto = "*"
-testfixtures = "*"
-coverage = "*"
-toml = "*"
-lupa = "*"
-fakeredis = "*"
-mypy = "*"
-types-redis = "*"
-matplotlib = "*"
-typing-extensions = "^4.11.0"
-pytest = "*"
-pytest-cov = "*"
+lint = [
+  "ruff",
+  "mypy",
+]
+
+[tool.uv]
+default-groups = ['test', 'lint']
+cache-keys = [ { file = "pyproject.toml" }, { git = true } ]
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+enable = true
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/LICENSE",
+  "/README.md",
+  "/examples",
+  "/gokart",
+  "/test",
+]
 
 [tool.ruff]
 line-length = 160
-exclude = ["venv/*", "tox/*"]
+exclude = ["venv/*", "tox/*", "examples/*"]
 
 [tool.ruff.lint]
 # All the rules are listed on https://docs.astral.sh/ruff/rules/
@@ -74,25 +109,6 @@ plugins = ["gokart.mypy:plugin"]
 
 check_untyped_defs = true
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.pytest.ini_options]
 testpaths = ["test"]
-addopts = "-s -v --durations=0"
-
-[tool.coverage.run]
-branch = true
-source = ["gokart"]
-command_line = "-m pytest"
-# FIXME: omit this file because it is not working with python3.9
-omit = [
-    "*/build_process_task_info.py"
-]
-
-[tool.coverage.report]
-show_missing = true
-
-[tool.coverage.xml]
-output = "coverage.xml"
+addopts = "-n auto -s -v --durations=0"
