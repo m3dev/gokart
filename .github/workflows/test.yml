@@ -9,7 +9,7 @@ jobs:
   tests:
     runs-on: ${{ matrix.platform }}
     strategy:
-      max-parallel: 5
+      max-parallel: 7
       matrix:
         include:
           - platform: ubuntu-latest
