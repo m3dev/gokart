@@ -65,6 +65,10 @@ from gokart.parameter import ExplicitBoolParameter
 
 logger = logging.getLogger(__name__)
 
+# Set the start method to fork, which is the default on Unix systems.
+# This is necessary because the default start method on macOS is spawn, which is not compatible with the multiprocessing
+multiprocessing.set_start_method('fork')
+
 # Prevent fork() from being called during a C-level getaddrinfo() which uses a process-global mutex,
 # that may not be unlocked in child process, resulting in the process being locked indefinitely.
 fork_lock = threading.Lock()
