@@ -11,9 +11,21 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        platform: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-
+        include:
+          - platform: ubuntu-latest
+            tox-env: "py39"
+          - platform: ubuntu-latest
+            tox-env: "py310"
+          - platform: ubuntu-latest
+            tox-env: "py311"
+          - platform: ubuntu-latest
+            tox-env: "py312"
+          - platform: ubuntu-latest
+            tox-env: "py313"
+          - platform: macos-13
+            tox-env: "py313"
+          - platform: macos-latest
+            tox-env: "py313"
     steps:
     - uses: actions/checkout@v4
     - name: Set up the latest version of uv
