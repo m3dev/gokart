@@ -9,11 +9,24 @@ jobs:
   tests:
     runs-on: ${{ matrix.platform }}
     strategy:
-      max-parallel: 5
+      max-parallel: 7
       matrix:
-        platform: [ubuntu-latest]
-        tox-env: ["py39", "py310", "py311", "py312", "py313"]
-
+        include:
+          - platform: ubuntu-latest
+            tox-env: "py39"
+          - platform: ubuntu-latest
+            tox-env: "py310"
+          - platform: ubuntu-latest
+            tox-env: "py311"
+          - platform: ubuntu-latest
+            tox-env: "py312"
+          - platform: ubuntu-latest
+            tox-env: "py313"
+          # test only on latest python for macos
+          - platform: macos-13
+            tox-env: "py313"
+          - platform: macos-latest
+            tox-env: "py313"
     steps:
     - uses: actions/checkout@v4
     - name: Set up the latest version of uv
