@@ -1,8 +1,12 @@
-from gokart.conflict_prevention_lock.task_lock import TaskLockParams
-from gokart.in_memory import make_inmemory_target, InMemoryTarget, InMemoryCacheRepository
-import pytest
 from datetime import datetime
 from time import sleep
+
+import pytest
+
+from gokart.conflict_prevention_lock.task_lock import TaskLockParams
+from gokart.in_memory import InMemoryCacheRepository, InMemoryTarget, make_inmemory_target
+
+
 class TestInMemoryTarget:
     @pytest.fixture
     def task_lock_params(self):
@@ -13,7 +17,7 @@ class TestInMemoryTarget:
             redis_key='dummy',
             should_task_lock=False,
             raise_task_lock_exception_on_collision=False,
-            lock_extend_seconds=0
+            lock_extend_seconds=0,
         )
 
     @pytest.fixture
@@ -34,13 +38,13 @@ class TestInMemoryTarget:
         assert not target.exists()
         target.dump('dummy_data')
         assert target.exists()
-  
+
     def test_last_modified_time(self, target: InMemoryTarget):
         input = 'dummy_data'
         target.dump(input)
         time = target.last_modification_time()
         assert isinstance(time, datetime)
-        
+
         sleep(0.1)
         another_input = 'another_data'
         target.dump(another_input)

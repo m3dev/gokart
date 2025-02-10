@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Any
-from abc import ABC
 from datetime import datetime
+from typing import Any
 
-class BaseData(ABC):
-    ...
+
+class BaseData: ...
+
 
 @dataclass
 class InMemoryData(BaseData):
