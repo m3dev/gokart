@@ -18,19 +18,19 @@ class InMemoryCacheRepository(BaseRepository):
     def get_last_modification_time(self, key: str):
         return self._get_data(key).last_modified_time
 
-    def _get_data(self, id: str) -> InMemoryData:
-        return self._cache[id]
+    def _get_data(self, key: str) -> InMemoryData:
+        return self._cache[key]
 
-    def set_value(self, id: str, obj: Any) -> None:
+    def set_value(self, key: str, obj: Any) -> None:
         data = InMemoryData.create_data(obj)
-        self._cache[id] = data
+        self._cache[key] = data
 
-    def has(self, id: str) -> bool:
-        return id in self._cache
+    def has(self, key: str) -> bool:
+        return key in self._cache
 
-    def remove(self, id: str) -> None:
-        assert self.has(id)
-        del self._cache[id]
+    def remove(self, key: str) -> None:
+        assert self.has(key), f'{key} does not exist.'
+        del self._cache[key]
 
     def empty(self) -> bool:
         return not self._cache
