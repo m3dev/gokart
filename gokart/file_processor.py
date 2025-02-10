@@ -166,9 +166,9 @@ class JsonFileProcessor(FileProcessor):
             return pd.DataFrame()
 
     def dump(self, obj, file):
-        assert (
-            isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict)
-        ), f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
+        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict), (
+            f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
+        )
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
         obj.to_json(file)
@@ -263,8 +263,10 @@ class FeatherFileProcessor(FileProcessor):
 
         if self._store_index_in_feather:
             index_column_name = f'{self.INDEX_COLUMN_PREFIX}{dump_obj.index.name}'
-            assert index_column_name not in dump_obj.columns, f'column name {index_column_name} already exists in dump_obj. \
+            assert index_column_name not in dump_obj.columns, (
+                f'column name {index_column_name} already exists in dump_obj. \
                 Consider not saving index by setting store_index_in_feather=False.'
+            )
             assert dump_obj.index.name != 'None', 'index name is "None", which is not allowed in gokart. Consider setting another index name.'
 
             dump_obj[index_column_name] = dump_obj.index
