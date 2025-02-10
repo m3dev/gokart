@@ -111,4 +111,6 @@ check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-addopts = "-n auto -s -v --durations=0"
+# NOTE: `-n auto` makes pytest fast but unstable
+# ref: https://github.com/m3dev/gokart/issues/436
+addopts = "-s -v --durations=0"
