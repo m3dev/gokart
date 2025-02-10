@@ -1,7 +1,8 @@
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams
-from gokart.in_memory import make_inmemory_target, InMemoryTarget, InMemeryCacheRepository
+from gokart.in_memory import make_inmemory_target, InMemoryTarget, InMemoryCacheRepository
 import pytest
-
+from datetime import datetime
+from time import sleep
 class TestInMemoryTarget:
     @pytest.fixture
     def task_lock_params(self):
@@ -14,13 +15,14 @@ class TestInMemoryTarget:
             raise_task_lock_exception_on_collision=False,
             lock_extend_seconds=0
         )
+
     @pytest.fixture
     def target(self, task_lock_params: TaskLockParams):
-        return make_inmemory_target(target_key='dummy_task_id', task_lock_params=task_lock_params)
-    
+        return make_inmemory_target(target_key='dummy_key', task_lock_params=task_lock_params)
+
     @pytest.fixture(autouse=True)
     def clear_repo(self):
-        InMemeryCacheRepository().clear()
+        InMemoryCacheRepository().clear()
 
     def test_dump_and_load_data(self, target: InMemoryTarget):
         dumped = 'dummy_data'
@@ -28,5 +30,23 @@ class TestInMemoryTarget:
         loaded = target.load()
         assert loaded == dumped
 
-        with pytest.raises(AssertionError):
-            target.dump('another_data')
+    def test_exist(self, target: InMemoryTarget):
+        assert not target.exists()
+        target.dump('dummy_data')
+        assert target.exists()
+  
+    def test_last_modified_time(self, target: InMemoryTarget):
+        input = 'dummy_data'
+        target.dump(input)
+        time = target.last_modification_time()
+        assert isinstance(time, datetime)
+        
+        sleep(0.1)
+        another_input = 'another_data'
+        target.dump(another_input)
+        another_time = target.last_modification_time()
+        assert time < another_time
+
+        target.remove()
+        with pytest.raises(ValueError):
+            assert target.last_modification_time()

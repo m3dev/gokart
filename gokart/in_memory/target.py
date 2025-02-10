@@ -1,50 +1,47 @@
 from gokart.target import TargetOnKart, TaskLockParams
-from gokart.in_memory.repository import InMemeryCacheRepository
+from gokart.in_memory.repository import InMemoryCacheRepository
 from datetime import datetime
+from typing import Any
+from logging import warning
 
-_repository = InMemeryCacheRepository()
+_repository = InMemoryCacheRepository()
 
-# TODO: unnecessary params in task_lock_param expecially regarding redies
 class InMemoryTarget(TargetOnKart):
     def __init__(
             self,
-            id: str,
+            data_key: str,
             task_lock_param: TaskLockParams
         ):
-        self._id = id
+        if task_lock_param.should_task_lock:
+            warning(f'Redis in {self.__class__.__name__} is not supported now.')
+
+        self._data_key = data_key
         self._task_lock_params = task_lock_param
-        self._last_modification_time_value: None | datetime = None
     
-    def _exists(self):
-        # import pdb;pdb.set_trace()
-        return _repository.has(self._id)
+    def _exists(self) -> bool:
+        return _repository.has(self._data_key)
     
-    def _get_task_lock_params(self):
+    def _get_task_lock_params(self) -> TaskLockParams:
         return self._task_lock_params
     
-    def _load(self):
-        # import pdb
-        # pdb.set_trace()
-        return _repository.get(self._id)
+    def _load(self) -> Any:
+        return _repository.get_value(self._data_key)
     
-    def _dump(self, obj):
-        return _repository.set(self._id, obj)
+    def _dump(self, obj: Any) -> None:
+        return _repository.set_value(self._data_key, obj)
     
     def _remove(self) -> None:
-        _repository.remove_by_id(self._id)
+        _repository.remove(self._data_key)
     
     def _last_modification_time(self) -> datetime:
-        if self._last_modification_time_value is None:
-            raise ValueError(f"No object(s) which id is {self._id} are stored before.")
-        self._last_modification_time_value
-    
-    def _path(self):
-        # TODO: this module name `_path` migit not be appropriate
-        return self._id
+        if not _repository.has(self._data_key):
+            raise ValueError(f"No object(s) which id is {self._data_key} are stored before.")
+        time = _repository.get_last_modification_time(self._data_key)
+        return time
 
-    @property
-    def id(self):
-        return self._id
+    def _path(self) -> str:
+        # TODO: this module name `_path` migit not be appropriate
+        return self._data_key
 
 def make_inmemory_target(target_key: str, task_lock_params: TaskLockParams | None = None):
     return InMemoryTarget(target_key, task_lock_params)
