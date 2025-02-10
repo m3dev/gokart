@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol
 
 
-class BaseData: ...
+class BaseData(Protocol): ...
 
 
 @dataclass

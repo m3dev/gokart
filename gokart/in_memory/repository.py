@@ -1,9 +1,9 @@
-from typing import Any, Iterator
+from typing import Any, Iterator, Protocol
 
 from .data import InMemoryData
 
 
-class BaseRepository: ...
+class BaseRepository(Protocol): ...
 
 
 class InMemoryCacheRepository(BaseRepository):
