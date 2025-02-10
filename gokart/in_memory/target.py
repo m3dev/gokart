@@ -1,6 +1,6 @@
 from datetime import datetime
 from logging import warning
-from typing import Any, Optional
+from typing import Any
 
 from gokart.in_memory.repository import InMemoryCacheRepository
 from gokart.target import TargetOnKart, TaskLockParams
@@ -42,5 +42,5 @@ class InMemoryTarget(TargetOnKart):
         return self._data_key
 
 
-def make_inmemory_target(target_key: str, task_lock_params: Optional[TaskLockParams] = None):
+def make_inmemory_target(target_key: str, task_lock_params: TaskLockParams):
     return InMemoryTarget(target_key, task_lock_params)
