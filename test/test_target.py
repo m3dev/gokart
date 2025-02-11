@@ -8,7 +8,6 @@ from unittest.mock import patch
 import boto3
 import numpy as np
 import pandas as pd
-import uuid
 from matplotlib import pyplot
 from moto import mock_aws
 
