@@ -15,26 +15,27 @@ class InMemoryTarget(TargetOnKart):
 
         self._data_key = data_key
         self._task_lock_params = task_lock_param
+        self._repository = InMemoryCacheRepository()
 
     def _exists(self) -> bool:
-        return _repository.has(self._data_key)
+        return self._repository.has(self._data_key)
 
     def _get_task_lock_params(self) -> TaskLockParams:
         return self._task_lock_params
 
     def _load(self) -> Any:
-        return _repository.get_value(self._data_key)
+        return self._repository.get_value(self._data_key)
 
     def _dump(self, obj: Any) -> None:
-        return _repository.set_value(self._data_key, obj)
+        return self._repository.set_value(self._data_key, obj)
 
     def _remove(self) -> None:
-        _repository.remove(self._data_key)
+        self._repository.remove(self._data_key)
 
     def _last_modification_time(self) -> datetime:
-        if not _repository.has(self._data_key):
+        if not self._repository.has(self._data_key):
             raise ValueError(f'No object(s) which id is {self._data_key} are stored before.')
-        time = _repository.get_last_modification_time(self._data_key)
+        time = self._repository.get_last_modification_time(self._data_key)
         return time
 
     def _path(self) -> str:
