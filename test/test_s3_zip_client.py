@@ -16,6 +16,10 @@ class TestS3ZipClient(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temporary_directory, ignore_errors=True)
 
+        # remove temporary zip archive if exists.
+        if os.path.exists(f'{self.temporary_directory}.zip'):
+            os.remove(f'{self.temporary_directory}.zip')
+
     @mock_aws
     def test_make_archive(self):
         conn = boto3.resource('s3', region_name='us-east-1')
