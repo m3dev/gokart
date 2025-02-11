@@ -8,24 +8,25 @@ from unittest.mock import patch
 import boto3
 import numpy as np
 import pandas as pd
+import uuid
 from matplotlib import pyplot
 from moto import mock_aws
 
 from gokart.file_processor import _ChunkedLargeFileReader
 from gokart.target import make_model_target, make_target
-
-
-def _get_temporary_directory():
-    return os.path.abspath(os.path.join(os.path.dirname(__name__), 'temporary'))
+from test.util import _get_temporary_directory
 
 
 class LocalTargetTest(unittest.TestCase):
+    def setUp(self):
+        self.temporary_directory = _get_temporary_directory()
+
     def tearDown(self):
-        shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
+        shutil.rmtree(self.temporary_directory, ignore_errors=True)
 
     def test_save_and_load_pickle_file(self):
         obj = 1
-        file_path = os.path.join(_get_temporary_directory(), 'test.pkl')
+        file_path = os.path.join(self.temporary_directory, 'test.pkl')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -37,7 +38,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_text_file(self):
         obj = 1
-        file_path = os.path.join(_get_temporary_directory(), 'test.txt')
+        file_path = os.path.join(self.temporary_directory, 'test.txt')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -47,7 +48,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_gzip(self):
         obj = 1
-        file_path = os.path.join(_get_temporary_directory(), 'test.gz')
+        file_path = os.path.join(self.temporary_directory, 'test.gz')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -57,7 +58,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_npz(self):
         obj = np.ones(shape=10, dtype=np.float32)
-        file_path = os.path.join(_get_temporary_directory(), 'test.npz')
+        file_path = os.path.join(self.temporary_directory, 'test.npz')
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
         loaded = target.load()
@@ -69,7 +70,7 @@ class LocalTargetTest(unittest.TestCase):
         pd.DataFrame(dict(x=range(10), y=range(10))).plot.scatter(x='x', y='y')
         pyplot.savefig(figure_binary)
         figure_binary.seek(0)
-        file_path = os.path.join(_get_temporary_directory(), 'test.png')
+        file_path = os.path.join(self.temporary_directory, 'test.png')
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(figure_binary.read())
 
@@ -78,7 +79,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_csv(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
-        file_path = os.path.join(_get_temporary_directory(), 'test.csv')
+        file_path = os.path.join(self.temporary_directory, 'test.csv')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -88,7 +89,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_tsv(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
-        file_path = os.path.join(_get_temporary_directory(), 'test.tsv')
+        file_path = os.path.join(self.temporary_directory, 'test.tsv')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -98,7 +99,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_parquet(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
-        file_path = os.path.join(_get_temporary_directory(), 'test.parquet')
+        file_path = os.path.join(self.temporary_directory, 'test.parquet')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -108,7 +109,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_feather(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]), index=pd.Index([33, 44], name='object_index'))
-        file_path = os.path.join(_get_temporary_directory(), 'test.feather')
+        file_path = os.path.join(self.temporary_directory, 'test.feather')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -118,7 +119,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_feather_without_store_index_in_feather(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]), index=pd.Index([33, 44], name='object_index')).reset_index()
-        file_path = os.path.join(_get_temporary_directory(), 'test.feather')
+        file_path = os.path.join(self.temporary_directory, 'test.feather')
 
         target = make_target(file_path=file_path, unique_id=None, store_index_in_feather=False)
         target.dump(obj)
@@ -128,7 +129,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_last_modified_time(self):
         obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
-        file_path = os.path.join(_get_temporary_directory(), 'test.csv')
+        file_path = os.path.join(self.temporary_directory, 'test.csv')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -136,14 +137,14 @@ class LocalTargetTest(unittest.TestCase):
         self.assertIsInstance(t, datetime)
 
     def test_last_modified_time_without_file(self):
-        file_path = os.path.join(_get_temporary_directory(), 'test.csv')
+        file_path = os.path.join(self.temporary_directory, 'test.csv')
         target = make_target(file_path=file_path, unique_id=None)
         with self.assertRaises(FileNotFoundError):
             target.last_modification_time()
 
     def test_save_pandas_series(self):
         obj = pd.Series(data=[1, 2], name='column_name')
-        file_path = os.path.join(_get_temporary_directory(), 'test.csv')
+        file_path = os.path.join(self.temporary_directory, 'test.csv')
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
@@ -154,7 +155,7 @@ class LocalTargetTest(unittest.TestCase):
     def test_dump_with_lock(self):
         with patch('gokart.target.wrap_dump_with_lock') as wrap_with_lock_mock:
             obj = 1
-            file_path = os.path.join(_get_temporary_directory(), 'test.pkl')
+            file_path = os.path.join(self.temporary_directory, 'test.pkl')
             target = make_target(file_path=file_path, unique_id=None)
             target.dump(obj, lock_at_dump=True)
 
@@ -163,7 +164,7 @@ class LocalTargetTest(unittest.TestCase):
     def test_dump_without_lock(self):
         with patch('gokart.target.wrap_dump_with_lock') as wrap_with_lock_mock:
             obj = 1
-            file_path = os.path.join(_get_temporary_directory(), 'test.pkl')
+            file_path = os.path.join(self.temporary_directory, 'test.pkl')
             target = make_target(file_path=file_path, unique_id=None)
             target.dump(obj, lock_at_dump=False)
 
@@ -238,8 +239,11 @@ class S3TargetTest(unittest.TestCase):
 
 
 class ModelTargetTest(unittest.TestCase):
+    def setUp(self):
+        self.temporary_directory = _get_temporary_directory()
+
     def tearDown(self):
-        shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
+        shutil.rmtree(self.temporary_directory, ignore_errors=True)
 
     @staticmethod
     def _save_function(obj, path):
@@ -251,10 +255,10 @@ class ModelTargetTest(unittest.TestCase):
 
     def test_model_target_on_local(self):
         obj = 1
-        file_path = os.path.join(_get_temporary_directory(), 'test.zip')
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
 
         target = make_model_target(
-            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function
+            file_path=file_path, temporary_directory=self.temporary_directory, save_function=self._save_function, load_function=self._load_function
         )
 
         target.dump(obj)
@@ -271,7 +275,7 @@ class ModelTargetTest(unittest.TestCase):
         file_path = os.path.join('s3://test/', 'test.zip')
 
         target = make_model_target(
-            file_path=file_path, temporary_directory=_get_temporary_directory(), save_function=self._save_function, load_function=self._load_function
+            file_path=file_path, temporary_directory=self.temporary_directory, save_function=self._save_function, load_function=self._load_function
         )
 
         target.dump(obj)
