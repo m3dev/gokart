@@ -16,7 +16,7 @@ class InMemoryCacheRepository(BaseRepository):
         return self._get_data(key).value
 
     def get_last_modification_time(self, key: str):
-        return self._get_data(key).last_modified_time
+        return self._get_data(key).last_modification_time
 
     def _get_data(self, key: str) -> InMemoryData:
         return self._cache[key]
