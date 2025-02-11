@@ -216,19 +216,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return cls(**new_k)
 
     def make_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
-        # if self.cache_in_memory and processor:
-        #     logger.warning(f"processor {type(processor)} never used.")
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.pkl')
         )
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        # if self.cache_in_memory:
-        #     from gokart.target import _make_file_path
-        #     return make_inmemory_target(
-        #         target_key=_make_file_path(file_path, unique_id),
-        #         task_lock_params=TaskLockParams(None, None, None, "hoge", False, False, 100)
-        #     )
 
         task_lock_params = make_task_lock_params(
             file_path=file_path,
