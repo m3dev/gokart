@@ -4,12 +4,12 @@ from time import sleep
 import pytest
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams
-from gokart.in_memory import InMemoryCacheRepository, InMemoryTarget, make_inmemory_target
+from gokart.in_memory import InMemoryCacheRepository, InMemoryTarget, make_in_memory_target
 
 
 class TestInMemoryTarget:
     @pytest.fixture
-    def task_lock_params(self):
+    def task_lock_params(self) -> TaskLockParams:
         return TaskLockParams(
             redis_host=None,
             redis_port=None,
@@ -21,11 +21,11 @@ class TestInMemoryTarget:
         )
 
     @pytest.fixture
-    def target(self, task_lock_params: TaskLockParams):
-        return make_inmemory_target(target_key='dummy_key', task_lock_params=task_lock_params)
+    def target(self, task_lock_params: TaskLockParams) -> InMemoryTarget:
+        return make_in_memory_target(target_key='dummy_key', task_lock_params=task_lock_params)
 
     @pytest.fixture(autouse=True)
-    def clear_repo(self):
+    def clear_repo(self) -> None:
         InMemoryCacheRepository().clear()
 
     def test_dump_and_load_data(self, target: InMemoryTarget):

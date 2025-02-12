@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Protocol
+from typing import Any
 
-
-class BaseData(Protocol): ...
 
 
 @dataclass
-class InMemoryData(BaseData):
+class InMemoryData:
     value: Any
     last_modification_time: datetime
 

@@ -289,21 +289,23 @@ If you want to dump csv file with other encodings, you can use `encoding` parame
 
 Cache output in memory instead of dumping to files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-You can use :class:`~InMemoryTarget` to cache output in memory instead of dumping to files by calling :func:`~gokart.target.make_inmemory_target`.
+You can use :class:`~InMemoryTarget` to cache output in memory instead of dumping to files by calling :func:`~gokart.target.make_in_memory_target`.
+
+Please note that :class:`~InMemoryTarget` is an experimental feature.
 
 .. code:: python
 
-    from gokart.in_memory.target import make_inmemory_target
+    from gokart.in_memory.target import make_in_memory_target
 
     def output(self):
-    unique_id = self.make_unique_id() if use_unique_id else None
-    # TaskLock is not supported in InMemoryTarget, so it's dummy
-    task_lock_params = make_task_lock_params(
-        file_path='dummy_path',
-        unique_id=unique_id,
-        redis_host=None,
-        redis_port=None,
-        redis_timeout=self.redis_timeout,
-        raise_task_lock_exception_on_collision=False,
-    )
-    return make_inmemory_target('dummy_path', task_lock_params, unique_id)
+        unique_id = self.make_unique_id() if use_unique_id else None
+        # TaskLock is not supported in InMemoryTarget, so it's dummy
+        task_lock_params = make_task_lock_params(
+            file_path='dummy_path',
+            unique_id=unique_id,
+            redis_host=None,
+            redis_port=None,
+            redis_timeout=self.redis_timeout,
+            raise_task_lock_exception_on_collision=False,
+        )
+        return make_in_memory_target('dummy_path', task_lock_params, unique_id)

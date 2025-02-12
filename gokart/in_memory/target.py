@@ -42,5 +42,5 @@ class InMemoryTarget(TargetOnKart):
         return self._data_key
 
 
-def make_inmemory_target(target_key: str, task_lock_params: TaskLockParams):
+def make_in_memory_target(target_key: str, task_lock_params: TaskLockParams) -> InMemoryTarget:
     return InMemoryTarget(target_key, task_lock_params)

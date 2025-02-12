@@ -9,7 +9,7 @@ dummy_num = 100
 
 class TestInMemoryCacheRepository:
     @pytest.fixture
-    def repo(self):
+    def repo(self) -> Repo:
         repo = Repo()
         repo.clear()
         return repo

@@ -1,12 +1,10 @@
-from typing import Any, Iterator, Protocol
+from typing import Any, Iterator
 
 from .data import InMemoryData
 
 
-class BaseRepository(Protocol): ...
 
-
-class InMemoryCacheRepository(BaseRepository):
+class InMemoryCacheRepository:
     _cache: dict[str, InMemoryData] = {}
 
     def __init__(self):
