@@ -20,9 +20,10 @@ from luigi.parameter import ParameterVisibility
 
 import gokart
 import gokart.target
-from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
+from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
 from gokart.file_processor import FileProcessor
+from gokart.in_memory.target import make_inmemory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import TargetOnKart
@@ -105,6 +106,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         default=True, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
     should_lock_run: bool = ExplicitBoolParameter(default=False, significant=False, description='Whether to use redis lock or not at task run.')
+    cache_in_memory_by_default: bool = ExplicitBoolParameter(
+        default=False, significant=False, description='If `True`, output is stored on a memory instead of files unless specified.'
+    )
 
     @property
     def priority(self):
@@ -134,11 +138,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
             task_lock_params = make_task_lock_params_for_run(task_self=self)
             self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
 
+        self.make_default_target = self.make_target if not self.cache_in_memory_by_default else self.make_cache_target
+
     def input(self) -> FlattenableItems[TargetOnKart]:
         return super().input()
 
     def output(self) -> FlattenableItems[TargetOnKart]:
-        return self.make_target()
+        return self.make_default_target()
 
     def requires(self) -> FlattenableItems['TaskOnKart']:
         tasks = self.make_task_instance_dictionary()
@@ -228,6 +234,21 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return gokart.target.make_target(
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
+
+    def make_cache_target(self, data_key: Optional[str] = None, use_unique_id: bool = True):
+        _data_key = data_key if data_key else os.path.join(self.__module__.replace('.', '/'), type(self).__name__)
+        unique_id = self.make_unique_id() if use_unique_id else None
+        # TODO: combine with redis
+        task_lock_params = TaskLockParams(
+            redis_host=None,
+            redis_port=None,
+            redis_timeout=None,
+            redis_key='redis_key',
+            should_task_lock=False,
+            raise_task_lock_exception_on_collision=False,
+            lock_extend_seconds=-1,
+        )
+        return make_inmemory_target(_data_key, task_lock_params, unique_id)
 
     def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (
