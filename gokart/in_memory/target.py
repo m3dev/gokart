@@ -10,7 +10,7 @@ _repository = InMemoryCacheRepository()
 class InMemoryTarget(TargetOnKart):
     def __init__(self, data_key: str, task_lock_param: TaskLockParams):
         if task_lock_param.should_task_lock:
-            raise ValueError(f'Redis with `InMemoryTarget` is not currently supported.')
+            raise ValueError('Redis with `InMemoryTarget` is not currently supported.')
 
         self._data_key = data_key
         self._task_lock_params = task_lock_param
