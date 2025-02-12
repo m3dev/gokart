@@ -6,15 +6,19 @@ import boto3
 from moto import mock_aws
 
 from gokart.s3_zip_client import S3ZipClient
-
-
-def _get_temporary_directory():
-    return os.path.abspath(os.path.join(os.path.dirname(__name__), 'temporary'))
+from test.util import _get_temporary_directory
 
 
 class TestS3ZipClient(unittest.TestCase):
+    def setUp(self):
+        self.temporary_directory = _get_temporary_directory()
+
     def tearDown(self):
-        shutil.rmtree(_get_temporary_directory(), ignore_errors=True)
+        shutil.rmtree(self.temporary_directory, ignore_errors=True)
+
+        # remove temporary zip archive if exists.
+        if os.path.exists(f'{self.temporary_directory}.zip'):
+            os.remove(f'{self.temporary_directory}.zip')
 
     @mock_aws
     def test_make_archive(self):
@@ -22,7 +26,7 @@ class TestS3ZipClient(unittest.TestCase):
         conn.create_bucket(Bucket='test')
 
         file_path = os.path.join('s3://test/', 'test.zip')
-        temporary_directory = _get_temporary_directory()
+        temporary_directory = self.temporary_directory
 
         zip_client = S3ZipClient(file_path=file_path, temporary_directory=temporary_directory)
         # raise error if temporary directory does not exist.
@@ -39,8 +43,8 @@ class TestS3ZipClient(unittest.TestCase):
         conn.create_bucket(Bucket='test')
 
         file_path = os.path.join('s3://test/', 'test.zip')
-        in_temporary_directory = os.path.join(_get_temporary_directory(), 'in', 'dummy')
-        out_temporary_directory = os.path.join(_get_temporary_directory(), 'out', 'dummy')
+        in_temporary_directory = os.path.join(self.temporary_directory, 'in', 'dummy')
+        out_temporary_directory = os.path.join(self.temporary_directory, 'out', 'dummy')
 
         # make dummy zip file.
         os.makedirs(in_temporary_directory, exist_ok=True)
