@@ -239,11 +239,13 @@ def make_model_target(
     load_function,
     unique_id: Optional[str] = None,
     task_lock_params: Optional[TaskLockParams] = None,
+    cacheable: bool = False,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
-    return ModelTarget(
+    cls = CacheableModelTarget if cacheable else ModelTarget
+    return cls(
         file_path=file_path,
         temporary_directory=temporary_directory,
         save_function=save_function,

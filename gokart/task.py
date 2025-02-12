@@ -274,7 +274,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
     def make_model_target(
-        self, relative_file_path: str, save_function: Callable[[Any, str], None], load_function: Callable[[str], Any], use_unique_id: bool = True
+        self, relative_file_path: str, save_function: Callable[[Any, str], None], load_function: Callable[[str], Any], use_unique_id: bool = True, cacheable: bool = False
     ):
         """
         Make target for models which generate multiple files in saving, e.g. gensim.Word2Vec, Tensorflow, and so on.
@@ -303,6 +303,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             save_function=save_function,
             load_function=load_function,
             task_lock_params=task_lock_params,
+            cacheable=cacheable
         )
 
     @overload
