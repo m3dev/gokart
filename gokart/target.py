@@ -14,6 +14,8 @@ import pandas as pd
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 from gokart.file_processor import FileProcessor, make_file_processor
+from gokart.in_memory.cacheable import InMemoryCacheableMixin
+from gokart.in_memory.repository import InMemoryCacheRepository
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client_util import make_zip_client
 
@@ -164,6 +166,12 @@ class ModelTarget(TargetOnKart):
         os.makedirs(self._temporary_directory, exist_ok=True)
 
 
+class CacheableSingleFileTarget(InMemoryCacheableMixin, SingleFileTarget): ...
+
+
+class CacheableModelTarget(InMemoryCacheableMixin, ModelTarget): ...
+
+
 class LargeDataFrameProcessor(object):
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
@@ -216,12 +224,14 @@ def make_target(
     processor: Optional[FileProcessor] = None,
     task_lock_params: Optional[TaskLockParams] = None,
     store_index_in_feather: bool = True,
+    cacheable: bool = False,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
     file_system_target = _make_file_system_target(file_path, processor=processor, store_index_in_feather=store_index_in_feather)
-    return SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params)
+    cls = CacheableSingleFileTarget if cacheable else SingleFileTarget
+    return cls(target=file_system_target, processor=processor, task_lock_params=_task_lock_params)
 
 
 def make_model_target(
@@ -231,14 +241,62 @@ def make_model_target(
     load_function,
     unique_id: Optional[str] = None,
     task_lock_params: Optional[TaskLockParams] = None,
+    cacheable: bool = False,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
-    return ModelTarget(
+    cls = CacheableModelTarget if cacheable else ModelTarget
+    return cls(
         file_path=file_path,
         temporary_directory=temporary_directory,
         save_function=save_function,
         load_function=load_function,
         task_lock_params=_task_lock_params,
     )
+
+
+class InMemoryTarget(TargetOnKart):
+    def __init__(self, data_key: str, task_lock_param: TaskLockParams):
+        if task_lock_param.should_task_lock:
+            logger.warning(f'Redis in {self.__class__.__name__} is not supported now.')
+
+        self._data_key = data_key
+        self._task_lock_params = task_lock_param
+        self._repository = InMemoryCacheRepository()
+
+    def _exists(self) -> bool:
+        return self._repository.has(self._data_key)
+
+    def _get_task_lock_params(self) -> TaskLockParams:
+        return self._task_lock_params
+
+    def _load(self) -> Any:
+        return self._repository.get_value(self._data_key)
+
+    def _dump(self, obj: Any) -> None:
+        return self._repository.set_value(self._data_key, obj)
+
+    def _remove(self) -> None:
+        self._repository.remove(self._data_key)
+
+    def _last_modification_time(self) -> datetime:
+        if not self._repository.has(self._data_key):
+            raise ValueError(f'No object(s) which id is {self._data_key} are stored before.')
+        time = self._repository.get_last_modification_time(self._data_key)
+        return time
+
+    def _path(self) -> str:
+        # TODO: this module name `_path` migit not be appropriate
+        return self._data_key
+
+
+def _make_data_key(data_key: str, unique_id: Optional[str] = None):
+    if not unique_id:
+        return data_key
+    return data_key + '_' + unique_id
+
+
+def make_inmemory_target(data_key: str, task_lock_params: TaskLockParams, unique_id: Optional[str] = None):
+    _data_key = _make_data_key(data_key, unique_id)
+    return InMemoryTarget(_data_key, task_lock_params)
