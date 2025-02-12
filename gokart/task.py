@@ -23,7 +23,6 @@ import gokart.target
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
 from gokart.file_processor import FileProcessor
-from gokart.in_memory.target import make_inmemory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import TargetOnKart
@@ -215,7 +214,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+    def make_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None, cacheable: bool = False) -> TargetOnKart:
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.pkl')
         )
@@ -232,7 +231,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
         return gokart.target.make_target(
-            file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
+            file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather, cacheable=cacheable
         )
 
     def make_cache_target(self, data_key: Optional[str] = None, use_unique_id: bool = True):
@@ -248,7 +247,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             raise_task_lock_exception_on_collision=False,
             lock_extend_seconds=-1,
         )
-        return make_inmemory_target(_data_key, task_lock_params, unique_id)
+        return gokart.target.make_inmemory_target(_data_key, task_lock_params, unique_id)
 
     def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (

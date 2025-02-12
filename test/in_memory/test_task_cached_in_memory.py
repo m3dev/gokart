@@ -4,8 +4,8 @@ import luigi
 import pytest
 
 import gokart
-from gokart.in_memory import InMemoryCacheRepository, InMemoryTarget
-from gokart.target import SingleFileTarget
+from gokart.in_memory import InMemoryCacheRepository
+from gokart.target import SingleFileTarget, InMemoryTarget
 
 
 class DummyTask(gokart.TaskOnKart):

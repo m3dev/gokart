@@ -4,8 +4,8 @@ from time import sleep
 import pytest
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams
-from gokart.in_memory import InMemoryCacheRepository, InMemoryTarget, make_inmemory_target
-
+from gokart.in_memory import InMemoryCacheRepository
+from gokart.target import InMemoryTarget, make_inmemory_target
 
 class TestInMemoryTarget:
     @pytest.fixture
