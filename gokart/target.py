@@ -14,10 +14,10 @@ import pandas as pd
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.object_storage import ObjectStorage
-from gokart.zip_client_util import make_zip_client
 from gokart.in_memory.cacheable import InMemoryCacheableMixin
 from gokart.in_memory.repository import InMemoryCacheRepository
+from gokart.object_storage import ObjectStorage
+from gokart.zip_client_util import make_zip_client
 
 logger = getLogger(__name__)
 
@@ -165,11 +165,13 @@ class ModelTarget(TargetOnKart):
     def _make_temporary_directory(self):
         os.makedirs(self._temporary_directory, exist_ok=True)
 
-class CacheableSingleFileTarget(InMemoryCacheableMixin, SingleFileTarget):
-    ...
 
-class CacheableModelTarget(InMemoryCacheableMixin, ModelTarget):
-    ...
+class CacheableSingleFileTarget(InMemoryCacheableMixin, SingleFileTarget): ...
+
+
+class CacheableModelTarget(InMemoryCacheableMixin, ModelTarget): ...
+
+
 class LargeDataFrameProcessor(object):
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
@@ -222,7 +224,7 @@ def make_target(
     processor: Optional[FileProcessor] = None,
     task_lock_params: Optional[TaskLockParams] = None,
     store_index_in_feather: bool = True,
-    cacheable: bool = False
+    cacheable: bool = False,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
@@ -252,6 +254,7 @@ def make_model_target(
         load_function=load_function,
         task_lock_params=_task_lock_params,
     )
+
 
 class InMemoryTarget(TargetOnKart):
     def __init__(self, data_key: str, task_lock_param: TaskLockParams):

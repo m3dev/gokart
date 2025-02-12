@@ -7,6 +7,7 @@ from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 from gokart.in_memory import InMemoryCacheRepository
 from gokart.target import InMemoryTarget, make_inmemory_target
 
+
 class TestInMemoryTarget:
     @pytest.fixture
     def task_lock_params(self):

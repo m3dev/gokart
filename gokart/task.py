@@ -214,7 +214,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None, cacheable: bool = False) -> TargetOnKart:
+    def make_target(
+        self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None, cacheable: bool = False
+    ) -> TargetOnKart:
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.pkl')
         )
@@ -231,7 +233,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
         return gokart.target.make_target(
-            file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather, cacheable=cacheable
+            file_path=file_path,
+            unique_id=unique_id,
+            processor=processor,
+            task_lock_params=task_lock_params,
+            store_index_in_feather=self.store_index_in_feather,
+            cacheable=cacheable,
         )
 
     def make_cache_target(self, data_key: Optional[str] = None, use_unique_id: bool = True):
@@ -274,7 +281,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
     def make_model_target(
-        self, relative_file_path: str, save_function: Callable[[Any, str], None], load_function: Callable[[str], Any], use_unique_id: bool = True, cacheable: bool = False
+        self,
+        relative_file_path: str,
+        save_function: Callable[[Any, str], None],
+        load_function: Callable[[str], Any],
+        use_unique_id: bool = True,
+        cacheable: bool = False,
     ):
         """
         Make target for models which generate multiple files in saving, e.g. gensim.Word2Vec, Tensorflow, and so on.
@@ -303,7 +315,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             save_function=save_function,
             load_function=load_function,
             task_lock_params=task_lock_params,
-            cacheable=cacheable
+            cacheable=cacheable,
         )
 
     @overload

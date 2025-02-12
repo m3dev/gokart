@@ -5,7 +5,7 @@ import pytest
 
 import gokart
 from gokart.in_memory import InMemoryCacheRepository
-from gokart.target import SingleFileTarget, InMemoryTarget
+from gokart.target import InMemoryTarget, SingleFileTarget
 
 
 class DummyTask(gokart.TaskOnKart):

@@ -1,17 +1,22 @@
+import pickle
+from time import sleep
+
+import luigi
 import pytest
-from gokart.target import CacheableSingleFileTarget, CacheableModelTarget
-from gokart.task import TaskOnKart
+
 from gokart.in_memory import InMemoryCacheRepository
 from gokart.in_memory.cacheable import CacheNotFoundError
-import luigi
-from time import sleep
-import pickle
+from gokart.target import CacheableModelTarget, CacheableSingleFileTarget
+from gokart.task import TaskOnKart
+
+
 class DummyTask(TaskOnKart):
     namespace = __name__
     param = luigi.IntParameter()
 
     def run(self):
         self.dump(self.param)
+
 
 class TestCacheableSingleFileTarget:
     @pytest.fixture
@@ -36,7 +41,7 @@ class TestCacheableSingleFileTarget:
         assert not cacheable_target.exists()
         target.dump('data')
         assert cacheable_target.exists()
-    
+
     def test_load_without_cache_or_file(self, task: TaskOnKart):
         target = task.make_target('sample.pkl')
         with pytest.raises(FileNotFoundError):
@@ -44,7 +49,7 @@ class TestCacheableSingleFileTarget:
         cacheable_target = task.make_target('sample.pkl', cacheable=True)
         with pytest.raises(CacheNotFoundError):
             cacheable_target.load()
-        
+
     def test_load_with_cache(self, task: TaskOnKart):
         target = task.make_target('sample.pkl')
         cacheable_target: CacheableSingleFileTarget = task.make_target('sample.pkl', cacheable=True)
@@ -79,7 +84,7 @@ class TestCacheableSingleFileTarget:
         target.dump('data_in_file')
         cache_target.dump('data_in_memory')
         assert cacheable_target.load() == 'data_in_memory'
-    
+
     def test_dump(self, task: TaskOnKart):
         target = task.make_target('sample.pkl')
         cacheable_target: CacheableSingleFileTarget = task.make_target('sample.pkl', cacheable=True)
@@ -97,7 +102,7 @@ class TestCacheableSingleFileTarget:
         assert target.exists()
         assert cache_target.exists()
         assert cacheable_target.exists()
-    
+
     def test_remove_without_cache_or_file(self, task: TaskOnKart):
         cacheable_target: CacheableSingleFileTarget = task.make_target('sample.pkl', cacheable=True)
         cacheable_target.remove()
@@ -138,7 +143,7 @@ class TestCacheableSingleFileTarget:
         cacheable_target.remove(also_remove_file=True)
         assert not target.exists()
         assert not cache_target.exists()
-    
+
     def test_last_modification_time_without_cache_and_file(self, task: TaskOnKart):
         target = task.make_target('sample.pkl')
         cacheable_target: CacheableSingleFileTarget = task.make_target('sample.pkl', cacheable=True)
@@ -162,7 +167,7 @@ class TestCacheableSingleFileTarget:
         cacheable_target: CacheableSingleFileTarget = task.make_target('sample.pkl', cacheable=True)
         target.dump('data')
         assert cacheable_target.last_modification_time() == target.last_modification_time()
- 
+
     def test_last_modification_time_with_cache_and_file(self, task: TaskOnKart):
         target = task.make_target('sample.pkl')
         cacheable_target: CacheableSingleFileTarget = task.make_target('sample.pkl', cacheable=True)
@@ -172,25 +177,31 @@ class TestCacheableSingleFileTarget:
         cache_target.dump('inmemory_data')
         assert cacheable_target.last_modification_time() == cache_target.last_modification_time()
 
+
 class DummyModule:
     def func(self):
         return 'hello world'
 
+
 class DummyModuleA:
     def func_a(self):
-        return f'hello world'
+        return 'hello world'
+
 
 class DummyModuleB:
     def func_b(self):
-        return f'hello world'
-    
+        return 'hello world'
+
+
 def _save_func(obj, path):
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
 
+
 def _load_func(path):
     with open(path, 'rb') as f:
         return pickle.load(f)
+
 
 class TestCacheableModelTarget:
     @pytest.fixture
@@ -203,70 +214,34 @@ class TestCacheableModelTarget:
         InMemoryCacheRepository.clear()
 
     def test_exists_without_cache_or_file(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
-        cacheable_target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
+        cacheable_target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True)
         cache_target = task.make_cache_target(target.path(), use_unique_id=False)
         assert not target.exists()
         assert not cache_target.exists()
         assert not cacheable_target.exists()
-   
+
     def test_exists_with_file(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
-        cacheable_target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
+        cacheable_target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True)
         assert not cacheable_target.exists()
         module = DummyModule()
         target.dump(module)
         assert cacheable_target.exists()
 
     def test_exists_with_cache(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
-        cacheable_target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
+        cacheable_target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True)
         cache_target = task.make_cache_target(target.path(), use_unique_id=False)
         assert not cacheable_target.exists()
         module = DummyModule()
         cache_target.dump(module)
         assert not target.exists()
         assert cacheable_target.exists()
-    
+
     def test_load_without_cache_or_file(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
-        cacheable_target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
+        cacheable_target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True)
         cache_target = task.make_cache_target(target.path(), use_unique_id=False)
         with pytest.raises(FileNotFoundError):
             target.load()
@@ -274,19 +249,10 @@ class TestCacheableModelTarget:
             cache_target.load()
         with pytest.raises(CacheNotFoundError):
             cacheable_target.load()
-    
+
     def test_load_with_cache(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
-        cacheable_target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
+        cacheable_target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True)
         cache_target = task.make_cache_target(target.path(), use_unique_id=False)
         module = DummyModule()
         cache_target.dump(module)
@@ -296,17 +262,8 @@ class TestCacheableModelTarget:
         assert isinstance(cacheable_target.load(), DummyModule)
 
     def test_load_with_file(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
-        cacheable_target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
+        cacheable_target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True)
         cache_target = task.make_cache_target(target.path(), use_unique_id=False)
         module = DummyModule()
         target.dump(module)
@@ -314,19 +271,10 @@ class TestCacheableModelTarget:
         assert not cache_target.exists()
         assert isinstance(cacheable_target.load(), DummyModule)
         assert cache_target.exists()
-    
+
     def test_load_with_cache_and_file(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
-        cacheable_target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
+        cacheable_target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True)
         cache_target = task.make_cache_target(target.path(), use_unique_id=False)
         inmemory_module_cls, file_module_cls = DummyModule, DummyModuleA
         inmemory_module, file_module = inmemory_module_cls(), file_module_cls()
@@ -337,16 +285,9 @@ class TestCacheableModelTarget:
         assert isinstance(cacheable_target.load(), inmemory_module_cls)
 
     def test_dump(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
         cacheable_target: CacheableModelTarget = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
+            relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True
         )
         module = DummyModule()
         cacheable_target.dump(module)
@@ -354,16 +295,9 @@ class TestCacheableModelTarget:
         assert cacheable_target.exists()
 
     def test_dump_with_dump_to_file_flag(self, task: TaskOnKart):
-        target = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func
-        )
+        target = task.make_model_target(relative_file_path='model.zip', save_function=_save_func, load_function=_load_func)
         cacheable_target: CacheableModelTarget = task.make_model_target(
-            relative_file_path='model.zip',
-            save_function=_save_func,
-            load_function=_load_func,
-            cacheable=True
+            relative_file_path='model.zip', save_function=_save_func, load_function=_load_func, cacheable=True
         )
         cache_target = task.make_cache_target(target.path(), use_unique_id=False)
         module = DummyModule()
