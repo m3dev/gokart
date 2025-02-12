@@ -1,5 +1,4 @@
 from datetime import datetime
-from logging import warning
 from typing import Any
 
 from gokart.in_memory.repository import InMemoryCacheRepository
@@ -11,7 +10,7 @@ _repository = InMemoryCacheRepository()
 class InMemoryTarget(TargetOnKart):
     def __init__(self, data_key: str, task_lock_param: TaskLockParams):
         if task_lock_param.should_task_lock:
-            warning(f'Redis in {self.__class__.__name__} is not supported now.')
+            raise ValueError(f'Redis with `InMemoryTarget` is not currently supported.')
 
         self._data_key = data_key
         self._task_lock_params = task_lock_param
