@@ -3,7 +3,6 @@ from typing import Any, Iterator
 from .data import InMemoryData
 
 
-
 class InMemoryCacheRepository:
     _cache: dict[str, InMemoryData] = {}
 

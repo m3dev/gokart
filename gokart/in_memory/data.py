@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Any
 
 
-
 @dataclass
 class InMemoryData:
     value: Any
