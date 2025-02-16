@@ -48,7 +48,7 @@ class AddTask(gokart.TaskOnKart[Union[int, float]]):
 
 class TestTaskOnKartWithCache:
     @pytest.fixture(autouse=True)
-    def clear_repository(slef):
+    def clear_repository(self) -> None:
         InMemoryCacheRepository().clear()
 
     @pytest.mark.parametrize('data_key', ['sample_key', None])

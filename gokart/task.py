@@ -23,7 +23,7 @@ import gokart.target
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
 from gokart.file_processor import FileProcessor
-from gokart.in_memory.target import make_inmemory_target
+from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import TargetOnKart
@@ -235,7 +235,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
 
-    def make_cache_target(self, data_key: Optional[str] = None, use_unique_id: bool = True):
+    def make_cache_target(self, data_key: Optional[str] = None, use_unique_id: bool = True) -> InMemoryTarget:
         _data_key = data_key if data_key else os.path.join(self.__module__.replace('.', '/'), type(self).__name__)
         unique_id = self.make_unique_id() if use_unique_id else None
         # TODO: combine with redis
@@ -248,7 +248,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             raise_task_lock_exception_on_collision=False,
             lock_extend_seconds=-1,
         )
-        return make_inmemory_target(_data_key, task_lock_params, unique_id)
+        return make_in_memory_target(_data_key, task_lock_params, unique_id)
 
     def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (
