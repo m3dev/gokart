@@ -138,8 +138,7 @@ class TimestampParameter(_DatetimeParameterBase):
     def __init__(self, interval=1, start=None, **kwargs):
         super().__init__(interval, start, **kwargs)
         _UNIX_EPOCH = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
-        self.start = start if start is not None else _UNIX_EPOCH.replace(
-            tzinfo=datetime.timezone.utc)
+        self.start = start if start is not None else _UNIX_EPOCH.replace(tzinfo=datetime.timezone.utc)
 
     def normalize(self, dt):
         """
@@ -151,9 +150,7 @@ class TimestampParameter(_DatetimeParameterBase):
 
         dt = self._convert_to_dt(dt)
 
-        dt = dt.replace(
-            microsecond=0
-        )  # remove microseconds, to avoid float rounding issues.
+        dt = dt.replace(microsecond=0)  # remove microseconds, to avoid float rounding issues.
         start_with_dt_timezone = self.start.astimezone(dt.tzinfo)  # avoid calculating two datetime objects with different timezones
         delta = (dt - start_with_dt_timezone).total_seconds()
         granularity = (self._timedelta * self.interval).total_seconds()
