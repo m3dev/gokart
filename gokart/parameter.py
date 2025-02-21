@@ -1,10 +1,12 @@
 import bz2
+import datetime
 import json
 from logging import getLogger
 from typing import Generic, Protocol, TypeVar
 
 import luigi
 from luigi import task_register
+from luigi.parameter import _DatetimeParameterBase
 
 import gokart
 
@@ -119,3 +121,40 @@ class SerializableParameter(luigi.Parameter, Generic[S]):
 
     def serialize(self, x: S) -> str:
         return x.gokart_serialize()
+
+
+class TimestampParameter(_DatetimeParameterBase):
+    """
+    TimestampParameter supprts a datetime.datetime object with timezone information.
+
+    A TimestampParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date, time specified to the second and timezone. For example, ``2013-07-10T190738Z+0900`` specifies July 10, 2013 at
+    19:07:38 +09:00.
+    """
+
+    date_format = '%Y-%m-%dT%H%M%SZ%z'
+    _timedelta = datetime.timedelta(seconds=1)
+
+    def __init__(self, interval=1, start=None, **kwargs):
+        super().__init__(interval, start, **kwargs)
+        _UNIX_EPOCH = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
+        self.start = start if start is not None else _UNIX_EPOCH.replace(
+            tzinfo=datetime.timezone.utc)
+
+    def normalize(self, dt):
+        """
+        Clamp dt to every Nth :py:attr:`~_DatetimeParameterBase.interval` starting at
+        :py:attr:`~_DatetimeParameterBase.start`.
+        """
+        if dt is None:
+            return None
+
+        dt = self._convert_to_dt(dt)
+
+        dt = dt.replace(
+            microsecond=0
+        )  # remove microseconds, to avoid float rounding issues.
+        start_with_dt_timezone = self.start.astimezone(dt.tzinfo)  # avoid calculating two datetime objects with different timezones
+        delta = (dt - start_with_dt_timezone).total_seconds()
+        granularity = (self._timedelta * self.interval).total_seconds()
+        return dt - datetime.timedelta(seconds=delta % granularity)
