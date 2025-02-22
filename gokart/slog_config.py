@@ -1,8 +1,9 @@
+import functools
 import logging
 import os
 import sys
+
 from pythonjsonlogger import json
-import functools
 
 
 class SlogConfig(object):
@@ -14,8 +15,9 @@ class SlogConfig(object):
     Else if "$GOKART_LOGGER_FORMAT=text", set logging configuration as plain text, normal logging.
     Otherwise, default setting is applied, structured logging.
     """
-    _default_base_format = "%(message)s %(lineno)d %(pathname)s %(asctime)s %(name)s %(levelname)s %(filename)s %(lineno)s %(message)s"
-    _default_date_format = "%Y/%m/%d %H:%M:%S"
+
+    _default_base_format = '%(message)s %(lineno)d %(pathname)s %(asctime)s %(name)s %(levelname)s %(filename)s %(lineno)s %(message)s'
+    _default_date_format = '%Y/%m/%d %H:%M:%S'
 
     @staticmethod
     def apply_slog_format(logger):
@@ -28,8 +30,8 @@ class SlogConfig(object):
             if not isinstance(logger, logging.Logger):
                 return
             if not logger.handlers:
-                handler = logging.StreamHandler(sys.stdout)
-                logger.addHandler(handler)
+                stream_handler = logging.StreamHandler(sys.stdout)
+                logger.addHandler(stream_handler)
 
             for handler in logger.handlers:
                 if isinstance(handler, logging.StreamHandler):
@@ -49,7 +51,8 @@ class SlogConfig(object):
                 logger.addHandler(handler)
             return logger
         else:
-            raise Exception(f"Unknown logger format: {logger_mode}")
+            raise Exception(f'Unknown logger format: {logger_mode}')
+
 
 # This is the decorator method for logging.getLogger.
 def getLogger_decorator(func):
@@ -58,6 +61,5 @@ def getLogger_decorator(func):
         logger = func(name)
         logger = SlogConfig.apply_slog_format(logger)
         return logger
+
     return wrapper
-
-
