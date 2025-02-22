@@ -26,6 +26,8 @@ dependencies = [
   "dill",
   "backoff",
   "typing-extensions>=4.11.0; python_version<'3.13'",
+  "python-json-logger>=3.2.1",
+  "notebook>=7.3.2",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
