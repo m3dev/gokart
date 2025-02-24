@@ -1,11 +1,10 @@
+import io
+import json
 import logging
 import os
-import io
 import unittest
 from unittest.mock import patch
-import json
 
-import gokart
 from gokart import getLogger
 
 
@@ -47,7 +46,6 @@ class TestSlogConfig(unittest.TestCase):
         log_contents = log_stream.getvalue().strip()
 
         self.assertEqual(log_contents, test_log_message)
-
 
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'invalid_value'})
     def test_apply_slog_format_invalid_env(self):

@@ -1,9 +1,9 @@
 import logging
 import os
 
-from gokart.slog_config import SlogConfig
-
 from pythonjsonlogger import json
+
+from gokart.slog_config import SlogConfig
 
 
 class GokartLogger(logging.Logger):
@@ -15,4 +15,3 @@ class GokartLogger(logging.Logger):
             date_fmt = SlogConfig._default_date_format
             formatter = json.JsonFormatter(fmt=fmt, datefmt=date_fmt)
             handler.setFormatter(formatter)
-

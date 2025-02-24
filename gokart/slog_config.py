@@ -4,8 +4,6 @@ import os
 
 from pythonjsonlogger import json
 
-import gokart
-
 
 class SlogConfig(object):
     """
@@ -28,7 +26,7 @@ class SlogConfig(object):
         """
         logger_mode = os.environ.get('GOKART_LOGGER_FORMAT')
         if not logger_mode or logger_mode.lower() == 'json':
-            if not isinstance(logger, gokart.gokart_logger.GokartLogger):
+            if not isinstance(logger, logging.Logger):
                 return logger
             current_logger, found_handler = logger, 0
             while current_logger:
@@ -41,14 +39,26 @@ class SlogConfig(object):
                         datefmt=date_fmt,
                     )
                     handler.setFormatter(formatter)
+
+                if not current_logger.parent:
+                    break
+
                 current_logger = current_logger.parent
 
             if found_handler == 0:
                 last_resort_handler = logging.lastResort
                 if not last_resort_handler:
                     last_resort_handler = logging.StreamHandler()
-                fmt = last_resort_handler.formatter._fmt if last_resort_handler.formatter and last_resort_handler.formatter._fmt else SlogConfig._default_base_format
-                date_fmt = last_resort_handler.formatter.datefmt if last_resort_handler.formatter and last_resort_handler.formatter.datefmt else SlogConfig._default_date_format
+                fmt = (
+                    last_resort_handler.formatter._fmt
+                    if last_resort_handler.formatter and last_resort_handler.formatter._fmt
+                    else SlogConfig._default_base_format
+                )
+                date_fmt = (
+                    last_resort_handler.formatter.datefmt
+                    if last_resort_handler.formatter and last_resort_handler.formatter.datefmt
+                    else SlogConfig._default_date_format
+                )
                 formatter = json.JsonFormatter(
                     fmt=fmt,
                     datefmt=date_fmt,
