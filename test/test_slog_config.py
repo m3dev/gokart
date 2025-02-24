@@ -1,10 +1,11 @@
 import logging
 import os
+import io
 import unittest
 from unittest.mock import patch
+import json
 
-from pythonjsonlogger import json
-
+import gokart
 from gokart import getLogger
 
 
@@ -15,19 +16,38 @@ class TestSlogConfig(unittest.TestCase):
 
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'json'})
     def test_apply_slog_format_json(self):
-        logger = getLogger('test_logger')
-        stream_handlers = [h for h in logger.handlers if isinstance(h, logging.StreamHandler)]
-        self.assertTrue(stream_handlers, 'No stream_handlers defined')
-        json_formatters = [h.formatter for h in stream_handlers if isinstance(h.formatter, json.JsonFormatter)]
-        self.assertTrue(json_formatters, 'No json_formatters defined')
+        logger_name = 'test_json_logger'
+        test_log_message = 'This should be structured log message.'
+
+        logger = getLogger(logger_name)
+        log_stream = io.StringIO()
+        log_handler = logging.StreamHandler(log_stream)
+        logger.addHandler(log_handler)
+
+        logger.warning(test_log_message)
+
+        log_contents = log_stream.getvalue().strip()
+        json_log_contents = json.loads(log_contents)
+
+        self.assertEqual(json_log_contents['message'], test_log_message)
+        self.assertEqual(json_log_contents['name'], logger_name)
 
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'text'})
     def test_apply_slog_format_text(self):
-        logger = getLogger('test_logger')
-        stream_handlers = [h for h in logger.handlers if isinstance(h, logging.StreamHandler)]
-        self.assertTrue(stream_handlers, 'No stream_handlers defined')
-        json_formatters = [h.formatter for h in stream_handlers if isinstance(h.formatter, json.JsonFormatter)]
-        self.assertFalse(json_formatters, 'No json_formatters defined')
+        logger_name = 'test_text_logger'
+        test_log_message = 'This should be structured log message.'
+
+        logger = getLogger(logger_name)
+        log_stream = io.StringIO()
+        log_handler = logging.StreamHandler(log_stream)
+        logger.addHandler(log_handler)
+
+        logger.warning(test_log_message)
+
+        log_contents = log_stream.getvalue().strip()
+
+        self.assertEqual(log_contents, test_log_message)
+
 
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'invalid_value'})
     def test_apply_slog_format_invalid_env(self):
