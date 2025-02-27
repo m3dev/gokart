@@ -3,10 +3,10 @@ import datetime
 import json
 from logging import getLogger
 from typing import Generic, Protocol, TypeVar
+from warnings import warn
 
 import luigi
 from luigi import task_register
-from luigi.parameter import _DatetimeParameterBase
 
 import gokart
 
@@ -123,20 +123,30 @@ class SerializableParameter(luigi.Parameter, Generic[S]):
         return x.gokart_serialize()
 
 
-class TimestampParameter(_DatetimeParameterBase):
+class ZonedDateSecondParameter(luigi.Parameter):
     """
-    TimestampParameter supprts a datetime.datetime object with timezone information.
+    ZonedDateSecondParameter supports a datetime.datetime object with timezone information.
 
-    A TimestampParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
-    date, time specified to the second and timezone. For example, ``2013-07-10T190738Z+0900`` specifies July 10, 2013 at
-    19:07:38 +09:00.
+    A ZonedDateSecondParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date, time specified to the second and timezone. For example, ``2013-07-10T19:07:38+09:00`` specifies July 10, 2013 at
+    19:07:38 +09:00. The separator `:` can be omitted.
     """
 
-    date_format = '%Y-%m-%dT%H%M%SZ%z'
-    _timedelta = datetime.timedelta(seconds=1)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    def __init__(self, interval=1, start=None, **kwargs):
-        super().__init__(interval, start, **kwargs)
+    def parse(self, s):
+        # special character 'Z' is replaced with '+0000'
+        # because Python 3.10 and older does not support fromisoformat with Z at the end of the string.
+        if s.endswith('Z'):
+            s = s[:-1] + '+00:00'
+        dt = datetime.datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            warn('The input does not have timezone information. Please consider using luigi.DateSecondParameter instead.', stacklevel=1)
+        return datetime.datetime.fromisoformat(s)
+
+    def serialize(self, dt):
+        return dt.isoformat()
 
     def normalize(self, dt):
         # override _DatetimeParameterBase.normalize to avoid do nothing to normalize except removing microsecond.
