@@ -1,5 +1,7 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, List, Optional, Tuple
+
+import luigi
 
 from gokart.in_memory.repository import InMemoryCacheRepository
 from gokart.target import TargetOnKart, TaskLockParams
@@ -24,7 +26,7 @@ class InMemoryTarget(TargetOnKart):
     def _load(self) -> Any:
         return _repository.get_value(self._data_key)
 
-    def _dump(self, obj: Any) -> None:
+    def _dump(self, obj: Any, params: Optional[List[Tuple[str, Any, luigi.Parameter]]] = None) -> None:
         return _repository.set_value(self._data_key, obj)
 
     def _remove(self) -> None:
