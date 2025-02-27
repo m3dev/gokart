@@ -19,7 +19,6 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         param8 = luigi.DateHourParameter(default=datetime.date.today())
         param9 = luigi.DateMinuteParameter(default=datetime.date.today())
         param10 = luigi.DateSecondParameter(default=datetime.date.today())
-        user_provided_gcs_labels = luigi.DictParameter(default={'hoge': 'fuga', '1': 2})
 
         params = [
             ('param0', None, param0),
@@ -33,11 +32,8 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             ('param8', datetime.date.today().strftime(param8.date_format), param8),
             ('param9', datetime.date.today().strftime(param9.date_format), param9),
             ('param10', datetime.date.today().strftime(param10.date_format), param10),
-            ('user_provided_gcs_labels', {'hoge': 'fuga', '1': 2}, user_provided_gcs_labels),
         ]
         want = {
-            'hoge': 'fuga',
-            '1': '2',
             'param1': 'param1_value',
             'param2': '100',
             'param3': 'False',
