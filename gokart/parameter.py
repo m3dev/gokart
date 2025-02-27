@@ -129,21 +129,21 @@ class ZonedDateSecondParameter(luigi.Parameter):
 
     A ZonedDateSecondParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
     date, time specified to the second and timezone. For example, ``2013-07-10T19:07:38+09:00`` specifies July 10, 2013 at
-    19:07:38 +09:00. The separator `:` can be omitted.
+    19:07:38 +09:00. The separator `:` can be omitted for Python3.11 and later.
     """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def parse(self, s):
-        # special character 'Z' is replaced with '+0000'
-        # because Python 3.10 and older does not support fromisoformat with Z at the end of the string.
+        # special character 'Z' is replaced with '+00:00'
+        # because Python 3.11 and later support fromisoformat with Z at the end of the string.
         if s.endswith('Z'):
             s = s[:-1] + '+00:00'
         dt = datetime.datetime.fromisoformat(s)
         if dt.tzinfo is None:
             warn('The input does not have timezone information. Please consider using luigi.DateSecondParameter instead.', stacklevel=1)
-        return datetime.datetime.fromisoformat(s)
+        return dt
 
     def serialize(self, dt):
         return dt.isoformat()

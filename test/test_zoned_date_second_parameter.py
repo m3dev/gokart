@@ -43,10 +43,6 @@ class ZonedDateSecondParameterTest(unittest.TestCase):
         with CmdlineParser.global_instance([f'{__name__}.ZonedDateSecondParameterTaskWithoutDefault', '--dt', '2025-02-21T12:00:00']) as cp:
             assert cp.get_task_obj().dt == datetime.datetime(2025, 2, 21, 12, 0, 0, tzinfo=None)
 
-    def test_parse_param_without_column_separator(self):
-        with CmdlineParser.global_instance([f'{__name__}.ZonedDateSecondParameterTaskWithoutDefault', '--dt', '2025-02-21T120000+0900']) as cp:
-            assert cp.get_task_obj().dt == datetime.datetime(2025, 2, 21, 12, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=9)))
-
     def test_parse_method(self):
         actual = ZonedDateSecondParameter().parse(self.default_datetime_str)
         expected = self.default_datetime
