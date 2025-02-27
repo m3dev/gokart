@@ -16,6 +16,7 @@ logger = getLogger(__name__)
 class GCSObjectMetadataClient(object):
     """
     This class is Utility-Class, so should not be initialized.
+    This class used for adding metadata as labels.
     """
 
     # This is the copied method of luigi.gcs._path_to_bucket_and_key(path).
@@ -84,12 +85,11 @@ class GCSObjectMetadataClient(object):
 
         # Maximum size of metadata for each object is 8KiB.
         # [Link]: https://cloud.google.com/storage/quotas?hl=ja#objects
-        # And also, user_provided_labels should be prioritized rather than auto generated labels.
-        # So, at first, attach user_provided_labels, then add auto generated labels.
         max_gcs_metadata_size, total_metadata_size, labels = 8 * 1024, 0, []
         if params:
-            all_labels = GCSObjectMetadataClient._merge_with_user_provided_labels(params)
-            for label_name, label_value in all_labels:
+            for label_name, label_value, _ in params:
+                if label_value is None:
+                    continue
                 size = len(str(label_name).encode('utf-8')) + len(str(label_value).encode('utf-8'))
                 if total_metadata_size + size > max_gcs_metadata_size:
                     logger.warning(f'current metadata total size is {total_metadata_size} byte, and no more labels would be added.')
@@ -101,30 +101,3 @@ class GCSObjectMetadataClient(object):
         for label_key, label_value in labels:
             patched_metadata[label_key] = label_value
         return patched_metadata
-
-    @staticmethod
-    def _merge_with_user_provided_labels(
-        params: list[tuple[str, Any, luigi.Parameter]],
-    ) -> list[tuple[Any, Any]]:
-        # luigi.Parameter.get_param_names() returns significant parameters only.
-        # [Link]: https://luigi.readthedocs.io/en/latest/_modules/luigi/task.html#Task.get_param_names
-        parameter_labels, parameter_key_set = [], set()
-
-        for param_name, param_value, param_obj in params:
-            if param_name == 'user_provided_gcs_labels':
-                continue
-            if param_value is None:
-                logger.warning(f'param_name={param_name} param_obj={param_obj} param_value is None. So skipped.')
-                continue
-            parameter_labels.append((param_name, param_value)) if param_obj.significant else None
-            parameter_key_set.add(param_name)
-        # Make user_provided override parameter when their key conflict.
-        # Log a warning message when this happens.
-        for param_name, param_value, _ in params:
-            if param_name == 'user_provided_gcs_labels':
-                user_provided_labels = dict(param_value)
-                for up_key, up_value in user_provided_labels.items():
-                    if up_key in parameter_key_set:
-                        logger.warning(f"{up_key} is already in parameter's name set. Override it's value with {up_value} from user provided labels.")
-                    parameter_labels.append((up_key, up_value))
-        return parameter_labels

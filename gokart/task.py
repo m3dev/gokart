@@ -105,7 +105,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         default=True, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
     should_lock_run: bool = ExplicitBoolParameter(default=False, significant=False, description='Whether to use redis lock or not at task run.')
-    user_provided_gcs_labels: Dict = luigi.DictParameter(default={}, significant=False, description='User-provided labels for gcs cache label..')
 
     @property
     def priority(self):
