@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import copy
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
+from urllib.parse import urlsplit
 
 import luigi
 from googleapiclient.model import makepatch
@@ -17,14 +18,22 @@ class GCSObjectMetadataClient(object):
     This class is Utility-Class, so should not be initialized.
     """
 
+    # This is the copied method of luigi.gcs._path_to_bucket_and_key(path).
+    @staticmethod
+    def path_to_bucket_and_key(path):
+        (scheme, netloc, path, _, _) = urlsplit(path)
+        assert scheme == 'gs'
+        path_without_initial_slash = path[1:]
+        return netloc, path_without_initial_slash
+
     @staticmethod
     def add_task_state_labels(
         path: str,
-        params: Optional[List[Tuple[str, Any, luigi.Parameter]]] = None,
+        params: Optional[list[tuple[str, Any, luigi.Parameter]]] = None,
     ) -> None:
         # In gokart/object_storage.get_time_stamp, could find same call.
         # _path_to_bucket_and_key is a private method, so, this might not be acceptable.
-        bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)
+        bucket, obj = GCSObjectMetadataClient.path_to_bucket_and_key(path)
 
         _response = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
         if _response is None:
@@ -43,7 +52,7 @@ class GCSObjectMetadataClient(object):
             params,
         )
 
-        if not original_metadata == patched_metadata:
+        if original_metadata != patched_metadata:
             # If we use update api, existing object metadata are removed, so should use patch api.
             # See the official document descriptions.
             # [Link] https://cloud.google.com/storage/docs/viewing-editing-metadata?hl=ja#rest-set-object-metadata
@@ -65,7 +74,7 @@ class GCSObjectMetadataClient(object):
     @staticmethod
     def _get_patched_obj_metadata(
         metadata: Any,
-        params: Optional[List[Tuple[str, Any, luigi.Parameter]]] = None,
+        params: Optional[list[tuple[str, Any, luigi.Parameter]]] = None,
     ) -> Union[Dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
@@ -95,8 +104,8 @@ class GCSObjectMetadataClient(object):
 
     @staticmethod
     def _merge_with_user_provided_labels(
-        params: List[Tuple[str, Any, luigi.Parameter]],
-    ) -> List[Tuple[Any, Any]]:
+        params: list[tuple[str, Any, luigi.Parameter]],
+    ) -> list[tuple[Any, Any]]:
         # luigi.Parameter.get_param_names() returns significant parameters only.
         # [Link]: https://luigi.readthedocs.io/en/latest/_modules/luigi/task.html#Task.get_param_names
         parameter_labels, parameter_key_set = [], set()

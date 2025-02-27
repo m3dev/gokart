@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import luigi
 
@@ -26,7 +26,7 @@ class InMemoryTarget(TargetOnKart):
     def _load(self) -> Any:
         return _repository.get_value(self._data_key)
 
-    def _dump(self, obj: Any, params: Optional[List[Tuple[str, Any, luigi.Parameter]]] = None) -> None:
+    def _dump(self, obj: Any, params: Optional[list[tuple[str, Any, luigi.Parameter]]] = None) -> None:
         return _repository.set_value(self._data_key, obj)
 
     def _remove(self) -> None:
