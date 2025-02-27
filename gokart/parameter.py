@@ -1,7 +1,9 @@
 import bz2
+import datetime
 import json
 from logging import getLogger
 from typing import Generic, Protocol, TypeVar
+from warnings import warn
 
 import luigi
 from luigi import task_register
@@ -119,3 +121,35 @@ class SerializableParameter(luigi.Parameter, Generic[S]):
 
     def serialize(self, x: S) -> str:
         return x.gokart_serialize()
+
+
+class ZonedDateSecondParameter(luigi.Parameter):
+    """
+    ZonedDateSecondParameter supports a datetime.datetime object with timezone information.
+
+    A ZonedDateSecondParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date, time specified to the second and timezone. For example, ``2013-07-10T19:07:38+09:00`` specifies July 10, 2013 at
+    19:07:38 +09:00. The separator `:` can be omitted for Python3.11 and later.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def parse(self, s):
+        # special character 'Z' is replaced with '+00:00'
+        # because Python 3.11 and later support fromisoformat with Z at the end of the string.
+        if s.endswith('Z'):
+            s = s[:-1] + '+00:00'
+        dt = datetime.datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            warn('The input does not have timezone information. Please consider using luigi.DateSecondParameter instead.', stacklevel=1)
+        return dt
+
+    def serialize(self, dt):
+        return dt.isoformat()
+
+    def normalize(self, dt):
+        # override _DatetimeParameterBase.normalize to avoid do nothing to normalize except removing microsecond.
+        # microsecond is removed because the number of digits of microsecond is not fixed.
+        # See also luigi's implementation  https://github.com/spotify/luigi/blob/v3.6.0/luigi/parameter.py#L612
+        return dt.replace(microsecond=0)
