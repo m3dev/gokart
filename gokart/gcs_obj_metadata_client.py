@@ -83,8 +83,8 @@ class GCSObjectMetadataClient(object):
             logger.warning(f'metadata is not a dict: {metadata}, something wrong was happened when getting response when get bucket and object information.')
             return metadata
 
-        # Maximum size of metadata for each object is 8KiB.
-        # [Link]: https://cloud.google.com/storage/quotas?hl=ja#objects
+        # Maximum size of metadata for each object is 8 KiB.
+        # [Link]: https://cloud.google.com/storage/quotas#objects
         max_gcs_metadata_size, total_metadata_size, labels = 8 * 1024, 0, []
         if params:
             for label_name, label_value, _ in params:
@@ -97,7 +97,4 @@ class GCSObjectMetadataClient(object):
                 total_metadata_size += size
                 labels.append((label_name, str(label_value)))
 
-        patched_metadata = dict(metadata)
-        for label_key, label_value in labels:
-            patched_metadata[label_key] = label_value
-        return patched_metadata
+        return dict(metadata) | dict(labels)
