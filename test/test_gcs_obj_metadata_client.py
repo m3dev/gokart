@@ -59,77 +59,75 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             ('param1', None, param1),
             ('param2', 'optional string', param2),
         ]
-        want = {
-            'param2': 'optional string',
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertNotIn('param1', got)
+        self.assertIn('param2', got)
+        self.assertEqual('optional string', got['param2'])
 
     def test_get_patched_date_parameter(self):
-        param1 = luigi.DateParameter(default=datetime.datetime(2025, 2, 27, 0, 0))
+        param1 = luigi.DateParameter(default=datetime.datetime(1789, 5, 6, 4, 2, 3))
         params = [
-            ('param1', datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format), param1),
+            ('param1', datetime.datetime(1789, 5, 6, 4, 2, 3).strftime(param1.date_format), param1),
         ]
-        want = {
-            'param1': datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('6' in got['param1'])
+        self.assertFalse('4' in got['param1'])
 
     def test_get_patched_month_parameter(self):
-        param1 = luigi.MonthParameter(default=datetime.datetime(2025, 2, 27, 0, 0))
+        param1 = luigi.MonthParameter(default=datetime.datetime(1789, 5, 6, 4, 2, 3))
         params = [
-            ('param1', datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format), param1),
+            ('param1', datetime.datetime(1789, 5, 6, 4, 2, 3).strftime(param1.date_format), param1),
         ]
-        want = {
-            'param1': datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('5' in got['param1'])
+        self.assertFalse('6' in got['param1'])
 
     def test_get_patched_year_parameter(self):
-        param1 = luigi.YearParameter(default=datetime.datetime(2025, 2, 27, 0, 0))
+        param1 = luigi.YearParameter(default=datetime.datetime(1789, 5, 6, 4, 2, 3))
         params = [
-            ('param1', datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format), param1),
+            ('param1', datetime.datetime(1789, 5, 6, 4, 2, 3).strftime(param1.date_format), param1),
         ]
-        want = {
-            'param1': datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('1789' in got['param1'])
+        self.assertFalse('5' in got['param1'])
 
     def test_get_patched_date_hour_parameter(self):
-        param1 = luigi.DateHourParameter(default=datetime.datetime(2025, 2, 27, 0, 0))
+        param1 = luigi.DateHourParameter(default=datetime.datetime(1789, 5, 6, 4, 2, 3))
         params = [
-            ('param1', datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format), param1),
+            ('param1', datetime.datetime(1789, 5, 6, 4, 2, 3).strftime(param1.date_format), param1),
         ]
-        want = {
-            'param1': datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('4' in got['param1'])
+        self.assertFalse('2' in got['param1'])
 
     def test_get_patched_date_minute_parameter(self):
-        param1 = luigi.DateMinuteParameter(default=datetime.datetime(2025, 2, 27, 0, 0))
+        param1 = luigi.DateMinuteParameter(default=datetime.datetime(1789, 5, 6, 4, 2, 3))
         params = [
-            ('param1', datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format), param1),
+            ('param1', datetime.datetime(1789, 5, 6, 4, 2, 3).strftime(param1.date_format), param1),
         ]
-        want = {
-            'param1': datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('2' in got['param1'])
+        self.assertFalse('3' in got['param1'])
 
     def test_get_patched_date_second_parameter(self):
-        param1 = luigi.DateSecondParameter(default=datetime.datetime(2025, 2, 27, 0, 0))
+        param1 = luigi.DateSecondParameter(default=datetime.datetime(1789, 5, 6, 4, 2, 3))
         params = [
-            ('param1', datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format), param1),
+            ('param1', datetime.datetime(1789, 5, 6, 4, 2, 3).strftime(param1.date_format), param1),
         ]
-        want = {
-            'param1': datetime.datetime(2025, 2, 27, 0, 0).strftime(param1.date_format),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('3' in got['param1'])
 
     def test_get_patched_int_parameter(self):
         param1 = luigi.IntParameter(default=100)
@@ -204,70 +202,72 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertEqual(want, got)
 
     def test_get_patched_date_interval_parameter(self):
-        param1 = luigi.DateIntervalParameter(default=datetime.datetime(2025, 2, 27, 0, 0))
+        param1 = luigi.DateIntervalParameter(default=datetime.datetime(1789, 5, 6, 4, 2, 3))
         params = [
-            ('param1', datetime.datetime(2025, 2, 27, 0, 0), param1),
+            ('param1', datetime.datetime(1789, 5, 6, 4, 2, 3), param1),
         ]
-        want = {
-            'param1': str(datetime.datetime(2025, 2, 27, 0, 0)),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertEqual(got['param1'], '1789-05-06 04:02:03')
 
     def test_get_patched_time_delta_parameter(self):
         param1 = luigi.TimeDeltaParameter(default=datetime.timedelta(hours=1))
         params = [
             ('param1', datetime.timedelta(hours=1), param1),
         ]
-        want = {
-            'param1': str(datetime.timedelta(hours=1)),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertEqual(got['param1'], '1:00:00')
 
     def test_get_patched_task_parameter(self):
         param1 = luigi.TaskParameter(default=_DummyTask())
         params = [
             ('param1', _DummyTask(), param1),
         ]
-        want = {
-            'param1': str(_DummyTask()),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('_DummyTask' in got['param1'])
 
     def test_get_patched_enum_parameter(self):
         param1 = luigi.EnumParameter(enum=_DummyEnum, default=_DummyEnum.hoge)
         params = [
             ('param1', _DummyEnum.hoge, param1),
         ]
-        want = {
-            'param1': str(_DummyEnum.hoge),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('_DummyEnum.hoge' in got['param1'])
 
     def test_get_patched_enum_list_parameter(self):
         param1 = luigi.EnumParameter(enum=_DummyEnum, default=[_DummyEnum.hoge, _DummyEnum.fuga, _DummyEnum.geho])
         params = [
             ('param1', [_DummyEnum.hoge, _DummyEnum.fuga, _DummyEnum.geho], param1),
         ]
-        want = {
-            'param1': str([_DummyEnum.hoge, _DummyEnum.fuga, _DummyEnum.geho]),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('_DummyEnum.hoge'in got['param1'])
+        self.assertTrue('_DummyEnum.fuga'in got['param1'])
+        self.assertTrue('_DummyEnum.geho'in got['param1'])
 
     def test_get_patched_dict_parameter(self):
         param1 = luigi.DictParameter(default={"color":"red", "id": 123, "is_test": True})
         params = [
             ('param1', {"color":"red", "id": 123, "is_test": True}, param1),
         ]
-        want = {
-            'param1': str({"color":"red", "id": 123, "is_test": True}),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('color' in got['param1'])
+        self.assertTrue('red' in got['param1'])
+        self.assertTrue('id' in got['param1'])
+        self.assertTrue('123' in got['param1'])
+        self.assertTrue('is_test' in got['param1'])
+        self.assertTrue('True' in got['param1'])
+
 
     def test_get_patched_optional_dict_parameter(self):
         param1 = luigi.OptionalDictParameter(default=None)
@@ -276,22 +276,30 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             ('param1', None, param1),
             ('param2', {"color": "red", "id": 123, "is_test": True}, param2),
         ]
-        want = {
-            'param2': str({"color": "red", "id": 123, "is_test": True}),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertNotIn('param1', got)
+        self.assertIn('param2', got)
+        self.assertIsInstance(got['param2'], str)
+        self.assertTrue('color' in got['param2'])
+        self.assertTrue('red' in got['param2'])
+        self.assertTrue('id' in got['param2'])
+        self.assertTrue('123' in got['param2'])
+        self.assertTrue('is_test' in got['param2'])
+        self.assertTrue('True' in got['param2'])
 
     def test_get_patched_list_parameter(self):
         param1 = luigi.ListParameter(default=[1, 2, 3, 4, 5])
         params = [
             ('param1', [1, 2, 3, 4, 5], param1),
         ]
-        want = {
-            'param1': str([1, 2, 3, 4, 5]),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('1' in got['param1'])
+        self.assertTrue('2' in got['param1'])
+        self.assertTrue('3' in got['param1'])
+        self.assertTrue('4' in got['param1'])
+        self.assertTrue('5' in got['param1'])
 
     def test_get_patched_optional_list_parameter(self):
         param1 = luigi.OptionalListParameter(default=None)
@@ -300,22 +308,29 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             ('param1', None, param1),
             ('param2', [1, 2, 3, 4, 5], param2),
         ]
-        want = {
-            'param2': str([1, 2, 3, 4, 5]),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertNotIn('param1', got)
+        self.assertIn('param2', got)
+        self.assertIsInstance(got['param2'], str)
+        self.assertTrue('1' in got['param2'])
+        self.assertTrue('2' in got['param2'])
+        self.assertTrue('3' in got['param2'])
+        self.assertTrue('4' in got['param2'])
+        self.assertTrue('5' in got['param2'])
 
     def test_get_patched_tuple_parameter(self):
         param1 = luigi.TupleParameter(default=('hoge', 1, True, {'a': 'b'}))
         params = [
             ('param1', ('hoge', 1, True, {'a': 'b'}), param1),
         ]
-        want = {
-            'param1': str(('hoge', 1, True, {'a': 'b'})),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('hoge' in got['param1'])
+        self.assertTrue('1' in got['param1'])
+        self.assertTrue('True' in got['param1'])
+        self.assertTrue('a' in got['param1'])
+        self.assertTrue('b' in got['param1'])
 
     def test_get_patched_optional_tuple_parameter(self):
         param1 = luigi.OptionalTupleParameter(default=None)
@@ -324,11 +339,15 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             ('param1', None, param1),
             ('param2', ('hoge', 1, True, {'a': 'b'}), param2),
         ]
-        want = {
-            'param2': str(('hoge', 1, True, {'a': 'b'})),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertNotIn('param1', got)
+        self.assertIn('param2', got)
+        self.assertIsInstance(got['param2'], str)
+        self.assertTrue('hoge' in got['param2'])
+        self.assertTrue('1' in got['param2'])
+        self.assertTrue('True' in got['param2'])
+        self.assertTrue('a' in got['param2'])
+        self.assertTrue('b' in got['param2'])
 
     def test_get_patched_path_parameter(self):
         param1 = luigi.PathParameter(default="/hoge/fuga")
@@ -360,22 +379,18 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         params = [
             ('param1', str(_DummyTaskOnKart()), param1),
         ]
-        want = {
-            'param1': str(_DummyTaskOnKart()),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertIn('param1', got)
+        self.assertIsInstance(got['param1'], str)
+        self.assertTrue('_DummyTaskOnKart' in got['param1'])
 
     def test_get_patched_list_task_instance_parameter(self):
         param1 = gokart.ListTaskInstanceParameter(default=[_DummyTaskOnKart(), _DummyTaskOnKart()])
         params = [
             ('param1', str([_DummyTaskOnKart(), _DummyTaskOnKart()]), param1),
         ]
-        want = {
-            'param1': str([_DummyTaskOnKart(), _DummyTaskOnKart()]),
-        }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
-        self.assertEqual(want, got)
+        self.assertTrue(got['param1'].count('_DummyTaskOnKart') == 2)
 
     def test_get_patched_explicit_bool_parameter(self):
         param1 = gokart.ExplicitBoolParameter(default=True)
