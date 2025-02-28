@@ -4,6 +4,7 @@ import unittest
 
 import luigi
 
+import gokart
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 
 
@@ -13,6 +14,10 @@ class _DummyTask(luigi.Task):
 
     def complete(self):
         return True
+
+class _DummyTaskOnKart(gokart.TaskOnKart):
+    def run(self):
+        self.dump('Dummy TaskOnKart')
 
 class _DummyEnum(enum.Enum):
     hoge = 1
@@ -349,6 +354,40 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertEqual(want, got)
 
+    # gokart specific parameter test
+    def test_get_patched_task_instance_parameter(self):
+        param1 = gokart.TaskInstanceParameter(default=_DummyTaskOnKart())
+        params = [
+            ('param1', str(_DummyTaskOnKart()), param1),
+        ]
+        want = {
+            'param1': str(_DummyTaskOnKart()),
+        }
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
+        self.assertEqual(want, got)
+
+    def test_get_patched_list_task_instance_parameter(self):
+        param1 = gokart.ListTaskInstanceParameter(default=[_DummyTaskOnKart(), _DummyTaskOnKart()])
+        params = [
+            ('param1', str([_DummyTaskOnKart(), _DummyTaskOnKart()]), param1),
+        ]
+        want = {
+            'param1': str([_DummyTaskOnKart(), _DummyTaskOnKart()]),
+        }
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
+        self.assertEqual(want, got)
+
+    def test_get_patched_explicit_bool_parameter(self):
+        param1 = gokart.ExplicitBoolParameter(default=True)
+        params = [
+            ('param1', str(True), param1),
+        ]
+        want = {
+            'param1': str(True),
+        }
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
+        self.assertEqual(want, got)
+
     def test_get_patched_obj_metadata_with_exceeded_size_metadata(self):
         param1 = luigi.Parameter(default='a'*5000)
         param2 = luigi.Parameter(default='b'*5000)
@@ -363,6 +402,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertEqual(got, want)
+
 
 if __name__ == '__main__':
     unittest.main()
