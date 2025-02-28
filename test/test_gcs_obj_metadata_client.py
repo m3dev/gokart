@@ -1,11 +1,13 @@
 import datetime
 import enum
 import unittest
+from unittest.mock import patch, MagicMock
 
 import luigi
 
 import gokart
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
+from gokart.target import TargetOnKart
 
 
 class _DummyTask(luigi.Task):
@@ -418,6 +420,22 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertEqual(got, want)
 
+class TestGokartTask(unittest.TestCase):
+
+    @patch('gokart.target.TargetOnKart.dump')
+    @patch.object(_DummyTaskOnKartWithParameter, '_get_output_target')
+    def test_mock_target_on_kart(self, mock_get_output_target, mock_dump):
+        mock_target = MagicMock(spec=gokart.target.TargetOnKart)
+        mock_get_output_target.return_value = mock_target
+
+        task = _DummyTaskOnKart()
+        task.dump({'key':'value'}, mock_target)
+
+        mock_target.dump.assert_called_once_with(
+            {'key':'value'},
+            lock_at_dump=task._lock_at_dump,
+            params=[]
+        )
 
 if __name__ == '__main__':
     unittest.main()
