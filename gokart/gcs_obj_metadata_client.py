@@ -41,8 +41,8 @@ class GCSObjectMetadataClient(object):
             logger.error(f'failed to get object from GCS bucket {bucket} and object {obj}.')
             return
 
-        response: Dict[str, Any] = dict(_response)
-        original_metadata: Dict[Any, Any] = {}
+        response: dict[str, Any] = dict(_response)
+        original_metadata: dict[Any, Any] = {}
         if 'metadata' in response.keys():
             _metadata = response.get('metadata')
             if _metadata is not None:
