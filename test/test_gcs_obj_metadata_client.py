@@ -1,7 +1,14 @@
+# mypy: ignore-errors
+# The reason why this file ignore mypy errors is luigi.Parameter specification.
+# There are no ways to get luigi.Parameter instance.
+# In _get_patched_obj_metadata(), params arguments type is list[tuple[str, Any, luigi.Parameter]],
+# so, even if in this file, we need to cast params to list[tuple[str, Any, luigi.Parameter]].
+# But by luigi's specification, we get string value, which is parameter value instead of luigi.Parameter instance.
+
 import datetime
 import enum
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import luigi
 
@@ -11,15 +18,21 @@ from gokart.target import TargetOnKart
 
 
 class _DummyTask(luigi.Task):
+    task_namespace = __name__
+
     def run(self):
-        print(f"{self.__class__.__name__} has been executed")
+        print(f'{self.__class__.__name__} has been executed')
 
     def complete(self):
         return True
 
+
 class _DummyTaskOnKart(gokart.TaskOnKart):
+    task_namespace = __name__
+
     def run(self):
         self.dump('Dummy TaskOnKart')
+
 
 class _DummyEnum(enum.Enum):
     hoge = 1
@@ -41,14 +54,14 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
 
     def test_get_patched_optional_parameter(self):
         param1 = luigi.OptionalParameter(default=None)
-        param2 = luigi.OptionalParameter(default="optional")
+        param2 = luigi.OptionalParameter(default='optional')
 
         params = [
             ('param1', None, param1),
             ('param2', 'optional', param2),
         ]
         want = {
-            'param2' : 'optional',
+            'param2': 'optional',
         }
 
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
@@ -145,10 +158,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
     def test_get_patched_optional_int_parameter(self):
         param1 = luigi.OptionalIntParameter(default=None)
         param2 = luigi.OptionalIntParameter(default=10)
-        params = [
-            ('param1', None, param1),
-            ('param2', 10, param2)
-        ]
+        params = [('param1', None, param1), ('param2', 10, param2)]
         want = {
             'param2': '10',
         }
@@ -251,14 +261,14 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertIn('param1', got)
         self.assertIsInstance(got['param1'], str)
-        self.assertTrue('_DummyEnum.hoge'in got['param1'])
-        self.assertTrue('_DummyEnum.fuga'in got['param1'])
-        self.assertTrue('_DummyEnum.geho'in got['param1'])
+        self.assertTrue('_DummyEnum.hoge' in got['param1'])
+        self.assertTrue('_DummyEnum.fuga' in got['param1'])
+        self.assertTrue('_DummyEnum.geho' in got['param1'])
 
     def test_get_patched_dict_parameter(self):
-        param1 = luigi.DictParameter(default={"color":"red", "id": 123, "is_test": True})
+        param1 = luigi.DictParameter(default={'color': 'red', 'id': 123, 'is_test': True})
         params = [
-            ('param1', {"color":"red", "id": 123, "is_test": True}, param1),
+            ('param1', {'color': 'red', 'id': 123, 'is_test': True}, param1),
         ]
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertIn('param1', got)
@@ -270,13 +280,12 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertTrue('is_test' in got['param1'])
         self.assertTrue('True' in got['param1'])
 
-
     def test_get_patched_optional_dict_parameter(self):
         param1 = luigi.OptionalDictParameter(default=None)
-        param2 = luigi.OptionalDictParameter(default={"color": "red", "id": 123, "is_test": True})
+        param2 = luigi.OptionalDictParameter(default={'color': 'red', 'id': 123, 'is_test': True})
         params = [
             ('param1', None, param1),
-            ('param2', {"color": "red", "id": 123, "is_test": True}, param2),
+            ('param2', {'color': 'red', 'id': 123, 'is_test': True}, param2),
         ]
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertNotIn('param1', got)
@@ -352,25 +361,25 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertTrue('b' in got['param2'])
 
     def test_get_patched_path_parameter(self):
-        param1 = luigi.PathParameter(default="/hoge/fuga")
+        param1 = luigi.PathParameter(default='/hoge/fuga')
         params = [
-            ('param1', "/hoge/fuga", param1),
+            ('param1', '/hoge/fuga', param1),
         ]
         want = {
-            'param1': "/hoge/fuga",
+            'param1': '/hoge/fuga',
         }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertEqual(want, got)
 
     def test_get_patched_optional_path_parameter(self):
         param1 = luigi.OptionalPathParameter(default=None)
-        param2 = luigi.OptionalPathParameter(default="/hoge/fuga")
+        param2 = luigi.OptionalPathParameter(default='/hoge/fuga')
         params = [
             ('param1', None, param1),
-            ('param2', "/hoge/fuga", param2),
+            ('param2', '/hoge/fuga', param2),
         ]
         want = {
-            'param2': "/hoge/fuga",
+            'param2': '/hoge/fuga',
         }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertEqual(want, got)
@@ -406,36 +415,33 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertEqual(want, got)
 
     def test_get_patched_obj_metadata_with_exceeded_size_metadata(self):
-        param1 = luigi.Parameter(default='a'*5000)
-        param2 = luigi.Parameter(default='b'*5000)
+        param1 = luigi.Parameter(default='a' * 5000)
+        param2 = luigi.Parameter(default='b' * 5000)
 
         params = [
-            ('param1', 'a'*5000, param1),
+            ('param1', 'a' * 5000, param1),
             ('param2', 'b' * 5000, param2),
         ]
 
         want = {
-            'param1': 'a'*5000,
+            'param1': 'a' * 5000,
         }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
         self.assertEqual(got, want)
 
-class TestGokartTask(unittest.TestCase):
 
+class TestGokartTask(unittest.TestCase):
     @patch('gokart.target.TargetOnKart.dump')
-    @patch.object(_DummyTaskOnKartWithParameter, '_get_output_target')
+    @patch.object(_DummyTaskOnKart, '_get_output_target')
     def test_mock_target_on_kart(self, mock_get_output_target, mock_dump):
-        mock_target = MagicMock(spec=gokart.target.TargetOnKart)
+        mock_target = MagicMock(spec=TargetOnKart)
         mock_get_output_target.return_value = mock_target
 
         task = _DummyTaskOnKart()
-        task.dump({'key':'value'}, mock_target)
+        task.dump({'key': 'value'}, mock_target)
 
-        mock_target.dump.assert_called_once_with(
-            {'key':'value'},
-            lock_at_dump=task._lock_at_dump,
-            params=[]
-        )
+        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, params=[])
+
 
 if __name__ == '__main__':
     unittest.main()
