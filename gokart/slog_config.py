@@ -15,8 +15,8 @@ class SlogConfig(object):
     Otherwise, default setting is applied, structured logging.
     """
 
-    _default_base_format = '%(message)s %(lineno)d %(pathname)s %(asctime)s %(name)s %(levelname)s %(filename)s %(lineno)s %(message)s'
-    _default_date_format = '%Y/%m/%d %H:%M:%S'
+    default_base_format = '%(message)s %(lineno)d %(pathname)s %(asctime)s %(name)s %(levelname)s %(filename)s %(lineno)s %(message)s'
+    default_date_format = '%Y/%m/%d %H:%M:%S'
 
     @staticmethod
     def apply_slog_format(logger):
@@ -28,12 +28,15 @@ class SlogConfig(object):
         if not logger_mode or logger_mode.lower() == 'json':
             if not isinstance(logger, logging.Logger):
                 return logger
+            # If logger configuration was loaded, skip configuration.
+            if logger.hasHandlers():
+                return logger
             current_logger, found_handler = logger, 0
             while current_logger:
                 for handler in current_logger.handlers:
                     found_handler += 1
-                    fmt = handler.formatter._fmt if handler.formatter and handler.formatter._fmt else SlogConfig._default_base_format
-                    date_fmt = handler.formatter.datefmt if handler.formatter and handler.formatter.datefmt else SlogConfig._default_date_format
+                    fmt = handler.formatter._fmt if handler.formatter and handler.formatter._fmt else SlogConfig.default_base_format
+                    date_fmt = handler.formatter.datefmt if handler.formatter and handler.formatter.datefmt else SlogConfig.default_date_format
                     formatter = json.JsonFormatter(
                         fmt=fmt,
                         datefmt=date_fmt,
@@ -52,12 +55,12 @@ class SlogConfig(object):
                 fmt = (
                     last_resort_handler.formatter._fmt
                     if last_resort_handler.formatter and last_resort_handler.formatter._fmt
-                    else SlogConfig._default_base_format
+                    else SlogConfig.default_base_format
                 )
                 date_fmt = (
                     last_resort_handler.formatter.datefmt
                     if last_resort_handler.formatter and last_resort_handler.formatter.datefmt
-                    else SlogConfig._default_date_format
+                    else SlogConfig.default_date_format
                 )
                 formatter = json.JsonFormatter(
                     fmt=fmt,

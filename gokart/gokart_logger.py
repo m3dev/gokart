@@ -11,7 +11,10 @@ class GokartLogger(logging.Logger):
         super().addHandler(handler)
         logger_mode = os.environ.get('GOKART_LOGGER_FORMAT', 'json').lower()
         if logger_mode == 'json':
-            fmt = SlogConfig._default_base_format
-            date_fmt = SlogConfig._default_date_format
-            formatter = json.JsonFormatter(fmt=fmt, datefmt=date_fmt)
+            fmt = handler.formatter._fmt if handler.formatter and handler.formatter._fmt else SlogConfig.default_base_format
+            date_fmt = handler.formatter.datefmt if handler.formatter and handler.formatter.datefmt else SlogConfig.default_date_format
+            formatter = json.JsonFormatter(
+                fmt=fmt,
+                datefmt=date_fmt,
+            )
             handler.setFormatter(formatter)

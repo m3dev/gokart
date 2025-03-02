@@ -83,6 +83,7 @@ class TestTestFrameworkForPandasDataFrame(unittest.TestCase):
             with self.assertRaises(SystemExit) as exit_code:
                 gokart.run(argv)
         log_str = mock_debug.call_args[0][0]
+        print(log_str)
         self.assertEqual(exit_code.exception.code, 1)
         self.assertTrue('DummyModelTask' in log_str)
 
