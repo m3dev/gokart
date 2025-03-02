@@ -7,7 +7,7 @@ from pythonjsonlogger import json
 
 class SlogConfig(object):
     """
-    LoggerConfig is for logging configuration, Utility-class.
+    SlogConfig is for logging configuration, Utility-class.
     This class will read an environment variable named GOKART_LOGGER_FORMAT, then switch logging configuration.
 
     If "$GOKART_LOGGER_FORMAT=json", set logging configuration as structured logging.
@@ -19,13 +19,18 @@ class SlogConfig(object):
     default_date_format = '%Y/%m/%d %H:%M:%S'
 
     @staticmethod
-    def apply_slog_format(logger):
+    def switch_log_format(logger):
         """
         If $GOKART_LOGGER_FORMAT=json, set logging configuration as structured logging.
         On the other hand, set logging configuration as plain text.
         """
         logger_mode = os.environ.get('GOKART_LOGGER_FORMAT')
-        if not logger_mode or logger_mode.lower() == 'json':
+        if logger_mode and logger_mode.lower() not in {'text', 'json'}:
+            raise Exception(f'Unknown logger format: {logger_mode}')
+        # plain text mode, so nothing is applied,
+        elif logger_mode and logger_mode.lower() == 'text':
+            return logger
+        else:
             if not isinstance(logger, logging.Logger):
                 return logger
             # If logger configuration was loaded, skip configuration.
@@ -49,9 +54,7 @@ class SlogConfig(object):
                 current_logger = current_logger.parent
 
             if found_handler == 0:
-                last_resort_handler = logging.lastResort
-                if not last_resort_handler:
-                    last_resort_handler = logging.StreamHandler()
+                last_resort_handler = logging.lastResort if logging.lastResort is not None else logging.StreamHandler()
                 fmt = (
                     last_resort_handler.formatter._fmt
                     if last_resort_handler.formatter and last_resort_handler.formatter._fmt
@@ -68,11 +71,6 @@ class SlogConfig(object):
                 )
                 last_resort_handler.setFormatter(formatter)
             return logger
-        # plain text mode, so nothing is applied.
-        elif logger_mode.lower() == 'text':
-            return logger
-        else:
-            raise Exception(f'Unknown logger format: {logger_mode}')
 
 
 # This is the decorator method for logging.getLogger.
@@ -80,7 +78,7 @@ def getLogger_decorator(func):
     @functools.wraps(func)
     def wrapper(name):
         logger = func(name)
-        logger = SlogConfig.apply_slog_format(logger)
+        logger = SlogConfig.switch_log_format(logger)
         return logger
 
     return wrapper
