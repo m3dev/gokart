@@ -10,7 +10,7 @@ from gokart import getLogger
 
 class TestSlogConfig(unittest.TestCase):
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'json'})
-    def test_apply_slog_format_json(self):
+    def test_switch_log_format_json(self):
         logger_name = 'test_json_logger'
         test_log_message = 'This should be structured log message.'
 
@@ -28,7 +28,7 @@ class TestSlogConfig(unittest.TestCase):
         self.assertEqual(json_log_contents['name'], logger_name)
 
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'text'})
-    def test_apply_slog_format_text(self):
+    def test_switch_log_format_text(self):
         logger_name = 'test_text_logger'
         test_log_message = 'This should be structured log message.'
 
@@ -44,7 +44,7 @@ class TestSlogConfig(unittest.TestCase):
         self.assertEqual(log_contents, test_log_message)
 
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'invalid_value'})
-    def test_apply_slog_format_invalid_env(self):
+    def test_switch_log_format_invalid_env(self):
         with self.assertRaises(Exception) as context:
             _ = getLogger(__name__)
         self.assertEqual(str(context.exception), 'Unknown logger format: invalid_value')
