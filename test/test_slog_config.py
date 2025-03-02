@@ -9,10 +9,6 @@ from gokart import getLogger
 
 
 class TestSlogConfig(unittest.TestCase):
-    def setUp(self):
-        logging.root.handlers = []
-        logging.root.manager.loggerDict.clear()
-
     @patch.dict(os.environ, {'GOKART_LOGGER_FORMAT': 'json'})
     def test_apply_slog_format_json(self):
         logger_name = 'test_json_logger'
