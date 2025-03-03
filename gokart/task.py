@@ -505,7 +505,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
     @luigi.Task.event_handler(luigi.Event.START)
     def _dump_task_params(self):
         if self.should_dump_supplementary_log_files:
-            self.dump(obj=self.to_str_params(only_significant=True), target=self._get_task_params_target())
+            self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
 
     def _get_processing_time_target(self):
         return self.make_target(f'log/processing_time/{type(self).__name__}.pkl')
