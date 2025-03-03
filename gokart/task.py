@@ -355,12 +355,17 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
     @overload
     def dump(self, obj: Any, target: Union[str, TargetOnKart]) -> None: ...
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None) -> None:
+    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, user_provided_labels: Optional[dict[Any, Any]] = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
-        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump, task_params=super().to_str_params(only_significant=True))
+        self._get_output_target(target).dump(
+            obj,
+            lock_at_dump=self._lock_at_dump,
+            task_params=super().to_str_params(only_significant=True),
+            user_provided_labels=user_provided_labels,
+        )
 
     @staticmethod
     def get_code(target_class) -> Set[str]:
