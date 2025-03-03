@@ -38,7 +38,7 @@ class GCSObjectMetadataClient:
         return netloc, path_without_initial_slash
 
     @staticmethod
-    def add_task_state_labels(path: str, task_params: Optional[dict[Any, str]] = None, user_provided_labels: Optional[dict[Any, Any]] = None) -> None:
+    def add_task_state_labels(path: str, task_params: Optional[dict[str, str]] = None, user_provided_labels: Optional[dict[str, Any]] = None) -> None:
         if GCSObjectMetadataClient._is_log_related_path(path):
             return
         # In gokart/object_storage.get_time_stamp, could find same call.
@@ -56,7 +56,11 @@ class GCSObjectMetadataClient:
             if _metadata is not None:
                 original_metadata = dict(_metadata)
 
-        patched_metadata = GCSObjectMetadataClient._get_patched_obj_metadata(copy.deepcopy(original_metadata), task_params, user_provided_labels)
+        patched_metadata = GCSObjectMetadataClient._get_patched_obj_metadata(
+            copy.deepcopy(original_metadata),
+            task_params,
+            user_provided_labels,
+        )
 
         if original_metadata != patched_metadata:
             # If we use update api, existing object metadata are removed, so should use patch api.
@@ -78,8 +82,8 @@ class GCSObjectMetadataClient:
                 logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')
 
     @staticmethod
-    def _normalize_labels(task_params: Optional[dict[Any, str]], user_provided_labels: Optional[dict[Any, Any]]) -> tuple[dict[Any, str], dict[Any, str]]:
-        def _normalize_labels_helper(_params: Optional[dict[Any, Any]]) -> dict[Any, str]:
+    def _normalize_labels(task_params: Optional[dict[str, str]], user_provided_labels: Optional[dict[str, Any]]) -> tuple[dict[str, str], dict[str, str]]:
+        def _normalize_labels_helper(_params: Optional[dict[str, Any]]) -> dict[str, str]:
             return {str(key): str(value) for key, value in _params.items()} if _params else {}
 
         return (
@@ -90,8 +94,8 @@ class GCSObjectMetadataClient:
     @staticmethod
     def _get_patched_obj_metadata(
         metadata: Any,
-        task_params: Optional[dict[Any, str]] = None,
-        user_provided_labels: Optional[dict[Any, Any]] = None,
+        task_params: Optional[dict[str, str]] = None,
+        user_provided_labels: Optional[dict[str, Any]] = None,
     ) -> Union[dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
@@ -121,7 +125,8 @@ class GCSObjectMetadataClient:
         return dict(metadata) | dict(labels)
 
     @staticmethod
-    def _add_labels_to_metadata(labels_dict, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys):
+    def _add_labels_to_metadata(labels_dict: dict[str, str], total_metadata_size: int, max_gcs_metadata_size: int,
+                                labels: list[tuple[str, str]], has_seen_keys: set[str]) -> tuple[int, list[tuple[str, str]]]:
         for label_name, label_value in labels_dict.items():
             if len(label_value) == 0:
                 logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
