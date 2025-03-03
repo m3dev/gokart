@@ -24,7 +24,7 @@ class InMemoryTarget(TargetOnKart):
     def _load(self) -> Any:
         return _repository.get_value(self._data_key)
 
-    def _dump(self, obj: Any, task_params: Optional[dict[Any, str]] = None, user_provided_labels: Optional[dict[Any, Any]] = None) -> None:
+    def _dump(self, obj: Any, task_params: Optional[dict[str, str]] = None, user_provided_labels: Optional[dict[Any, Any]] = None) -> None:
         return _repository.set_value(self._data_key, obj)
 
     def _remove(self) -> None:

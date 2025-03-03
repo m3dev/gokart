@@ -32,85 +32,100 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             'try_num': 3,
         }
 
-    def test_merge_task_params_and_user_provided_labels_both_are_empty(self):
-        got = GCSObjectMetadataClient._merge_task_params_and_user_provided_labels(
+        self.task_params_with_conflicts = {
+            'empty': 'False',
+            'created_by': 'fuga hoge',
+            'param1': 'a' * 10,
+        }
+
+    def test_normalize_labels_both_are_empty(self):
+        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(
             task_params=None,
             user_provided_labels=None,
         )
-        self.assertIsInstance(got, dict)
-        self.assertEqual(got, {})
+        self.assertIsInstance(got_norm_task_params, dict)
+        self.assertIsInstance(got_norm_user_provided, dict)
+        self.assertEqual(got_norm_task_params, {})
+        self.assertEqual(got_norm_user_provided, {})
 
-    def test_merge_task_params_and_user_provided_labels_only_task_params(self):
-        got = GCSObjectMetadataClient._merge_task_params_and_user_provided_labels(task_params=self.task_params, user_provided_labels=None)
+    def test_normalize_labels_only_task_params(self):
+        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(task_params=self.task_params, user_provided_labels=None)
 
-        self.assertIsInstance(got, dict)
-        self.assertIn('tp:param1', got)
-        self.assertIn('tp:param2', got)
-        self.assertIn('tp:param3', got)
-        self.assertIn('tp:param4', got)
-        self.assertIn('tp:param5', got)
-        self.assertIn('tp:param6', got)
+        self.assertIsInstance(got_norm_task_params, dict)
+        self.assertIsInstance(got_norm_user_provided, dict)
+        self.assertIn('param1', got_norm_task_params)
+        self.assertIn('param2', got_norm_task_params)
+        self.assertIn('param3', got_norm_task_params)
+        self.assertIn('param4', got_norm_task_params)
+        self.assertIn('param5', got_norm_task_params)
+        self.assertIn('param6', got_norm_task_params)
+        self.assertEqual(got_norm_user_provided, {})
 
-    def test_merge_task_params_and_user_provided_labels_only_user_provided_labels(self):
-        got = GCSObjectMetadataClient._merge_task_params_and_user_provided_labels(
+    def test_normalize_labels_only_user_provided_labels(self):
+        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(
             task_params=None,
             user_provided_labels=self.user_provided_labels,
         )
-        self.assertIsInstance(got, dict)
-        self.assertIn('up:created_at', got)
-        self.assertIn('up:created_by', got)
-        self.assertIn('up:empty', got)
-        self.assertIn('up:try_num', got)
+        self.assertIsInstance(got_norm_task_params, dict)
+        self.assertIsInstance(got_norm_user_provided, dict)
+        self.assertEqual(got_norm_task_params, {})
+        self.assertIn('created_at', got_norm_user_provided)
+        self.assertIn('created_by', got_norm_user_provided)
+        self.assertIn('empty', got_norm_user_provided)
+        self.assertIn('try_num', got_norm_user_provided)
 
-    def test_merge_task_params_and_user_provided_labels_both_has_value(self):
-        got = GCSObjectMetadataClient._merge_task_params_and_user_provided_labels(task_params=self.task_params, user_provided_labels=self.user_provided_labels)
+    def test_normalize_labels_both_has_value(self):
+        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(
+            task_params=self.task_params, user_provided_labels=self.user_provided_labels
+        )
 
-        self.assertIsInstance(got, dict)
-        self.assertIn('tp:param1', got)
-        self.assertIn('tp:param2', got)
-        self.assertIn('tp:param3', got)
-        self.assertIn('tp:param4', got)
-        self.assertIn('tp:param5', got)
-        self.assertIn('tp:param6', got)
-        self.assertIn('up:created_at', got)
-        self.assertIn('up:created_by', got)
-        self.assertIn('up:empty', got)
-        self.assertIn('up:try_num', got)
+        self.assertIsInstance(got_norm_task_params, dict)
+        self.assertIsInstance(got_norm_user_provided, dict)
+        self.assertIn('param1', got_norm_task_params)
+        self.assertIn('param2', got_norm_task_params)
+        self.assertIn('param3', got_norm_task_params)
+        self.assertIn('param4', got_norm_task_params)
+        self.assertIn('param5', got_norm_task_params)
+        self.assertIn('param6', got_norm_task_params)
+        self.assertIn('created_at', got_norm_user_provided)
+        self.assertIn('created_by', got_norm_user_provided)
+        self.assertIn('empty', got_norm_user_provided)
+        self.assertIn('try_num', got_norm_user_provided)
 
     def test_get_patched_obj_metadata_only_task_params(self):
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params, user_provided_labels=None)
 
         self.assertIsInstance(got, dict)
-        self.assertIn('tp:param1', got)
-        self.assertIn('tp:param2', got)
-        self.assertIn('tp:param3', got)
-        self.assertIn('tp:param4', got)
-        self.assertIn('tp:param5', got)
-        self.assertNotIn('tp:param6', got)
+        self.assertIn('param1', got)
+        self.assertIn('param2', got)
+        self.assertIn('param3', got)
+        self.assertIn('param4', got)
+        self.assertIn('param5', got)
+        self.assertNotIn('param6', got)
 
     def test_get_patched_obj_metadata_only_user_provided_labels(self):
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=None, user_provided_labels=self.user_provided_labels)
 
         self.assertIsInstance(got, dict)
-        self.assertIn('up:created_at', got)
-        self.assertIn('up:created_by', got)
-        self.assertIn('up:empty', got)
-        self.assertIn('up:try_num', got)
+        self.assertIn('created_at', got)
+        self.assertIn('created_by', got)
+        self.assertIn('empty', got)
+        self.assertIn('try_num', got)
 
     def test_get_patched_obj_metadata_with_both_task_params_and_user_provided_labels(self):
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params, user_provided_labels=self.user_provided_labels)
 
         self.assertIsInstance(got, dict)
-        self.assertIn('tp:param1', got)
-        self.assertIn('tp:param2', got)
-        self.assertIn('tp:param3', got)
-        self.assertIn('tp:param4', got)
-        self.assertIn('tp:param5', got)
-        self.assertNotIn('tp:param6', got)
-        self.assertIn('up:created_at', got)
-        self.assertIn('up:created_by', got)
-        self.assertIn('up:empty', got)
-        self.assertIn('up:try_num', got)
+        self.assertIn('param1', got)
+        self.assertIn('param2', got)
+        self.assertIn('param3', got)
+        self.assertIn('param4', got)
+        self.assertIn('param5', got)
+        self.assertNotIn('param6', got)
+        self.assertIn('created_at', got)
+        self.assertIn('created_by', got)
+        self.assertIn('empty', got)
+        self.assertIn('try_num', got)
 
     def test_get_patched_obj_metadata_with_exceeded_size_metadata(self):
         size_exceeded_task_params = {
@@ -118,10 +133,21 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             'param2': 'b' * 5000,
         }
         want = {
-            'tp:param1': 'a' * 5000,
+            'param1': 'a' * 5000,
         }
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=size_exceeded_task_params)
         self.assertEqual(got, want)
+
+    def test_get_patched_obj_metadata_with_conflicts(self):
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params_with_conflicts, user_provided_labels=self.user_provided_labels)
+        self.assertIsInstance(got, dict)
+        self.assertIn('created_at', got)
+        self.assertIn('created_by', got)
+        self.assertIn('empty', got)
+        self.assertIn('try_num', got)
+        self.assertEqual(got['empty'], 'True')
+        self.assertEqual(got['created_by'], 'hoge fuga')
+        self.assertEqual(got['param1'], 'a' * 10)
 
 
 class TestGokartTask(unittest.TestCase):

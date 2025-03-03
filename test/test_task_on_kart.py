@@ -613,7 +613,7 @@ class TaskTest(unittest.TestCase):
 
 
 class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
-    def dump(self, _obj: Any, _target: Any = None):
+    def dump(self, _obj: Any, _target: Any = None, _user_provided_labels: Any = None):
         # overrive dump() to do nothing.
         pass
 
@@ -625,7 +625,7 @@ class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
 
 
 class _DummyTaskWithCompleted(gokart.TaskOnKart):
-    def dump(self, obj: Any, _target: Any = None):
+    def dump(self, obj: Any, _target: Any = None, user_provided_labels: Any = None):
         # overrive dump() to do nothing.
         pass
 
