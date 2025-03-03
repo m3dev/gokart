@@ -25,7 +25,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             'param5': str(datetime.datetime(year=2025, month=1, day=2, hour=3, minute=4, second=5)),
             'param6': '',
         }
-        self.user_provided_labels: dict[Any, Any] = {
+        self.custom_labels: dict[Any, Any] = {
             'created_at': datetime.datetime(year=2025, month=1, day=2, hour=3, minute=4, second=5),
             'created_by': 'hoge fuga',
             'empty': True,
@@ -41,7 +41,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
     def test_normalize_labels_both_are_empty(self):
         got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(
             task_params=None,
-            user_provided_labels=None,
+            custom_labels=None,
         )
         self.assertIsInstance(got_norm_task_params, dict)
         self.assertIsInstance(got_norm_user_provided, dict)
@@ -49,7 +49,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertEqual(got_norm_user_provided, {})
 
     def test_normalize_labels_only_task_params(self):
-        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(task_params=self.task_params, user_provided_labels=None)
+        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(task_params=self.task_params, custom_labels=None)
 
         self.assertIsInstance(got_norm_task_params, dict)
         self.assertIsInstance(got_norm_user_provided, dict)
@@ -61,10 +61,10 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertIn('param6', got_norm_task_params)
         self.assertEqual(got_norm_user_provided, {})
 
-    def test_normalize_labels_only_user_provided_labels(self):
+    def test_normalize_labels_only_custom_labels(self):
         got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(
             task_params=None,
-            user_provided_labels=self.user_provided_labels,
+            custom_labels=self.custom_labels,
         )
         self.assertIsInstance(got_norm_task_params, dict)
         self.assertIsInstance(got_norm_user_provided, dict)
@@ -75,9 +75,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertIn('try_num', got_norm_user_provided)
 
     def test_normalize_labels_both_has_value(self):
-        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(
-            task_params=self.task_params, user_provided_labels=self.user_provided_labels
-        )
+        got_norm_task_params, got_norm_user_provided = GCSObjectMetadataClient._normalize_labels(task_params=self.task_params, custom_labels=self.custom_labels)
 
         self.assertIsInstance(got_norm_task_params, dict)
         self.assertIsInstance(got_norm_user_provided, dict)
@@ -93,7 +91,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertIn('try_num', got_norm_user_provided)
 
     def test_get_patched_obj_metadata_only_task_params(self):
-        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params, user_provided_labels=None)
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params, custom_labels=None)
 
         self.assertIsInstance(got, dict)
         self.assertIn('param1', got)
@@ -103,8 +101,8 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertIn('param5', got)
         self.assertNotIn('param6', got)
 
-    def test_get_patched_obj_metadata_only_user_provided_labels(self):
-        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=None, user_provided_labels=self.user_provided_labels)
+    def test_get_patched_obj_metadata_only_custom_labels(self):
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=None, custom_labels=self.custom_labels)
 
         self.assertIsInstance(got, dict)
         self.assertIn('created_at', got)
@@ -112,8 +110,8 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertIn('empty', got)
         self.assertIn('try_num', got)
 
-    def test_get_patched_obj_metadata_with_both_task_params_and_user_provided_labels(self):
-        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params, user_provided_labels=self.user_provided_labels)
+    def test_get_patched_obj_metadata_with_both_task_params_and_custom_labels(self):
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params, custom_labels=self.custom_labels)
 
         self.assertIsInstance(got, dict)
         self.assertIn('param1', got)
@@ -139,7 +137,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertEqual(got, want)
 
     def test_get_patched_obj_metadata_with_conflicts(self):
-        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params_with_conflicts, user_provided_labels=self.user_provided_labels)
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params_with_conflicts, custom_labels=self.custom_labels)
         self.assertIsInstance(got, dict)
         self.assertIn('created_at', got)
         self.assertIn('created_by', got)
@@ -158,7 +156,7 @@ class TestGokartTask(unittest.TestCase):
 
         task = _DummyTaskOnKart()
         task.dump({'key': 'value'}, mock_target)
-        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={}, user_provided_labels=None)
+        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={}, custom_labels=None)
 
 
 if __name__ == '__main__':
