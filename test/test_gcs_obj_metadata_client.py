@@ -17,7 +17,7 @@ class _DummyTaskOnKart(gokart.TaskOnKart):
 
 class TestGCSObjectMetadataClient(unittest.TestCase):
     def test_get_patched_obj_metadata(self):
-        params: dict[Any, str] = {
+        task_params: dict[Any, str] = {
             'param1': 'a' * 1000,
             'param2': str(1000),
             'param3': str({'key1': 'value1', 'key2': True, 'key3': 2}),
@@ -25,7 +25,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             'param5': str(datetime.datetime(year=2025, month=1, day=2, hour=3, minute=4, second=5)),
             'param6': '',
         }
-        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=task_params)
         self.assertIsInstance(got, dict)
         self.assertIn('param1', got)
         self.assertIn('param2', got)
@@ -35,14 +35,14 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertNotIn('param6', got)
 
     def test_get_patched_obj_metadata_with_exceeded_size_metadata(self):
-        params = {
+        task_params = {
             'param1': 'a' * 5000,
             'param2': 'b' * 5000,
         }
         want = {
             'param1': 'a' * 5000,
         }
-        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, params=params)
+        got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=task_params)
         self.assertEqual(got, want)
 
 
@@ -55,7 +55,7 @@ class TestGokartTask(unittest.TestCase):
         task = _DummyTaskOnKart()
         task.dump({'key': 'value'}, mock_target)
 
-        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, params={})
+        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={})
 
 
 if __name__ == '__main__':
