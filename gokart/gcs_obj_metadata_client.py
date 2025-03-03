@@ -125,8 +125,9 @@ class GCSObjectMetadataClient:
         return dict(metadata) | dict(labels)
 
     @staticmethod
-    def _add_labels_to_metadata(labels_dict: dict[str, str], total_metadata_size: int, max_gcs_metadata_size: int,
-                                labels: list[tuple[str, str]], has_seen_keys: set[str]) -> tuple[int, list[tuple[str, str]]]:
+    def _add_labels_to_metadata(
+        labels_dict: dict[str, str], total_metadata_size: int, max_gcs_metadata_size: int, labels: list[tuple[str, str]], has_seen_keys: set[str]
+    ) -> tuple[int, list[tuple[str, str]]]:
         for label_name, label_value in labels_dict.items():
             if len(label_value) == 0:
                 logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
