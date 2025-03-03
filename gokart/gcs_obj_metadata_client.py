@@ -29,7 +29,7 @@ class GCSObjectMetadataClient:
     @staticmethod
     def add_task_state_labels(
         path: str,
-        params: Optional[dict[Any, str]] = None,
+        task_params: Optional[dict[Any, str]] = None,
     ) -> None:
         # In gokart/object_storage.get_time_stamp, could find same call.
         # _path_to_bucket_and_key is a private method, so, this might not be acceptable.
@@ -49,7 +49,7 @@ class GCSObjectMetadataClient:
 
         patched_metadata = GCSObjectMetadataClient._get_patched_obj_metadata(
             copy.deepcopy(original_metadata),
-            params,
+            task_params,
         )
 
         if original_metadata != patched_metadata:
@@ -74,7 +74,7 @@ class GCSObjectMetadataClient:
     @staticmethod
     def _get_patched_obj_metadata(
         metadata: Any,
-        params: Optional[dict[Any, str]] = None,
+        task_params: Optional[dict[Any, str]] = None,
     ) -> Union[dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
@@ -82,12 +82,12 @@ class GCSObjectMetadataClient:
             logger.warning(f'metadata is not a dict: {metadata}, something wrong was happened when getting response when get bucket and object information.')
             return metadata
 
-        if not params:
+        if not task_params:
             return metadata
         # Maximum size of metadata for each object is 8 KiB.
         # [Link]: https://cloud.google.com/storage/quotas#objects
         max_gcs_metadata_size, total_metadata_size, labels = 8 * 1024, 0, []
-        for label_name, label_value in params.items():
+        for label_name, label_value in task_params.items():
             if len(label_value) == 0:
                 logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
                 continue

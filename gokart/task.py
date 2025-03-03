@@ -360,7 +360,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
-        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump, params=super().to_str_params(only_significant=True))
+        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump, task_params=super().to_str_params(only_significant=True))
 
     @staticmethod
     def get_code(target_class) -> Set[str]:
