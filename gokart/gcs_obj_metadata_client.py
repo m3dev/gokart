@@ -38,7 +38,7 @@ class GCSObjectMetadataClient:
         return netloc, path_without_initial_slash
 
     @staticmethod
-    def add_task_state_labels(path: str, task_params: Optional[dict[str, str]] = None, user_provided_labels: Optional[dict[str, Any]] = None) -> None:
+    def add_task_state_labels(path: str, task_params: Optional[dict[str, str]] = None, custom_labels: Optional[dict[str, Any]] = None) -> None:
         if GCSObjectMetadataClient._is_log_related_path(path):
             return
         # In gokart/object_storage.get_time_stamp, could find same call.
@@ -59,7 +59,7 @@ class GCSObjectMetadataClient:
         patched_metadata = GCSObjectMetadataClient._get_patched_obj_metadata(
             copy.deepcopy(original_metadata),
             task_params,
-            user_provided_labels,
+            custom_labels,
         )
 
         if original_metadata != patched_metadata:
@@ -82,20 +82,20 @@ class GCSObjectMetadataClient:
                 logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')
 
     @staticmethod
-    def _normalize_labels(task_params: Optional[dict[str, str]], user_provided_labels: Optional[dict[str, Any]]) -> tuple[dict[str, str], dict[str, str]]:
+    def _normalize_labels(task_params: Optional[dict[str, str]], custom_labels: Optional[dict[str, Any]]) -> tuple[dict[str, str], dict[str, str]]:
         def _normalize_labels_helper(_params: Optional[dict[str, Any]]) -> dict[str, str]:
             return {str(key): str(value) for key, value in _params.items()} if _params else {}
 
         return (
             _normalize_labels_helper(task_params),
-            _normalize_labels_helper(user_provided_labels),
+            _normalize_labels_helper(custom_labels),
         )
 
     @staticmethod
     def _get_patched_obj_metadata(
         metadata: Any,
         task_params: Optional[dict[str, str]] = None,
-        user_provided_labels: Optional[dict[str, Any]] = None,
+        custom_labels: Optional[dict[str, Any]] = None,
     ) -> Union[dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
@@ -103,7 +103,7 @@ class GCSObjectMetadataClient:
             logger.warning(f'metadata is not a dict: {metadata}, something wrong was happened when getting response when get bucket and object information.')
             return metadata
 
-        if not task_params and not user_provided_labels:
+        if not task_params and not custom_labels:
             return metadata
         # Maximum size of metadata for each object is 8 KiB.
         # [Link]: https://cloud.google.com/storage/quotas#objects
@@ -111,13 +111,13 @@ class GCSObjectMetadataClient:
         labels: list[tuple[str, str]] = []
         has_seen_keys: set[str] = set()
 
-        normalized_task_params_labels, normalized_user_provided_labels = GCSObjectMetadataClient._normalize_labels(task_params, user_provided_labels)
-        # There is a possibility that the keys of user-provided labels(user_provided_labels) may conflict with those generated from task parameters (task_params_labels).
-        # However, users who utilize user_provided_labels are no longer expected to search using the labels generated from task parameters.
+        normalized_task_params_labels, normalized_custom_labels = GCSObjectMetadataClient._normalize_labels(task_params, custom_labels)
+        # There is a possibility that the keys of user-provided labels(custom_labels) may conflict with those generated from task parameters (task_params_labels).
+        # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
         total_metadata_size, labels = GCSObjectMetadataClient._add_labels_to_metadata(
-            normalized_user_provided_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
+            normalized_custom_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
         )
         _, labels = GCSObjectMetadataClient._add_labels_to_metadata(
             normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys

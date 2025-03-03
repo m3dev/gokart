@@ -350,12 +350,12 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         return data
 
     @overload
-    def dump(self, obj: T, target: None = None, user_provided_labels: Optional[dict[Any, Any]] = None) -> None: ...
+    def dump(self, obj: T, target: None = None, custom_labels: Optional[dict[Any, Any]] = None) -> None: ...
 
     @overload
-    def dump(self, obj: Any, target: Union[str, TargetOnKart], user_provided_labels: Optional[dict[Any, Any]] = None) -> None: ...
+    def dump(self, obj: Any, target: Union[str, TargetOnKart], custom_labels: Optional[dict[Any, Any]] = None) -> None: ...
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, user_provided_labels: Optional[dict[str, Any]] = None) -> None:
+    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, custom_labels: Optional[dict[str, Any]] = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
@@ -364,7 +364,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
             obj,
             lock_at_dump=self._lock_at_dump,
             task_params=super().to_str_params(only_significant=True, only_public=True),
-            user_provided_labels=user_provided_labels,
+            custom_labels=custom_labels,
         )
 
     @staticmethod
