@@ -85,7 +85,6 @@ class GCSObjectMetadataClient:
     def _normalize_labels(labels: Optional[dict[str, Any]]) -> dict[str, str]:
         return {str(key): str(value) for key, value in labels.items()} if labels else {}
 
-
     @staticmethod
     def _get_patched_obj_metadata(
         metadata: Any,
@@ -109,8 +108,12 @@ class GCSObjectMetadataClient:
         # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
-        total_metadata_size, labels = GCSObjectMetadataClient._add_labels_to_metadata(normalized_custom_labels, total_metadata_size, max_gcs_metadata_size)
-        _, labels = GCSObjectMetadataClient._add_labels_to_metadata(normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size)
+        total_metadata_size, labels, has_seen_keys = GCSObjectMetadataClient._add_labels_to_metadata(
+            normalized_custom_labels, total_metadata_size, max_gcs_metadata_size
+        )
+        _, labels, _ = GCSObjectMetadataClient._add_labels_to_metadata(
+            normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
+        )
         return dict(metadata) | dict(labels)
 
     @staticmethod
@@ -118,9 +121,9 @@ class GCSObjectMetadataClient:
         labels_dict: dict[str, str],
         total_metadata_size: int,
         max_gcs_metadata_size: int,
-        labels: Optional[list[tuple[str, str]]]=None,
-        has_seen_keys: Optional[set[str]]=None
-    ) -> tuple[int, list[tuple[str, str]]]:
+        labels: Optional[list[tuple[str, str]]] = None,
+        has_seen_keys: Optional[set[str]] = None,
+    ) -> tuple[int, list[tuple[str, str]], set[str]]:
         labels = copy.copy(labels) if labels else []
         has_seen_keys = copy.copy(has_seen_keys) if has_seen_keys else set({})
         for label_name, label_value in labels_dict.items():
@@ -137,4 +140,4 @@ class GCSObjectMetadataClient:
             total_metadata_size += size
             labels.append((label_name, label_value))
             has_seen_keys.add(label_name)
-        return total_metadata_size, labels
+        return total_metadata_size, labels, has_seen_keys
