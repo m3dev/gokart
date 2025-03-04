@@ -30,6 +30,7 @@ class GCSObjectMetadataClient:
     def add_task_state_labels(
         path: str,
         task_params: Optional[dict[Any, str]] = None,
+        required_task_outputs: Optional[list[str]] = None,
     ) -> None:
         # In gokart/object_storage.get_time_stamp, could find same call.
         # _path_to_bucket_and_key is a private method, so, this might not be acceptable.

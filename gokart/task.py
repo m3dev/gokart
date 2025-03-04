@@ -7,7 +7,9 @@ import sys
 import types
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
+from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload, cast
+
+from luigi.contrib.gcs import GCSTarget
 
 if sys.version_info < (3, 13):
     from typing_extensions import deprecated
@@ -360,7 +362,14 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
-        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump, task_params=super().to_str_params(only_significant=True, only_public=True))
+        required_task_outputs: list[str] = []
+        for required_task in self.requires():
+            for target in required_task.output():
+                required_task_outputs.append(target) if target and str(target).startswith('gs://') or isinstance(target, GCSTarget) else None
+
+        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump,
+                                             task_params=super().to_str_params(only_significant=True, only_public=True),
+                                             required_task_outputs=required_task_outputs)
 
     @staticmethod
     def get_code(target_class) -> Set[str]:
