@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 from logging import getLogger
+import re
 from typing import Any, Optional, Union
 from urllib.parse import urlsplit
 
@@ -20,14 +21,7 @@ class GCSObjectMetadataClient:
 
     @staticmethod
     def _is_log_related_path(path: str) -> bool:
-        return (
-            ('log/random_seed' in path)
-            or ('log/processing_time' in path)
-            or ('log/task_params' in path)
-            or ('log/task_log' in path)
-            or ('log/module_versions' in path)
-            or ('log/task_info' in path)
-        )
+        return re.match(r'^log/(processing_time/|task_info/|task_log/|module_versions/|random_seed/|task_params/).+', path) is not None
 
     # This is the copied method of luigi.gcs._path_to_bucket_and_key(path).
     @staticmethod
@@ -108,16 +102,16 @@ class GCSObjectMetadataClient:
         # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
-        total_metadata_size, labels, has_seen_keys = GCSObjectMetadataClient._add_labels_to_metadata(
+        total_metadata_size, labels, has_seen_keys = GCSObjectMetadataClient._add_labels_with_size_limitation(
             normalized_custom_labels, total_metadata_size, max_gcs_metadata_size
         )
-        _, labels, _ = GCSObjectMetadataClient._add_labels_to_metadata(
+        _, labels, _ = GCSObjectMetadataClient._add_labels_with_size_limitation(
             normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
         )
         return dict(metadata) | dict(labels)
 
     @staticmethod
-    def _add_labels_to_metadata(
+    def _add_labels_with_size_limitation(
         labels_dict: dict[str, str],
         total_metadata_size: int,
         max_gcs_metadata_size: int,
