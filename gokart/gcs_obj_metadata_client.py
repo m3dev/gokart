@@ -82,11 +82,9 @@ class GCSObjectMetadataClient:
                 logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')
 
     @staticmethod
-    def _normalize_labels(labels: Optional[dict[str, str]]) -> dict[str, str]:
-        def _normalize_labels_helper(_params: Optional[dict[str, Any]]) -> dict[str, str]:
-            return {str(key): str(value) for key, value in labels.items()} if labels else {}
+    def _normalize_labels(labels: Optional[dict[str, Any]]) -> dict[str, str]:
+        return {str(key): str(value) for key, value in labels.items()} if labels else {}
 
-        return _normalize_labels_helper(labels)
 
     @staticmethod
     def _get_patched_obj_metadata(
@@ -104,28 +102,27 @@ class GCSObjectMetadataClient:
             return metadata
         # Maximum size of metadata for each object is 8 KiB.
         # [Link]: https://cloud.google.com/storage/quotas#objects
-        max_gcs_metadata_size, total_metadata_size = 8 * 1024, 0
-        labels: list[tuple[str, str]] = []
-        has_seen_keys: set[str] = set()
-
         normalized_task_params_labels = GCSObjectMetadataClient._normalize_labels(task_params)
         normalized_custom_labels = GCSObjectMetadataClient._normalize_labels(custom_labels)
+        max_gcs_metadata_size, total_metadata_size = 8 * 1024, 0
         # There is a possibility that the keys of user-provided labels(custom_labels) may conflict with those generated from task parameters (task_params_labels).
         # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
-        total_metadata_size, labels = GCSObjectMetadataClient._add_labels_to_metadata(
-            normalized_custom_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
-        )
-        _, labels = GCSObjectMetadataClient._add_labels_to_metadata(
-            normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
-        )
+        total_metadata_size, labels = GCSObjectMetadataClient._add_labels_to_metadata(normalized_custom_labels, total_metadata_size, max_gcs_metadata_size)
+        _, labels = GCSObjectMetadataClient._add_labels_to_metadata(normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size)
         return dict(metadata) | dict(labels)
 
     @staticmethod
     def _add_labels_to_metadata(
-        labels_dict: dict[str, str], total_metadata_size: int, max_gcs_metadata_size: int, labels: list[tuple[str, str]], has_seen_keys: set[str]
+        labels_dict: dict[str, str],
+        total_metadata_size: int,
+        max_gcs_metadata_size: int,
+        labels: Optional[list[tuple[str, str]]]=None,
+        has_seen_keys: Optional[set[str]]=None
     ) -> tuple[int, list[tuple[str, str]]]:
+        labels = copy.copy(labels) if labels else []
+        has_seen_keys = copy.copy(has_seen_keys) if has_seen_keys else set({})
         for label_name, label_value in labels_dict.items():
             if len(label_value) == 0:
                 logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
