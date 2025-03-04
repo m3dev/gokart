@@ -82,14 +82,11 @@ class GCSObjectMetadataClient:
                 logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')
 
     @staticmethod
-    def _normalize_labels(task_params: Optional[dict[str, str]], custom_labels: Optional[dict[str, Any]]) -> tuple[dict[str, str], dict[str, str]]:
+    def _normalize_labels(labels: Optional[dict[str, str]]) -> dict[str, str]:
         def _normalize_labels_helper(_params: Optional[dict[str, Any]]) -> dict[str, str]:
-            return {str(key): str(value) for key, value in _params.items()} if _params else {}
+            return {str(key): str(value) for key, value in labels.items()} if labels else {}
 
-        return (
-            _normalize_labels_helper(task_params),
-            _normalize_labels_helper(custom_labels),
-        )
+        return _normalize_labels_helper(labels)
 
     @staticmethod
     def _get_patched_obj_metadata(
@@ -111,7 +108,8 @@ class GCSObjectMetadataClient:
         labels: list[tuple[str, str]] = []
         has_seen_keys: set[str] = set()
 
-        normalized_task_params_labels, normalized_custom_labels = GCSObjectMetadataClient._normalize_labels(task_params, custom_labels)
+        normalized_task_params_labels = GCSObjectMetadataClient._normalize_labels(task_params)
+        normalized_custom_labels = GCSObjectMetadataClient._normalize_labels(custom_labels)
         # There is a possibility that the keys of user-provided labels(custom_labels) may conflict with those generated from task parameters (task_params_labels).
         # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
