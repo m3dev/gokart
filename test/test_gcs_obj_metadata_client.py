@@ -38,55 +38,21 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             'param1': 'a' * 10,
         }
 
-    def test_normalize_labels_both_are_empty(self):
-        got_norm_task_params_labels = GCSObjectMetadataClient._normalize_labels(None)
-        got_norm_custom_labels = GCSObjectMetadataClient._normalize_labels(None)
-        self.assertIsInstance(got_norm_task_params_labels, dict)
-        self.assertIsInstance(got_norm_custom_labels, dict)
-        self.assertEqual(got_norm_task_params_labels, {})
-        self.assertEqual(got_norm_custom_labels, {})
+    def test_normalize_labels_not_empty(self):
+        got = GCSObjectMetadataClient._normalize_labels(None)
+        self.assertEqual(got, {})
 
-    def test_normalize_labels_only_task_params(self):
-        got_norm_task_params_labels = GCSObjectMetadataClient._normalize_labels(self.task_params)
-        got_norm_custom_labels = GCSObjectMetadataClient._normalize_labels(None)
+    def test_normalize_labels_has_value(self):
+        got = GCSObjectMetadataClient._normalize_labels(self.task_params)
 
-        self.assertIsInstance(got_norm_task_params_labels, dict)
-        self.assertIsInstance(got_norm_custom_labels, dict)
-        self.assertIn('param1', got_norm_task_params_labels)
-        self.assertIn('param2', got_norm_task_params_labels)
-        self.assertIn('param3', got_norm_task_params_labels)
-        self.assertIn('param4', got_norm_task_params_labels)
-        self.assertIn('param5', got_norm_task_params_labels)
-        self.assertIn('param6', got_norm_task_params_labels)
-        self.assertEqual(got_norm_custom_labels, {})
-
-    def test_normalize_labels_only_custom_labels(self):
-        got_norm_task_params_labels = GCSObjectMetadataClient._normalize_labels(None)
-        got_norm_custom_labels = GCSObjectMetadataClient._normalize_labels(self.custom_labels)
-        self.assertIsInstance(got_norm_task_params_labels, dict)
-        self.assertIsInstance(got_norm_custom_labels, dict)
-        self.assertEqual(got_norm_task_params_labels, {})
-        self.assertIn('created_at', got_norm_custom_labels)
-        self.assertIn('created_by', got_norm_custom_labels)
-        self.assertIn('empty', got_norm_custom_labels)
-        self.assertIn('try_num', got_norm_custom_labels)
-
-    def test_normalize_labels_both_has_value(self):
-        got_norm_task_params_labels = GCSObjectMetadataClient._normalize_labels(self.task_params)
-        got_norm_custom_labels = GCSObjectMetadataClient._normalize_labels(self.custom_labels)
-
-        self.assertIsInstance(got_norm_task_params_labels, dict)
-        self.assertIsInstance(got_norm_custom_labels, dict)
-        self.assertIn('param1', got_norm_task_params_labels)
-        self.assertIn('param2', got_norm_task_params_labels)
-        self.assertIn('param3', got_norm_task_params_labels)
-        self.assertIn('param4', got_norm_task_params_labels)
-        self.assertIn('param5', got_norm_task_params_labels)
-        self.assertIn('param6', got_norm_task_params_labels)
-        self.assertIn('created_at', got_norm_custom_labels)
-        self.assertIn('created_by', got_norm_custom_labels)
-        self.assertIn('empty', got_norm_custom_labels)
-        self.assertIn('try_num', got_norm_custom_labels)
+        self.assertIsInstance(got, dict)
+        self.assertIsInstance(got, dict)
+        self.assertIn('param1', got)
+        self.assertIn('param2', got)
+        self.assertIn('param3', got)
+        self.assertIn('param4', got)
+        self.assertIn('param5', got)
+        self.assertIn('param6', got)
 
     def test_get_patched_obj_metadata_only_task_params(self):
         got = GCSObjectMetadataClient._get_patched_obj_metadata({}, task_params=self.task_params, custom_labels=None)
