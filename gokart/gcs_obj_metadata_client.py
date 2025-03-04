@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from logging import getLogger
 from typing import Any, Optional, Union
 from urllib.parse import urlsplit
@@ -35,7 +36,6 @@ class GCSObjectMetadataClient:
         # In gokart/object_storage.get_time_stamp, could find same call.
         # _path_to_bucket_and_key is a private method, so, this might not be acceptable.
         bucket, obj = GCSObjectMetadataClient.path_to_bucket_and_key(path)
-
         _response = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
         if _response is None:
             logger.error(f'failed to get object from GCS bucket {bucket} and object {obj}.')
@@ -51,6 +51,7 @@ class GCSObjectMetadataClient:
         patched_metadata = GCSObjectMetadataClient._get_patched_obj_metadata(
             copy.deepcopy(original_metadata),
             task_params,
+            required_task_outputs
         )
 
         if original_metadata != patched_metadata:
@@ -74,28 +75,60 @@ class GCSObjectMetadataClient:
 
     @staticmethod
     def _get_patched_obj_metadata(
-        metadata: Any,
-        task_params: Optional[dict[Any, str]] = None,
+            metadata: Any,
+            task_params: Optional[dict[str, str]] = None,
+            required_task_outputs: Optional[list[str]] = None,
     ) -> Union[dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
         if not isinstance(metadata, dict):
-            logger.warning(f'metadata is not a dict: {metadata}, something wrong was happened when getting response when get bucket and object information.')
+            logger.warning(
+                f'metadata is not a dict: {metadata}, something wrong was happened when getting response when get bucket and object information.')
             return metadata
 
-        if not task_params:
+        if not task_params and not required_task_outputs:
             return metadata
         # Maximum size of metadata for each object is 8 KiB.
         # [Link]: https://cloud.google.com/storage/quotas#objects
-        max_gcs_metadata_size, total_metadata_size, labels = 8 * 1024, 0, []
-        for label_name, label_value in task_params.items():
+        normalized_task_params_labels = GCSObjectMetadataClient._normalize_labels(task_params)
+        normalized_required_task_outputs = {'requires_task_outputs': json.dumps(required_task_outputs)}
+        max_gcs_metadata_size, total_metadata_size = 8 * 1024, 0
+        # There is a possibility that the keys of user-provided labels(custom_labels) may conflict with those generated from task parameters (task_params_labels).
+        # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
+        # Instead, users are expected to search using the labels they provided.
+        # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
+        total_metadata_size, labels, has_seen_keys = GCSObjectMetadataClient._add_labels_to_metadata(normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size)
+        _, labels, _ = GCSObjectMetadataClient._add_labels_to_metadata(normalized_required_task_outputs, total_metadata_size, max_gcs_metadata_size)
+        return dict(metadata) | dict(labels)
+
+    @staticmethod
+    def _add_labels_to_metadata(
+            labels_dict: dict[str, str],
+            total_metadata_size: int,
+            max_gcs_metadata_size: int,
+            labels: Optional[list[tuple[str, str]]] = None,
+            has_seen_keys: Optional[set[str]] = None,
+    ) -> tuple[int, list[tuple[str, str]], set[str]]:
+        labels = copy.copy(labels) if labels else []
+        has_seen_keys = copy.copy(has_seen_keys) if has_seen_keys else set({})
+        for label_name, label_value in labels_dict.items():
             if len(label_value) == 0:
                 logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
                 continue
             size = len(str(label_name).encode('utf-8')) + len(str(label_value).encode('utf-8'))
             if total_metadata_size + size > max_gcs_metadata_size:
-                logger.warning(f'current metadata total size is {total_metadata_size} byte, and no more labels would be added.')
+                logger.warning(
+                    f'current metadata total size is {total_metadata_size} byte, and no more labels would be added.')
                 break
+            if label_name in has_seen_keys:
+                logger.warning(f'label_name={label_name} is seen. So skip to add as a metadata.')
+                continue
             total_metadata_size += size
             labels.append((label_name, label_value))
-        return dict(metadata) | dict(labels)
+            has_seen_keys.add(label_name)
+        return total_metadata_size, labels, has_seen_keys
+
+    @staticmethod
+    def _normalize_labels(labels: Optional[dict[str, Any]]) -> dict[str, str]:
+        return {str(key): str(value) for key, value in labels.items()} if labels else {}
+

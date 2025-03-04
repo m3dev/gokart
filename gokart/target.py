@@ -98,7 +98,11 @@ class SingleFileTarget(TargetOnKart):
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
         if self.path().startswith('gs://'):
-            GCSObjectMetadataClient.add_task_state_labels(path=self.path(), task_params=task_params, required_task_outputs=required_task_outputs)
+            GCSObjectMetadataClient.add_task_state_labels(
+                path=self.path(),
+                task_params=task_params,
+                required_task_outputs=required_task_outputs
+            )
 
     def _remove(self) -> None:
         self._target.remove()

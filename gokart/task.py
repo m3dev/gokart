@@ -362,10 +362,13 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
+        # TODO: 色んな場合があるから、ちゃんと場合分けしてあげる必要がある
         required_task_outputs: list[str] = []
-        for required_task in self.requires():
-            for target in required_task.output():
-                required_task_outputs.append(target) if target and str(target).startswith('gs://') or isinstance(target, GCSTarget) else None
+        requires = self.requires()
+        for required_task in list(requires):
+            output = required_task.output()
+            output_path = output.path()
+            required_task_outputs.append(output_path) if output_path.startswith('gs://') or isinstance(target, GCSTarget) else None
 
         self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump,
                                              task_params=super().to_str_params(only_significant=True, only_public=True),
