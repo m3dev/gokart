@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from logging import getLogger
 from typing import Any, Dict

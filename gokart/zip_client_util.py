@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client import LocalZipClient, ZipClient
 
