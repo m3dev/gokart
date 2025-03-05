@@ -14,7 +14,7 @@ class FailureEvent(TypedDict):
     exception: str
 
 
-class EventAggregator(object):
+class EventAggregator:
     def __init__(self) -> None:
         self._success_events: List[str] = []
         self._failure_events: List[FailureEvent] = []

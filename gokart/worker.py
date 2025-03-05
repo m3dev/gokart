@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2012-2015 Spotify AB
 #
@@ -50,7 +49,8 @@ import sys
 import threading
 import time
 import traceback
-from typing import Any, Dict, Generator, List, Literal, Optional, Set, Tuple
+from collections.abc import Generator
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 import luigi
 import luigi.scheduler
@@ -484,7 +484,7 @@ class Worker:
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
 
-    def __enter__(self) -> 'Worker':
+    def __enter__(self) -> Worker:
         """
         Start the KeepAliveThread.
         """
@@ -530,8 +530,8 @@ class Worker:
         return args
 
     def _generate_worker_id(self, worker_info: List[Any]) -> str:
-        worker_info_str = ', '.join(['{}={}'.format(k, v) for k, v in worker_info])
-        return 'Worker({})'.format(worker_info_str)
+        worker_info_str = ', '.join([f'{k}={v}' for k, v in worker_info])
+        return f'Worker({worker_info_str})'
 
     def _validate_task(self, task: Task) -> None:
         if not isinstance(task, Task):
@@ -544,11 +544,11 @@ class Worker:
             )
 
     def _log_complete_error(self, task: Task, tb: str) -> None:
-        log_msg = 'Will not run {task} or any dependencies due to error in complete() method:\n{tb}'.format(task=task, tb=tb)
+        log_msg = f'Will not run {task} or any dependencies due to error in complete() method:\n{tb}'
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task: Task, tb: str) -> None:
-        log_msg = 'Will not run {task} or any dependencies due to error in deps() method:\n{tb}'.format(task=task, tb=tb)
+        log_msg = f'Will not run {task} or any dependencies due to error in deps() method:\n{tb}'
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task: Task) -> None:
@@ -619,7 +619,7 @@ class Worker:
     def _handle_task_load_error(self, exception: Exception, task_ids: List[str]) -> None:
         msg = 'Cannot find task(s) sent by scheduler: {}'.format(','.join(task_ids))
         logger.exception(msg)
-        subject = 'Luigi: {}'.format(msg)
+        subject = f'Luigi: {msg}'
         error_message = notifications.wrap_traceback(exception)
         for task_id in task_ids:
             self._add_task(
@@ -780,7 +780,7 @@ class Worker:
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
         elif not isinstance(dependency, Task):
-            raise Exception('requires() must return Task objects but {} is a {}'.format(dependency, type(dependency)))
+            raise Exception(f'requires() must return Task objects but {dependency} is a {type(dependency)}')
 
     def _check_complete_value(self, is_complete: bool) -> None:
         if is_complete not in (True, False):
@@ -887,7 +887,7 @@ class Worker:
 
     def _run_task(self, task_id: str) -> None:
         if task_id in self._running_tasks:
-            logger.debug('Got already running task id {} from scheduler, taking a break'.format(task_id))
+            logger.debug(f'Got already running task id {task_id} from scheduler, taking a break')
             next(self._sleeper())
             return
 
@@ -930,11 +930,11 @@ class Worker:
         """
         for task_id, p in self._running_tasks.items():
             if not p.is_alive() and p.exitcode:
-                error_msg = 'Task {} died unexpectedly with exit code {}'.format(task_id, p.exitcode)
+                error_msg = f'Task {task_id} died unexpectedly with exit code {p.exitcode}'
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
-                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.worker_timeout)
+                error_msg = f'Task {task_id} timed out after {p.worker_timeout} seconds and was terminated.'
                 p.task.trigger_event(Event.TIMEOUT, p.task, error_msg)
             else:
                 continue

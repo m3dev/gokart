@@ -6,9 +6,10 @@ import inspect
 import os
 import random
 import types
+from collections.abc import Generator, Iterable
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
+from typing import Any, Callable, Dict, Generic, List, Optional, Set, TypeVar, Union, overload
 
 import luigi
 import pandas as pd
@@ -141,11 +142,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def output(self) -> FlattenableItems[TargetOnKart]:
         return self.make_target()
 
-    def requires(self) -> FlattenableItems['TaskOnKart']:
+    def requires(self) -> FlattenableItems[TaskOnKart]:
         tasks = self.make_task_instance_dictionary()
         return tasks or []  # when tasks is empty dict, then this returns empty list.
 
-    def make_task_instance_dictionary(self) -> Dict[str, 'TaskOnKart']:
+    def make_task_instance_dictionary(self) -> Dict[str, TaskOnKart]:
         return {key: var for key, var in vars(self).items() if self.is_task_on_kart(var)}
 
     @staticmethod
@@ -290,12 +291,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def load(self, target: Union[None, str, TargetOnKart] = None) -> Any: ...
 
     @overload
-    def load(self, target: 'TaskOnKart[K]') -> K: ...
+    def load(self, target: TaskOnKart[K]) -> K: ...
 
     @overload
-    def load(self, target: 'List[TaskOnKart[K]]') -> List[K]: ...
+    def load(self, target: List[TaskOnKart[K]]) -> List[K]: ...
 
-    def load(self, target: Union[None, str, TargetOnKart, 'TaskOnKart[K]', 'List[TaskOnKart[K]]'] = None) -> Any:
+    def load(self, target: Union[None, str, TargetOnKart, TaskOnKart[K], List[TaskOnKart[K]]] = None) -> Any:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
@@ -309,9 +310,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Generator[Any, None, None]: ...
 
     @overload
-    def load_generator(self, target: 'List[TaskOnKart[K]]') -> Generator[K, None, None]: ...
+    def load_generator(self, target: List[TaskOnKart[K]]) -> Generator[K, None, None]: ...
 
-    def load_generator(self, target: Union[None, str, TargetOnKart, 'List[TaskOnKart[K]]'] = None) -> Generator[Any, None, None]:
+    def load_generator(self, target: Union[None, str, TargetOnKart, List[TaskOnKart[K]]] = None) -> Generator[Any, None, None]:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 for t in targets:
@@ -379,7 +380,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
-    def _get_input_targets(self, target: Union[None, str, TargetOnKart, 'TaskOnKart', 'List[TaskOnKart]']) -> FlattenableItems[TargetOnKart]:
+    def _get_input_targets(self, target: Union[None, str, TargetOnKart, TaskOnKart, List[TaskOnKart]]) -> FlattenableItems[TargetOnKart]:
         if target is None:
             return self.input()
         if isinstance(target, str):

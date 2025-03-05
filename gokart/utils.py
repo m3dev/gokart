@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterable
 from io import BytesIO
-from typing import Any, Iterable, Protocol, TypeVar, Union
+from typing import Any, Protocol, TypeVar, Union
 
 import dill
 import luigi

@@ -171,7 +171,7 @@ class ModelTarget(TargetOnKart):
         os.makedirs(self._temporary_directory, exist_ok=True)
 
 
-class LargeDataFrameProcessor(object):
+class LargeDataFrameProcessor:
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
 

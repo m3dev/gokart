@@ -13,7 +13,7 @@ def _unzip_file(fp: Union[str, IO, os.PathLike], extract_dir: str) -> None:
     zip_file.close()
 
 
-class ZipClient(object):
+class ZipClient:
     @abstractmethod
     def exists(self) -> bool:
         pass

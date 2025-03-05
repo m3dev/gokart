@@ -22,7 +22,7 @@ from gokart.utils import load_dill_with_pandas_backward_compatibility
 logger = getLogger(__name__)
 
 
-class FileProcessor(object):
+class FileProcessor:
     @abstractmethod
     def format(self):
         pass
@@ -58,7 +58,7 @@ class BinaryFileProcessor(FileProcessor):
         file.write(obj)
 
 
-class _ChunkedLargeFileReader(object):
+class _ChunkedLargeFileReader:
     def __init__(self, file) -> None:
         self._file = file
 
