@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import copy
-from logging import getLogger
 import re
+from logging import getLogger
 from typing import Any, Optional, Union
 from urllib.parse import urlsplit
 
