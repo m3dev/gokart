@@ -18,8 +18,8 @@ class TaskInfo:
     processing_time: str
     is_complete: str
     task_log: dict
-    requires: FlattenableItems['RequiredTask']
-    children_task_infos: List['TaskInfo']
+    requires: FlattenableItems[RequiredTask]
+    children_task_infos: List[TaskInfo]
 
     def get_task_id(self):
         return f'{self.name}_{self.unique_id}'

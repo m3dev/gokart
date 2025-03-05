@@ -7,7 +7,8 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 from __future__ import annotations
 
 import re
-from typing import Callable, Final, Iterator, Literal, Optional
+from collections.abc import Iterator
+from typing import Callable, Final, Literal, Optional
 
 import luigi
 from mypy.expandtype import expand_type
