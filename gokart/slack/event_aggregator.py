@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from logging import getLogger
-from typing import List, TypedDict
+from typing import TypedDict
 
 import luigi
 
@@ -16,8 +16,8 @@ class FailureEvent(TypedDict):
 
 class EventAggregator:
     def __init__(self) -> None:
-        self._success_events: List[str] = []
-        self._failure_events: List[FailureEvent] = []
+        self._success_events: list[str] = []
+        self._failure_events: list[FailureEvent] = []
 
     def set_handlers(self):
         handlers = [(luigi.Event.SUCCESS, self._success), (luigi.Event.FAILURE, self._failure)]

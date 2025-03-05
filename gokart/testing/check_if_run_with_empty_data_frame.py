@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import List, Optional
 
 import luigi
 from luigi.cmdline_parser import CmdlineParser
@@ -17,7 +16,7 @@ test_logger.setLevel(logging.INFO)
 
 class test_run(gokart.TaskOnKart):
     pandas: bool = luigi.BoolParameter()
-    namespace: Optional[str] = luigi.OptionalParameter(
+    namespace: str | None = luigi.OptionalParameter(
         default=None, description='When task namespace is not defined explicitly, please use "__not_user_specified".'
     )
 
@@ -28,7 +27,7 @@ class _TestStatus:
         self.name = type(task).__name__
         self.task_id = task.make_unique_id()
         self.status = 'OK'
-        self.message: Optional[Exception] = None
+        self.message: Exception | None = None
 
     def format(self) -> str:
         s = f'status={self.status}; namespace={self.namespace}; name={self.name}; id={self.task_id};'
@@ -40,7 +39,7 @@ class _TestStatus:
         return self.status != 'OK'
 
 
-def _get_all_tasks(task: gokart.TaskOnKart) -> List[gokart.TaskOnKart]:
+def _get_all_tasks(task: gokart.TaskOnKart) -> list[gokart.TaskOnKart]:
     result = [task]
     for o in flatten(task.requires()):
         result.extend(_get_all_tasks(o))
@@ -57,7 +56,7 @@ def _run_with_test_status(task: gokart.TaskOnKart):
     return test_message
 
 
-def _test_run_with_empty_data_frame(cmdline_args: List[str], test_run_params: test_run):
+def _test_run_with_empty_data_frame(cmdline_args: list[str], test_run_params: test_run):
     from unittest.mock import patch
 
     try:
@@ -79,7 +78,7 @@ def _test_run_with_empty_data_frame(cmdline_args: List[str], test_run_params: te
         sys.exit(1)
 
 
-def try_to_run_test_for_empty_data_frame(cmdline_args: List[str]):
+def try_to_run_test_for_empty_data_frame(cmdline_args: list[str]):
     with CmdlineParser.global_instance(cmdline_args):
         test_run_params = test_run()
 

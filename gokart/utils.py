@@ -72,7 +72,7 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     return flat
 
 
-def load_dill_with_pandas_backward_compatibility(file: Union[FileLike, BytesIO]) -> Any:
+def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> Any:
     """Load binary dumped by dill with pandas backward compatibility.
     pd.read_pickle can load binary dumped in backward pandas version, and also any objects dumped by pickle.
     It is unclear whether all objects dumped by dill can be loaded by pd.read_pickle, we use dill.load as a fallback.
