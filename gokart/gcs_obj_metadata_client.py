@@ -102,10 +102,9 @@ class GCSObjectMetadataClient:
         total_metadata_size, labels, has_seen_keys = GCSObjectMetadataClient._add_labels_to_metadata(
             normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size
         )
-        _, labels, _ = GCSObjectMetadataClient._add_labels_to_metadata(normalized_required_task_outputs,
-                                                                       total_metadata_size,
-                                                                       max_gcs_metadata_size,
-                                                                       labels, has_seen_keys)
+        _, labels, _ = GCSObjectMetadataClient._add_labels_to_metadata(
+            normalized_required_task_outputs, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
+        )
         return dict(metadata) | dict(labels)
 
     @staticmethod
