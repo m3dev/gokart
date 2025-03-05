@@ -38,6 +38,11 @@ T = TypeVar('T')
 K = TypeVar('K')
 
 
+# NOTE: inherited from AssertionError for backward compatibility (Formerly, Gokart raises that exception when a task dumps an empty DataFrame).
+class EmptyDumpError(AssertionError):
+    """Attempted to dump an empty DataFrame even though it is prohibited (fail_on_empty_dump is set to True)."""
+
+
 class TaskOnKart(luigi.Task, Generic[T]):
     """
     This is a wrapper class of luigi.Task.
@@ -359,8 +364,9 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
 
     def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
-        if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
-            assert not obj.empty
+        if self.fail_on_empty_dump:
+            if isinstance(obj, pd.DataFrame) and obj.empty:
+                raise EmptyDumpError()
 
         self._get_output_target(target).dump(
             obj,
