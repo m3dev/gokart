@@ -14,6 +14,7 @@ import gokart
 from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
+from gokart.task import EmptyDumpError
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -414,7 +415,7 @@ class TaskTest(unittest.TestCase):
 
         # fail
         task = _DummyTask(fail_on_empty_dump=True)
-        self.assertRaises(AssertionError, lambda: task.dump(pd.DataFrame()))
+        self.assertRaises(EmptyDumpError, lambda: task.dump(pd.DataFrame()))
 
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: Mock):
