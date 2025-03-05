@@ -73,6 +73,7 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
 
 K = TypeVar('K')
 
+
 def map_flattenable_items(items: FlattenableItems[T], func: Callable[[T], K]) -> FlattenableItems[K]:
     if isinstance(items, dict):
         return {k: map_flattenable_items(v, func) for k, v in items.items()}
