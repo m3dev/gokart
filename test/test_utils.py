@@ -1,6 +1,6 @@
 import unittest
 
-from gokart.utils import flatten
+from gokart.utils import flatten, map_flattenable_items
 
 
 class TestFlatten(unittest.TestCase):
@@ -18,3 +18,12 @@ class TestFlatten(unittest.TestCase):
 
     def test_flatten_none(self):
         self.assertEqual(flatten(None), [])
+
+
+class TestMapFlatten(unittest.TestCase):
+    def test_map_flattenable_items(self):
+        self.assertEqual(map_flattenable_items({'a': 1, 'b': 2}, func=lambda x: str(x)), {'a': '1', 'b': '2'})
+        self.assertEqual(
+            map_flattenable_items({'a': [1, 2, 3, '4'], 'b': {'c': True, 'd': {'e': 5}}}, func=lambda x: str(x)),
+            {'a': ['1', '2', '3', '4'], 'b': {'c': 'True', 'd': {'e': '5'}}},
+        )
