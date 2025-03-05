@@ -16,6 +16,7 @@ from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lo
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 from gokart.object_storage import ObjectStorage
+from gokart.utils import FlattenableItems
 from gokart.zip_client_util import make_zip_client
 
 logger = getLogger(__name__)
@@ -28,9 +29,11 @@ class TargetOnKart(luigi.Target):
     def load(self) -> Any:
         return wrap_load_with_lock(func=self._load, task_lock_params=self._get_task_lock_params())()
 
-    def dump(self, obj, lock_at_dump: bool = True, task_params: Optional[dict[str, str]] = None, required_task_outputs: Optional[list[str]]=None) -> None:
+    def dump(self, obj, lock_at_dump: bool = True, task_params: Optional[dict[str, str]] = None, required_task_outputs: FlattenableItems | None = None) -> None:
         if lock_at_dump:
-            wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(obj=obj, task_params=task_params, required_task_outputs=required_task_outputs)
+            wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(
+                obj=obj, task_params=task_params, required_task_outputs=required_task_outputs
+            )
         else:
             self._dump(obj=obj, task_params=task_params, required_task_outputs=required_task_outputs)
 
@@ -98,11 +101,7 @@ class SingleFileTarget(TargetOnKart):
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
         if self.path().startswith('gs://'):
-            GCSObjectMetadataClient.add_task_state_labels(
-                path=self.path(),
-                task_params=task_params,
-                required_task_outputs=required_task_outputs
-            )
+            GCSObjectMetadataClient.add_task_state_labels(path=self.path(), task_params=task_params, required_task_outputs=required_task_outputs)
 
     def _remove(self) -> None:
         self._target.remove()

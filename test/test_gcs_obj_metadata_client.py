@@ -55,7 +55,7 @@ class TestGokartTask(unittest.TestCase):
         task = _DummyTaskOnKart()
         task.dump({'key': 'value'}, mock_target)
 
-        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={})
+        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={}, required_task_outputs=[])
 
 
 if __name__ == '__main__':

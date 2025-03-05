@@ -7,9 +7,9 @@ import sys
 import types
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload, cast
+from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
 
-from luigi.contrib.gcs import GCSTarget
+from gokart.utils import map_flattenable_items
 
 if sys.version_info < (3, 13):
     from typing_extensions import deprecated
@@ -362,17 +362,14 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
-        # TODO: 色んな場合があるから、ちゃんと場合分けしてあげる必要がある
-        required_task_outputs: list[str] = []
-        requires = self.requires()
-        for required_task in list(requires):
-            output = required_task.output()
-            output_path = output.path()
-            required_task_outputs.append(output_path) if output_path.startswith('gs://') or isinstance(target, GCSTarget) else None
-
-        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump,
-                                             task_params=super().to_str_params(only_significant=True, only_public=True),
-                                             required_task_outputs=required_task_outputs)
+        self._get_output_target(target).dump(
+            obj,
+            lock_at_dump=self._lock_at_dump,
+            task_params=super().to_str_params(only_significant=True, only_public=True),
+            required_task_outputs=map_flattenable_items(
+                self.requires(), func=lambda task: map_flattenable_items(task.output(), func=lambda output: output.path())
+            ),
+        )
 
     @staticmethod
     def get_code(target_class) -> Set[str]:
