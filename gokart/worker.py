@@ -508,7 +508,7 @@ class Worker:
     def _generate_worker_info(self) -> list[tuple[str, Any]]:
         # Generate as much info as possible about the worker
         # Some of these calls might not be available on all OS's
-        args = [('salt', '%09d' % random.randrange(0, 10_000_000_000)), ('workers', self.worker_processes)]
+        args = [('salt', f'{random.randrange(0, 10_000_000_000):09d}'), ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
         except BaseException:
