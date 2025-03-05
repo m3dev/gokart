@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import hashlib
 import inspect
@@ -350,12 +352,12 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         return data
 
     @overload
-    def dump(self, obj: T, target: None = None, custom_labels: Optional[dict[Any, Any]] = None) -> None: ...
+    def dump(self, obj: T, target: None = None, custom_labels: dict[Any, Any] | None = None) -> None: ...
 
     @overload
-    def dump(self, obj: Any, target: Union[str, TargetOnKart], custom_labels: Optional[dict[Any, Any]] = None) -> None: ...
+    def dump(self, obj: Any, target: Union[str, TargetOnKart], custom_labels: dict[Any, Any] | None = None) -> None: ...
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, custom_labels: Optional[dict[str, Any]] = None) -> None:
+    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty

@@ -17,7 +17,7 @@ class _DummyTaskOnKart(gokart.TaskOnKart):
 
 class TestGCSObjectMetadataClient(unittest.TestCase):
     def setUp(self):
-        self.task_params: dict[Any, str] = {
+        self.task_params: dict[str, str] = {
             'param1': 'a' * 1000,
             'param2': str(1000),
             'param3': str({'key1': 'value1', 'key2': True, 'key3': 2}),
@@ -25,7 +25,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
             'param5': str(datetime.datetime(year=2025, month=1, day=2, hour=3, minute=4, second=5)),
             'param6': '',
         }
-        self.custom_labels: dict[Any, Any] = {
+        self.custom_labels: dict[str, Any] = {
             'created_at': datetime.datetime(year=2025, month=1, day=2, hour=3, minute=4, second=5),
             'created_by': 'hoge fuga',
             'empty': True,

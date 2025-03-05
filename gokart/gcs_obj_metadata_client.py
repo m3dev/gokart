@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import re
 from logging import getLogger
-from typing import Any, Optional, Union
+from typing import Any, Union
 from urllib.parse import urlsplit
 
 from googleapiclient.model import makepatch
@@ -32,7 +32,7 @@ class GCSObjectMetadataClient:
         return netloc, path_without_initial_slash
 
     @staticmethod
-    def add_task_state_labels(path: str, task_params: Optional[dict[str, str]] = None, custom_labels: Optional[dict[str, Any]] = None) -> None:
+    def add_task_state_labels(path: str, task_params: dict[str, str] | None = None, custom_labels: dict[str, Any] | None = None) -> None:
         if GCSObjectMetadataClient._is_log_related_path(path):
             return
         # In gokart/object_storage.get_time_stamp, could find same call.
@@ -76,14 +76,14 @@ class GCSObjectMetadataClient:
                 logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')
 
     @staticmethod
-    def _normalize_labels(labels: Optional[dict[str, Any]]) -> dict[str, str]:
+    def _normalize_labels(labels: dict[str, Any] | None) -> dict[str, str]:
         return {str(key): str(value) for key, value in labels.items()} if labels else {}
 
     @staticmethod
     def _get_patched_obj_metadata(
         metadata: Any,
-        task_params: Optional[dict[str, str]] = None,
-        custom_labels: Optional[dict[str, Any]] = None,
+        task_params: dict[str, str] | None = None,
+        custom_labels: dict[str, Any] | None = None,
     ) -> Union[dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
