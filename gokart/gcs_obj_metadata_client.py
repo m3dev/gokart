@@ -102,7 +102,7 @@ class GCSObjectMetadataClient:
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
         _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_task_params_labels, normalized_custom_labels)
-        return dict(metadata) | dict(GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(_merged_labels))
+        return GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(dict(metadata) | _merged_labels)
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(
