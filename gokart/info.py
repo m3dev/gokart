@@ -33,7 +33,7 @@ def make_tree_info(
         Whether or not to output details.
     - abbr: bool
         Whether or not to simplify tasks information that has already appeared.
-    - ignore_task_names: Optional[List[str]]
+    - ignore_task_names: list[str] | None
         List of task names to ignore.
     Returns
     -------
