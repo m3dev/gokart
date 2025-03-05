@@ -22,7 +22,7 @@ class TestInMemoryTarget:
 
     @pytest.fixture
     def target(self, task_lock_params: TaskLockParams) -> InMemoryTarget:
-        return make_in_memory_target(target_key='dummy_key', task_lock_params=task_lock_params)
+        return make_in_memory_target(data_key='dummy_key', task_lock_params=task_lock_params)
 
     @pytest.fixture(autouse=True)
     def clear_repo(self) -> None:
