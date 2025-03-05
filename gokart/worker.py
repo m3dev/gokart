@@ -28,6 +28,8 @@ ways between versions. The exception is the exception types and the
 :py:class:`worker` config class.
 """
 
+from __future__ import annotations
+
 import collections
 import collections.abc
 import contextlib

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from logging import getLogger
 from typing import List, TypedDict
