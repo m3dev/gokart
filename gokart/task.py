@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import hashlib
 import inspect
@@ -350,17 +352,22 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         return data
 
     @overload
-    def dump(self, obj: T, target: None = None) -> None: ...
+    def dump(self, obj: T, target: None = None, custom_labels: dict[Any, Any] | None = None) -> None: ...
 
     @overload
-    def dump(self, obj: Any, target: Union[str, TargetOnKart]) -> None: ...
+    def dump(self, obj: Any, target: Union[str, TargetOnKart], custom_labels: dict[Any, Any] | None = None) -> None: ...
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None) -> None:
+    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
-        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump, task_params=super().to_str_params(only_significant=True, only_public=True))
+        self._get_output_target(target).dump(
+            obj,
+            lock_at_dump=self._lock_at_dump,
+            task_params=super().to_str_params(only_significant=True, only_public=True),
+            custom_labels=custom_labels,
+        )
 
     @staticmethod
     def get_code(target_class) -> Set[str]:

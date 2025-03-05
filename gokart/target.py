@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import os
 import shutil
@@ -28,11 +30,13 @@ class TargetOnKart(luigi.Target):
     def load(self) -> Any:
         return wrap_load_with_lock(func=self._load, task_lock_params=self._get_task_lock_params())()
 
-    def dump(self, obj, lock_at_dump: bool = True, task_params: Optional[dict[str, str]] = None) -> None:
+    def dump(self, obj, lock_at_dump: bool = True, task_params: dict[str, str] | None = None, custom_labels: dict[str, Any] | None = None) -> None:
         if lock_at_dump:
-            wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(obj=obj, task_params=task_params)
+            wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(
+                obj=obj, task_params=task_params, custom_labels=custom_labels
+            )
         else:
-            self._dump(obj=obj, task_params=task_params)
+            self._dump(obj=obj, task_params=task_params, custom_labels=custom_labels)
 
     def remove(self) -> None:
         if self.exists():
@@ -57,7 +61,7 @@ class TargetOnKart(luigi.Target):
         pass
 
     @abstractmethod
-    def _dump(self, obj, task_params: Optional[dict[str, str]] = None) -> None:
+    def _dump(self, obj, task_params: dict[str, str] | None = None, custom_labels: dict[str, Any] | None = None) -> None:
         pass
 
     @abstractmethod
@@ -94,11 +98,11 @@ class SingleFileTarget(TargetOnKart):
         with self._target.open('r') as f:
             return self._processor.load(f)
 
-    def _dump(self, obj, task_params: Optional[dict[str, str]] = None) -> None:
+    def _dump(self, obj, task_params: dict[str, str] | None = None, custom_labels: dict[str, Any] | None = None) -> None:
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
         if self.path().startswith('gs://'):
-            GCSObjectMetadataClient.add_task_state_labels(path=self.path(), task_params=task_params)
+            GCSObjectMetadataClient.add_task_state_labels(path=self.path(), task_params=task_params, custom_labels=custom_labels)
 
     def _remove(self) -> None:
         self._target.remove()
@@ -138,7 +142,7 @@ class ModelTarget(TargetOnKart):
         self._remove_temporary_directory()
         return model
 
-    def _dump(self, obj, task_params: Optional[dict[str, str]] = None) -> None:
+    def _dump(self, obj, task_params: dict[str, str] | None = None, custom_labels: dict[str, Any] | None = None) -> None:
         self._make_temporary_directory()
         self._save_function(obj, self._model_path())
         make_target(self._load_function_path()).dump(self._load_function, task_params=task_params)
