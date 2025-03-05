@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 from logging import getLogger
 from typing import Any, Union
@@ -9,7 +10,6 @@ from urllib.parse import urlsplit
 from googleapiclient.model import makepatch
 
 from gokart.gcs_config import GCSConfig
-from gokart.utils import FlattenableItems
 
 logger = getLogger(__name__)
 
@@ -22,7 +22,7 @@ class GCSObjectMetadataClient:
 
     @staticmethod
     def _is_log_related_path(path: str) -> bool:
-        return re.match(r'^log/(processing_time/|task_info/|task_log/|module_versions/|random_seed/|task_params/).+', path) is not None
+        return re.match(r'^gs://.+?/log/(processing_time/|task_info/|task_log/|module_versions/|random_seed/|task_params/).+', path) is not None
 
     # This is the copied method of luigi.gcs._path_to_bucket_and_key(path).
     @staticmethod
@@ -37,7 +37,7 @@ class GCSObjectMetadataClient:
         path: str,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
-        required_task_outputs: FlattenableItems[str] | None = None,
+        required_task_outputs: dict[str, str] | None = None,
     ) -> None:
         if GCSObjectMetadataClient._is_log_related_path(path):
             return
@@ -58,6 +58,7 @@ class GCSObjectMetadataClient:
             copy.deepcopy(original_metadata),
             task_params,
             custom_labels,
+            required_task_outputs if required_task_outputs else None,
         )
         if original_metadata != patched_metadata:
             # If we use update api, existing object metadata are removed, so should use patch api.
@@ -86,6 +87,7 @@ class GCSObjectMetadataClient:
         metadata: Any,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
+        required_task_outputs: dict[str, str] | None = None,
     ) -> Union[dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
@@ -102,23 +104,28 @@ class GCSObjectMetadataClient:
         # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
-        _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_task_params_labels, normalized_custom_labels)
+        normalized_labels = (
+            [normalized_custom_labels, normalized_task_params_labels]
+            if not required_task_outputs
+            else [normalized_custom_labels, normalized_custom_labels, {'required_task_outputs': json.dumps(required_task_outputs)}]
+        )
+        _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_labels)
         return GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(dict(metadata) | _merged_labels)
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(
-        normalized_task_params: dict[str, str],
-        normalized_custom_labels: dict[str, Any],
+        normalized_labels_list: list[dict[str, Any]],
     ) -> dict[str, str]:
-        merged_labels = copy.deepcopy(normalized_custom_labels)
-        for label_name, label_value in normalized_task_params.items():
-            if len(label_value) == 0:
-                logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
-                continue
-            if label_name in merged_labels.keys():
-                logger.warning(f'label_name={label_name} is already seen. So skip to add as a metadata.')
-                continue
-            merged_labels[label_name] = label_value
+        merged_labels: dict[str, str] = {}
+        for normalized_label in normalized_labels_list[:]:
+            for label_name, label_value in normalized_label.items():
+                if len(label_value) == 0:
+                    logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
+                    continue
+                if label_name in merged_labels.keys():
+                    logger.warning(f'label_name={label_name} is already seen. So skip to add as a metadata.')
+                    continue
+                merged_labels[label_name] = label_value
         return merged_labels
 
     # Google Cloud Storage(GCS) has a limitation of metadata size, 8 KiB.

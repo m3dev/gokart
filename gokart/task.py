@@ -7,6 +7,7 @@ import os
 import random
 import sys
 import types
+from dataclasses import dataclass
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
@@ -364,15 +365,33 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
+        @dataclass
+        class _RequiredTaskOutput:
+            task_name: str
+            output_path: str
+
+        _required_task_outputs = map_flattenable_items(
+            self.requires(),
+            func=lambda task: map_flattenable_items(
+                task.output(), func=lambda output: _RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path())
+            ),
+        )
+        required_task_outputs: dict[str, str] | None = None
+        if isinstance(_required_task_outputs, list):
+            required_task_outputs = {r.task_name: r.output_path for r in _required_task_outputs}
+        elif isinstance(_required_task_outputs, dict):
+            required_task_outputs = _required_task_outputs
+        else:
+            required_task_outputs = (
+                {_required_task_outputs.task_name: _required_task_outputs.output_path} if isinstance(_required_task_outputs, _RequiredTaskOutput) else None
+            )
+
         self._get_output_target(target).dump(
             obj,
             lock_at_dump=self._lock_at_dump,
             task_params=super().to_str_params(only_significant=True, only_public=True),
             custom_labels=custom_labels,
-            required_task_outputs=map_flattenable_items(
-                self.requires(),
-                func=lambda task: map_flattenable_items(task.output(), func=lambda output: output.path()),
-            ),
+            required_task_outputs=required_task_outputs,
         )
 
     @staticmethod
