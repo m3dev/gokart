@@ -97,41 +97,49 @@ class GCSObjectMetadataClient:
         # [Link]: https://cloud.google.com/storage/quotas#objects
         normalized_task_params_labels = GCSObjectMetadataClient._normalize_labels(task_params)
         normalized_custom_labels = GCSObjectMetadataClient._normalize_labels(custom_labels)
-        max_gcs_metadata_size, total_metadata_size = 8 * 1024, 0
         # There is a possibility that the keys of user-provided labels(custom_labels) may conflict with those generated from task parameters (task_params_labels).
         # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
-        total_metadata_size, labels, has_seen_keys = GCSObjectMetadataClient._add_labels_with_size_limitation(
-            normalized_custom_labels, total_metadata_size, max_gcs_metadata_size
-        )
-        _, labels, _ = GCSObjectMetadataClient._add_labels_with_size_limitation(
-            normalized_task_params_labels, total_metadata_size, max_gcs_metadata_size, labels, has_seen_keys
-        )
-        return dict(metadata) | dict(labels)
+        _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_task_params_labels, normalized_custom_labels)
+        return dict(metadata) | dict(GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(_merged_labels))
 
     @staticmethod
-    def _add_labels_with_size_limitation(
-        labels_dict: dict[str, str],
-        total_metadata_size: int,
-        max_gcs_metadata_size: int,
-        labels: Optional[list[tuple[str, str]]] = None,
-        has_seen_keys: Optional[set[str]] = None,
-    ) -> tuple[int, list[tuple[str, str]], set[str]]:
-        labels = copy.copy(labels) if labels else []
-        has_seen_keys = copy.copy(has_seen_keys) if has_seen_keys else set({})
-        for label_name, label_value in labels_dict.items():
+    def _merge_custom_labels_and_task_params_labels(
+        normalized_task_params: dict[str, str],
+        normalized_custom_labels: dict[str, Any],
+    ) -> dict[str, str]:
+        merged_labels = copy.deepcopy(normalized_custom_labels)
+        for label_name, label_value in normalized_task_params.items():
             if len(label_value) == 0:
                 logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
                 continue
-            size = len(str(label_name).encode('utf-8')) + len(str(label_value).encode('utf-8'))
-            if total_metadata_size + size > max_gcs_metadata_size:
-                logger.warning(f'current metadata total size is {total_metadata_size} byte, and no more labels would be added.')
-                break
-            if label_name in has_seen_keys:
-                logger.warning(f'label_name={label_name} is seen. So skip to add as a metadata.')
+            if label_name in merged_labels.keys():
+                logger.warning(f'label_name={label_name} is already seen. So skip to add as a metadata.')
                 continue
-            total_metadata_size += size
-            labels.append((label_name, label_value))
-            has_seen_keys.add(label_name)
-        return total_metadata_size, labels, has_seen_keys
+            merged_labels[label_name] = label_value
+        return merged_labels
+
+    # Google Cloud Storage(GCS) has a limitation of metadata size, 8 KiB.
+    # So, we need to adjust the size of metadata.
+    @staticmethod
+    def _adjust_gcs_metadata_limit_size(_labels: dict[str, str]) -> dict[str, str]:
+        def _get_label_size(label_name: str, label_value: str) -> int:
+            return len(label_name.encode('utf-8')) + len(label_value.encode('utf-8'))
+
+        labels = copy.deepcopy(_labels)
+        max_gcs_metadata_size, current_total_metadata_size = (
+            8 * 1024,
+            sum(_get_label_size(label_name, label_value) for label_name, label_value in labels.items()),
+        )
+
+        if current_total_metadata_size <= max_gcs_metadata_size:
+            return labels
+
+        for label_name, label_value in reversed(labels.items()):
+            size = _get_label_size(label_name, label_value)
+            del labels[label_name]
+            current_total_metadata_size -= size
+            if current_total_metadata_size <= max_gcs_metadata_size:
+                break
+        return labels
