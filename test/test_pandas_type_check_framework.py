@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import unittest
 from logging import getLogger
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import luigi
@@ -21,7 +21,7 @@ class TestPandasTypeConfig(PandasTypeConfig):
     task_namespace = 'test_pandas_type_check_framework'
 
     @classmethod
-    def type_dict(cls) -> Dict[str, Any]:
+    def type_dict(cls) -> dict[str, Any]:
         return {'system_cd': int}
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Dict
+from typing import Any
 from unittest import TestCase
 
 import numpy as np
@@ -13,7 +13,7 @@ from gokart.pandas_type_config import PandasTypeError
 
 class _DummyPandasTypeConfig(PandasTypeConfig):
     @classmethod
-    def type_dict(cls) -> Dict[str, Any]:
+    def type_dict(cls) -> dict[str, Any]:
         return {'int_column': int, 'datetime_column': datetime, 'array_column': np.ndarray}
 
 

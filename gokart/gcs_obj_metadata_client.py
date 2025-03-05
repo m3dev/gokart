@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from logging import getLogger
-from typing import Any, Optional, Union
+from typing import Any
 from urllib.parse import urlsplit
 
 from googleapiclient.model import makepatch
@@ -29,7 +29,7 @@ class GCSObjectMetadataClient:
     @staticmethod
     def add_task_state_labels(
         path: str,
-        task_params: Optional[dict[Any, str]] = None,
+        task_params: dict[Any, str] | None = None,
     ) -> None:
         # In gokart/object_storage.get_time_stamp, could find same call.
         # _path_to_bucket_and_key is a private method, so, this might not be acceptable.
@@ -74,8 +74,8 @@ class GCSObjectMetadataClient:
     @staticmethod
     def _get_patched_obj_metadata(
         metadata: Any,
-        task_params: Optional[dict[Any, str]] = None,
-    ) -> Union[dict, Any]:
+        task_params: dict[Any, str] | None = None,
+    ) -> dict | Any:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
         if not isinstance(metadata, dict):

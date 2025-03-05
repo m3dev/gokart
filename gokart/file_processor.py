@@ -126,7 +126,7 @@ class CsvFileProcessor(FileProcessor):
     def __init__(self, sep=',', encoding: str = 'utf-8'):
         self._sep = sep
         self._encoding = encoding
-        super(CsvFileProcessor, self).__init__()
+        super().__init__()
 
     def format(self):
         return TextFormat(encoding=self._encoding)
@@ -207,7 +207,7 @@ class ParquetFileProcessor(FileProcessor):
     def __init__(self, engine='pyarrow', compression=None):
         self._engine = engine
         self._compression = compression
-        super(ParquetFileProcessor, self).__init__()
+        super().__init__()
 
     def format(self):
         return luigi.format.Nop
@@ -230,7 +230,7 @@ class ParquetFileProcessor(FileProcessor):
 
 class FeatherFileProcessor(FileProcessor):
     def __init__(self, store_index_in_feather: bool):
-        super(FeatherFileProcessor, self).__init__()
+        super().__init__()
         self._store_index_in_feather = store_index_in_feather
         self.INDEX_COLUMN_PREFIX = '__feather_gokart_index__'
 

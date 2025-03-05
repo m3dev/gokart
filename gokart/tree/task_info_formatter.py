@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List, NamedTuple, Optional, Set
+from typing import NamedTuple
 
 from gokart.task import TaskOnKart
 from gokart.utils import FlattenableItems, flatten
@@ -13,13 +13,13 @@ from gokart.utils import FlattenableItems, flatten
 class TaskInfo:
     name: str
     unique_id: str
-    output_paths: List[str]
+    output_paths: list[str]
     params: dict
     processing_time: str
     is_complete: str
     task_log: dict
     requires: FlattenableItems[RequiredTask]
-    children_task_infos: List[TaskInfo]
+    children_task_infos: list[TaskInfo]
 
     def get_task_id(self):
         return f'{self.name}_{self.unique_id}'
@@ -59,14 +59,14 @@ def _make_requires_info(requires):
     raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `Iterarble[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 
 
-def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]] = None, cache: Optional[Dict[str, TaskInfo]] = None) -> TaskInfo:
+def make_task_info_tree(task: TaskOnKart, ignore_task_names: list[str] | None = None, cache: dict[str, TaskInfo] | None = None) -> TaskInfo:
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
         is_task_complete = task.complete()
 
     name = task.__class__.__name__
     unique_id = task.make_unique_id()
-    output_paths: List[str] = [t.path() for t in flatten(task.output())]
+    output_paths: list[str] = [t.path() for t in flatten(task.output())]
 
     cache = {} if cache is None else cache
     cache_id = f'{name}_{unique_id}_{is_task_complete}'
@@ -82,7 +82,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
     requires = _make_requires_info(task.requires())
 
     children = flatten(task.requires())
-    children_task_infos: List[TaskInfo] = []
+    children_task_infos: list[TaskInfo] = []
     for child in children:
         if ignore_task_names is None or child.__class__.__name__ not in ignore_task_names:
             children_task_infos.append(make_task_info_tree(child, ignore_task_names=ignore_task_names, cache=cache))
@@ -101,7 +101,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: Optional[List[str]]
     return task_info
 
 
-def make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, abbr: bool, visited_tasks: Set[str]):
+def make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, abbr: bool, visited_tasks: set[str]):
     result = '\n' + indent
     if last:
         result += '└─-'
@@ -128,7 +128,7 @@ def make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, 
     return result
 
 
-def make_tree_info_table_list(task_info: TaskInfo, visited_tasks: Set[str]):
+def make_tree_info_table_list(task_info: TaskInfo, visited_tasks: set[str]):
     task_id = task_info.get_task_id()
     if task_id in visited_tasks:
         return []
