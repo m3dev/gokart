@@ -111,7 +111,7 @@ class GCSObjectMetadataClient:
             if not required_task_outputs
             else [
                 normalized_custom_labels,
-                normalized_custom_labels,
+                normalized_task_params_labels,
                 {'__required_task_outputs': json.dumps(GCSObjectMetadataClient._get_serialized_string(required_task_outputs))},
             ]
         )

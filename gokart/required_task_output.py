@@ -7,4 +7,4 @@ class RequiredTaskOutput:
     output_path: str
 
     def serialize(self) -> dict[str, str]:
-        return {'task_name': self.task_name, 'output_path': self.output_path}
+        return {'__gokart_task_name': self.task_name, '__gokart_output_path': self.output_path}
