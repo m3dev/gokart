@@ -4,12 +4,14 @@ import copy
 import json
 import re
 from logging import getLogger
-from typing import Any, Union
+from typing import Any, Union, Iterable
 from urllib.parse import urlsplit
 
 from googleapiclient.model import makepatch
 
 from gokart.gcs_config import GCSConfig
+from gokart.required_task_output import RequiredTaskOutput
+from gokart.utils import FlattenableItems
 
 logger = getLogger(__name__)
 
@@ -37,7 +39,7 @@ class GCSObjectMetadataClient:
         path: str,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
-        required_task_outputs: dict[str, str] | None = None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         if GCSObjectMetadataClient._is_log_related_path(path):
             return
@@ -87,7 +89,7 @@ class GCSObjectMetadataClient:
         metadata: Any,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
-        required_task_outputs: dict[str, str] | None = None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> Union[dict, Any]:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
@@ -107,10 +109,20 @@ class GCSObjectMetadataClient:
         normalized_labels = (
             [normalized_custom_labels, normalized_task_params_labels]
             if not required_task_outputs
-            else [normalized_custom_labels, normalized_custom_labels, {'required_task_outputs': json.dumps(required_task_outputs)}]
+            else [normalized_custom_labels, normalized_custom_labels, {'__required_task_outputs': json.dumps(GCSObjectMetadataClient._get_serialized_string(required_task_outputs))}]
         )
         _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_labels)
         return GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(dict(metadata) | _merged_labels)
+
+    @staticmethod
+    def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput] | None) -> FlattenableItems[str]:
+        if isinstance(required_task_outputs, dict):
+            return {k : GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
+        if isinstance(required_task_outputs, tuple):
+            return tuple(required_task_output.serialize() for required_task_output in required_task_outputs)
+        if isinstance(required_task_outputs, RequiredTaskOutput):
+            return required_task_outputs.serialize()
+        return [require_task_output.serialize() for require_task_output in required_task_outputs]
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(

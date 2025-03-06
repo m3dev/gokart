@@ -9,6 +9,8 @@ from glob import glob
 from logging import getLogger
 from typing import Any, Optional
 
+from gokart.required_task_output import RequiredTaskOutput
+
 import luigi
 import numpy as np
 import pandas as pd
@@ -19,6 +21,7 @@ from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 from gokart.object_storage import ObjectStorage
 from gokart.zip_client_util import make_zip_client
+from gokart.utils import FlattenableItems
 
 logger = getLogger(__name__)
 
@@ -36,7 +39,7 @@ class TargetOnKart(luigi.Target):
         lock_at_dump: bool = True,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
-        required_task_outputs: dict[str, str] | None = None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         if lock_at_dump:
             wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(
@@ -76,7 +79,7 @@ class TargetOnKart(luigi.Target):
         obj,
         task_params: Optional[dict[str, str]] = None,
         custom_labels: dict[str, Any] | None = None,
-        required_task_outputs: dict[str, str] | None = None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         pass
 
@@ -119,7 +122,7 @@ class SingleFileTarget(TargetOnKart):
         obj,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
-        required_task_outputs: dict[str, str] | None = None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         with self._target.open('w') as f:
             self._processor.dump(obj, f)
@@ -171,7 +174,7 @@ class ModelTarget(TargetOnKart):
         obj,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
-        required_task_outputs: dict[str, str] | None = None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         self._make_temporary_directory()
         self._save_function(obj, self._model_path())

@@ -12,6 +12,7 @@ from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
 
+from gokart.required_task_output import RequiredTaskOutput
 from gokart.utils import map_flattenable_items
 
 if sys.version_info < (3, 13):
@@ -365,20 +366,16 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
-        @dataclass
-        class _RequiredTaskOutput:
-            task_name: str
-            output_path: str
+        requires = self.requires()
 
-        _required_task_outputs = flatten(
-            map_flattenable_items(
-                lambda task: map_flattenable_items(
-                    lambda output: _RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()
-                ),
-                self.requires(),
-            )
+        required_task_outputs = map_flattenable_items(
+            lambda task: map_flattenable_items(
+                lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()),
+                task.output()
+            ),
+            self.requires(),
         )
-        required_task_outputs = {r.task_name: r.output_path for r in _required_task_outputs}
+
         self._get_output_target(target).dump(
             obj,
             lock_at_dump=self._lock_at_dump,
