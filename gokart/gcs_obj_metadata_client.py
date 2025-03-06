@@ -121,7 +121,7 @@ class GCSObjectMetadataClient:
         if isinstance(required_task_outputs, tuple):
             return tuple(required_task_output.serialize() for required_task_output in required_task_outputs)
         if isinstance(required_task_outputs, RequiredTaskOutput):
-            return required_task_outputs.serialize()
+            return [required_task_outputs.serialize()]
         return [require_task_output.serialize() for require_task_output in required_task_outputs]
 
     @staticmethod
