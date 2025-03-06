@@ -4,7 +4,7 @@ import copy
 import json
 import re
 from logging import getLogger
-from typing import Any, Union
+from typing import Any, Iterable, Union
 from urllib.parse import urlsplit
 
 from googleapiclient.model import makepatch
@@ -124,9 +124,19 @@ class GCSObjectMetadataClient:
             return {k: GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
         if isinstance(required_task_outputs, tuple):
             return tuple(required_task_output.serialize() for required_task_output in required_task_outputs)
-        if isinstance(required_task_outputs, RequiredTaskOutput):
-            return [required_task_outputs.serialize()]
-        return [require_task_output.serialize() for require_task_output in required_task_outputs] # type: ignore
+        if isinstance(required_task_outputs, Iterable):
+            return GCSObjectMetadataClient._list_flatten([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs])
+        return [required_task_outputs.serialize()]
+
+    @staticmethod
+    def _list_flatten(nested_list: list):
+        flattened_list = []
+        for item in nested_list:
+            if isinstance(item, list):
+                flattened_list.extend(GCSObjectMetadataClient._list_flatten(item))
+            else:
+                flattened_list.append(item)
+        return flattened_list
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(
