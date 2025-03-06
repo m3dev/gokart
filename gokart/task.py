@@ -7,7 +7,6 @@ import os
 import random
 import sys
 import types
-from dataclasses import dataclass
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
@@ -367,10 +366,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
             assert not obj.empty
 
         required_task_outputs = map_flattenable_items(
-            lambda task: map_flattenable_items(
-                lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()),
-                task.output()
-            ),
+            lambda task: map_flattenable_items(lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()),
             self.requires(),
         )
 

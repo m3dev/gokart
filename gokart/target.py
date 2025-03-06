@@ -9,8 +9,6 @@ from glob import glob
 from logging import getLogger
 from typing import Any, Optional
 
-from gokart.required_task_output import RequiredTaskOutput
-
 import luigi
 import numpy as np
 import pandas as pd
@@ -20,8 +18,9 @@ from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lo
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 from gokart.object_storage import ObjectStorage
-from gokart.zip_client_util import make_zip_client
+from gokart.required_task_output import RequiredTaskOutput
 from gokart.utils import FlattenableItems
+from gokart.zip_client_util import make_zip_client
 
 logger = getLogger(__name__)
 
@@ -40,7 +39,6 @@ class TargetOnKart(luigi.Target):
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
-
     ) -> None:
         if lock_at_dump:
             wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(

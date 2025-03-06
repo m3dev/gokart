@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-@dataclass
 
+@dataclass
 class RequiredTaskOutput:
     task_name: str
     output_path: str

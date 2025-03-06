@@ -4,7 +4,7 @@ import copy
 import json
 import re
 from logging import getLogger
-from typing import Any, Union, Iterable
+from typing import Any, Union
 from urllib.parse import urlsplit
 
 from googleapiclient.model import makepatch
@@ -109,20 +109,24 @@ class GCSObjectMetadataClient:
         normalized_labels = (
             [normalized_custom_labels, normalized_task_params_labels]
             if not required_task_outputs
-            else [normalized_custom_labels, normalized_custom_labels, {'__required_task_outputs': json.dumps(GCSObjectMetadataClient._get_serialized_string(required_task_outputs))}]
+            else [
+                normalized_custom_labels,
+                normalized_custom_labels,
+                {'__required_task_outputs': json.dumps(GCSObjectMetadataClient._get_serialized_string(required_task_outputs))},
+            ]
         )
         _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_labels)
         return GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(dict(metadata) | _merged_labels)
 
     @staticmethod
-    def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput] | None) -> FlattenableItems[str]:
+    def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput]) -> FlattenableItems[str]:
         if isinstance(required_task_outputs, dict):
-            return {k : GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
+            return {k: GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
         if isinstance(required_task_outputs, tuple):
             return tuple(required_task_output.serialize() for required_task_output in required_task_outputs)
         if isinstance(required_task_outputs, RequiredTaskOutput):
             return [required_task_outputs.serialize()]
-        return [require_task_output.serialize() for require_task_output in required_task_outputs]
+        return [require_task_output.serialize() for require_task_output in required_task_outputs] # type: ignore
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(
