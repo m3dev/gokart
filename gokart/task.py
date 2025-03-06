@@ -366,8 +366,6 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
             assert not obj.empty
 
-        requires = self.requires()
-
         required_task_outputs = map_flattenable_items(
             lambda task: map_flattenable_items(
                 lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()),

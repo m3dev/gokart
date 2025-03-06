@@ -40,6 +40,7 @@ class TargetOnKart(luigi.Target):
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
+
     ) -> None:
         if lock_at_dump:
             wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(
