@@ -22,8 +22,15 @@ class TestFlatten(unittest.TestCase):
 
 class TestMapFlatten(unittest.TestCase):
     def test_map_flattenable_items(self):
-        self.assertEqual(map_flattenable_items({'a': 1, 'b': 2}, func=lambda x: str(x)), {'a': '1', 'b': '2'})
+        self.assertEqual(map_flattenable_items(lambda x: str(x), {'a': 1, 'b': 2}), {'a': '1', 'b': '2'})
         self.assertEqual(
-            map_flattenable_items({'a': [1, 2, 3, '4'], 'b': {'c': True, 'd': {'e': 5}}}, func=lambda x: str(x)),
+            map_flattenable_items(lambda x: str(x), (1, 2, 3, (4, 5, (6, 7, {'a': (8, 9, 0)})))),
+            ('1', '2', '3', ('4', '5', ('6', '7', {'a': ('8', '9', '0')}))),
+        )
+        self.assertEqual(
+            map_flattenable_items(
+                lambda x: str(x),
+                {'a': [1, 2, 3, '4'], 'b': {'c': True, 'd': {'e': 5}}},
+            ),
             {'a': ['1', '2', '3', '4'], 'b': {'c': 'True', 'd': {'e': '5'}}},
         )

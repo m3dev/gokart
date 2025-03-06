@@ -370,22 +370,15 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
             task_name: str
             output_path: str
 
-        _required_task_outputs = map_flattenable_items(
-            self.requires(),
-            func=lambda task: map_flattenable_items(
-                task.output(), func=lambda output: _RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path())
-            ),
-        )
-        required_task_outputs: dict[str, str] | None = None
-        if isinstance(_required_task_outputs, list):
-            required_task_outputs = {r.task_name: r.output_path for r in _required_task_outputs}
-        elif isinstance(_required_task_outputs, dict):
-            required_task_outputs = _required_task_outputs
-        else:
-            required_task_outputs = (
-                {_required_task_outputs.task_name: _required_task_outputs.output_path} if isinstance(_required_task_outputs, _RequiredTaskOutput) else None
+        _required_task_outputs = flatten(
+            map_flattenable_items(
+                lambda task: map_flattenable_items(
+                    lambda output: _RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()
+                ),
+                self.requires(),
             )
-
+        )
+        required_task_outputs = {r.task_name: r.output_path for r in _required_task_outputs}
         self._get_output_target(target).dump(
             obj,
             lock_at_dump=self._lock_at_dump,
