@@ -120,21 +120,19 @@ class GCSObjectMetadataClient:
 
     @staticmethod
     def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput]) -> FlattenableItems[str]:
-        def _list_flatten(nested_list: list):
-            flattened_list = []
+        def _iterable_flatten(nested_list: Iterable) -> list[str]:
+            flattened_list: list[str] = []
             for item in nested_list:
-                if isinstance(item, list):
-                    flattened_list.extend(_list_flatten(item))
+                if isinstance(item, Iterable):
+                    flattened_list.extend(_iterable_flatten(item))
                 else:
                     flattened_list.append(item)
             return flattened_list
 
         if isinstance(required_task_outputs, dict):
             return {k: GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
-        if isinstance(required_task_outputs, tuple):
-            return tuple(required_task_output.serialize() for required_task_output in required_task_outputs)
         if isinstance(required_task_outputs, Iterable):
-            return _list_flatten([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs])
+            return _iterable_flatten([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs])
         return [required_task_outputs.serialize()]
 
     @staticmethod
