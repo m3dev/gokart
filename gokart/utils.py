@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from io import BytesIO
-from typing import Any, Iterable, Protocol, TypeVar, Union
+from typing import Any, Callable, Iterable, Protocol, TypeVar, Union
 
 import dill
 import luigi
@@ -69,6 +69,21 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     for result in targets:
         flat += flatten(result)
     return flat
+
+
+K = TypeVar('K')
+
+
+def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) -> FlattenableItems[K]:
+    if isinstance(items, dict):
+        return {k: map_flattenable_items(func, v) for k, v in items.items()}
+    if isinstance(items, tuple):
+        return tuple(map_flattenable_items(func, i) for i in items)
+    if isinstance(items, str):
+        return func(items)  # type: ignore
+    if isinstance(items, Iterable):
+        return [map_flattenable_items(func, i) for i in items]
+    return func(items)
 
 
 def load_dill_with_pandas_backward_compatibility(file: Union[FileLike, BytesIO]) -> Any:
