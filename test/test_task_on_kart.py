@@ -14,6 +14,7 @@ import gokart
 from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
+from gokart.task import EmptyDumpError
 
 
 class _DummyTask(gokart.TaskOnKart):
@@ -414,7 +415,7 @@ class TaskTest(unittest.TestCase):
 
         # fail
         task = _DummyTask(fail_on_empty_dump=True)
-        self.assertRaises(AssertionError, lambda: task.dump(pd.DataFrame()))
+        self.assertRaises(EmptyDumpError, lambda: task.dump(pd.DataFrame()))
 
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: Mock):
@@ -567,7 +568,7 @@ class TaskTest(unittest.TestCase):
 
 
 class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
-    def dump(self, _obj: Any, _target: Any = None):
+    def dump(self, _obj: Any, _target: Any = None, _custom_labels: Any = None):
         # overrive dump() to do nothing.
         pass
 
@@ -579,7 +580,7 @@ class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
 
 
 class _DummyTaskWithCompleted(gokart.TaskOnKart):
-    def dump(self, obj: Any, _target: Any = None):
+    def dump(self, obj: Any, _target: Any = None, custom_labels: Any = None):
         # overrive dump() to do nothing.
         pass
 

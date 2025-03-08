@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import hashlib
 import inspect
@@ -28,6 +30,11 @@ logger = getLogger(__name__)
 
 T = TypeVar('T')
 K = TypeVar('K')
+
+
+# NOTE: inherited from AssertionError for backward compatibility (Formerly, Gokart raises that exception when a task dumps an empty DataFrame).
+class EmptyDumpError(AssertionError):
+    """Attempted to dump an empty DataFrame even though it is prohibited (fail_on_empty_dump is set to True)."""
 
 
 class TaskOnKart(luigi.Task, Generic[T]):
@@ -318,16 +325,23 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return _load(self._get_input_targets(target))
 
     @overload
-    def dump(self, obj: T, target: None = None) -> None: ...
+    def dump(self, obj: T, target: None = None, custom_labels: dict[Any, Any] | None = None) -> None: ...
 
     @overload
-    def dump(self, obj: Any, target: Union[str, TargetOnKart]) -> None: ...
+    def dump(self, obj: Any, target: Union[str, TargetOnKart], custom_labels: dict[Any, Any] | None = None) -> None: ...
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None) -> None:
+    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
-        if self.fail_on_empty_dump and isinstance(obj, pd.DataFrame):
-            assert not obj.empty
-        self._get_output_target(target).dump(obj, lock_at_dump=self._lock_at_dump)
+        if self.fail_on_empty_dump:
+            if isinstance(obj, pd.DataFrame) and obj.empty:
+                raise EmptyDumpError()
+
+        self._get_output_target(target).dump(
+            obj,
+            lock_at_dump=self._lock_at_dump,
+            task_params=super().to_str_params(only_significant=True, only_public=True),
+            custom_labels=custom_labels,
+        )
 
     @staticmethod
     def get_code(target_class) -> Set[str]:
