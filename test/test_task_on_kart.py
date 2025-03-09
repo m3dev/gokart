@@ -443,52 +443,6 @@ class TaskTest(unittest.TestCase):
         mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 2)
 
-    def test_load_list_of_list_pandas(self):
-        task = _DummyTask()
-        task.load = Mock(return_value=[pd.DataFrame(dict(a=[1])), [pd.DataFrame(dict(a=[2])), pd.DataFrame(dict(a=[3]))]])  # type: ignore
-
-        df = task.load_data_frame()
-        self.assertIsInstance(df, pd.DataFrame)
-        self.assertEqual(3, df.shape[0])
-
-    def test_load_single_value_dict_of_dataframe(self):
-        task = _DummyTask()
-        task.load = Mock(return_value={'a': pd.DataFrame(dict(a=[1]))})  # type: ignore
-
-        df = task.load_data_frame()
-        self.assertIsInstance(df, pd.DataFrame)
-        self.assertEqual(1, df.shape[0])
-
-    def test_load_data_frame_drop_columns(self):
-        task = _DummyTask()
-        task.load = Mock(return_value=pd.DataFrame(dict(a=[1], b=[2], c=[3])))  # type: ignore
-
-        df = task.load_data_frame(required_columns={'a', 'c'}, drop_columns=True)
-        self.assertIsInstance(df, pd.DataFrame)
-        self.assertEqual(1, df.shape[0])
-        self.assertSetEqual({'a', 'c'}, set(df.columns))
-
-    def test_load_data_frame_empty_input(self):
-        task = _DummyTask()
-        task.load = Mock(return_value=pd.DataFrame(dict(a=[], b=[], c=[])))  # type: ignore
-
-        df = task.load_data_frame(required_columns={'a', 'c'})
-        self.assertIsInstance(df, pd.DataFrame)
-        self.assertEqual(0, df.shape[0])
-        self.assertSetEqual({'a', 'b', 'c'}, set(df.columns))
-
-    def test_load_index_only_dataframe(self):
-        task = _DummyTask()
-        task.load = Mock(return_value=pd.DataFrame(index=range(3)))  # type: ignore
-
-        # connnot load index only frame with required_columns
-        self.assertRaises(AssertionError, lambda: task.load_data_frame(required_columns={'a', 'c'}))
-
-        df: pd.DataFrame = task.load_data_frame()
-        self.assertIsInstance(df, pd.DataFrame)
-        self.assertTrue(df.empty)
-        self.assertListEqual(list(range(3)), list(df.index))
-
     def test_use_rerun_with_inherits(self):
         # All tasks are completed.
         task_c = _DummyTaskC()

@@ -5,16 +5,10 @@ import hashlib
 import inspect
 import os
 import random
-import sys
 import types
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
-
-if sys.version_info < (3, 13):
-    from typing_extensions import deprecated
-else:
-    from warnings import deprecated
 
 import luigi
 import pandas as pd
@@ -329,32 +323,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 yield targets.load()
 
         return _load(self._get_input_targets(target))
-
-    @deprecated("""This function is deprecated. use `load` instead.
-If you want to specify `required_columns` and `drop_columns`, please extract the columns after loading. ex: `load()[['colA', 'colB']]`
-""")
-    def load_data_frame(
-        self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None, drop_columns: bool = False
-    ) -> pd.DataFrame:
-        def _flatten_recursively(dfs):
-            if isinstance(dfs, list):
-                return pd.concat([_flatten_recursively(df) for df in dfs])
-            else:
-                return dfs
-
-        dfs = self.load(target=target)
-        if isinstance(dfs, dict) and len(dfs) == 1:
-            dfs = list(dfs.values())[0]
-
-        data = _flatten_recursively(dfs)
-
-        required_columns = required_columns or set()
-        if data.empty and len(data.index) == 0 and len(required_columns - set(data.columns)) > 0:
-            return pd.DataFrame(columns=list(required_columns))
-        assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
-        if drop_columns:
-            data = data[list(required_columns)]
-        return data
 
     @overload
     def dump(self, obj: T, target: None = None, custom_labels: dict[Any, Any] | None = None) -> None: ...
