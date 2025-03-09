@@ -157,7 +157,7 @@ As an alternative, the `load` method loads individual task input by passing an i
 
 
 We can also omit the :func:`~gokart.task.TaskOnKart.requires` and write the task used by :func:`~gokart.parameter.TaskInstanceParameter`.
-Extensions include :func:`~gokart.task.TaskOnKart.load_data_frame` and :func:`~gokart.task.TaskOnKart.load_generator`. Please refer to :func:`~gokart.task.TaskOnKart.load`, :doc:`task_parameters`, and described later Advanced Features section.
+Also please refer to :func:`~gokart.task.TaskOnKart.load`, :doc:`task_parameters`, and described later Advanced Features section.
 
 
 TaskOnKart.dump
@@ -240,15 +240,6 @@ The :func:`~gokart.task.TaskOnKart.make_model_target` method is used to dump for
 It is dumped and zipped with ``gensim.model.Word2Vec.save``.
 
 Please refer to :func:`~gokart.task.TaskOnKart.make_model_target`.
-
-
-TaskOnKart.load_data_frame
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Please refer to :doc:`for_pandas`.
-
-.. warning::
-    This function is deprecated. Please use :func:`~gokart.task.TaskOnKart.load` instead.
 
 
 TaskOnKart.fail_on_empty_dump
