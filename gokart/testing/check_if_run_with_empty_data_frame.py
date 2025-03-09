@@ -3,7 +3,6 @@ import sys
 from typing import List, Optional
 
 import luigi
-import pandas as pd
 from luigi.cmdline_parser import CmdlineParser
 
 import gokart
