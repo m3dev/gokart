@@ -39,13 +39,15 @@ class LoggerConfig:
 
 
 class GokartBuildError(Exception):
+    """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution."""
+
     def __init__(self, messsage, raised_exceptions: dict[str, list[Exception]]):
         super().__init__(messsage)
         self.raised_exceptions = raised_exceptions
 
 
 class HasLockedTaskException(Exception):
-    pass
+    """Raised when the task failed to acquire the lock in the task execution."""
 
 
 class TaskLockExceptionRaisedFlag:

@@ -11,7 +11,7 @@ logger = getLogger(__name__)
 
 
 class PandasTypeError(Exception):
-    pass
+    """Raised when the type of the pandas DataFrame column is not as expected."""
 
 
 class PandasTypeConfig(luigi.Config):
