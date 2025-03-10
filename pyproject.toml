@@ -45,6 +45,10 @@ Homepage = "https://github.com/m3dev/gokart"
 Repository = "https://github.com/m3dev/gokart"
 Documentation = "https://gokart.readthedocs.io/en/latest/"
 
+[project.optional-dependencies]
+pandas = ["pandas"]
+polars = ["polars"]
+
 [dependency-groups]
 test = [
   "fakeredis",
