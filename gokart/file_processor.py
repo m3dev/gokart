@@ -223,7 +223,7 @@ class ParquetFileProcessor(FileProcessor):
     def dump(self, obj, file):
         assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
         # MEMO: to_parquet only supports a filepath as string (not a file handle)
-        obj.to_parquet(file.name, index=False, compression=self._compression)
+        obj.to_parquet(file.name, index=False, engine=self._engine, compression=self._compression)
 
 
 class FeatherFileProcessor(FileProcessor):
