@@ -9,8 +9,6 @@ import luigi
 import luigi.contrib.s3
 import luigi.format
 import numpy as np
-import pandas as pd
-import pandas.errors
 from luigi.format import TextFormat
 
 from gokart.object_storage import ObjectStorage
@@ -131,13 +129,31 @@ class CsvFileProcessor(FileProcessor):
 
     def load(self, file):
         try:
-            return pd.read_csv(file, sep=self._sep, encoding=self._encoding)
-        except pd.errors.EmptyDataError:
-            return pd.DataFrame()
+            import pandas as pd
+
+            try:
+                return pd.read_csv(file, sep=self._sep, encoding=self._encoding)
+            except pd.errors.EmptyDataError:
+                return pd.DataFrame()
+        except ImportError:
+            import polars as pl
+
+            try:
+                return pl.read_csv(file, sep=self._sep, encoding=self._encoding)
+            except pl.exceptions.NoDataError:
+                return pd.DataFrame()
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame, pd.Series)), f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
-        obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True, encoding=self._encoding)
+        try:
+            import pandas as pd
+
+            assert isinstance(obj, (pd.DataFrame, pd.Series)), f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.'
+            obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True, encoding=self._encoding)
+        except ImportError:
+            import polars as pl
+
+            assert isinstance(obj, (pl.DataFrame, pl.Series)), f'requires pl.DataFrame or pl.Series, but {type(obj)} is passed.'
+            obj.write_csv(file, separator=self._sep, include_header=True)
 
 
 class GzipFileProcessor(FileProcessor):
@@ -161,17 +177,39 @@ class JsonFileProcessor(FileProcessor):
 
     def load(self, file):
         try:
-            return pd.read_json(file)
-        except pd.errors.EmptyDataError:
-            return pd.DataFrame()
+            import pandas as pd
+
+            try:
+                return self.read_json(file)
+            except pd.errors.EmptyDataError:
+                return pd.DataFrame()
+        except ImportError:
+            import polars as pl
+
+            try:
+                return self.read_json(file)
+            except pl.exceptions.NoDataError:
+                return pl.DataFrame()
 
     def dump(self, obj, file):
-        assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict), (
-            f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
-        )
-        if isinstance(obj, dict):
-            obj = pd.DataFrame.from_dict(obj)
-        obj.to_json(file)
+        try:
+            import pandas as pd
+
+            assert isinstance(obj, pd.DataFrame) or isinstance(obj, pd.Series) or isinstance(obj, dict), (
+                f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.'
+            )
+            if isinstance(obj, dict):
+                obj = pd.DataFrame.from_dict(obj)
+            obj.to_json(file)
+        except ImportError:
+            import polars as pl
+
+            assert isinstance(obj, pl.DataFrame) or isinstance(obj, pl.Series) or isinstance(obj, dict), (
+                f'requires pl.DataFrame or pl.Series or dict, but {type(obj)} is passed.'
+            )
+            if isinstance(obj, dict):
+                obj = pl.from_dict(obj)
+            obj.write_json(file)
 
 
 class XmlFileProcessor(FileProcessor):
@@ -211,19 +249,39 @@ class ParquetFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        # FIXME(mamo3gr): enable streaming (chunked) read with S3.
-        # pandas.read_parquet accepts file-like object
-        # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
-        # which is needed for pandas to read a file in chunks.
-        if ObjectStorage.is_buffered_reader(file):
-            return pd.read_parquet(file.name)
-        else:
-            return pd.read_parquet(BytesIO(file.read()))
+        try:
+            import pandas as pd
+
+            # FIXME(mamo3gr): enable streaming (chunked) read with S3.
+            # pandas.read_parquet accepts file-like object
+            # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
+            # which is needed for pandas to read a file in chunks.
+            if ObjectStorage.is_buffered_reader(file):
+                return pd.read_parquet(file.name)
+            else:
+                return pd.read_parquet(BytesIO(file.read()))
+        except ImportError:
+            import polars as pl
+
+            if ObjectStorage.is_buffered_reader(file):
+                return pl.read_parquet(file.name)
+            else:
+                return pl.read_parquet(BytesIO(file.read()))
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
-        # MEMO: to_parquet only supports a filepath as string (not a file handle)
-        obj.to_parquet(file.name, index=False, engine=self._engine, compression=self._compression)
+        try:
+            import pandas as pd
+
+            assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
+            # MEMO: to_parquet only supports a filepath as string (not a file handle)
+            obj.to_parquet(file.name, index=False, engine=self._engine, compression=self._compression)
+        except ImportError:
+            import polars as pl
+
+            assert isinstance(obj, (pl.DataFrame)), f'requires pl.DataFrame, but {type(obj)} is passed.'
+            use_pyarrow = self._engine == 'pyarrow'
+            compression = 'uncompressed' if self._compression is None else self._compression
+            obj.write_parquet(file, use_pyarrow=use_pyarrow, compression=compression)
 
 
 class FeatherFileProcessor(FileProcessor):
@@ -236,44 +294,66 @@ class FeatherFileProcessor(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file):
-        # FIXME(mamo3gr): enable streaming (chunked) read with S3.
-        # pandas.read_feather accepts file-like object
-        # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
-        # which is needed for pandas to read a file in chunks.
-        if ObjectStorage.is_buffered_reader(file):
-            loaded_df = pd.read_feather(file.name)
-        else:
-            loaded_df = pd.read_feather(BytesIO(file.read()))
+        try:
+            import pandas as pd
 
-        if self._store_index_in_feather:
-            if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
-                index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
-                index_column = index_columns[0]
-                index_name = index_column[len(self.INDEX_COLUMN_PREFIX) :]
-                if index_name == 'None':
-                    index_name = None
-                loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
-                loaded_df = loaded_df.drop(columns={index_column})
+            # FIXME(mamo3gr): enable streaming (chunked) read with S3.
+            # pandas.read_feather accepts file-like object
+            # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
+            # which is needed for pandas to read a file in chunks.
+            if ObjectStorage.is_buffered_reader(file):
+                loaded_df = pd.read_feather(file.name)
+            else:
+                loaded_df = pd.read_feather(BytesIO(file.read()))
 
-        return loaded_df
+            if self._store_index_in_feather:
+                if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
+                    index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
+                    index_column = index_columns[0]
+                    index_name = index_column[len(self.INDEX_COLUMN_PREFIX) :]
+                    if index_name == 'None':
+                        index_name = None
+                    loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
+                    loaded_df = loaded_df.drop(columns={index_column})
+
+            return loaded_df
+        except ImportError:
+            import polars as pl
+
+            # Since polars' DataFrame doesn't have index, just load feather file
+            if ObjectStorage.is_buffered_reader(file):
+                loaded_df = pl.read_ipc(file.name)
+            else:
+                loaded_df = pl.read_ipc(BytesIO(file.read()))
+
+            return loaded_df
 
     def dump(self, obj, file):
-        assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
-        dump_obj = obj.copy()
+        try:
+            import pandas as pd
 
-        if self._store_index_in_feather:
-            index_column_name = f'{self.INDEX_COLUMN_PREFIX}{dump_obj.index.name}'
-            assert index_column_name not in dump_obj.columns, (
-                f'column name {index_column_name} already exists in dump_obj. \
+            assert isinstance(obj, (pd.DataFrame)), f'requires pd.DataFrame, but {type(obj)} is passed.'
+            dump_obj = obj.copy()
+
+            if self._store_index_in_feather:
+                index_column_name = f'{self.INDEX_COLUMN_PREFIX}{dump_obj.index.name}'
+                assert index_column_name not in dump_obj.columns, (
+                    f'column name {index_column_name} already exists in dump_obj. \
                 Consider not saving index by setting store_index_in_feather=False.'
-            )
-            assert dump_obj.index.name != 'None', 'index name is "None", which is not allowed in gokart. Consider setting another index name.'
+                )
+                assert dump_obj.index.name != 'None', 'index name is "None", which is not allowed in gokart. Consider setting another index name.'
 
-            dump_obj[index_column_name] = dump_obj.index
-            dump_obj = dump_obj.reset_index(drop=True)
+                dump_obj[index_column_name] = dump_obj.index
+                dump_obj = dump_obj.reset_index(drop=True)
 
-        # to_feather supports "binary" file-like object, but file variable is text
-        dump_obj.to_feather(file.name)
+            # to_feather supports "binary" file-like object, but file variable is text
+            dump_obj.to_feather(file.name)
+        except ImportError:
+            import polars as pl
+
+            assert isinstance(obj, (pl.DataFrame)), f'requires pl.DataFrame, but {type(obj)} is passed.'
+            dump_obj = obj.copy()
+            dump_obj.write_ipc(file.name)
 
 
 def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
