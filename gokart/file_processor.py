@@ -156,7 +156,7 @@ class GzipFileProcessor(FileProcessor):
 
 
 class JsonFileProcessor(FileProcessor):
-    def __init__(self, orient=None):
+    def __init__(self, orient: Optional[str] = None):
         self._orient = orient
 
     def format(self):
