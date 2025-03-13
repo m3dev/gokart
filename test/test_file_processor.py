@@ -83,7 +83,9 @@ class TestCsvFileProcessor(unittest.TestCase):
                 pd.testing.assert_frame_equal(df, loaded_df)
 
 
-target_orients = [None, "records"]
+target_orients = [None, 'records']
+
+
 class TestJsonFileProcessor(unittest.TestCase):
     @parameterized.expand([(orient,) for orient in target_orients])
     def test_dump_and_load_dataframe(self, orient):
