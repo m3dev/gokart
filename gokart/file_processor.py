@@ -165,7 +165,7 @@ class JsonFileProcessor(FileProcessor):
 
     def load(self, file):
         try:
-            return pd.read_json(file, orient=self._orient)
+            return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
@@ -175,7 +175,7 @@ class JsonFileProcessor(FileProcessor):
         )
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
-        obj.to_json(file, orient=self._orient)
+        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
 
 
 class XmlFileProcessor(FileProcessor):

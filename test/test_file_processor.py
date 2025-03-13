@@ -97,13 +97,13 @@ class TestJsonFileProcessor:
             pytest.param(
                 'records',
                 pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}),
-                '[{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}]',
+                '{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}',
                 id='With Records Orient for DataFrame',
             ),
             pytest.param(None, {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":{"0":1,"1":2,"2":3},"B":{"0":4,"1":5,"2":6}}', id='With Default Orient for Dict'),
-            pytest.param('records', {'A': [1, 2, 3], 'B': [4, 5, 6]}, '[{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}]', id='With Records Orient for Dict'),
+            pytest.param('records', {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}', id='With Records Orient for Dict'),
             pytest.param(None, {}, '{}', id='With Default Orient for Empty Dict'),
-            pytest.param('records', {}, '[]', id='With Records Orient for Empty Dict'),
+            pytest.param('records', {}, '', id='With Records Orient for Empty Dict'),
         ],
     )
     def test_dump_and_load_json(self, orient, input_data, expected_json):
@@ -119,9 +119,15 @@ class TestJsonFileProcessor:
                 loaded_df = processor.load(f)
             # load file as json
             with local_target.open('r') as f:
-                loaded_json = f.read().decode('utf-8')
+                if orient == None:
+                    loaded_json = f.read().decode('utf-8')
+                else:
+                    # newline delimited json file
+                    _loaded_json = [line.decode('utf-8').strip() for line in f.readlines()]
+                    loaded_json = ','.join(_loaded_json)
 
-        assert json.loads(loaded_json) == json.loads(expected_json)
+        # assert json.loads(loaded_json) == json.loads(expected_json)
+        assert loaded_json == expected_json
 
         df_input = pd.DataFrame(input_data)
         pd.testing.assert_frame_equal(df_input, loaded_df)
