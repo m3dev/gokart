@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from io import BytesIO
 from logging import getLogger
+from typing import Optional
 
 import dill
 import luigi
