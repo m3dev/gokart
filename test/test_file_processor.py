@@ -7,8 +7,19 @@ import boto3
 import pandas as pd
 from luigi import LocalTarget
 from moto import mock_aws
+from parameterized import parameterized
 
-from gokart.file_processor import CsvFileProcessor, FeatherFileProcessor, PickleFileProcessor
+from gokart.file_processor import (
+    CsvFileProcessor,
+    FeatherFileProcessor,
+    GzipFileProcessor,
+    JsonFileProcessor,
+    NpzFileProcessor,
+    ParquetFileProcessor,
+    PickleFileProcessor,
+    TextFileProcessor,
+    make_file_processor,
+)
 from gokart.object_storage import ObjectStorage
 
 
@@ -70,6 +81,71 @@ class TestCsvFileProcessor(unittest.TestCase):
                 # read with cp932 to check if the file is dumped with cp932
                 loaded_df = processor.load(f)
                 pd.testing.assert_frame_equal(df, loaded_df)
+
+
+target_orients = [None, "records"]
+class TestJsonFileProcessor(unittest.TestCase):
+    @parameterized.expand([(orient,) for orient in target_orients])
+    def test_dump_and_load_dataframe(self, orient):
+        df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+        processor = JsonFileProcessor(orient=orient)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.json'
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(df, f)
+            with local_target.open('r') as f:
+                loaded_df = processor.load(f)
+
+        pd.testing.assert_frame_equal(df, loaded_df)
+
+    @parameterized.expand([(orient,) for orient in target_orients])
+    def test_dump_and_load_dict(self, orient):
+        data = {'A': [1, 2, 3], 'B': [4, 5, 6]}
+        processor = JsonFileProcessor(orient=orient)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.json'
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(data, f)
+            with local_target.open('r') as f:
+                loaded_df = processor.load(f)
+
+        pd.testing.assert_frame_equal(pd.DataFrame(data), loaded_df)
+
+    @parameterized.expand([(orient,) for orient in target_orients])
+    def test_load_empty_dict(self, orient):
+        data: dict = {}
+        processor = JsonFileProcessor(orient=orient)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.json'
+            with open(temp_path, 'w') as f:
+                processor.dump(data, f)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded_df = processor.load(f)
+
+        pd.testing.assert_frame_equal(pd.DataFrame(data), loaded_df)
+
+    @parameterized.expand([(orient,) for orient in target_orients])
+    def test_load_empty_dataframe(self, orient):
+        data = pd.DataFrame()
+        processor = JsonFileProcessor(orient=orient)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.json'
+            with open(temp_path, 'w') as f:
+                processor.dump(data, f)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded_df = processor.load(f)
+
+        pd.testing.assert_frame_equal(data, loaded_df)
 
 
 class TestPickleFileProcessor(unittest.TestCase):
@@ -179,3 +255,41 @@ class TestFeatherFileProcessor(unittest.TestCase):
             with local_target.open('w') as f:
                 with self.assertRaises(AssertionError):
                     processor.dump(df, f)
+
+
+class TestMakeFileProcessor(unittest.TestCase):
+    def test_make_file_processor_with_txt_extension(self):
+        processor = make_file_processor('test.txt', store_index_in_feather=False)
+        self.assertIsInstance(processor, TextFileProcessor)
+
+    def test_make_file_processor_with_csv_extension(self):
+        processor = make_file_processor('test.csv', store_index_in_feather=False)
+        self.assertIsInstance(processor, CsvFileProcessor)
+
+    def test_make_file_processor_with_gz_extension(self):
+        processor = make_file_processor('test.gz', store_index_in_feather=False)
+        self.assertIsInstance(processor, GzipFileProcessor)
+
+    def test_make_file_processor_with_json_extension(self):
+        processor = make_file_processor('test.json', store_index_in_feather=False)
+        self.assertIsInstance(processor, JsonFileProcessor)
+
+    def test_make_file_processor_with_ndjson_extension(self):
+        processor = make_file_processor('test.ndjson', store_index_in_feather=False)
+        self.assertIsInstance(processor, JsonFileProcessor)
+
+    def test_make_file_processor_with_npz_extension(self):
+        processor = make_file_processor('test.npz', store_index_in_feather=False)
+        self.assertIsInstance(processor, NpzFileProcessor)
+
+    def test_make_file_processor_with_parquet_extension(self):
+        processor = make_file_processor('test.parquet', store_index_in_feather=False)
+        self.assertIsInstance(processor, ParquetFileProcessor)
+
+    def test_make_file_processor_with_feather_extension(self):
+        processor = make_file_processor('test.feather', store_index_in_feather=True)
+        self.assertIsInstance(processor, FeatherFileProcessor)
+
+    def test_make_file_processor_with_unsupported_extension(self):
+        with self.assertRaises(AssertionError):
+            make_file_processor('test.unsupported', store_index_in_feather=False)
