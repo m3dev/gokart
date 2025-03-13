@@ -52,7 +52,6 @@ test = [
   "matplotlib",
   "moto",
   "mypy",
-  "parameterized>=0.9.0",
   "pytest",
   "pytest-cov",
   "pytest-xdist",
