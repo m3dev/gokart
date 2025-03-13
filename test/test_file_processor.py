@@ -1,12 +1,11 @@
 import os
 import tempfile
 import unittest
-import json
 from typing import Callable
 
-import pytest
 import boto3
 import pandas as pd
+import pytest
 from luigi import LocalTarget
 from moto import mock_aws
 
@@ -119,7 +118,7 @@ class TestJsonFileProcessor:
                 loaded_df = processor.load(f)
             # load file as json
             with local_target.open('r') as f:
-                if orient == None:
+                if orient is None:
                     loaded_json = f.read().decode('utf-8')
                 else:
                     # newline delimited json file
