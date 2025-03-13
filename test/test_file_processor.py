@@ -125,7 +125,6 @@ class TestJsonFileProcessor:
                     _loaded_json = [line.decode('utf-8').strip() for line in f.readlines()]
                     loaded_json = ','.join(_loaded_json)
 
-        # assert json.loads(loaded_json) == json.loads(expected_json)
         assert loaded_json == expected_json
 
         df_input = pd.DataFrame(input_data)
