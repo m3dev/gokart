@@ -96,13 +96,13 @@ class TestJsonFileProcessor:
             pytest.param(
                 'records',
                 pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}),
-                '{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}',
+                '{"A":1,"B":4}\n{"A":2,"B":5}\n{"A":3,"B":6}\n',
                 id='With Records Orient for DataFrame',
             ),
             pytest.param(None, {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":{"0":1,"1":2,"2":3},"B":{"0":4,"1":5,"2":6}}', id='With Default Orient for Dict'),
-            pytest.param('records', {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}', id='With Records Orient for Dict'),
+            pytest.param('records', {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":1,"B":4}\n{"A":2,"B":5}\n{"A":3,"B":6}\n', id='With Records Orient for Dict'),
             pytest.param(None, {}, '{}', id='With Default Orient for Empty Dict'),
-            pytest.param('records', {}, '', id='With Records Orient for Empty Dict'),
+            pytest.param('records', {}, '\n', id='With Records Orient for Empty Dict'),
         ],
     )
     def test_dump_and_load_json(self, orient, input_data, expected_json):
@@ -113,17 +113,10 @@ class TestJsonFileProcessor:
             local_target = LocalTarget(path=temp_path, format=processor.format())
             with local_target.open('w') as f:
                 processor.dump(input_data, f)
-            # load file as DataFrame
             with local_target.open('r') as f:
                 loaded_df = processor.load(f)
-            # load file as json
-            with local_target.open('r') as f:
-                if orient is None:
-                    loaded_json = f.read().decode('utf-8')
-                else:
-                    # newline delimited json file
-                    _loaded_json = [line.decode('utf-8').strip() for line in f.readlines()]
-                    loaded_json = ','.join(_loaded_json)
+                f.seek(0)
+                loaded_json = f.read().decode('utf-8')
 
         assert loaded_json == expected_json
 
