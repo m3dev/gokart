@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from io import BytesIO
 from logging import getLogger
+from typing import Optional
 
 import dill
 import luigi
@@ -156,12 +157,15 @@ class GzipFileProcessor(FileProcessor):
 
 
 class JsonFileProcessor(FileProcessor):
+    def __init__(self, orient: Optional[str] = None):
+        self._orient = orient
+
     def format(self):
-        return None
+        return luigi.format.Nop
 
     def load(self, file):
         try:
-            return pd.read_json(file)
+            return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
@@ -171,7 +175,7 @@ class JsonFileProcessor(FileProcessor):
         )
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
-        obj.to_json(file)
+        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
 
 
 class XmlFileProcessor(FileProcessor):
@@ -285,6 +289,7 @@ def make_file_processor(file_path: str, store_index_in_feather: bool) -> FilePro
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
         '.json': JsonFileProcessor(),
+        '.ndjson': JsonFileProcessor(orient='records'),
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip'),
