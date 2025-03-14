@@ -85,28 +85,30 @@ class TestCsvFileProcessor(unittest.TestCase):
 
 class TestJsonFileProcessor:
     @pytest.mark.parametrize(
-        'orient,input_data,expected_json',
+        'orient,lines,input_data,expected_json',
         [
             pytest.param(
                 None,
+                False,
                 pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}),
                 '{"A":{"0":1,"1":2,"2":3},"B":{"0":4,"1":5,"2":6}}',
                 id='With Default Orient for DataFrame',
             ),
             pytest.param(
                 'records',
+                True,
                 pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}),
                 '{"A":1,"B":4}\n{"A":2,"B":5}\n{"A":3,"B":6}\n',
                 id='With Records Orient for DataFrame',
             ),
-            pytest.param(None, {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":{"0":1,"1":2,"2":3},"B":{"0":4,"1":5,"2":6}}', id='With Default Orient for Dict'),
-            pytest.param('records', {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":1,"B":4}\n{"A":2,"B":5}\n{"A":3,"B":6}\n', id='With Records Orient for Dict'),
-            pytest.param(None, {}, '{}', id='With Default Orient for Empty Dict'),
-            pytest.param('records', {}, '\n', id='With Records Orient for Empty Dict'),
+            pytest.param(None, False, {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":{"0":1,"1":2,"2":3},"B":{"0":4,"1":5,"2":6}}', id='With Default Orient for Dict'),
+            pytest.param('records', True, {'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":1,"B":4}\n{"A":2,"B":5}\n{"A":3,"B":6}\n', id='With Records Orient for Dict'),
+            pytest.param(None, False, {}, '{}', id='With Default Orient for Empty Dict'),
+            pytest.param('records', True, {}, '\n', id='With Records Orient for Empty Dict'),
         ],
     )
-    def test_dump_and_load_json(self, orient, input_data, expected_json):
-        processor = JsonFileProcessor(orient=orient)
+    def test_dump_and_load_json(self, orient, lines, input_data, expected_json):
+        processor = JsonFileProcessor(orient=orient, lines=lines)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = f'{temp_dir}/temp.json'

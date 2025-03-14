@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from io import BytesIO
 from logging import getLogger
-from typing import Optional
+from typing import Literal, Optional
 
 import dill
 import luigi
@@ -156,16 +156,20 @@ class GzipFileProcessor(FileProcessor):
             file.write(str(obj).encode())
 
 
+JsonOrient = Literal['split', 'records', 'index', 'table', 'columns', 'values']
+
+
 class JsonFileProcessor(FileProcessor):
-    def __init__(self, orient: Optional[str] = None):
+    def __init__(self, orient: Optional[JsonOrient] = None, lines: bool = False):
         self._orient = orient
+        self._lines = lines
 
     def format(self):
         return luigi.format.Nop
 
     def load(self, file):
         try:
-            return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
+            return pd.read_json(file, orient=self._orient, lines=self._lines)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
@@ -175,7 +179,7 @@ class JsonFileProcessor(FileProcessor):
         )
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
-        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
+        obj.to_json(file, orient=self._orient, lines=self._lines)
 
 
 class XmlFileProcessor(FileProcessor):
@@ -289,7 +293,7 @@ def make_file_processor(file_path: str, store_index_in_feather: bool) -> FilePro
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
         '.json': JsonFileProcessor(),
-        '.ndjson': JsonFileProcessor(orient='records'),
+        '.ndjson': JsonFileProcessor(orient='records', lines=True),
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip'),
