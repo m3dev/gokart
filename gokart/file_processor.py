@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import xml.etree.ElementTree as ET
 from abc import abstractmethod
@@ -63,7 +65,7 @@ class BinaryFileProcessor(FileProcessor):
         file.write(obj)
 
 
-class _ChunkedLargeFileReader(object):
+class _ChunkedLargeFileReader:
     def __init__(self, file) -> None:
         self._file = file
 
@@ -183,8 +185,11 @@ class GzipFileProcessor(FileProcessor):
 
 
 class JsonFileProcessor(FileProcessor):
+    def __init__(self, orient: str | None = None):
+        self._orient = orient
+
     def format(self):
-        return None
+        return luigi.format.Nop
 
     def load(self, file):
         ...
@@ -196,6 +201,8 @@ class JsonFileProcessor(FileProcessor):
 class PolarsJsonFileProcessor(JsonFileProcessor):
     def load(self, file):
         try:
+            if self._orient == 'records':
+                return self.read_ndjson(file)
             return self.read_json(file)
         except pl.exceptions.NoDataError:
             return pl.DataFrame()
@@ -206,13 +213,17 @@ class PolarsJsonFileProcessor(JsonFileProcessor):
         )
         if isinstance(obj, dict):
             obj = pl.from_dict(obj)
-        obj.write_json(file)
+
+        if self._orient == 'records':
+            obj_write_ndjson(file)
+        else:
+            obj.write_json(file)
 
 
 class PandasJsonFileProcessor(JsonFileProcessor):
     def load(self, file):
         try:
-            return self.read_json(file)
+            return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
@@ -222,7 +233,7 @@ class PandasJsonFileProcessor(JsonFileProcessor):
         )
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
-        obj.to_json(file)
+        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
 
 
 class XmlFileProcessor(FileProcessor):
@@ -386,6 +397,7 @@ def make_file_processor(file_path: str, store_index_in_feather: bool) -> FilePro
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
         '.json': JsonFileProcessor(),
+        '.ndjson': JsonFileProcessor(orient='records'),
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip'),

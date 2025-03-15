@@ -97,7 +97,8 @@ exclude = ["venv/*", "tox/*", "examples/*"]
 # All the rules are listed on https://docs.astral.sh/ruff/rules/
 extend-select = [
   "B", # bugbear
-  "I" # isort
+  "I", # isort
+  "UP", # pyupgrade, upgrade syntax for newer versions of the language.
 ]
 
 # B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.

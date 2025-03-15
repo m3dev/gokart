@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import io
 import logging
 import os
 import sys
 import unittest
 from copy import copy
-from typing import Dict
 
 if sys.version_info >= (3, 11):
     from typing import assert_type
@@ -30,7 +31,7 @@ class _DummyTask(gokart.TaskOnKart[str]):
         self.dump(self.param)
 
 
-class _DummyTaskTwoOutputs(gokart.TaskOnKart[Dict[str, str]]):
+class _DummyTaskTwoOutputs(gokart.TaskOnKart[dict[str, str]]):
     task_namespace = __name__
     param1: str = luigi.Parameter()
     param2: str = luigi.Parameter()
@@ -114,7 +115,7 @@ class RunTest(unittest.TestCase):
             'out2': 'test2',
         }
         output = gokart.build(_DummyTaskTwoOutputs(param1=param_dict['out1'], param2=param_dict['out2']), reset_register=False)
-        assert_type(output, Dict[str, str])
+        assert_type(output, dict[str, str])
         self.assertEqual(output, param_dict)
 
     def test_failed_task(self):

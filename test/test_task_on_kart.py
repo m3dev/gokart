@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import os
 import pathlib
 import unittest
 from datetime import datetime
-from typing import Any, Dict, List, cast
+from typing import Any, cast
 from unittest.mock import Mock, patch
 
 import luigi
@@ -355,7 +357,7 @@ class TaskTest(unittest.TestCase):
         # task2 should be in requires' return values
         task.requires = lambda: {'tasks': [task2, task3]}  # type: ignore
 
-        load_args: List[gokart.TaskOnKart[int]] = [task2, task3]
+        load_args: list[gokart.TaskOnKart[int]] = [task2, task3]
         actual = task.load(load_args)
         self.assertEqual(actual, [1, 2])
 
@@ -393,7 +395,7 @@ class TaskTest(unittest.TestCase):
         # task2 should be in requires' return values
         task.requires = lambda: {'tasks': [task2, task3]}  # type: ignore
 
-        load_args: List[gokart.TaskOnKart[int]] = [task2, task3]
+        load_args: list[gokart.TaskOnKart[int]] = [task2, task3]
         actual = [x for x in task.load_generator(load_args)]
         self.assertEqual(actual, [1, 2])
 
@@ -420,7 +422,7 @@ class TaskTest(unittest.TestCase):
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: Mock):
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
-        kwargs: Dict[str, Any] = dict()
+        kwargs: dict[str, Any] = dict()
         _DummyTask._add_configuration(kwargs, '_DummyTask')
         self.assertEqual(3, kwargs['param'])
         self.assertEqual(['c', 'd'], list(kwargs['list_param']))
