@@ -3,8 +3,9 @@ from __future__ import annotations
 import copy
 import json
 import re
+from collections.abc import Iterable
 from logging import getLogger
-from typing import Any, Iterable, Union
+from typing import Any
 from urllib.parse import urlsplit
 
 from googleapiclient.model import makepatch
@@ -90,7 +91,7 @@ class GCSObjectMetadataClient:
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, Any] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
-    ) -> Union[dict, Any]:
+    ) -> dict | Any:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
         if not isinstance(metadata, dict):

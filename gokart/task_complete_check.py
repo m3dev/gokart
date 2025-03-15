@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 from logging import getLogger
 from typing import Callable

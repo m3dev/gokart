@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterable
 from io import BytesIO
-from typing import Any, Callable, Iterable, Protocol, TypeVar, Union
+from typing import Any, Callable, Protocol, TypeVar, Union
 
 import dill
 import luigi
@@ -82,11 +83,11 @@ def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) ->
     if isinstance(items, str):
         return func(items)  # type: ignore
     if isinstance(items, Iterable):
-        return [map_flattenable_items(func, i) for i in items]
+        return map(lambda item: map_flattenable_items(func, item), items)
     return func(items)
 
 
-def load_dill_with_pandas_backward_compatibility(file: Union[FileLike, BytesIO]) -> Any:
+def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> Any:
     """Load binary dumped by dill with pandas backward compatibility.
     pd.read_pickle can load binary dumped in backward pandas version, and also any objects dumped by pickle.
     It is unclear whether all objects dumped by dill can be loaded by pd.read_pickle, we use dill.load as a fallback.

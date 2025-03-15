@@ -7,7 +7,8 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 from __future__ import annotations
 
 import re
-from typing import Callable, Final, Iterator, Literal, Optional
+from collections.abc import Iterator
+from typing import Callable, Final, Literal
 
 import luigi
 from mypy.expandtype import expand_type
@@ -233,7 +234,7 @@ class TaskOnKartTransformer:
             elif isinstance(stmt, IfStmt):
                 yield from self._get_assignment_statements_from_if_statement(stmt)
 
-    def collect_attributes(self) -> Optional[list[TaskOnKartAttribute]]:
+    def collect_attributes(self) -> list[TaskOnKartAttribute] | None:
         """Collect all attributes declared in the task and its parents.
 
         All assignments of the form
@@ -360,7 +361,7 @@ class TaskOnKartTransformer:
             return True, args
         return False, {}
 
-    def _infer_type_from_parameters(self, parameter: Expression) -> Optional[Type]:
+    def _infer_type_from_parameters(self, parameter: Expression) -> Type | None:
         """
         Generate default type from Parameter.
         For example, when parameter is `luigi.parameter.Parameter`, this method should return `str` type.
@@ -369,7 +370,7 @@ class TaskOnKartTransformer:
         if parameter_name is None:
             return None
 
-        underlying_type: Optional[Type] = None
+        underlying_type: Type | None = None
         if parameter_name in ['luigi.parameter.Parameter', 'luigi.parameter.OptionalParameter']:
             underlying_type = self._api.named_type('builtins.str', [])
         elif parameter_name in ['luigi.parameter.IntParameter', 'luigi.parameter.OptionalIntParameter']:
@@ -422,7 +423,7 @@ class TaskOnKartTransformer:
 
         return underlying_type
 
-    def _get_type_from_args(self, parameter: Expression, arg_key: str) -> Optional[Type]:
+    def _get_type_from_args(self, parameter: Expression, arg_key: str) -> Type | None:
         """
         get type from parameter arguments.
 
@@ -452,7 +453,7 @@ def is_parameter_call(expr: Expression) -> bool:
     return PARAMETER_FULLNAME_MATCHER.match(parameter_name) is not None
 
 
-def _extract_parameter_name(expr: Expression) -> Optional[str]:
+def _extract_parameter_name(expr: Expression) -> str | None:
     """Extract name if the expression is a call to luigi.Parameter()"""
     if not isinstance(expr, CallExpr):
         return None
