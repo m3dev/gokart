@@ -5,11 +5,20 @@ import hashlib
 import inspect
 import os
 import random
+import sys
 import types
 from collections.abc import Generator, Iterable
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Generic, TypeVar, overload
+
+from gokart.required_task_output import RequiredTaskOutput
+from gokart.utils import map_flattenable_items
+
+if sys.version_info < (3, 13):
+    pass
+else:
+    pass
 
 import luigi
 import pandas as pd
@@ -337,11 +346,17 @@ class TaskOnKart(luigi.Task, Generic[T]):
             if isinstance(obj, pd.DataFrame) and obj.empty:
                 raise EmptyDumpError()
 
+        required_task_outputs = map_flattenable_items(
+            lambda task: map_flattenable_items(lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()),
+            self.requires(),
+        )
+
         self._get_output_target(target).dump(
             obj,
             lock_at_dump=self._lock_at_dump,
             task_params=super().to_str_params(only_significant=True, only_public=True),
             custom_labels=custom_labels,
+            required_task_outputs=required_task_outputs,
         )
 
     @staticmethod
