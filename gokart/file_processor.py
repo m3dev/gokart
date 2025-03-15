@@ -29,7 +29,7 @@ except ImportError:
     DATAFRAME_FRAMEWORK = 'pandas'
 
 
-class FileProcessor(object):
+class FileProcessor:
     @abstractmethod
     def format(self):
         pass
@@ -139,11 +139,10 @@ class CsvFileProcessor(FileProcessor):
     def format(self):
         return TextFormat(encoding=self._encoding)
 
-    def load(self, file):
-        ...
+    def load(self, file): ...
 
-    def dump(self, obj, file):
-        ...
+    def dump(self, obj, file): ...
+
 
 class PolarsCsvFileProcessor(CsvFileProcessor):
     def load(self, file):
@@ -191,19 +190,17 @@ class JsonFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
-        ...
+    def load(self, file): ...
 
-    def dump(self, obj, file):
-        ...
+    def dump(self, obj, file): ...
 
 
 class PolarsJsonFileProcessor(JsonFileProcessor):
     def load(self, file):
         try:
             if self._orient == 'records':
-                return self.read_ndjson(file)
-            return self.read_json(file)
+                return pl.read_ndjson(file)
+            return pl.read_json(file)
         except pl.exceptions.NoDataError:
             return pl.DataFrame()
 
@@ -215,7 +212,7 @@ class PolarsJsonFileProcessor(JsonFileProcessor):
             obj = pl.from_dict(obj)
 
         if self._orient == 'records':
-            obj_write_ndjson(file)
+            obj.write_ndjson(file)
         else:
             obj.write_json(file)
 
@@ -272,11 +269,10 @@ class ParquetFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
-        ...
+    def load(self, file): ...
 
-    def dump(self, obj, file):
-        ...
+    def dump(self, obj, file): ...
+
 
 class PolarsParquetFileProcessor(ParquetFileProcessor):
     def load(self, file):
@@ -314,20 +310,17 @@ class FeatherFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
-        ...
+    def load(self, file): ...
 
-    def dump(self, obj, file):
-        ...
+    def dump(self, obj, file): ...
 
 
 class PolarsFeatherFileProcessor(FeatherFileProcessor):
     def load(self, file):
         # Since polars' DataFrame doesn't have index, just load feather file
         if ObjectStorage.is_buffered_reader(file):
-            loaded_df = pl.read_ipc(file.name)
-        else:
-            loaded_df = pl.read_ipc(BytesIO(file.read()))
+            return pl.read_ipc(file.name)
+        return pl.read_ipc(BytesIO(file.read()))
 
     def dump(self, obj, file):
         assert isinstance(obj, (pl.DataFrame)), f'requires pl.DataFrame, but {type(obj)} is passed.'
@@ -378,15 +371,16 @@ class PandasFeatherFileProcessor(FeatherFileProcessor):
 
 
 if DATAFRAME_FRAMEWORK == 'polars':
-    CsvFileProcessor = PolarsCsvFileProcessor
-    JsonFileProcessor = PolarsJsonFileProcessor
-    ParquetFileProcessor = PolarsParquetFileProcessor
-    FeatherFileProcessor = PolarsFeatherFileProcessor
+    CsvFileProcessor = PolarsCsvFileProcessor  # type: ignore
+    JsonFileProcessor = PolarsJsonFileProcessor  # type: ignore
+    ParquetFileProcessor = PolarsParquetFileProcessor  # type: ignore
+    FeatherFileProcessor = PolarsFeatherFileProcessor  # type: ignore
 else:
-    CsvFileProcessor = PandasCsvFileProcessor
-    JsonFileProcessor = PandasJsonFileProcessor
-    ParquetFileProcessor = PandasParquetFileProcessor
-    FeatherFileProcessor = PandasFeatherFileProcessor
+    CsvFileProcessor = PandasCsvFileProcessor  # type: ignore
+    JsonFileProcessor = PandasJsonFileProcessor  # type: ignore
+    ParquetFileProcessor = PandasParquetFileProcessor  # type: ignore
+    FeatherFileProcessor = PandasFeatherFileProcessor  # type: ignore
+
 
 def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
     extension2processor = {
