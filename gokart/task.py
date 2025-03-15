@@ -35,7 +35,7 @@ K = TypeVar('K')
 
 # NOTE: inherited from AssertionError for backward compatibility (Formerly, Gokart raises that exception when a task dumps an empty DataFrame).
 class EmptyDumpError(AssertionError):
-    """Attempted to dump an empty DataFrame even though it is prohibited (fail_on_empty_dump is set to True)."""
+    """Raised when the task attempts to dump an empty DataFrame even though it is prohibited (``fail_on_empty_dump`` is set to True)"""
 
 
 class TaskOnKart(luigi.Task, Generic[T]):
