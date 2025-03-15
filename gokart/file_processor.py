@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import os
 import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from io import BytesIO
 from logging import getLogger
-from typing import Optional
 
 import dill
 import luigi
@@ -20,7 +21,7 @@ from gokart.utils import load_dill_with_pandas_backward_compatibility
 logger = getLogger(__name__)
 
 
-class FileProcessor(object):
+class FileProcessor:
     @abstractmethod
     def format(self):
         pass
@@ -56,7 +57,7 @@ class BinaryFileProcessor(FileProcessor):
         file.write(obj)
 
 
-class _ChunkedLargeFileReader(object):
+class _ChunkedLargeFileReader:
     def __init__(self, file) -> None:
         self._file = file
 
@@ -125,7 +126,7 @@ class CsvFileProcessor(FileProcessor):
     def __init__(self, sep=',', encoding: str = 'utf-8'):
         self._sep = sep
         self._encoding = encoding
-        super(CsvFileProcessor, self).__init__()
+        super().__init__()
 
     def format(self):
         return TextFormat(encoding=self._encoding)
@@ -157,7 +158,7 @@ class GzipFileProcessor(FileProcessor):
 
 
 class JsonFileProcessor(FileProcessor):
-    def __init__(self, orient: Optional[str] = None):
+    def __init__(self, orient: str | None = None):
         self._orient = orient
 
     def format(self):
@@ -209,7 +210,7 @@ class ParquetFileProcessor(FileProcessor):
     def __init__(self, engine='pyarrow', compression=None):
         self._engine = engine
         self._compression = compression
-        super(ParquetFileProcessor, self).__init__()
+        super().__init__()
 
     def format(self):
         return luigi.format.Nop
@@ -232,7 +233,7 @@ class ParquetFileProcessor(FileProcessor):
 
 class FeatherFileProcessor(FileProcessor):
     def __init__(self, store_index_in_feather: bool):
-        super(FeatherFileProcessor, self).__init__()
+        super().__init__()
         self._store_index_in_feather = store_index_in_feather
         self.INDEX_COLUMN_PREFIX = '__feather_gokart_index__'
 

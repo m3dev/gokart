@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2012-2015 Spotify AB
 #
@@ -28,6 +27,8 @@ ways between versions. The exception is the exception types and the
 :py:class:`worker` config class.
 """
 
+from __future__ import annotations
+
 import collections
 import collections.abc
 import contextlib
@@ -48,7 +49,8 @@ import sys
 import threading
 import time
 import traceback
-from typing import Any, Dict, Generator, List, Literal, Optional, Set, Tuple
+from collections.abc import Generator
+from typing import Any, Literal
 
 import luigi
 import luigi.scheduler
@@ -87,7 +89,7 @@ def _is_external(task: Task) -> bool:
     return task.run is None or task.run == NotImplemented
 
 
-def _get_retry_policy_dict(task: Task) -> Dict[str, Any]:
+def _get_retry_policy_dict(task: Task) -> dict[str, Any]:
     return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()  # type: ignore
 
 
@@ -129,10 +131,10 @@ class TaskProcess(multiprocessing.Process):
         worker_timeout: int = 0,
         check_unfulfilled_deps: bool = True,
         check_complete_on_run: bool = False,
-        task_completion_cache: Optional[Dict[str, Any]] = None,
+        task_completion_cache: dict[str, Any] | None = None,
         task_completion_check_at_run: bool = True,
     ) -> None:
-        super(TaskProcess, self).__init__()
+        super().__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
@@ -148,13 +150,13 @@ class TaskProcess(multiprocessing.Process):
         # completeness check using the cache
         self.check_complete = functools.partial(luigi.worker.check_complete_cached, completion_cache=task_completion_cache)
 
-    def _run_task(self) -> Optional[collections.abc.Generator]:
+    def _run_task(self) -> collections.abc.Generator | None:
         if self.task_completion_check_at_run and self.check_complete(self.task):
             logger.warning(f'{self.task} is skipped because the task is already completed.')
             return None
         return self.task.run()
 
-    def _run_get_new_deps(self) -> Optional[List[Tuple[str, str, Dict[str, str]]]]:
+    def _run_get_new_deps(self) -> list[tuple[str, str, dict[str, str]]] | None:
         task_gen = self._run_task()
 
         if not isinstance(task_gen, collections.abc.Generator):
@@ -191,10 +193,10 @@ class TaskProcess(multiprocessing.Process):
             currentTime = time.time()
             random.seed(processID * currentTime)
 
-        status: Optional[str] = FAILED
+        status: str | None = FAILED
         expl = ''
-        missing: List[str] = []
-        new_deps: Optional[List[Tuple[str, str, Dict[str, str]]]] = []
+        missing: list[str] = []
+        new_deps: list[tuple[str, str, dict[str, str]]] | None = []
         try:
             # Verify that all the tasks are fulfilled! For external tasks we
             # don't care about unfulfilled dependencies, because we are just
@@ -211,7 +213,7 @@ class TaskProcess(multiprocessing.Process):
                             missing.append(dep.task_id)
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
-                    raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
+                    raise RuntimeError('Unfulfilled {} at run time: {}'.format(deps, ', '.join(missing)))
             self.task.trigger_event(Event.START, self.task)
             t0 = time.time()
             status = None
@@ -269,7 +271,7 @@ class TaskProcess(multiprocessing.Process):
             children = parent.children(recursive=True)
 
             # terminate parent. Give it a chance to clean up
-            super(TaskProcess, self).terminate()
+            super().terminate()
             parent.wait()
 
             # terminate children
@@ -287,7 +289,7 @@ class TaskProcess(multiprocessing.Process):
         try:
             return self._recursive_terminate()
         except ImportError:
-            return super(TaskProcess, self).terminate()
+            return super().terminate()
 
     @contextlib.contextmanager
     def _forward_attributes(self):
@@ -306,7 +308,7 @@ class TaskProcess(multiprocessing.Process):
 # Discussion on generalizing it into a plugin system: https://github.com/spotify/luigi/issues/1897
 class ContextManagedTaskProcess(TaskProcess):
     def __init__(self, context, *args, **kwargs) -> None:
-        super(ContextManagedTaskProcess, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.context = context
 
     def run(self) -> None:
@@ -317,9 +319,9 @@ class ContextManagedTaskProcess(TaskProcess):
             cls = getattr(module, class_name)
 
             with cls(self):
-                super(ContextManagedTaskProcess, self).run()
+                super().run()
         else:
-            super(ContextManagedTaskProcess, self).run()
+            super().run()
 
 
 class gokart_worker(luigi.Config):
@@ -396,11 +398,11 @@ class Worker:
 
     def __init__(
         self,
-        scheduler: Optional[Scheduler] = None,
-        worker_id: Optional[str] = None,
+        scheduler: Scheduler | None = None,
+        worker_id: str | None = None,
         worker_processes: int = 1,
         assistant: bool = False,
-        config: Optional[gokart_worker] = None,
+        config: gokart_worker | None = None,
     ) -> None:
         if scheduler is None:
             scheduler = Scheduler()
@@ -423,17 +425,17 @@ class Worker:
         self._stop_requesting_work = False
 
         self.host = socket.gethostname()
-        self._scheduled_tasks: Dict[str, Task] = {}
-        self._suspended_tasks: Dict[str, Task] = {}
-        self._batch_running_tasks: Dict[str, Any] = {}
-        self._batch_families_sent: Set[str] = set()
+        self._scheduled_tasks: dict[str, Task] = {}
+        self._suspended_tasks: dict[str, Task] = {}
+        self._batch_running_tasks: dict[str, Any] = {}
+        self._batch_families_sent: set[str] = set()
 
         self._first_task = None
 
         self.add_succeeded = True
         self.run_succeeded = True
 
-        self.unfulfilled_counts: Dict[str, int] = collections.defaultdict(int)
+        self.unfulfilled_counts: dict[str, int] = collections.defaultdict(int)
 
         # note that ``signal.signal(signal.SIGUSR1, fn)`` only works inside the main execution thread, which is why we
         # provide the ability to conditionally install the hook.
@@ -446,8 +448,8 @@ class Worker:
 
         # Keep info about what tasks are running (could be in other processes)
         self._task_result_queue: multiprocessing.Queue = multiprocessing.Queue()
-        self._running_tasks: Dict[str, TaskProcess] = {}
-        self._idle_since: Optional[datetime.datetime] = None
+        self._running_tasks: dict[str, TaskProcess] = {}
+        self._idle_since: datetime.datetime | None = None
 
         # mp-safe dictionary for caching completation checks across task processes
         self._task_completion_cache = None
@@ -455,8 +457,8 @@ class Worker:
             self._task_completion_cache = multiprocessing.Manager().dict()
 
         # Stuff for execution_summary
-        self._add_task_history: List[Any] = []
-        self._get_work_response_history: List[Any] = []
+        self._add_task_history: list[Any] = []
+        self._get_work_response_history: list[Any] = []
 
     def _add_task(self, *args, **kwargs):
         """
@@ -482,7 +484,7 @@ class Worker:
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
 
-    def __enter__(self) -> 'Worker':
+    def __enter__(self) -> Worker:
         """
         Start the KeepAliveThread.
         """
@@ -503,10 +505,10 @@ class Worker:
         self._task_result_queue.close()
         return False  # Don't suppress exception
 
-    def _generate_worker_info(self) -> List[Tuple[str, Any]]:
+    def _generate_worker_info(self) -> list[tuple[str, Any]]:
         # Generate as much info as possible about the worker
         # Some of these calls might not be available on all OS's
-        args = [('salt', '%09d' % random.randrange(0, 10_000_000_000)), ('workers', self.worker_processes)]
+        args = [('salt', f'{random.randrange(0, 10_000_000_000):09d}'), ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
         except BaseException:
@@ -527,26 +529,26 @@ class Worker:
             pass
         return args
 
-    def _generate_worker_id(self, worker_info: List[Any]) -> str:
-        worker_info_str = ', '.join(['{}={}'.format(k, v) for k, v in worker_info])
-        return 'Worker({})'.format(worker_info_str)
+    def _generate_worker_id(self, worker_info: list[Any]) -> str:
+        worker_info_str = ', '.join([f'{k}={v}' for k, v in worker_info])
+        return f'Worker({worker_info_str})'
 
     def _validate_task(self, task: Task) -> None:
         if not isinstance(task, Task):
-            raise luigi.worker.TaskException('Can not schedule non-task %s' % task)
+            raise luigi.worker.TaskException(f'Can not schedule non-task {task}')
 
         if not task.initialized():
             # we can't get the repr of it since it's not initialized...
             raise luigi.worker.TaskException(
-                'Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__
+                f'Task of class {task.__class__.__name__} not initialized. Did you override __init__ and forget to call super(...).__init__?'
             )
 
     def _log_complete_error(self, task: Task, tb: str) -> None:
-        log_msg = 'Will not run {task} or any dependencies due to error in complete() method:\n{tb}'.format(task=task, tb=tb)
+        log_msg = f'Will not run {task} or any dependencies due to error in complete() method:\n{tb}'
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task: Task, tb: str) -> None:
-        log_msg = 'Will not run {task} or any dependencies due to error in deps() method:\n{tb}'.format(task=task, tb=tb)
+        log_msg = f'Will not run {task} or any dependencies due to error in deps() method:\n{tb}'
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task: Task) -> None:
@@ -614,10 +616,10 @@ class Worker:
         message = notifications.format_task_error(formatted_headline, task, command, formatted_traceback)
         notifications.send_error_email(formatted_subject, message, task.owner_email)
 
-    def _handle_task_load_error(self, exception: Exception, task_ids: List[str]) -> None:
+    def _handle_task_load_error(self, exception: Exception, task_ids: list[str]) -> None:
         msg = 'Cannot find task(s) sent by scheduler: {}'.format(','.join(task_ids))
         logger.exception(msg)
-        subject = 'Luigi: {}'.format(msg)
+        subject = f'Luigi: {msg}'
         error_message = notifications.wrap_traceback(exception)
         for task_id in task_ids:
             self._add_task(
@@ -778,13 +780,13 @@ class Worker:
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
         elif not isinstance(dependency, Task):
-            raise Exception('requires() must return Task objects but {} is a {}'.format(dependency, type(dependency)))
+            raise Exception(f'requires() must return Task objects but {dependency} is a {type(dependency)}')
 
     def _check_complete_value(self, is_complete: bool) -> None:
         if is_complete not in (True, False):
             if isinstance(is_complete, luigi.worker.TracebackWrapper):
                 raise luigi.workerAsyncCompletionException(is_complete.trace)
-            raise Exception('Return value of Task.complete() must be boolean (was %r)' % is_complete)
+            raise Exception(f'Return value of Task.complete() must be boolean (was {is_complete!r})')
 
     def _add_worker(self) -> None:
         self._worker_info.append(('first_task', self._first_task))
@@ -803,7 +805,7 @@ class Worker:
             if get_work_response.n_pending_last_scheduled:
                 logger.debug('There are %i pending tasks last scheduled by this worker', get_work_response.n_pending_last_scheduled)
 
-    def _get_work_task_id(self, get_work_response: Dict[str, Any]) -> Optional[str]:
+    def _get_work_task_id(self, get_work_response: dict[str, Any]) -> str | None:
         if get_work_response.get('task_id') is not None:
             return get_work_response['task_id']
         elif 'batch_id' in get_work_response:
@@ -885,7 +887,7 @@ class Worker:
 
     def _run_task(self, task_id: str) -> None:
         if task_id in self._running_tasks:
-            logger.debug('Got already running task id {} from scheduler, taking a break'.format(task_id))
+            logger.debug(f'Got already running task id {task_id} from scheduler, taking a break')
             next(self._sleeper())
             return
 
@@ -928,11 +930,11 @@ class Worker:
         """
         for task_id, p in self._running_tasks.items():
             if not p.is_alive() and p.exitcode:
-                error_msg = 'Task {} died unexpectedly with exit code {}'.format(task_id, p.exitcode)
+                error_msg = f'Task {task_id} died unexpectedly with exit code {p.exitcode}'
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
-                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.worker_timeout)
+                error_msg = f'Task {task_id} timed out after {p.worker_timeout} seconds and was terminated.'
                 p.task.trigger_event(Event.TIMEOUT, p.task, error_msg)
             else:
                 continue
@@ -1107,8 +1109,8 @@ class Worker:
 
         return self.run_succeeded
 
-    def _handle_rpc_message(self, message: Dict[str, Any]) -> None:
-        logger.info('Worker %s got message %s' % (self._id, message))
+    def _handle_rpc_message(self, message: dict[str, Any]) -> None:
+        logger.info(f'Worker {self._id} got message {message}')
 
         # the message is a dict {'name': <function_name>, 'kwargs': <function_kwargs>}
         name = message['name']
@@ -1119,11 +1121,11 @@ class Worker:
         func = getattr(self, name, None)
         tpl = (self._id, name)
         if not callable(func):
-            logger.error("Worker %s has no function '%s'" % tpl)
+            logger.error("Worker {} has no function '{}'".format(*tpl))
         elif not getattr(func, 'is_rpc_message_callback', False):
-            logger.error("Worker %s function '%s' is not available as rpc message callback" % tpl)
+            logger.error("Worker {} function '{}' is not available as rpc message callback".format(*tpl))
         else:
-            logger.info("Worker %s successfully dispatched rpc message to function '%s'" % tpl)
+            logger.info("Worker {} successfully dispatched rpc message to function '{}'".format(*tpl))
             func(**kwargs)
 
     @luigi.worker.rpc_message_callback

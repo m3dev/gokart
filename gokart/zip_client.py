@@ -1,17 +1,19 @@
+from __future__ import annotations
+
 import os
 import shutil
 import zipfile
 from abc import abstractmethod
-from typing import IO, Union
+from typing import IO
 
 
-def _unzip_file(fp: Union[str, IO, os.PathLike], extract_dir: str) -> None:
+def _unzip_file(fp: str | IO | os.PathLike, extract_dir: str) -> None:
     zip_file = zipfile.ZipFile(fp)
     zip_file.extractall(extract_dir)
     zip_file.close()
 
 
-class ZipClient(object):
+class ZipClient:
     @abstractmethod
     def exists(self) -> bool:
         pass
