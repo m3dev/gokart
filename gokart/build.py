@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import enum
 import logging
 import sys
 from dataclasses import dataclass
 from functools import partial
 from logging import getLogger
-from typing import Literal, Optional, Protocol, TypeVar, cast, overload
+from typing import Literal, Protocol, TypeVar, cast, overload
 
 import backoff
 import luigi
@@ -62,7 +64,7 @@ class WorkerProtocol(Protocol):
 
     def run(self) -> bool: ...
 
-    def __enter__(self) -> 'WorkerProtocol': ...
+    def __enter__(self) -> WorkerProtocol: ...
 
     def __exit__(self, type, value, traceback) -> Literal[False]: ...
 
@@ -162,7 +164,7 @@ def build(
     task_lock_exception_max_wait_seconds: int = 600,
     task_dump_config: TaskDumpConfig = TaskDumpConfig(),
     **env_params,
-) -> Optional[T]:
+) -> T | None:
     """
     Run gokart task for local interpreter.
     Sharing the most of its parameters with luigi.build (see https://luigi.readthedocs.io/en/stable/api/luigi.html?highlight=build#luigi.build)

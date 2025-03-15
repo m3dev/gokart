@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import os
 import sys
 from logging import getLogger
-from typing import List, Optional
 
 import luigi
 import luigi.cmdline
@@ -40,7 +41,7 @@ def _try_tree_info(cmdline_args):
     sys.exit()
 
 
-def _try_to_delete_unnecessary_output_file(cmdline_args: List[str]):
+def _try_to_delete_unnecessary_output_file(cmdline_args: list[str]):
     with CmdlineParser.global_instance(cmdline_args) as cp:
         task = cp.get_task_obj()  # type: gokart.TaskOnKart
         if task.delete_unnecessary_output_files:
@@ -51,7 +52,7 @@ def _try_to_delete_unnecessary_output_file(cmdline_args: List[str]):
             sys.exit()
 
 
-def _try_get_slack_api(cmdline_args: List[str]) -> Optional[gokart.slack.SlackAPI]:
+def _try_get_slack_api(cmdline_args: list[str]) -> gokart.slack.SlackAPI | None:
     with CmdlineParser.global_instance(cmdline_args):
         config = gokart.slack.SlackConfig()
         token = os.getenv(config.token_name, '')
@@ -64,7 +65,7 @@ def _try_get_slack_api(cmdline_args: List[str]) -> Optional[gokart.slack.SlackAP
     return None
 
 
-def _try_to_send_event_summary_to_slack(slack_api: Optional[gokart.slack.SlackAPI], event_aggregator: gokart.slack.EventAggregator, cmdline_args: List[str]):
+def _try_to_send_event_summary_to_slack(slack_api: gokart.slack.SlackAPI | None, event_aggregator: gokart.slack.EventAggregator, cmdline_args: list[str]):
     if slack_api is None:
         # do nothing
         return
