@@ -46,7 +46,11 @@ Repository = "https://github.com/m3dev/gokart"
 Documentation = "https://gokart.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
-polars = ["polars-lts-cpu"]
+polars = [
+  # polars doesn't run correctly on Apple silicon chips
+  "polars-lts-cpu; platform_system =='Darwin'",
+  "polars; platform_system != 'Darwin'",
+]
 
 [dependency-groups]
 test = [
