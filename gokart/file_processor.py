@@ -147,7 +147,7 @@ class CsvFileProcessor(FileProcessor):
 class PolarsCsvFileProcessor(CsvFileProcessor):
     def load(self, file):
         try:
-            return pl.read_csv(file, sep=self._sep, encoding=self._encoding)
+            return pl.read_csv(file, separator=self._sep, encoding=self._encoding)
         except pl.exceptions.NoDataError:
             return pl.DataFrame()
 
@@ -201,7 +201,7 @@ class PolarsJsonFileProcessor(JsonFileProcessor):
             if self._orient == 'records':
                 return pl.read_ndjson(file)
             return pl.read_json(file)
-        except pl.exceptions.NoDataError:
+        except pl.exceptions.ComputeError:
             return pl.DataFrame()
 
     def dump(self, obj, file):
@@ -318,14 +318,16 @@ class FeatherFileProcessor(FileProcessor):
 class PolarsFeatherFileProcessor(FeatherFileProcessor):
     def load(self, file):
         # Since polars' DataFrame doesn't have index, just load feather file
+        # TODO: Fix ingnoring store_index_in_feather variable
+        # Currently in PolarsFeatherFileProcessor, we ignored store_index_in_feather variable to avoid
+        # a breaking change of FeatherFileProcessor's default behavior.
         if ObjectStorage.is_buffered_reader(file):
             return pl.read_ipc(file.name)
         return pl.read_ipc(BytesIO(file.read()))
 
     def dump(self, obj, file):
         assert isinstance(obj, (pl.DataFrame)), f'requires pl.DataFrame, but {type(obj)} is passed.'
-        dump_obj = obj.copy()
-        dump_obj.write_ipc(file.name)
+        obj.write_ipc(file.name)
 
 
 class PandasFeatherFileProcessor(FeatherFileProcessor):
