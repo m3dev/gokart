@@ -3,7 +3,7 @@ import unittest
 
 from mypy import api
 
-from test.config import PYPROJECT_TOML
+from test.config import PYPROJECT_TOML, PYPROJECT_TOML_SET_DISALLOW_MISSING_PARAMETERS
 
 
 class TestMyMypyPlugin(unittest.TestCase):
@@ -118,3 +118,55 @@ MyTask(foo=1, bar=date.today(), baz=gokart.TaskOnKart())
             test_file.flush()
             result = api.run(['--show-traceback', '--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
             self.assertIn('Success: no issues found', result[0])
+
+    def test_no_issue_found_when_missing_parameter_when_default_option(self):
+        """
+        If `disallow_missing_parameters` is False (or default), mypy doesn't show any error when missing parameters.
+        """
+        test_code = """
+import luigi
+import gokart
+
+class MyTask(gokart.TaskOnKart):
+    foo = luigi.IntParameter()
+    bar = luigi.Parameter(default="bar")
+
+MyTask()
+    """
+        with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
+            test_file.write(test_code.encode('utf-8'))
+            test_file.flush()
+            result = api.run(['--show-traceback', '--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
+            self.assertIn('Success: no issues found', result[0])
+
+    def test_issue_found_when_missing_parameter_when_disallow_missing_parameters_set_true(self):
+        """
+        If `disallow_missing_parameters` is True, mypy shows an error when missing parameters.
+        """
+        test_code = """
+import luigi
+import gokart
+
+class MyTask(gokart.TaskOnKart):
+    # issue: foo is missing
+    foo = luigi.IntParameter()
+    # bar has default value, so it is not required to set it.
+    bar = luigi.Parameter(default="bar")
+
+MyTask()
+    """
+        with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
+            test_file.write(test_code.encode('utf-8'))
+            test_file.flush()
+            result = api.run(
+                [
+                    '--show-traceback',
+                    '--no-incremental',
+                    '--cache-dir=/dev/null',
+                    '--config-file',
+                    str(PYPROJECT_TOML_SET_DISALLOW_MISSING_PARAMETERS),
+                    test_file.name,
+                ]
+            )
+            self.assertIn('error: Missing named argument "foo" for "MyTask"  [call-arg]', result[0])
+            self.assertIn('Found 1 error in 1 file (checked 1 source file)', result[0])
