@@ -41,8 +41,8 @@ class LoggerConfig:
 class GokartBuildError(Exception):
     """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution."""
 
-    def __init__(self, messsage, raised_exceptions: dict[str, list[Exception]]):
-        super().__init__(messsage)
+    def __init__(self, message, raised_exceptions: dict[str, list[Exception]]):
+        super().__init__(message)
         self.raised_exceptions = raised_exceptions
 
 
