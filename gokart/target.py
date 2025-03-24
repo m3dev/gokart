@@ -7,7 +7,7 @@ from abc import abstractmethod
 from datetime import datetime
 from glob import glob
 from logging import getLogger
-from typing import Any, Optional
+from typing import Any
 
 import luigi
 import numpy as np
@@ -171,7 +171,7 @@ class ModelTarget(TargetOnKart):
         os.makedirs(self._temporary_directory, exist_ok=True)
 
 
-class LargeDataFrameProcessor(object):
+class LargeDataFrameProcessor:
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
 
@@ -195,14 +195,14 @@ class LargeDataFrameProcessor(object):
         return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, 'data_*.pkl'))])
 
 
-def _make_file_system_target(file_path: str, processor: Optional[FileProcessor] = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:
+def _make_file_system_target(file_path: str, processor: FileProcessor | None = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:
     processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
     if ObjectStorage.if_object_storage_path(file_path):
         return ObjectStorage.get_object_storage_target(file_path, processor.format())
     return luigi.LocalTarget(file_path, format=processor.format())
 
 
-def _make_file_path(original_path: str, unique_id: Optional[str] = None) -> str:
+def _make_file_path(original_path: str, unique_id: str | None = None) -> str:
     if unique_id is not None:
         [base, extension] = os.path.splitext(original_path)
         return base + '_' + unique_id + extension
@@ -219,9 +219,9 @@ def _get_last_modification_time(path: str) -> datetime:
 
 def make_target(
     file_path: str,
-    unique_id: Optional[str] = None,
-    processor: Optional[FileProcessor] = None,
-    task_lock_params: Optional[TaskLockParams] = None,
+    unique_id: str | None = None,
+    processor: FileProcessor | None = None,
+    task_lock_params: TaskLockParams | None = None,
     store_index_in_feather: bool = True,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
@@ -236,8 +236,8 @@ def make_model_target(
     temporary_directory: str,
     save_function,
     load_function,
-    unique_id: Optional[str] = None,
-    task_lock_params: Optional[TaskLockParams] = None,
+    unique_id: str | None = None,
+    task_lock_params: TaskLockParams | None = None,
 ) -> TargetOnKart:
     _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)

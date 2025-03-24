@@ -5,16 +5,11 @@ import hashlib
 import inspect
 import os
 import random
-import sys
 import types
+from collections.abc import Generator, Iterable
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Dict, Generator, Generic, Iterable, List, Optional, Set, TypeVar, Union, overload
-
-if sys.version_info < (3, 13):
-    from typing_extensions import deprecated
-else:
-    from warnings import deprecated
+from typing import Any, Callable, Generic, TypeVar, overload
 
 import luigi
 import pandas as pd
@@ -88,8 +83,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
         default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.', significant=False
     )  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
-    redis_host: Optional[str] = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
-    redis_port: Optional[int] = luigi.OptionalIntParameter(
+    redis_host: str | None = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_port: int | None = luigi.OptionalIntParameter(
         default=None,
         description='Task lock check is deactivated, when None.',
         significant=False,
@@ -122,7 +117,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log = dict()
         self.task_unique_id = None
-        super(TaskOnKart, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
 
@@ -147,11 +142,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def output(self) -> FlattenableItems[TargetOnKart]:
         return self.make_target()
 
-    def requires(self) -> FlattenableItems['TaskOnKart']:
+    def requires(self) -> FlattenableItems[TaskOnKart]:
         tasks = self.make_task_instance_dictionary()
         return tasks or []  # when tasks is empty dict, then this returns empty list.
 
-    def make_task_instance_dictionary(self) -> Dict[str, 'TaskOnKart']:
+    def make_task_instance_dictionary(self) -> dict[str, TaskOnKart]:
         return {key: var for key, var in vars(self).items() if self.is_task_on_kart(var)}
 
     @staticmethod
@@ -216,7 +211,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, processor: Optional[FileProcessor] = None) -> TargetOnKart:
+    def make_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, processor: FileProcessor | None = None) -> TargetOnKart:
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.pkl')
         )
@@ -236,7 +231,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
 
-    def make_large_data_frame_target(self, relative_file_path: Optional[str] = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.zip')
         )
@@ -293,15 +288,15 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
     @overload
-    def load(self, target: Union[None, str, TargetOnKart] = None) -> Any: ...
+    def load(self, target: None | str | TargetOnKart = None) -> Any: ...
 
     @overload
-    def load(self, target: 'TaskOnKart[K]') -> K: ...
+    def load(self, target: TaskOnKart[K]) -> K: ...
 
     @overload
-    def load(self, target: 'List[TaskOnKart[K]]') -> List[K]: ...
+    def load(self, target: list[TaskOnKart[K]]) -> list[K]: ...
 
-    def load(self, target: Union[None, str, TargetOnKart, 'TaskOnKart[K]', 'List[TaskOnKart[K]]'] = None) -> Any:
+    def load(self, target: None | str | TargetOnKart | TaskOnKart[K] | list[TaskOnKart[K]] = None) -> Any:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
@@ -312,12 +307,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return _load(self._get_input_targets(target))
 
     @overload
-    def load_generator(self, target: Union[None, str, TargetOnKart] = None) -> Generator[Any, None, None]: ...
+    def load_generator(self, target: None | str | TargetOnKart = None) -> Generator[Any, None, None]: ...
 
     @overload
-    def load_generator(self, target: 'List[TaskOnKart[K]]') -> Generator[K, None, None]: ...
+    def load_generator(self, target: list[TaskOnKart[K]]) -> Generator[K, None, None]: ...
 
-    def load_generator(self, target: Union[None, str, TargetOnKart, 'List[TaskOnKart[K]]'] = None) -> Generator[Any, None, None]:
+    def load_generator(self, target: None | str | TargetOnKart | list[TaskOnKart[K]] = None) -> Generator[Any, None, None]:
         def _load(targets):
             if isinstance(targets, list) or isinstance(targets, tuple):
                 for t in targets:
@@ -330,39 +325,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         return _load(self._get_input_targets(target))
 
-    @deprecated("""This function is deprecated. use `load` instead.
-If you want to specify `required_columns` and `drop_columns`, please extract the columns after loading. ex: `load()[['colA', 'colB']]`
-""")
-    def load_data_frame(
-        self, target: Union[None, str, TargetOnKart] = None, required_columns: Optional[Set[str]] = None, drop_columns: bool = False
-    ) -> pd.DataFrame:
-        def _flatten_recursively(dfs):
-            if isinstance(dfs, list):
-                return pd.concat([_flatten_recursively(df) for df in dfs])
-            else:
-                return dfs
-
-        dfs = self.load(target=target)
-        if isinstance(dfs, dict) and len(dfs) == 1:
-            dfs = list(dfs.values())[0]
-
-        data = _flatten_recursively(dfs)
-
-        required_columns = required_columns or set()
-        if data.empty and len(data.index) == 0 and len(required_columns - set(data.columns)) > 0:
-            return pd.DataFrame(columns=list(required_columns))
-        assert required_columns.issubset(set(data.columns)), f'data must have columns {required_columns}, but actually have only {data.columns}.'
-        if drop_columns:
-            data = data[list(required_columns)]
-        return data
-
     @overload
     def dump(self, obj: T, target: None = None, custom_labels: dict[Any, Any] | None = None) -> None: ...
 
     @overload
-    def dump(self, obj: Any, target: Union[str, TargetOnKart], custom_labels: dict[Any, Any] | None = None) -> None: ...
+    def dump(self, obj: Any, target: str | TargetOnKart, custom_labels: dict[Any, Any] | None = None) -> None: ...
 
-    def dump(self, obj: Any, target: Union[None, str, TargetOnKart] = None, custom_labels: dict[str, Any] | None = None) -> None:
+    def dump(self, obj: Any, target: None | str | TargetOnKart = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump:
             if isinstance(obj, pd.DataFrame) and obj.empty:
@@ -376,7 +345,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         )
 
     @staticmethod
-    def get_code(target_class) -> Set[str]:
+    def get_code(target_class) -> set[str]:
         def has_sourcecode(obj):
             return inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isframe(obj) or inspect.iscode(obj)
 
@@ -411,7 +380,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
             dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
-    def _get_input_targets(self, target: Union[None, str, TargetOnKart, 'TaskOnKart', 'List[TaskOnKart]']) -> FlattenableItems[TargetOnKart]:
+    def _get_input_targets(self, target: None | str | TargetOnKart | TaskOnKart | list[TaskOnKart]) -> FlattenableItems[TargetOnKart]:
         if target is None:
             return self.input()
         if isinstance(target, str):
@@ -427,7 +396,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
             return target.output()
         return target
 
-    def _get_output_target(self, target: Union[None, str, TargetOnKart]) -> TargetOnKart:
+    def _get_output_target(self, target: None | str | TargetOnKart) -> TargetOnKart:
         if target is None:
             output = self.output()
             assert isinstance(output, TargetOnKart), f'output must be TargetOnKart, but {type(output)} is passed.'
@@ -454,7 +423,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
     def _get_task_log_target(self):
         return self.make_target(f'log/task_log/{type(self).__name__}.pkl')
 
-    def get_task_log(self) -> Dict:
+    def get_task_log(self) -> dict:
         target = self._get_task_log_target()
         if self.task_log:
             return self.task_log
@@ -471,7 +440,7 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
     def _get_task_params_target(self):
         return self.make_target(f'log/task_params/{type(self).__name__}.pkl')
 
-    def get_task_params(self) -> Dict:
+    def get_task_params(self) -> dict:
         target = self._get_task_log_target()
         if target.exists():
             return self.load(target)
@@ -488,8 +457,8 @@ If you want to specify `required_columns` and `drop_columns`, please extract the
         return self.make_target(f'log/random_seed/{type(self).__name__}.pkl')
 
     @staticmethod
-    def try_set_seed(methods: List[str], random_seed: int) -> List[str]:
-        success_methods: List[str] = []
+    def try_set_seed(methods: list[str], random_seed: int) -> list[str]:
+        success_methods: list[str] = []
         for method_name in methods:
             try:
                 for i, x in enumerate(method_name.split('.')):
