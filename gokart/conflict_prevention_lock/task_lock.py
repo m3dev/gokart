@@ -23,6 +23,7 @@ class TaskLockParams(NamedTuple):
 
 class TaskLockException(Exception):
     pass
+    """Raised when the task failed to acquire the lock in the task execution. Only used internally."""
 
 
 class RedisClient:
