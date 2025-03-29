@@ -26,7 +26,7 @@ try:
     if os.getenv('GOKART_DATAFRAME_FRAMEWORK_POLARS_ENABLED') == 'true':
         DATAFRAME_FRAMEWORK = 'polars'
     else:
-        raise ValueError('GOKART_DATAFRAME_FRAMEWORK is not set. Use pandas as dataframe framework.')
+        raise ValueError('GOKART_DATAFRAME_FRAMEWORK_POLARS_ENABLED is not set. Use pandas as dataframe framework.')
 except (ImportError, ValueError):
     DATAFRAME_FRAMEWORK = 'pandas'
 
