@@ -20,15 +20,13 @@ from gokart.utils import load_dill_with_pandas_backward_compatibility
 logger = getLogger(__name__)
 
 
-try:
-    import polars as pl
+DATAFRAME_FRAMEWORK = os.getenv('GOKART_DATAFRAME_FRAMEWORK', 'pandas')
+if DATAFRAME_FRAMEWORK == 'polars':
+    try:
+        import polars as pl
 
-    if os.getenv('GOKART_DATAFRAME_FRAMEWORK_POLARS_ENABLED') == 'true':
-        DATAFRAME_FRAMEWORK = 'polars'
-    else:
-        raise ValueError('GOKART_DATAFRAME_FRAMEWORK_POLARS_ENABLED is not set. Use pandas as dataframe framework.')
-except (ImportError, ValueError):
-    DATAFRAME_FRAMEWORK = 'pandas'
+    except ImportError as e:
+        raise ValueError('please install polars to use polars as a framework of dataframe for gokart') from e
 
 
 class FileProcessor:
