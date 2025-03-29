@@ -10,6 +10,7 @@ import dill
 import luigi
 import luigi.contrib.s3
 import luigi.format
+import pandas as pd
 import numpy as np
 from luigi.format import TextFormat
 
@@ -22,10 +23,11 @@ logger = getLogger(__name__)
 try:
     import polars as pl
 
-    DATAFRAME_FRAMEWORK = 'polars'
-except ImportError:
-    import pandas as pd
-
+    if os.getenv('GOKART_DATAFRAME_FRAMEWORK_POLARS_ENABLED') == 'true':
+        DATAFRAME_FRAMEWORK = 'polars'
+    else:
+        raise ValueError('GOKART_DATAFRAME_FRAMEWORK is not set. Use pandas as dataframe framework.')
+except (ImportError, ValueError):
     DATAFRAME_FRAMEWORK = 'pandas'
 
 
