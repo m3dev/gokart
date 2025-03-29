@@ -1,17 +1,37 @@
 from __future__ import annotations
 
+import importlib
 import tempfile
 
 import pytest
 from luigi import LocalTarget
 
+from gokart import file_processor
 from gokart.file_processor import PolarsCsvFileProcessor, PolarsFeatherFileProcessor, PolarsJsonFileProcessor
 
 pl = pytest.importorskip('polars', reason='polars required')
 pl_testing = pytest.importorskip('polars.testing', reason='polars required')
 
 
-def test_dump_csv_with():
+@pytest.fixture
+def reload_processor(monkeypatch):
+    """
+    A pytest fixture that reloads the `gokart.file_processor` module after modifying
+    the environment variable `GOKART_DATAFRAME_FRAMEWORK`. This ensures that polars
+    is used when reloading the module.
+
+    Returns:
+        Tuple[Type[PolarsCsvFileProcessor], Type[PolarsFeatherFileProcessor], Type[PolarsJsonFileProcessor]]:
+        The reloaded classes from the `gokart.file_processor` module.
+    """
+    monkeypatch.setenv('GOKART_DATAFRAME_FRAMEWORK', 'polars')
+    importlib.reload(file_processor)
+
+    yield PolarsCsvFileProcessor, PolarsFeatherFileProcessor, PolarsJsonFileProcessor
+
+
+def test_dump_csv(reload_processor):
+    PolarsCsvFileProcessor, _, _ = reload_processor
     df = pl.DataFrame({'あ': [1, 2, 3], 'い': [4, 5, 6]})
     processor = PolarsCsvFileProcessor()
 
@@ -27,7 +47,8 @@ def test_dump_csv_with():
         pl_testing.assert_frame_equal(df, loaded_df)
 
 
-def test_load_csv():
+def test_load_csv(reload_processor):
+    PolarsCsvFileProcessor, _, _ = reload_processor
     df = pl.DataFrame({'あ': [1, 2, 3], 'い': [4, 5, 6]})
     processor = PolarsCsvFileProcessor()
 
@@ -63,7 +84,8 @@ def test_load_csv():
         pytest.param('records', {}, '', id='With Records Orient for Empty Dict'),
     ],
 )
-def test_dump_and_load_json(orient, input_data, expected_json):
+def test_dump_and_load_json(reload_processor, orient, input_data, expected_json):
+    _, _, PolarsJsonFileProcessor = reload_processor
     processor = PolarsJsonFileProcessor(orient=orient)
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -82,7 +104,8 @@ def test_dump_and_load_json(orient, input_data, expected_json):
     pl_testing.assert_frame_equal(df_input, loaded_df)
 
 
-def test_feather_should_return_same_dataframe():
+def test_feather_should_return_same_dataframe(reload_processor):
+    _, PolarsFeatherFileProcessor, _ = reload_processor
     df = pl.DataFrame({'a': [1]})
     # TODO: currently we set store_index_in_feather True but it is ignored
     processor = PolarsFeatherFileProcessor(store_index_in_feather=True)
