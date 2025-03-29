@@ -10,8 +10,8 @@ import dill
 import luigi
 import luigi.contrib.s3
 import luigi.format
-import pandas as pd
 import numpy as np
+import pandas as pd
 from luigi.format import TextFormat
 
 from gokart.object_storage import ObjectStorage
