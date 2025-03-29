@@ -14,7 +14,6 @@ jobs:
         platform: ["ubuntu-latest"]
         tox-env: ["py39", "py310", "py311", "py312", "py313"]
         include:
-          # test only on latest python for macos
           - platform: macos-13
             tox-env: "py313"
           - platform: macos-latest
