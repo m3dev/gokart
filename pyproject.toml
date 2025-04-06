@@ -26,6 +26,7 @@ dependencies = [
   "dill",
   "backoff",
   "typing-extensions>=4.11.0; python_version<'3.13'",
+  "python-json-logger>=3.2.1",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -59,6 +60,8 @@ test = [
   "toml",
   "types-redis",
   "typing-extensions>=4.11.0",
+  "tox>=4.24.1",
+  "tox-uv>=1.25.0",
 ]
 
 lint = [
