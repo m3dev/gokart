@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # https://github.com/sphinx-doc/sphinx/issues/6211
 import luigi
 

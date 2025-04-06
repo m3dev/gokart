@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import functools
 import os
 from logging import getLogger
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -10,9 +12,9 @@ logger = getLogger(__name__)
 
 
 class TaskLockParams(NamedTuple):
-    redis_host: Optional[str]
-    redis_port: Optional[int]
-    redis_timeout: Optional[int]
+    redis_host: str | None
+    redis_port: int | None
+    redis_timeout: int | None
     redis_key: str
     should_task_lock: bool
     raise_task_lock_exception_on_collision: bool
@@ -21,6 +23,7 @@ class TaskLockParams(NamedTuple):
 
 class TaskLockException(Exception):
     pass
+    """Raised when the task failed to acquire the lock in the task execution. Only used internally."""
 
 
 class RedisClient:
@@ -31,10 +34,10 @@ class RedisClient:
         if cls not in cls._instances:
             cls._instances[cls] = {}
         if key not in cls._instances[cls]:
-            cls._instances[cls][key] = super(RedisClient, cls).__new__(cls)
+            cls._instances[cls][key] = super().__new__(cls)
         return cls._instances[cls][key]
 
-    def __init__(self, host: Optional[str], port: Optional[int]) -> None:
+    def __init__(self, host: str | None, port: int | None) -> None:
         if not hasattr(self, '_redis_client'):
             host = host or 'localhost'
             port = port or 6379
@@ -72,17 +75,17 @@ def set_lock_scheduler(task_lock: redis.lock.Lock, task_lock_params: TaskLockPar
     return scheduler
 
 
-def make_task_lock_key(file_path: str, unique_id: Optional[str]):
+def make_task_lock_key(file_path: str, unique_id: str | None):
     basename_without_ext = os.path.splitext(os.path.basename(file_path))[0]
     return f'{basename_without_ext}_{unique_id}'
 
 
 def make_task_lock_params(
     file_path: str,
-    unique_id: Optional[str],
-    redis_host: Optional[str] = None,
-    redis_port: Optional[int] = None,
-    redis_timeout: Optional[int] = None,
+    unique_id: str | None,
+    redis_host: str | None = None,
+    redis_port: int | None = None,
+    redis_timeout: int | None = None,
     raise_task_lock_exception_on_collision: bool = False,
     lock_extend_seconds: int = 10,
 ) -> TaskLockParams:

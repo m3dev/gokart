@@ -53,7 +53,7 @@ Please refer to :func:`~gokart.task.TaskOnKart.load`.
 Fail on empty DataFrame
 -----------------------
 
-When the :attr:`~gokart.task.TaskOnKart.fail_on_empty_dump` parameter is true, the :func:`~gokart.task.TaskOnKart.dump()` method is `AssertionError` on trying to dump empty ``pandas.DataFrame``.
+When the :attr:`~gokart.task.TaskOnKart.fail_on_empty_dump` parameter is true, the :func:`~gokart.task.TaskOnKart.dump()` method raises :class:`~gokart.errors.EmptyDumpError` on trying to dump empty ``pandas.DataFrame``.
 
 
 .. code:: python
@@ -70,7 +70,7 @@ When the :attr:`~gokart.task.TaskOnKart.fail_on_empty_dump` parameter is true, t
 ::
 
     $ python main.py EmptyTask --fail-on-empty-dump true
-    # AssertionError
+    # EmptyDumpError
     $ python main.py EmptyTask
     # Task will be ran and outputs an empty dataframe
 

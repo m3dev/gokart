@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from logging import getLogger
-from typing import List, Optional, Set
 
 import luigi
 
@@ -15,8 +16,8 @@ def make_tree_info(
     last: bool = True,
     details: bool = False,
     abbr: bool = True,
-    visited_tasks: Optional[Set[str]] = None,
-    ignore_task_names: Optional[List[str]] = None,
+    visited_tasks: set[str] | None = None,
+    ignore_task_names: list[str] | None = None,
 ) -> str:
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
@@ -32,7 +33,7 @@ def make_tree_info(
         Whether or not to output details.
     - abbr: bool
         Whether or not to simplify tasks information that has already appeared.
-    - ignore_task_names: Optional[List[str]]
+    - ignore_task_names: list[str] | None
         List of task names to ignore.
     Returns
     -------

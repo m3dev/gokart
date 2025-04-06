@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from logging import getLogger
-from typing import Any, Dict
+from typing import Any
 
 import luigi
 import numpy as np
@@ -11,13 +13,13 @@ logger = getLogger(__name__)
 
 
 class PandasTypeError(Exception):
-    pass
+    """Raised when the type of the pandas DataFrame column is not as expected."""
 
 
 class PandasTypeConfig(luigi.Config):
     @classmethod
     @abstractmethod
-    def type_dict(cls) -> Dict[str, Any]:
+    def type_dict(cls) -> dict[str, Any]:
         pass
 
     @classmethod
@@ -39,7 +41,7 @@ class PandasTypeConfigMap(luigi.Config):
     """To initialize this class only once, this inherits luigi.Config."""
 
     def __init__(self, *args, **kwargs) -> None:
-        super(PandasTypeConfigMap, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         task_names = Register.task_names()
         task_classes = [Register.get_task_cls(task_name) for task_name in task_names]
         self._map = {
