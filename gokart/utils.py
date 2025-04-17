@@ -83,7 +83,7 @@ def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) ->
     if isinstance(items, str):
         return func(items)  # type: ignore
     if isinstance(items, Iterable):
-        return map(lambda item: map_flattenable_items(func, item), items)
+        return list(map(lambda item: map_flattenable_items(func, item), items))
     return func(items)
 
 
