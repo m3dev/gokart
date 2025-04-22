@@ -61,7 +61,7 @@ class GCSObjectMetadataClient:
             copy.deepcopy(original_metadata),
             task_params,
             custom_labels,
-            required_task_outputs if required_task_outputs else None,
+            required_task_outputs,
         )
         if original_metadata != patched_metadata:
             # If we use update api, existing object metadata are removed, so should use patch api.
@@ -107,15 +107,10 @@ class GCSObjectMetadataClient:
         # However, users who utilize custom_labels are no longer expected to search using the labels generated from task parameters.
         # Instead, users are expected to search using the labels they provided.
         # Therefore, in the event of a key conflict, the value registered by the user-provided labels will take precedence.
-        normalized_labels = (
-            [normalized_custom_labels, normalized_task_params_labels]
-            if not required_task_outputs
-            else [
-                normalized_custom_labels,
-                normalized_task_params_labels,
-                {'__required_task_outputs': json.dumps(GCSObjectMetadataClient._get_serialized_string(required_task_outputs))},
-            ]
-        )
+        normalized_labels = [normalized_custom_labels, normalized_task_params_labels]
+        if required_task_outputs:
+            normalized_labels.append({'__required_task_outputs': json.dumps(GCSObjectMetadataClient._get_serialized_string(required_task_outputs))})
+
         _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_labels)
         return GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(dict(metadata) | _merged_labels)
 
@@ -141,7 +136,7 @@ class GCSObjectMetadataClient:
         normalized_labels_list: list[dict[str, Any]],
     ) -> dict[str, str]:
         merged_labels: dict[str, str] = {}
-        for normalized_label in normalized_labels_list[:]:
+        for normalized_label in normalized_labels_list:
             for label_name, label_value in normalized_label.items():
                 if len(label_value) == 0:
                     logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')

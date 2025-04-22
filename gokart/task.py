@@ -5,20 +5,11 @@ import hashlib
 import inspect
 import os
 import random
-import sys
 import types
 from collections.abc import Generator, Iterable
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Callable, Generic, TypeVar, overload
-
-from gokart.required_task_output import RequiredTaskOutput
-from gokart.utils import map_flattenable_items
-
-if sys.version_info < (3, 13):
-    pass
-else:
-    pass
 
 import luigi
 import pandas as pd
@@ -31,9 +22,10 @@ from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_loc
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
+from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
-from gokart.utils import FlattenableItems, flatten
+from gokart.utils import FlattenableItems, flatten, map_flattenable_items
 
 logger = getLogger(__name__)
 
