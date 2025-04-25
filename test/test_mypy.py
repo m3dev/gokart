@@ -79,7 +79,6 @@ class MyEnum(enum.Enum):
     FOO = enum.auto()
 
 class MyTask(gokart.TaskOnKart):
-    # NOTE: mypy shows attr-defined error for the following lines, so we need to ignore it.
     foo = luigi.IntParameter()
     bar = luigi.DateParameter()
     baz = gokart.TaskInstanceParameter()
@@ -110,7 +109,6 @@ import luigi
 import gokart
 
 class MyTask(gokart.TaskOnKart):
-    # NOTE: mypy shows attr-defined error for the following lines, so we need to ignore it.
     foo = luigi.IntParameter()
     bar = luigi.DateParameter()
     baz = gokart.TaskInstanceParameter()
@@ -122,3 +120,18 @@ MyTask(foo=1, bar=date.today(), baz=gokart.TaskOnKart())
             test_file.flush()
             result = api.run(['--show-traceback', '--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
             self.assertIn('Success: no issues found', result[0])
+
+    def test_parameter_has_uncorrect_default_value(self):
+        test_code = """
+import luigi
+import gokart
+
+class MyTask(gokart.TaskOnKart):
+    foo = luigi.IntParameter(default='s')
+"""
+        with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
+            test_file.write(test_code.encode('utf-8'))
+            test_file.flush()
+            result = api.run(['--show-traceback', '--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
+            print(result[0])
+            self.assertIn('Incompatible default for argument "foo" (default has type "str", argument has type "int")', result[0])

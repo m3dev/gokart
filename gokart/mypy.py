@@ -28,7 +28,6 @@ from mypy.nodes import (
     PlaceholderNode,
     RefExpr,
     Statement,
-    TempNode,
     TypeInfo,
     Var,
 )
@@ -119,7 +118,7 @@ class TaskOnKartAttribute:
     def __init__(
         self,
         name: str,
-        has_default: bool,
+        default_value: Optional[Expression],
         line: int,
         column: int,
         type: Type | None,
@@ -127,7 +126,7 @@ class TaskOnKartAttribute:
         api: SemanticAnalyzerPluginInterface,
     ) -> None:
         self.name = name
-        self.has_default = has_default
+        self.default_value = default_value
         self.line = line
         self.column = column
         self.type = type  # Type as __init__ argument
@@ -142,7 +141,7 @@ class TaskOnKartAttribute:
         return Argument(
             variable=self.to_var(current_info),
             type_annotation=self.expand_type(current_info),
-            initializer=EllipsisExpr() if self.has_default else None,  # Only used by stubgen
+            initializer=self.default_value,
             kind=arg_kind,
         )
 
@@ -163,7 +162,7 @@ class TaskOnKartAttribute:
         assert self.type
         return {
             'name': self.name,
-            'has_default': self.has_default,
+            'default_value': self.default_value,
             'line': self.line,
             'column': self.column,
             'type': self.type.serialize(),
@@ -303,23 +302,11 @@ class TaskOnKartTransformer:
             assert isinstance(node, Var)
 
             has_parameter_call, parameter_args = self._collect_parameter_args(stmt.rvalue)
-            has_default = False
+            default_value: Optional[Expression] = None
             # Ensure that something like x: int = field() is rejected
             # after an attribute with a default.
-            if has_parameter_call:
-                has_default = 'default' in parameter_args
-
-            # All other assignments are already type checked.
-            elif not isinstance(stmt.rvalue, TempNode):
-                has_default = True
-
-            if not has_default:
-                # Make all non-default task_on_kart attributes implicit because they are de-facto
-                # set on self in the generated __init__(), not in the class body. On the other
-                # hand, we don't know how custom task_on_kart transforms initialize attributes,
-                # so we don't treat them as implicit. This is required to support descriptors
-                # (https://github.com/python/mypy/issues/14868).
-                sym.implicit = True
+            if has_parameter_call and 'default' in parameter_args:
+                default_value = parameter_args['default']
 
             current_attr_names.add(lhs.name)
             with state.strict_optional_set(self._api.options.strict_optional):
@@ -331,7 +318,7 @@ class TaskOnKartTransformer:
 
             found_attrs[lhs.name] = TaskOnKartAttribute(
                 name=lhs.name,
-                has_default=has_default,
+                default_value=default_value,
                 line=stmt.line,
                 column=stmt.column,
                 type=init_type,
