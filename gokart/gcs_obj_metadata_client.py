@@ -132,7 +132,7 @@ class GCSObjectMetadataClient:
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(
-        normalized_labels_list: list[dict[str, Any]],
+        normalized_labels_list: list[dict[str, str]],
     ) -> dict[str, str]:
         def __merge_two_dicts_helper(merged: dict[str, str], current_labels: dict[str, Any]) -> dict[str, str]:
             next_merged = copy.deepcopy(merged)
