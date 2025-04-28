@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import functools
 import json
 import re
 from collections.abc import Iterable
@@ -116,36 +117,36 @@ class GCSObjectMetadataClient:
 
     @staticmethod
     def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput]) -> FlattenableItems[str]:
-        def _iterable_flatten(nested_list: Iterable) -> list[str]:
-            flattened_list: list[str] = []
+        def _iterable_flatten(nested_list: Iterable) -> Iterable[str]:
             for item in nested_list:
                 if isinstance(item, Iterable):
-                    flattened_list.extend(_iterable_flatten(item))
+                    yield from _iterable_flatten(item)
                 else:
-                    flattened_list.append(item)
-            return flattened_list
+                    yield item
 
         if isinstance(required_task_outputs, dict):
             return {k: GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
         if isinstance(required_task_outputs, Iterable):
-            return _iterable_flatten([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs])
+            return list(_iterable_flatten([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs]))
         return [required_task_outputs.serialize()]
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(
         normalized_labels_list: list[dict[str, Any]],
     ) -> dict[str, str]:
-        merged_labels: dict[str, str] = {}
-        for normalized_label in normalized_labels_list:
-            for label_name, label_value in normalized_label.items():
+        def __merge_two_dicts_helper(merged: dict[str, str], current_labels: dict[str, Any]) -> dict[str, str]:
+            next_merged = copy.deepcopy(merged)
+            for label_name, label_value in current_labels.items():
                 if len(label_value) == 0:
                     logger.warning(f'value of label_name={label_name} is empty. So skip to add as a metadata.')
                     continue
-                if label_name in merged_labels.keys():
-                    logger.warning(f'label_name={label_name} is already seen. So skip to add as a metadata.')
+                if label_name in next_merged:
+                    logger.warning(f'label_name={label_name} is already seen. So skip to add as metadata.')
                     continue
-                merged_labels[label_name] = label_value
-        return merged_labels
+                next_merged[label_name] = label_value
+            return next_merged
+
+        return functools.reduce(__merge_two_dicts_helper, normalized_labels_list, {})
 
     # Google Cloud Storage(GCS) has a limitation of metadata size, 8 KiB.
     # So, we need to adjust the size of metadata.
