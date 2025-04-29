@@ -64,3 +64,17 @@ Mypy plugin checks TaskOnKart generic types.
         str_task=StrTask(),  # mypy ok
         int_task=StrTask(),  # mypy error: Argument "int_task" to "StrTask" has incompatible type "StrTask"; expected "TaskOnKart[int]
     )
+
+Configurations (only pyproject.toml)
+-----------------------------------
+
+You can configure the Mypy plugin using the ``pyproject.toml`` file.
+The following options are available:
+
+.. code:: toml
+
+    [tool.gokart-mypy]
+    # If true, Mypy will raise an error if a task is missing required parameters.
+    # This configuration causes an error when the parameters set by `luigi.Config()`
+    # Default: false
+    disallow_missing_parameters = true
