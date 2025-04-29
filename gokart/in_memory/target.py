@@ -32,7 +32,7 @@ class InMemoryTarget(TargetOnKart):
         self,
         obj: Any,
         task_params: dict[str, str] | None = None,
-        custom_labels: dict[str, Any] | None = None,
+        custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         return _repository.set_value(self._data_key, obj)

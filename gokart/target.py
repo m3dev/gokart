@@ -37,7 +37,7 @@ class TargetOnKart(luigi.Target):
         obj,
         lock_at_dump: bool = True,
         task_params: dict[str, str] | None = None,
-        custom_labels: dict[str, Any] | None = None,
+        custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         if lock_at_dump:
@@ -77,7 +77,7 @@ class TargetOnKart(luigi.Target):
         self,
         obj,
         task_params: dict[str, str] | None = None,
-        custom_labels: dict[str, Any] | None = None,
+        custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         pass
@@ -120,7 +120,7 @@ class SingleFileTarget(TargetOnKart):
         self,
         obj,
         task_params: dict[str, str] | None = None,
-        custom_labels: dict[str, Any] | None = None,
+        custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         with self._target.open('w') as f:
@@ -172,7 +172,7 @@ class ModelTarget(TargetOnKart):
         self,
         obj,
         task_params: dict[str, str] | None = None,
-        custom_labels: dict[str, Any] | None = None,
+        custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         self._make_temporary_directory()

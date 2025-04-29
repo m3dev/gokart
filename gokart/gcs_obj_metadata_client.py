@@ -40,7 +40,7 @@ class GCSObjectMetadataClient:
     def add_task_state_labels(
         path: str,
         task_params: dict[str, str] | None = None,
-        custom_labels: dict[str, Any] | None = None,
+        custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
         if GCSObjectMetadataClient._is_log_related_path(path):
@@ -90,7 +90,7 @@ class GCSObjectMetadataClient:
     def _get_patched_obj_metadata(
         metadata: Any,
         task_params: dict[str, str] | None = None,
-        custom_labels: dict[str, Any] | None = None,
+        custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> dict | Any:
         # If metadata from response when getting bucket and object information is not dictionary,
@@ -134,7 +134,7 @@ class GCSObjectMetadataClient:
     def _merge_custom_labels_and_task_params_labels(
         normalized_labels_list: list[dict[str, str]],
     ) -> dict[str, str]:
-        def __merge_two_dicts_helper(merged: dict[str, str], current_labels: dict[str, Any]) -> dict[str, str]:
+        def __merge_two_dicts_helper(merged: dict[str, str], current_labels: dict[str, str]) -> dict[str, str]:
             next_merged = copy.deepcopy(merged)
             for label_name, label_value in current_labels.items():
                 if len(label_value) == 0:
