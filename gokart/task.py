@@ -22,9 +22,10 @@ from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_loc
 from gokart.file_processor import FileProcessor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
+from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
-from gokart.utils import FlattenableItems, flatten
+from gokart.utils import FlattenableItems, flatten, map_flattenable_items
 
 logger = getLogger(__name__)
 
@@ -337,11 +338,17 @@ class TaskOnKart(luigi.Task, Generic[T]):
             if isinstance(obj, pd.DataFrame) and obj.empty:
                 raise EmptyDumpError()
 
+        required_task_outputs = map_flattenable_items(
+            lambda task: map_flattenable_items(lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()),
+            self.requires(),
+        )
+
         self._get_output_target(target).dump(
             obj,
             lock_at_dump=self._lock_at_dump,
             task_params=super().to_str_params(only_significant=True, only_public=True),
             custom_labels=custom_labels,
+            required_task_outputs=required_task_outputs,
         )
 
     @staticmethod

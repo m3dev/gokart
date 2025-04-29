@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Any
 
 from gokart.in_memory.repository import InMemoryCacheRepository
+from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart, TaskLockParams
+from gokart.utils import FlattenableItems
 
 _repository = InMemoryCacheRepository()
 
@@ -26,7 +28,13 @@ class InMemoryTarget(TargetOnKart):
     def _load(self) -> Any:
         return _repository.get_value(self._data_key)
 
-    def _dump(self, obj: Any, task_params: dict[str, str] | None = None, custom_labels: dict[str, Any] | None = None) -> None:
+    def _dump(
+        self,
+        obj: Any,
+        task_params: dict[str, str] | None = None,
+        custom_labels: dict[str, str] | None = None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
+    ) -> None:
         return _repository.set_value(self._data_key, obj)
 
     def _remove(self) -> None:
