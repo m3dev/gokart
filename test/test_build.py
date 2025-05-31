@@ -12,6 +12,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import assert_type
 
+from unittest.mock import patch
+
 import luigi
 import luigi.mock
 
@@ -194,6 +196,25 @@ class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):
 class TestBuildHasLockedTaskException(unittest.TestCase):
     def test_build_expo_backoff_when_luigi_failed_due_to_locked_task(self):
         gokart.build(_FailThreeTimesAndSuccessTask(), reset_register=False)
+
+
+class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
+    def test_build_raises_exception_on_failed_and_scheduling_failed(self):
+        """Test that build() raises GokartBuildError when FAILED_AND_SCHEDULING_FAILED occurs"""
+
+        # Create a mock result object with FAILED_AND_SCHEDULING_FAILED status
+        class MockResult:
+            def __init__(self):
+                self.status = luigi.LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED
+                self.summary_text = 'Task failed and scheduling failed'
+
+        # Mock luigi.build to return FAILED_AND_SCHEDULING_FAILED status
+        with patch('luigi.build') as mock_luigi_build:
+            mock_luigi_build.return_value = MockResult()
+
+            # This should now raise GokartBuildError after the fix
+            with self.assertRaises(GokartBuildError):
+                gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
 
 
 if __name__ == '__main__':
