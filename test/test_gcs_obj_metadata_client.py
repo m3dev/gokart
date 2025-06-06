@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import gokart
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
+from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 
 
@@ -112,6 +113,18 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertEqual(got['empty'], 'True')
         self.assertEqual(got['created_by'], 'hoge fuga')
         self.assertEqual(got['param1'], 'a' * 10)
+
+    def test_get_patched_obj_metadata_with_required_task_outputs(self):
+        got = GCSObjectMetadataClient._get_patched_obj_metadata(
+            {},
+            required_task_outputs=[
+                RequiredTaskOutput(task_name='task1', output_path='path/to/output1'),
+            ],
+        )
+
+        self.assertIsInstance(got, dict)
+        self.assertIn('__required_task_outputs', got)
+        self.assertEqual(got['__required_task_outputs'], '[{"__gokart_task_name": "task1", "__gokart_output_path": "path/to/output1"}]')
 
 
 class TestGokartTask(unittest.TestCase):
