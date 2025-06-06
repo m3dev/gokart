@@ -98,8 +98,6 @@ class GCSObjectMetadataClient:
         if not isinstance(metadata, dict):
             logger.warning(f'metadata is not a dict: {metadata}, something wrong was happened when getting response when get bucket and object information.')
             return metadata
-        if not task_params and not custom_labels:
-            return metadata
         # Maximum size of metadata for each object is 8 KiB.
         # [Link]: https://cloud.google.com/storage/quotas#objects
         normalized_task_params_labels = GCSObjectMetadataClient._normalize_labels(task_params)
@@ -117,18 +115,17 @@ class GCSObjectMetadataClient:
 
     @staticmethod
     def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput]) -> FlattenableItems[str]:
-        def _iterable_flatten(nested_list: Iterable) -> Iterable[str]:
-            for item in nested_list:
-                if isinstance(item, Iterable):
-                    yield from _iterable_flatten(item)
-                else:
-                    yield item
-
-        if isinstance(required_task_outputs, dict):
+        if isinstance(required_task_outputs, RequiredTaskOutput):
+            return required_task_outputs.serialize()
+        elif isinstance(required_task_outputs, dict):
             return {k: GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
-        if isinstance(required_task_outputs, Iterable):
-            return list(_iterable_flatten([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs]))
-        return [required_task_outputs.serialize()]
+        elif isinstance(required_task_outputs, Iterable):
+            return list([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs])
+        else:
+            raise TypeError(
+                f'Unsupported type for required_task_outputs: {type(required_task_outputs)}. '
+                'It should be RequiredTaskOutput, dict, or iterable of RequiredTaskOutput.'
+            )
 
     @staticmethod
     def _merge_custom_labels_and_task_params_labels(
