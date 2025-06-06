@@ -120,7 +120,7 @@ class GCSObjectMetadataClient:
         elif isinstance(required_task_outputs, dict):
             return {k: GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
         elif isinstance(required_task_outputs, Iterable):
-            return list([GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs])
+            return [GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs]
         else:
             raise TypeError(
                 f'Unsupported type for required_task_outputs: {type(required_task_outputs)}. '
