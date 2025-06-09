@@ -126,6 +126,20 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertIn('__required_task_outputs', got)
         self.assertEqual(got['__required_task_outputs'], '[{"__gokart_task_name": "task1", "__gokart_output_path": "path/to/output1"}]')
 
+    def test_get_patched_obj_metadata_with_nested_required_task_outputs(self):
+        got = GCSObjectMetadataClient._get_patched_obj_metadata(
+            {},
+            required_task_outputs={
+                'nested_task': {'nest': RequiredTaskOutput(task_name='task1', output_path='path/to/output1')},
+            },
+        )
+
+        self.assertIsInstance(got, dict)
+        self.assertIn('__required_task_outputs', got)
+        self.assertEqual(
+            got['__required_task_outputs'], '{"nested_task": {"nest": {"__gokart_task_name": "task1", "__gokart_output_path": "path/to/output1"}}}'
+        )
+
 
 class TestGokartTask(unittest.TestCase):
     @patch.object(_DummyTaskOnKart, '_get_output_target')
