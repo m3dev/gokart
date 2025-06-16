@@ -148,7 +148,7 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         result = GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(large_labels)
 
         total_size = sum(len(k.encode('utf-8')) + len(v.encode('utf-8')) for k, v in result.items())
-        self.assertLessEqual(total_size, 8 * 1024)
+        self.assertLessEqual(total_size, GCSObjectMetadataClient.MAX_GCS_METADATA_SIZE)
 
 
 class TestGokartTask(unittest.TestCase):
