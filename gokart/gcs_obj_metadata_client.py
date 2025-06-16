@@ -159,10 +159,14 @@ class GCSObjectMetadataClient:
         )
         if current_total_metadata_size <= max_gcs_metadata_size:
             return labels
-        for label_name, label_value in reversed(labels.items()):
+        to_remove = []
+        for label_name, label_value in reversed(list(labels.items())):
             size = _get_label_size(label_name, label_value)
-            del labels[label_name]
+            to_remove.append(label_name)
             current_total_metadata_size -= size
             if current_total_metadata_size <= max_gcs_metadata_size:
                 break
+
+        for key in to_remove:
+            del labels[key]
         return labels
