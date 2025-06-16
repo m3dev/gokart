@@ -139,14 +139,14 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertEqual(
             got['__required_task_outputs'], '{"nested_task": {"nest": {"__gokart_task_name": "task1", "__gokart_output_path": "path/to/output1"}}}'
         )
-        
+
     def test_adjust_gcs_metadata_limit_size_runtime_error(self):
         large_labels = {}
         for i in range(100):
             large_labels[f'key_{i}'] = 'x' * 1000
-            
+
         result = GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(large_labels)
-        
+
         total_size = sum(len(k.encode('utf-8')) + len(v.encode('utf-8')) for k, v in result.items())
         self.assertLessEqual(total_size, 8 * 1024)
 
