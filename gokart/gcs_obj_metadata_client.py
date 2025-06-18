@@ -6,7 +6,7 @@ import json
 import re
 from collections.abc import Iterable
 from logging import getLogger
-from typing import Any
+from typing import Any, Final
 from urllib.parse import urlsplit
 
 from googleapiclient.model import makepatch
@@ -23,6 +23,9 @@ class GCSObjectMetadataClient:
     This class is Utility-Class, so should not be initialized.
     This class used for adding metadata as labels.
     """
+
+    # Maximum metadata size for GCS objects (8 KiB)
+    MAX_GCS_METADATA_SIZE: Final[int] = 8 * 1024
 
     @staticmethod
     def _is_log_related_path(path: str) -> bool:
@@ -154,15 +157,20 @@ class GCSObjectMetadataClient:
 
         labels = copy.deepcopy(_labels)
         max_gcs_metadata_size, current_total_metadata_size = (
-            8 * 1024,
+            GCSObjectMetadataClient.MAX_GCS_METADATA_SIZE,
             sum(_get_label_size(label_name, label_value) for label_name, label_value in labels.items()),
         )
         if current_total_metadata_size <= max_gcs_metadata_size:
             return labels
-        for label_name, label_value in reversed(labels.items()):
+        # NOTE: remove labels to stay within max metadata size.
+        to_remove = []
+        for label_name, label_value in reversed(tuple(labels.items())):
             size = _get_label_size(label_name, label_value)
-            del labels[label_name]
+            to_remove.append(label_name)
             current_total_metadata_size -= size
             if current_total_metadata_size <= max_gcs_metadata_size:
                 break
+
+        for key in to_remove:
+            del labels[key]
         return labels
