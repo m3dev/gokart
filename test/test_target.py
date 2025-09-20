@@ -1,3 +1,4 @@
+import importlib.util
 import io
 import os
 import shutil
@@ -8,12 +9,16 @@ from unittest.mock import patch
 import boto3
 import numpy as np
 import pandas as pd
+import pytest
 from matplotlib import pyplot
 from moto import mock_aws
 
 from gokart.file_processor import _ChunkedLargeFileReader
 from gokart.target import make_model_target, make_target
 from test.util import _get_temporary_directory
+
+polars_installed = importlib.util.find_spec('polars') is not None
+pytestmark = pytest.mark.skipif(polars_installed, reason='polars installed, skip pandas tests')
 
 
 class LocalTargetTest(unittest.TestCase):

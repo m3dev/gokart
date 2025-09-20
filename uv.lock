@@ -616,6 +616,12 @@ dependencies = [
     { name = "uritemplate" },
 ]
 
+[package.optional-dependencies]
+polars = [
+    { name = "polars", marker = "sys_platform != 'darwin'" },
+    { name = "polars-lts-cpu", marker = "sys_platform == 'darwin'" },
+]
+
 [package.dev-dependencies]
 lint = [
     { name = "mypy" },
@@ -648,6 +654,8 @@ requires-dist = [
     { name = "luigi" },
     { name = "numpy" },
     { name = "pandas" },
+    { name = "polars", marker = "sys_platform != 'darwin' and extra == 'polars'" },
+    { name = "polars-lts-cpu", marker = "sys_platform == 'darwin' and extra == 'polars'" },
     { name = "pyarrow" },
     { name = "redis" },
     { name = "slack-sdk" },
@@ -1630,6 +1638,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/2d/02d4312c973c6050a18b314a5ad0b3210edb65a906f868e31c111dede4a6/pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1", size = 67955 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669", size = 20556 },
+]
+
+[[package]]
+name = "polars"
+version = "1.25.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/57/56/d8a13c3a1990c92cc2c4f1887e97ea15aabf5685b1e826f875ca3e4e6c9e/polars-1.25.2.tar.gz", hash = "sha256:c6bd9b1b17c86e49bcf8aac44d2238b77e414d7df890afc3924812a5c989a4fe", size = 4501858 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/92/db411b7c83f694dca1b8348fa57a120c27c67cf622b85fa88c7ecf463adb/polars-1.25.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f7fcbb4f476784384ccda48757fca4e8c2e2c5a0a3aef3717aaf56aee4e30e09", size = 35121263 },
+    { url = "https://files.pythonhosted.org/packages/9f/a5/5ff200ce3bc643d5f12d91eddb9720fa083267c45fe395bcf0046e97cc2d/polars-1.25.2-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:9dd91885c9ee5ffad8725c8591f73fb7bd2632c740277ee641f0453176b3d4b8", size = 32254697 },
+    { url = "https://files.pythonhosted.org/packages/70/d5/7a5458d05d5a0af816b1c7034aa1d026b7b8176a8de41e96dac70fcf29e2/polars-1.25.2-cp39-abi3-win_amd64.whl", hash = "sha256:a547796643b9a56cb2959be87d7cb87ff80a5c8ae9367f32fe1ad717039e9afc", size = 35318381 },
+    { url = "https://files.pythonhosted.org/packages/24/df/60d35c4ae8ec357a5fb9914eb253bd1bad9e0f5332eda2bd2c6371dd3668/polars-1.25.2-cp39-abi3-win_arm64.whl", hash = "sha256:a2488e9d4b67bf47b18088f7264999180559e6ec2637ed11f9d0d4f98a74a37c", size = 31619833 },
+]
+
+[[package]]
+name = "polars-lts-cpu"
+version = "1.25.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/ac/399f210dd334e70eb4a0df25864a97512fa61bea352bdd8a6285c4fbbb63/polars_lts_cpu-1.25.2.tar.gz", hash = "sha256:caf4764ceb94457f96166af16d060311bd742cf20a850a8651eac0643a7f41dd", size = 4501478 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/39/0cb03a21d38bc152e09046437990fbcd1973c326c24ce15db88f0a028760/polars_lts_cpu-1.25.2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:09a49dbf9782f72ed5cbf3369f26349d3ba98b209688dd8748ac2a1ae14bcf73", size = 34139766 },
+    { url = "https://files.pythonhosted.org/packages/29/41/4417553a00e3f0e696b747df34cd4546fe261da2bf99f7ffd88e0d5071c7/polars_lts_cpu-1.25.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:e230385b6b347465196343cd6f167451ca9bbc3a382e9db5f231977d5ab59f00", size = 31327093 },
 ]
 
 [[package]]

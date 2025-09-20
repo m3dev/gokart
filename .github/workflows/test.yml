@@ -29,3 +29,5 @@ jobs:
         uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
     - name: Test with tox
       run: uvx --with tox-uv tox run -e ${{ matrix.tox-env }}
+    - name: Test with tox for polars extra
+      run: uvx --with tox-uv tox run -e ${{ matrix.tox-env }}-polars

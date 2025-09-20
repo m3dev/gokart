@@ -12,13 +12,21 @@ import luigi.contrib.s3
 import luigi.format
 import numpy as np
 import pandas as pd
-import pandas.errors
 from luigi.format import TextFormat
 
 from gokart.object_storage import ObjectStorage
 from gokart.utils import load_dill_with_pandas_backward_compatibility
 
 logger = getLogger(__name__)
+
+
+DATAFRAME_FRAMEWORK = os.getenv('GOKART_DATAFRAME_FRAMEWORK', 'pandas')
+if DATAFRAME_FRAMEWORK == 'polars':
+    try:
+        import polars as pl
+
+    except ImportError as e:
+        raise ValueError('please install polars to use polars as a framework of dataframe for gokart') from e
 
 
 class FileProcessor:
@@ -131,6 +139,24 @@ class CsvFileProcessor(FileProcessor):
     def format(self):
         return TextFormat(encoding=self._encoding)
 
+    def load(self, file): ...
+
+    def dump(self, obj, file): ...
+
+
+class PolarsCsvFileProcessor(CsvFileProcessor):
+    def load(self, file):
+        try:
+            return pl.read_csv(file, separator=self._sep, encoding=self._encoding)
+        except pl.exceptions.NoDataError:
+            return pl.DataFrame()
+
+    def dump(self, obj, file):
+        assert isinstance(obj, (pl.DataFrame, pl.Series)), f'requires pl.DataFrame or pl.Series, but {type(obj)} is passed.'
+        obj.write_csv(file, separator=self._sep, include_header=True)
+
+
+class PandasCsvFileProcessor(CsvFileProcessor):
     def load(self, file):
         try:
             return pd.read_csv(file, sep=self._sep, encoding=self._encoding)
@@ -164,6 +190,34 @@ class JsonFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
+    def load(self, file): ...
+
+    def dump(self, obj, file): ...
+
+
+class PolarsJsonFileProcessor(JsonFileProcessor):
+    def load(self, file):
+        try:
+            if self._orient == 'records':
+                return pl.read_ndjson(file)
+            return pl.read_json(file)
+        except pl.exceptions.ComputeError:
+            return pl.DataFrame()
+
+    def dump(self, obj, file):
+        assert isinstance(obj, pl.DataFrame) or isinstance(obj, pl.Series) or isinstance(obj, dict), (
+            f'requires pl.DataFrame or pl.Series or dict, but {type(obj)} is passed.'
+        )
+        if isinstance(obj, dict):
+            obj = pl.from_dict(obj)
+
+        if self._orient == 'records':
+            obj.write_ndjson(file)
+        else:
+            obj.write_json(file)
+
+
+class PandasJsonFileProcessor(JsonFileProcessor):
     def load(self, file):
         try:
             return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
@@ -215,11 +269,27 @@ class ParquetFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
+    def load(self, file): ...
+
+    def dump(self, obj, file): ...
+
+
+class PolarsParquetFileProcessor(ParquetFileProcessor):
     def load(self, file):
-        # FIXME(mamo3gr): enable streaming (chunked) read with S3.
-        # pandas.read_parquet accepts file-like object
-        # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
-        # which is needed for pandas to read a file in chunks.
+        if ObjectStorage.is_buffered_reader(file):
+            return pl.read_parquet(file.name)
+        else:
+            return pl.read_parquet(BytesIO(file.read()))
+
+    def dump(self, obj, file):
+        assert isinstance(obj, (pl.DataFrame)), f'requires pl.DataFrame, but {type(obj)} is passed.'
+        use_pyarrow = self._engine == 'pyarrow'
+        compression = 'uncompressed' if self._compression is None else self._compression
+        obj.write_parquet(file, use_pyarrow=use_pyarrow, compression=compression)
+
+
+class PandasParquetFileProcessor(ParquetFileProcessor):
+    def load(self, file):
         if ObjectStorage.is_buffered_reader(file):
             return pd.read_parquet(file.name)
         else:
@@ -240,6 +310,27 @@ class FeatherFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
+    def load(self, file): ...
+
+    def dump(self, obj, file): ...
+
+
+class PolarsFeatherFileProcessor(FeatherFileProcessor):
+    def load(self, file):
+        # Since polars' DataFrame doesn't have index, just load feather file
+        # TODO: Fix ingnoring store_index_in_feather variable
+        # Currently in PolarsFeatherFileProcessor, we ignored store_index_in_feather variable to avoid
+        # a breaking change of FeatherFileProcessor's default behavior.
+        if ObjectStorage.is_buffered_reader(file):
+            return pl.read_ipc(file.name)
+        return pl.read_ipc(BytesIO(file.read()))
+
+    def dump(self, obj, file):
+        assert isinstance(obj, (pl.DataFrame)), f'requires pl.DataFrame, but {type(obj)} is passed.'
+        obj.write_ipc(file.name)
+
+
+class PandasFeatherFileProcessor(FeatherFileProcessor):
     def load(self, file):
         # FIXME(mamo3gr): enable streaming (chunked) read with S3.
         # pandas.read_feather accepts file-like object
@@ -279,6 +370,18 @@ class FeatherFileProcessor(FileProcessor):
 
         # to_feather supports "binary" file-like object, but file variable is text
         dump_obj.to_feather(file.name)
+
+
+if DATAFRAME_FRAMEWORK == 'polars':
+    CsvFileProcessor = PolarsCsvFileProcessor  # type: ignore
+    JsonFileProcessor = PolarsJsonFileProcessor  # type: ignore
+    ParquetFileProcessor = PolarsParquetFileProcessor  # type: ignore
+    FeatherFileProcessor = PolarsFeatherFileProcessor  # type: ignore
+else:
+    CsvFileProcessor = PandasCsvFileProcessor  # type: ignore
+    JsonFileProcessor = PandasJsonFileProcessor  # type: ignore
+    ParquetFileProcessor = PandasParquetFileProcessor  # type: ignore
+    FeatherFileProcessor = PandasFeatherFileProcessor  # type: ignore
 
 
 def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
