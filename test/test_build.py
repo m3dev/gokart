@@ -12,6 +12,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import assert_type
 
+from unittest.mock import patch
+
 import luigi
 import luigi.mock
 
@@ -194,6 +196,62 @@ class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):
 class TestBuildHasLockedTaskException(unittest.TestCase):
     def test_build_expo_backoff_when_luigi_failed_due_to_locked_task(self):
         gokart.build(_FailThreeTimesAndSuccessTask(), reset_register=False)
+
+
+class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
+    def test_build_raises_exception_on_failed_and_scheduling_failed(self):
+        """Test that build() raises GokartBuildError when FAILED_AND_SCHEDULING_FAILED occurs"""
+
+        # Create a mock result object with FAILED_AND_SCHEDULING_FAILED status
+        class MockResult:
+            def __init__(self):
+                self.status = luigi.LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED
+                self.summary_text = 'Task failed and scheduling failed'
+
+        # Mock luigi.build to return FAILED_AND_SCHEDULING_FAILED status
+        with patch('luigi.build') as mock_luigi_build:
+            mock_luigi_build.return_value = MockResult()
+
+            # This should now raise GokartBuildError after the fix
+            with self.assertRaises(GokartBuildError):
+                gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
+
+    def test_build_not_raises_exception_when_success_with_retry(self):
+        """Test that build() does not raise GokartBuildError when task succeeds with retry"""
+
+        # Create a mock result object with SUCCESS_WITH_RETRY status
+        class MockResult:
+            def __init__(self):
+                self.status = luigi.LuigiStatusCode.SUCCESS_WITH_RETRY
+                self.summary_text = 'Task completed successfully after retries'
+
+        # Mock _build_task to return a test value directly
+        with patch('luigi.build') as mock_luigi_build:
+            mock_luigi_build.return_value = MockResult()
+
+            # Create a mock task that will be used by build()
+            mock_task = _DummyTask(param='test')
+
+            # This should not raise GokartBuildError
+            # The test output will be whatever the mock returns
+            gokart.build(mock_task, reset_register=False, return_value=False, log_level=logging.CRITICAL)
+
+    def test_build_not_raises_exception_on_scheduling_failed_only(self):
+        """Test that build() raises GokartBuildError when SCHEDULING_FAILED occurs"""
+
+        # Create a mock result object with SCHEDULING_FAILED status
+        class MockResult:
+            def __init__(self):
+                self.status = luigi.LuigiStatusCode.SCHEDULING_FAILED
+                self.summary_text = 'Task scheduling failed'
+
+        # Mock luigi.build to return SCHEDULING_FAILED status
+        with patch('luigi.build') as mock_luigi_build:
+            mock_luigi_build.return_value = MockResult()
+
+            # This should raise GokartBuildError after the fix
+            with self.assertRaises(GokartBuildError):
+                gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
 
 
 if __name__ == '__main__':

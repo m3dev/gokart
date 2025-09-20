@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import gokart
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
+from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 
 
@@ -113,6 +114,39 @@ class TestGCSObjectMetadataClient(unittest.TestCase):
         self.assertEqual(got['created_by'], 'hoge fuga')
         self.assertEqual(got['param1'], 'a' * 10)
 
+    def test_get_patched_obj_metadata_with_required_task_outputs(self):
+        got = GCSObjectMetadataClient._get_patched_obj_metadata(
+            {},
+            required_task_outputs=[
+                RequiredTaskOutput(task_name='task1', output_path='path/to/output1'),
+            ],
+        )
+
+        self.assertIsInstance(got, dict)
+        self.assertIn('__required_task_outputs', got)
+        self.assertEqual(got['__required_task_outputs'], '[{"__gokart_task_name": "task1", "__gokart_output_path": "path/to/output1"}]')
+
+    def test_get_patched_obj_metadata_with_nested_required_task_outputs(self):
+        got = GCSObjectMetadataClient._get_patched_obj_metadata(
+            {},
+            required_task_outputs={
+                'nested_task': {'nest': RequiredTaskOutput(task_name='task1', output_path='path/to/output1')},
+            },
+        )
+
+        self.assertIsInstance(got, dict)
+        self.assertIn('__required_task_outputs', got)
+        self.assertEqual(
+            got['__required_task_outputs'], '{"nested_task": {"nest": {"__gokart_task_name": "task1", "__gokart_output_path": "path/to/output1"}}}'
+        )
+
+    def test_adjust_gcs_metadata_limit_size_runtime_error(self):
+        large_labels = {}
+        for i in range(100):
+            large_labels[f'key_{i}'] = 'x' * 1000
+
+        GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(large_labels)
+
 
 class TestGokartTask(unittest.TestCase):
     @patch.object(_DummyTaskOnKart, '_get_output_target')
@@ -122,7 +156,10 @@ class TestGokartTask(unittest.TestCase):
 
         task = _DummyTaskOnKart()
         task.dump({'key': 'value'}, mock_target)
-        mock_target.dump.assert_called_once_with({'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={}, custom_labels=None)
+
+        mock_target.dump.assert_called_once_with(
+            {'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={}, custom_labels=None, required_task_outputs=[]
+        )
 
 
 if __name__ == '__main__':

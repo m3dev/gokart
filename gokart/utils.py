@@ -4,7 +4,7 @@ import os
 import sys
 from collections.abc import Iterable
 from io import BytesIO
-from typing import Any, Protocol, TypeVar, Union
+from typing import Any, Callable, Protocol, TypeVar, Union
 
 import dill
 import luigi
@@ -70,6 +70,21 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     for result in targets:
         flat += flatten(result)
     return flat
+
+
+K = TypeVar('K')
+
+
+def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) -> FlattenableItems[K]:
+    if isinstance(items, dict):
+        return {k: map_flattenable_items(func, v) for k, v in items.items()}
+    if isinstance(items, tuple):
+        return tuple(map_flattenable_items(func, i) for i in items)
+    if isinstance(items, str):
+        return func(items)  # type: ignore
+    if isinstance(items, Iterable):
+        return list(map(lambda item: map_flattenable_items(func, item), items))
+    return func(items)
 
 
 def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> Any:
