@@ -12,7 +12,7 @@ jobs:
       max-parallel: 7
       matrix:
         platform: ["ubuntu-latest"]
-        tox-env: ["py39", "py310", "py311", "py312", "py313"]
+        tox-env: ["py310", "py311", "py312", "py313"]
         include:
           - platform: macos-13
             tox-env: "py313"

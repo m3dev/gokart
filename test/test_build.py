@@ -176,9 +176,7 @@ class ProcessTaskInfoTest(unittest.TestCase):
                 process_task_info(task, config)
                 logger.removeHandler(handler)
                 handler.close()
-
-                if sys.version_info >= (3, 10):  # cannot use process_task_info in Python 3.9 or lower
-                    self.assertIn(member=str(task.make_unique_id()), container=log_stream.getvalue())
+                self.assertIn(member=str(task.make_unique_id()), container=log_stream.getvalue())
 
 
 class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):

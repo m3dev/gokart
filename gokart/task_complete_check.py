@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Callable
 from logging import getLogger
-from typing import Callable
 
 logger = getLogger(__name__)
 
