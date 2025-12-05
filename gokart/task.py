@@ -6,10 +6,10 @@ import inspect
 import os
 import random
 import types
-from collections.abc import Generator, Iterable
+from collections.abc import Callable, Generator, Iterable
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Callable, Generic, TypeVar, overload
+from typing import Any, Generic, TypeVar, overload
 
 import luigi
 import pandas as pd

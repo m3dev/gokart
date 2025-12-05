@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Callable
 from logging import getLogger
-from typing import Any, Callable
+from typing import Any
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, set_lock_scheduler, set_task_lock
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
-from typing import Callable
+from collections.abc import Callable
 
 import boto3
 import pandas as pd

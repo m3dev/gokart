@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import os
-import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from io import BytesIO
-from typing import Any, Callable, Protocol, TypeVar, Union
+from typing import Any, Protocol, TypeAlias, TypeVar
 
 import dill
 import luigi
@@ -28,12 +27,7 @@ def add_config(file_path: str):
 
 
 T = TypeVar('T')
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-
-    FlattenableItems: TypeAlias = T | Iterable['FlattenableItems[T]'] | dict[str, 'FlattenableItems[T]']
-else:
-    FlattenableItems = Union[T, Iterable['FlattenableItems[T]'], dict[str, 'FlattenableItems[T]']]
+FlattenableItems: TypeAlias = T | Iterable['FlattenableItems[T]'] | dict[str, 'FlattenableItems[T]']
 
 
 def flatten(targets: FlattenableItems[T]) -> list[T]:

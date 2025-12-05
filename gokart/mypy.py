@@ -9,10 +9,10 @@ from __future__ import annotations
 import re
 import sys
 import warnings
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Final, Literal
+from typing import Any, Final, Literal
 
 import luigi
 from mypy.expandtype import expand_type
@@ -422,7 +422,7 @@ class TaskOnKartTransformer:
         """
         if isinstance(expr, CallExpr) and isinstance(expr.callee, RefExpr):
             args = {}
-            for name, arg in zip(expr.arg_names, expr.args):
+            for name, arg in zip(expr.arg_names, expr.args, strict=False):
                 if name is None:
                     # NOTE: this is a workaround to get default value from a parameter
                     self._api.fail(
