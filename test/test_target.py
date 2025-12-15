@@ -11,7 +11,7 @@ import pandas as pd
 from matplotlib import pyplot
 from moto import mock_aws
 
-from gokart.file_processor import _ChunkedLargeFileReader
+from gokart.file_processor.base import _ChunkedLargeFileReader
 from gokart.target import make_model_target, make_target
 from test.util import _get_temporary_directory
 
@@ -29,7 +29,7 @@ class LocalTargetTest(unittest.TestCase):
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
-        with unittest.mock.patch('gokart.file_processor._ChunkedLargeFileReader', wraps=_ChunkedLargeFileReader) as monkey:
+        with unittest.mock.patch('gokart.file_processor.base._ChunkedLargeFileReader', wraps=_ChunkedLargeFileReader) as monkey:
             loaded = target.load()
             monkey.assert_called()
 
