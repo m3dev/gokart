@@ -25,7 +25,7 @@ from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, T
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
-from gokart.utils import FlattenableItems, flatten, map_flattenable_items
+from gokart.utils import FlattenableItems, flatten, get_dataframe_type_from_task, map_flattenable_items
 
 logger = getLogger(__name__)
 
@@ -219,6 +219,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
 
+        # Auto-select processor based on type parameter if not provided
+        if processor is None and relative_file_path is not None:
+            processor = self._create_processor_for_dataframe_type(file_path)
+
         task_lock_params = make_task_lock_params(
             file_path=file_path,
             unique_id=unique_id,
@@ -231,6 +235,38 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return gokart.target.make_target(
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
+
+    def _create_processor_for_dataframe_type(self, file_path: str) -> FileProcessor | None:
+        """
+        Create a file processor with appropriate return_type based on task's type parameter.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            FileProcessor with return_type set, or None to use default processor
+        """
+        from gokart.file_processor import CsvFileProcessor, FeatherFileProcessor, JsonFileProcessor, ParquetFileProcessor
+
+        extension = os.path.splitext(file_path)[1]
+        df_type = get_dataframe_type_from_task(self)
+
+        # Create custom processor for DataFrame-supporting file types with type parameter
+        if extension == '.csv':
+            return CsvFileProcessor(sep=',', dataframe_type=df_type)
+        elif extension == '.tsv':
+            return CsvFileProcessor(sep='\t', dataframe_type=df_type)
+        elif extension == '.json':
+            return JsonFileProcessor(orient=None, dataframe_type=df_type)
+        elif extension == '.ndjson':
+            return JsonFileProcessor(orient='records', dataframe_type=df_type)
+        elif extension == '.parquet':
+            return ParquetFileProcessor(dataframe_type=df_type)
+        elif extension == '.feather':
+            return FeatherFileProcessor(store_index_in_feather=self.store_index_in_feather, dataframe_type=df_type)
+
+        # For other file types, use default processor selection
+        return None
 
     def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (
