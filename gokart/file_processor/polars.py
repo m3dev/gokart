@@ -25,7 +25,7 @@ class CsvFileProcessorPolars(FileProcessor):
 
     def __init__(self, sep=',', encoding: str = 'utf-8'):
         if not HAS_POLARS:
-            raise ImportError("polars is required for return_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
         self._sep = sep
         self._encoding = encoding
         super().__init__()
@@ -53,7 +53,7 @@ class JsonFileProcessorPolars(FileProcessor):
 
     def __init__(self, orient: str | None = None):
         if not HAS_POLARS:
-            raise ImportError("polars is required for return_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
         self._orient = orient
 
     def format(self):
@@ -85,7 +85,7 @@ class ParquetFileProcessorPolars(FileProcessor):
 
     def __init__(self, engine='pyarrow', compression=None):
         if not HAS_POLARS:
-            raise ImportError("polars is required for return_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
         self._engine = engine  # Ignored for polars
         self._compression = compression
         super().__init__()
@@ -112,7 +112,7 @@ class FeatherFileProcessorPolars(FileProcessor):
 
     def __init__(self, store_index_in_feather: bool):
         if not HAS_POLARS:
-            raise ImportError("polars is required for return_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
         super().__init__()
         self._store_index_in_feather = store_index_in_feather  # Ignored for polars
 

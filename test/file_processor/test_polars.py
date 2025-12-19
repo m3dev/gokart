@@ -92,8 +92,7 @@ class TestCsvFileProcessorWithPolars:
 
             assert isinstance(loaded_df, pd.DataFrame)
             # Compare values
-            assert list(loaded_df['a']) == [1, 2, 3]
-            assert list(loaded_df['b']) == [4, 5, 6]
+            df_polars.equals(pl.from_pandas(loaded_df))
 
     def test_polars_with_different_separator(self):
         """Test polars with TSV (tab-separated values)"""
@@ -290,9 +289,7 @@ class TestParquetFileProcessorWithPolars:
                 loaded_df = processor_pandas.load(f)
 
             assert isinstance(loaded_df, pd.DataFrame)
-            # Compare values
-            assert list(loaded_df['a']) == [1, 2, 3]
-            assert list(loaded_df['b']) == [4, 5, 6]
+            df_polars.equals(pl.from_pandas(loaded_df))
 
     def test_parquet_with_compression(self):
         """Test polars with parquet compression"""
@@ -387,5 +384,4 @@ class TestFeatherFileProcessorWithPolars:
 
             assert isinstance(loaded_df, pd.DataFrame)
             # Compare values
-            assert list(loaded_df['a']) == [1, 2, 3]
-            assert list(loaded_df['b']) == [4, 5, 6]
+            df_polars.equals(pl.from_pandas(loaded_df))
