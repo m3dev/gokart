@@ -1,2 +1,8 @@
-from .repository import InMemoryCacheRepository  # noqa:F401
-from .target import InMemoryTarget, make_in_memory_target  # noqa:F401
+__all__ = [
+    'InMemoryCacheRepository',
+    'InMemoryTarget',
+    'make_in_memory_target',
+]
+
+from .repository import InMemoryCacheRepository
+from .target import InMemoryTarget, make_in_memory_target
