@@ -15,7 +15,10 @@ import gokart
 logger = getLogger(__name__)
 
 
-class TaskInstanceParameter(luigi.Parameter):
+TaskOnKartDumpType = TypeVar('TaskOnKartDumpType')
+
+
+class TaskInstanceParameter(luigi.Parameter['gokart.TaskOnKart[TaskOnKartDumpType]'], Generic[TaskOnKartDumpType]):
     def __init__(self, expected_type=None, *args, **kwargs):
         if expected_type is None:
             self.expected_type: type = gokart.TaskOnKart
@@ -64,7 +67,7 @@ class _TaskInstanceEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-class ListTaskInstanceParameter(luigi.Parameter):
+class ListTaskInstanceParameter(luigi.Parameter[list['gokart.TaskOnKart[TaskOnKartDumpType]']], Generic[TaskOnKartDumpType]):
     def __init__(self, expected_elements_type=None, *args, **kwargs):
         if expected_elements_type is None:
             self.expected_elements_type: type = gokart.TaskOnKart
@@ -91,7 +94,7 @@ class ExplicitBoolParameter(luigi.BoolParameter):
         luigi.Parameter.__init__(self, *args, **kwargs)
 
     def _parser_kwargs(self, *args, **kwargs):  # type: ignore
-        return luigi.Parameter._parser_kwargs(*args, *kwargs)
+        return luigi.Parameter._parser_kwargs(*args, *kwargs)  # type: ignore
 
 
 T = TypeVar('T')
@@ -113,7 +116,7 @@ class Serializable(Protocol):
 S = TypeVar('S', bound=Serializable)
 
 
-class SerializableParameter(luigi.Parameter, Generic[S]):
+class SerializableParameter(luigi.Parameter[S], Generic[S]):
     def __init__(self, object_type: type[S], *args, **kwargs):
         self._object_type = object_type
         super().__init__(*args, **kwargs)
@@ -125,7 +128,7 @@ class SerializableParameter(luigi.Parameter, Generic[S]):
         return x.gokart_serialize()
 
 
-class ZonedDateSecondParameter(luigi.Parameter):
+class ZonedDateSecondParameter(luigi.Parameter[datetime.datetime]):
     """
     ZonedDateSecondParameter supports a datetime.datetime object with timezone information.
 
