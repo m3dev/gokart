@@ -76,8 +76,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
     significant: bool = luigi.BoolParameter(
         default=True, description='If this is false, this task is not treated as a part of dependent tasks for the unique id.', significant=False
     )
-    fix_random_seed_methods: tuple[str] = luigi.ListParameter(
-        default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False
+    fix_random_seed_methods: tuple[str, ...] = luigi.ListParameter(
+        default=('random.seed', 'numpy.random.seed'), description='Fix random seed method list.', significant=False
     )
     FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER = -42497368
     fix_random_seed_value: int = luigi.IntParameter(
