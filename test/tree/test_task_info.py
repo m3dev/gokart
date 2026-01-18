@@ -14,7 +14,7 @@ from gokart.tree.task_info import dump_task_info_table, dump_task_info_tree, mak
 
 class _SubTask(gokart.TaskOnKart):
     task_namespace = __name__
-    param = luigi.IntParameter()
+    param: int = luigi.IntParameter()
 
     def output(self):
         return self.make_target('sub_task.txt')
@@ -25,8 +25,8 @@ class _SubTask(gokart.TaskOnKart):
 
 class _Task(gokart.TaskOnKart):
     task_namespace = __name__
-    param = luigi.IntParameter(default=10)
-    sub = gokart.TaskInstanceParameter(default=_SubTask(param=20))
+    param: int = luigi.IntParameter(default=10)
+    sub: gokart.TaskOnKart = gokart.TaskInstanceParameter(default=_SubTask(param=20))
 
     def requires(self):
         return self.sub
@@ -40,8 +40,8 @@ class _Task(gokart.TaskOnKart):
 
 class _DoubleLoadSubTask(gokart.TaskOnKart):
     task_namespace = __name__
-    sub1 = gokart.TaskInstanceParameter()
-    sub2 = gokart.TaskInstanceParameter()
+    sub1: gokart.TaskOnKart = gokart.TaskInstanceParameter()
+    sub2: gokart.TaskOnKart = gokart.TaskInstanceParameter()
 
     def output(self):
         return self.make_target('sub_task.txt')

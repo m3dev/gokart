@@ -12,7 +12,7 @@ from gokart.worker import Worker, gokart_worker
 
 class _DummyTask(gokart.TaskOnKart):
     task_namespace = __name__
-    random_id = luigi.Parameter()
+    random_id: str = luigi.Parameter()
 
     def _run(self): ...
 

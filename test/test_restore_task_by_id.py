@@ -9,7 +9,7 @@ import gokart
 
 class _SubDummyTask(gokart.TaskOnKart):
     task_namespace = __name__
-    param = luigi.IntParameter()
+    param: int = luigi.IntParameter()
 
     def run(self):
         self.dump('test')
@@ -17,7 +17,7 @@ class _SubDummyTask(gokart.TaskOnKart):
 
 class _DummyTask(gokart.TaskOnKart):
     task_namespace = __name__
-    sub_task = gokart.TaskInstanceParameter()
+    sub_task: gokart.TaskOnKart = gokart.TaskInstanceParameter()
 
     def output(self):
         return self.make_target('test.txt')

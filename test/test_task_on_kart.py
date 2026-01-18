@@ -21,9 +21,9 @@ from gokart.task import EmptyDumpError
 
 class _DummyTask(gokart.TaskOnKart):
     task_namespace = __name__
-    param = luigi.IntParameter(default=1)
-    list_param = luigi.ListParameter(default=['a', 'b'])
-    bool_param = luigi.BoolParameter()
+    param: int = luigi.IntParameter(default=1)
+    list_param: tuple[str, ...] = luigi.ListParameter(default=('a', 'b'))
+    bool_param: bool = luigi.BoolParameter()
 
     def output(self):
         return None
@@ -75,10 +75,10 @@ class _DummySubTaskWithPrivateParameter(gokart.TaskOnKart):
 
 class _DummyTaskWithPrivateParameter(gokart.TaskOnKart):
     task_namespace = __name__
-    int_param = luigi.IntParameter()
-    private_int_param = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
-    task_param = TaskInstanceParameter()
-    list_task_param = ListTaskInstanceParameter()
+    int_param: int = luigi.IntParameter()
+    private_int_param: int = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
+    task_param: gokart.TaskOnKart = TaskInstanceParameter()
+    list_task_param: list[gokart.TaskOnKart] = ListTaskInstanceParameter()
 
 
 class TaskTest(unittest.TestCase):
@@ -180,7 +180,7 @@ class TaskTest(unittest.TestCase):
 
     def test_clone_with_special_params(self):
         class _DummyTaskRerun(gokart.TaskOnKart):
-            a = luigi.BoolParameter(default=False)
+            a: bool = luigi.BoolParameter(default=False)
 
         task = _DummyTaskRerun(a=True, rerun=True)
         cloned = task.clone(_DummyTaskRerun)
@@ -492,7 +492,7 @@ class TaskTest(unittest.TestCase):
 
         class _WithTaskInstanceParameter(gokart.TaskOnKart):
             task_namespace = __name__
-            a_task = gokart.TaskInstanceParameter()
+            a_task: gokart.TaskOnKart = gokart.TaskInstanceParameter()
 
         without_task = _WithoutTaskInstanceParameter()
         self.assertListEqual(without_task.requires(), [])  # type: ignore

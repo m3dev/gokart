@@ -572,4 +572,4 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return f'{param_value.get_task_family()}({param_value.make_unique_id()})'
         if isinstance(param_obj, ListTaskInstanceParameter):
             return f'[{", ".join(f"{v.get_task_family()}({v.make_unique_id()})" for v in param_value)}]'
-        return param_obj.serialize(param_value)
+        return param_obj.serialize(param_value)  # type: ignore

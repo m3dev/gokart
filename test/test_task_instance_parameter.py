@@ -23,14 +23,14 @@ class _DummyInvalidSubClassTask(TaskOnKart):
 
 class _DummyTask(TaskOnKart):
     task_namespace = __name__
-    param = luigi.IntParameter()
-    task = TaskInstanceParameter(default=_DummySubTask())
+    param: int = luigi.IntParameter()
+    task: gokart.TaskOnKart = TaskInstanceParameter(default=_DummySubTask())
 
 
 class _DummyListTask(TaskOnKart):
     task_namespace = __name__
-    param = luigi.IntParameter()
-    task = ListTaskInstanceParameter(default=[_DummySubTask(), _DummySubTask()])
+    param: int = luigi.IntParameter()
+    task: list[gokart.TaskOnKart] = ListTaskInstanceParameter(default=[_DummySubTask(), _DummySubTask()])
 
 
 class TaskInstanceParameterTest(unittest.TestCase):
@@ -55,7 +55,7 @@ class TaskInstanceParameterTest(unittest.TestCase):
     def test_params_with_correct_param_type(self):
         class _DummyPipelineA(TaskOnKart):
             task_namespace = __name__
-            subtask = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
+            subtask: gokart.TaskOnKart = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
 
         task = _DummyPipelineA(subtask=_DummyCorrectSubClassTask())
         self.assertEqual(task.requires()['subtask'], _DummyCorrectSubClassTask())  # type: ignore
@@ -63,7 +63,7 @@ class TaskInstanceParameterTest(unittest.TestCase):
     def test_params_with_invalid_param_type(self):
         class _DummyPipelineB(TaskOnKart):
             task_namespace = __name__
-            subtask = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
+            subtask: gokart.TaskOnKart = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
 
         with self.assertRaises(TypeError):
             _DummyPipelineB(subtask=_DummyInvalidSubClassTask())
@@ -79,7 +79,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
     def test_list_params_with_correct_param_types(self):
         class _DummyPipelineC(TaskOnKart):
             task_namespace = __name__
-            subtask = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
+            subtask: list[gokart.TaskOnKart] = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         task = _DummyPipelineC(subtask=[_DummyCorrectSubClassTask()])
         self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(),))  # type: ignore
@@ -87,7 +87,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
     def test_list_params_with_invalid_param_types(self):
         class _DummyPipelineD(TaskOnKart):
             task_namespace = __name__
-            subtask = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
+            subtask: list[gokart.TaskOnKart] = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         with self.assertRaises(TypeError):
             _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask()])
