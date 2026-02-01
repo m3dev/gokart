@@ -385,3 +385,152 @@ class TestFeatherFileProcessorWithPolars:
             assert isinstance(loaded_df, pd.DataFrame)
             # Compare values
             df_polars.equals(pl.from_pandas(loaded_df))
+
+
+@pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+class TestLazyFrameSupport:
+    """Tests for LazyFrame support in file processors using dataframe_type='polars-lazy'"""
+
+    def test_csv_load_lazy(self):
+        """Test loading CSV as LazyFrame"""
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        processor = CsvFileProcessor(dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.csv'
+            df.write_csv(temp_path)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+            assert isinstance(loaded, pl.LazyFrame)
+            assert loaded.collect().equals(df)
+
+    def test_csv_dump_lazyframe(self):
+        """Test dumping a LazyFrame to CSV"""
+        lf = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}).lazy()
+        processor = CsvFileProcessor(dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.csv'
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(lf, f)
+
+            # Verify file was created and can be read
+            loaded_df = pl.read_csv(temp_path)
+            assert loaded_df.equals(lf.collect())
+
+    def test_parquet_load_lazy(self):
+        """Test loading Parquet as LazyFrame"""
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        processor = ParquetFileProcessor(dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.parquet'
+            df.write_parquet(temp_path)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+            assert isinstance(loaded, pl.LazyFrame)
+            assert loaded.collect().equals(df)
+
+    def test_parquet_dump_lazyframe(self):
+        """Test dumping a LazyFrame to Parquet"""
+        lf = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}).lazy()
+        processor = ParquetFileProcessor(dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.parquet'
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(lf, f)
+
+            # Verify file was created and can be read
+            loaded_df = pl.read_parquet(temp_path)
+            assert loaded_df.equals(lf.collect())
+
+    def test_feather_load_lazy(self):
+        """Test loading Feather as LazyFrame"""
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        processor = FeatherFileProcessor(store_index_in_feather=False, dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.feather'
+            df.write_ipc(temp_path)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+            assert isinstance(loaded, pl.LazyFrame)
+            assert loaded.collect().equals(df)
+
+    def test_feather_dump_lazyframe(self):
+        """Test dumping a LazyFrame to Feather"""
+        lf = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}).lazy()
+        processor = FeatherFileProcessor(store_index_in_feather=False, dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.feather'
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(lf, f)
+
+            # Verify file was created and can be read
+            loaded_df = pl.read_ipc(temp_path)
+            assert loaded_df.equals(lf.collect())
+
+    def test_json_load_lazy_ndjson(self):
+        """Test loading NDJSON as LazyFrame"""
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        processor = JsonFileProcessor(orient='records', dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.ndjson'
+            df.write_ndjson(temp_path)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+            assert isinstance(loaded, pl.LazyFrame)
+            assert loaded.collect().equals(df)
+
+    def test_json_dump_lazyframe_ndjson(self):
+        """Test dumping a LazyFrame to NDJSON"""
+        lf = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}).lazy()
+        processor = JsonFileProcessor(orient='records', dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.ndjson'
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(lf, f)
+
+            # Verify file was created and can be read
+            loaded_df = pl.read_ndjson(temp_path)
+            assert loaded_df.equals(lf.collect())
+
+    def test_polars_returns_dataframe(self):
+        """Test that dataframe_type='polars' returns DataFrame (not LazyFrame)"""
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        processor = ParquetFileProcessor(dataframe_type='polars')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.parquet'
+            df.write_parquet(temp_path)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+            assert isinstance(loaded, pl.DataFrame)
+            assert loaded.equals(df)
