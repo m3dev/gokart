@@ -41,14 +41,16 @@ class CsvFileProcessor(FileProcessor):
         Args:
             sep: CSV delimiter (default: ',')
             encoding: File encoding (default: 'utf-8')
-            dataframe_type: DataFrame library to use for load() - 'pandas' or 'polars' (default: 'pandas')
+            dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
         self._sep = sep
         self._encoding = encoding
         self._dataframe_type = dataframe_type  # Store for tests
 
-        if dataframe_type == 'polars':
-            self._impl: FileProcessor = CsvFileProcessorPolars(sep=sep, encoding=encoding)
+        if dataframe_type == 'polars-lazy':
+            self._impl: FileProcessor = CsvFileProcessorPolars(sep=sep, encoding=encoding, lazy=True)
+        elif dataframe_type == 'polars':
+            self._impl = CsvFileProcessorPolars(sep=sep, encoding=encoding, lazy=False)
         else:
             self._impl = CsvFileProcessorPandas(sep=sep, encoding=encoding)
 
@@ -71,13 +73,15 @@ class JsonFileProcessor(FileProcessor):
 
         Args:
             orient: JSON orientation. 'records' for newline-delimited JSON.
-            dataframe_type: DataFrame library to use for load() - 'pandas' or 'polars' (default: 'pandas')
+            dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
         self._orient = orient
         self._dataframe_type = dataframe_type  # Store for tests
 
-        if dataframe_type == 'polars':
-            self._impl: FileProcessor = JsonFileProcessorPolars(orient=orient)
+        if dataframe_type == 'polars-lazy':
+            self._impl: FileProcessor = JsonFileProcessorPolars(orient=orient, lazy=True)
+        elif dataframe_type == 'polars':
+            self._impl = JsonFileProcessorPolars(orient=orient, lazy=False)
         else:
             self._impl = JsonFileProcessorPandas(orient=orient)
 
@@ -101,14 +105,16 @@ class ParquetFileProcessor(FileProcessor):
         Args:
             engine: Parquet engine (pandas-specific, ignored for polars).
             compression: Compression type.
-            dataframe_type: DataFrame library to use for load() - 'pandas' or 'polars' (default: 'pandas')
+            dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
         self._engine = engine
         self._compression = compression
         self._dataframe_type = dataframe_type  # Store for tests
 
-        if dataframe_type == 'polars':
-            self._impl: FileProcessor = ParquetFileProcessorPolars(engine=engine, compression=compression)
+        if dataframe_type == 'polars-lazy':
+            self._impl: FileProcessor = ParquetFileProcessorPolars(engine=engine, compression=compression, lazy=True)
+        elif dataframe_type == 'polars':
+            self._impl = ParquetFileProcessorPolars(engine=engine, compression=compression, lazy=False)
         else:
             self._impl = ParquetFileProcessorPandas(engine=engine, compression=compression)
 
@@ -132,13 +138,15 @@ class FeatherFileProcessor(FileProcessor):
 
         Args:
             store_index_in_feather: Whether to store pandas index (pandas-only feature).
-            dataframe_type: DataFrame library to use for load() - 'pandas' or 'polars' (default: 'pandas')
+            dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
         self._store_index_in_feather = store_index_in_feather
         self._dataframe_type = dataframe_type  # Store for tests
 
-        if dataframe_type == 'polars':
-            self._impl: FileProcessor = FeatherFileProcessorPolars(store_index_in_feather=store_index_in_feather)
+        if dataframe_type == 'polars-lazy':
+            self._impl: FileProcessor = FeatherFileProcessorPolars(store_index_in_feather=store_index_in_feather, lazy=True)
+        elif dataframe_type == 'polars':
+            self._impl = FeatherFileProcessorPolars(store_index_in_feather=store_index_in_feather, lazy=False)
         else:
             self._impl = FeatherFileProcessorPandas(store_index_in_feather=store_index_in_feather)
 

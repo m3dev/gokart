@@ -16,7 +16,7 @@ from gokart.utils import load_dill_with_pandas_backward_compatibility
 logger = getLogger(__name__)
 
 # Type alias for DataFrame library return type
-DataFrameType = Literal['pandas', 'polars']
+DataFrameType = Literal['pandas', 'polars', 'polars-lazy']
 
 
 class FileProcessor:
