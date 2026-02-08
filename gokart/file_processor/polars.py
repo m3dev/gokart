@@ -25,7 +25,7 @@ class CsvFileProcessorPolars(FileProcessor):
 
     def __init__(self, sep=',', encoding: str = 'utf-8', lazy: bool = False):
         if not HAS_POLARS:
-            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._sep = sep
         self._encoding = encoding
         self._lazy = lazy
@@ -61,7 +61,7 @@ class JsonFileProcessorPolars(FileProcessor):
 
     def __init__(self, orient: str | None = None, lazy: bool = False):
         if not HAS_POLARS:
-            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._orient = orient
         self._lazy = lazy
 
@@ -100,7 +100,7 @@ class ParquetFileProcessorPolars(FileProcessor):
 
     def __init__(self, engine='pyarrow', compression=None, lazy: bool = False):
         if not HAS_POLARS:
-            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._engine = engine  # Ignored for polars
         self._compression = compression
         self._lazy = lazy
@@ -136,7 +136,7 @@ class FeatherFileProcessorPolars(FileProcessor):
 
     def __init__(self, store_index_in_feather: bool, lazy: bool = False):
         if not HAS_POLARS:
-            raise ImportError("polars is required for dataframe_type='polars'. Install with: pip install polars")
+            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         super().__init__()
         self._store_index_in_feather = store_index_in_feather  # Ignored for polars
         self._lazy = lazy

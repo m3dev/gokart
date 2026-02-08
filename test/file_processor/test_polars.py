@@ -519,6 +519,38 @@ class TestLazyFrameSupport:
             loaded_df = pl.read_ndjson(temp_path)
             assert loaded_df.equals(lf.collect())
 
+    def test_json_load_lazy_standard(self):
+        """Test loading standard JSON (orient=None) as LazyFrame"""
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        processor = JsonFileProcessor(orient=None, dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.json'
+            df.write_json(temp_path)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+            assert isinstance(loaded, pl.LazyFrame)
+            assert loaded.collect().equals(df)
+
+    def test_json_dump_lazyframe_standard(self):
+        """Test dumping a LazyFrame to standard JSON (orient=None)"""
+        lf = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}).lazy()
+        processor = JsonFileProcessor(orient=None, dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.json'
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(lf, f)
+
+            # Verify file was created and can be read
+            loaded_df = pl.read_json(temp_path)
+            assert loaded_df.equals(lf.collect())
+
     def test_polars_returns_dataframe(self):
         """Test that dataframe_type='polars' returns DataFrame (not LazyFrame)"""
         df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
