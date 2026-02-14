@@ -19,7 +19,7 @@ import gokart
 import gokart.target
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
-from gokart.file_processor import FileProcessor
+from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
@@ -246,27 +246,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
         Returns:
             FileProcessor with return_type set, or None to use default processor
         """
-        from gokart.file_processor import CsvFileProcessor, FeatherFileProcessor, JsonFileProcessor, ParquetFileProcessor
-
-        extension = os.path.splitext(file_path)[1]
         df_type = get_dataframe_type_from_task(self)
-
-        # Create custom processor for DataFrame-supporting file types with type parameter
-        if extension == '.csv':
-            return CsvFileProcessor(sep=',', dataframe_type=df_type)
-        elif extension == '.tsv':
-            return CsvFileProcessor(sep='\t', dataframe_type=df_type)
-        elif extension == '.json':
-            return JsonFileProcessor(orient=None, dataframe_type=df_type)
-        elif extension == '.ndjson':
-            return JsonFileProcessor(orient='records', dataframe_type=df_type)
-        elif extension == '.parquet':
-            return ParquetFileProcessor(dataframe_type=df_type)
-        elif extension == '.feather':
-            return FeatherFileProcessor(store_index_in_feather=self.store_index_in_feather, dataframe_type=df_type)
-
-        # For other file types, use default processor selection
-        return None
+        return make_file_processor(file_path, dataframe_type=df_type, store_index_in_feather=self.store_index_in_feather)
 
     def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (
