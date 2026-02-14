@@ -67,9 +67,9 @@ from gokart.parameter import ExplicitBoolParameter
 
 logger = logging.getLogger(__name__)
 
-# Set the start method to fork, which is the default on Unix systems.
-# This is necessary because the default start method on macOS is spawn, which is not compatible with the multiprocessing
-multiprocessing.set_start_method('fork')
+# Use fork context instead of the default (spawn on macOS), which is not compatible with the multiprocessing
+_fork_context = multiprocessing.get_context('fork')
+_ForkProcess = _fork_context.Process
 
 # Prevent fork() from being called during a C-level getaddrinfo() which uses a process-global mutex,
 # that may not be unlocked in child process, resulting in the process being locked indefinitely.
@@ -106,7 +106,7 @@ GetWorkResponse = collections.namedtuple(
 )
 
 
-class TaskProcess(multiprocessing.Process):
+class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
     """Wrap all task execution in this class.
 
     Mainly for convenience since this is run in a separate process."""
@@ -447,14 +447,14 @@ class Worker:
                 pass
 
         # Keep info about what tasks are running (could be in other processes)
-        self._task_result_queue: multiprocessing.Queue = multiprocessing.Queue()
+        self._task_result_queue: multiprocessing.Queue = _fork_context.Queue()
         self._running_tasks: dict[str, TaskProcess] = {}
         self._idle_since: datetime.datetime | None = None
 
         # mp-safe dictionary for caching completation checks across task processes
         self._task_completion_cache = None
         if self._config.cache_task_completion:
-            self._task_completion_cache = multiprocessing.Manager().dict()
+            self._task_completion_cache = _fork_context.Manager().dict()
 
         # Stuff for execution_summary
         self._add_task_history: list[Any] = []
@@ -641,8 +641,8 @@ class Worker:
             self._first_task = task.task_id
         self.add_succeeded = True
         if multiprocess:
-            queue: Any = multiprocessing.Manager().Queue()
-            pool: Any = multiprocessing.Pool(processes=processes if processes > 0 else None)
+            queue: Any = _fork_context.Manager().Queue()
+            pool: Any = _fork_context.Pool(processes=processes if processes > 0 else None)
         else:
             queue = luigi.worker.DequeQueue()
             pool = luigi.worker.SingleProcessPool()
@@ -905,7 +905,7 @@ class Worker:
             task_process.run()
 
     def _create_task_process(self, task):
-        message_queue: Any = multiprocessing.Queue() if task.accepts_messages else None
+        message_queue: Any = _fork_context.Queue() if task.accepts_messages else None
         reporter = luigi.worker.TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
         return ContextManagedTaskProcess(

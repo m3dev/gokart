@@ -211,6 +211,7 @@ def build(
             task_lock_exception_raised.flag = False
             result = luigi.build(
                 [task],
+                worker_scheduler_factory=WorkerSchedulerFactory(),
                 local_scheduler=True,
                 detailed_summary=True,
                 log_level=logging.getLevelName(log_level),

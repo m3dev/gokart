@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from logging import getLogger
 
 import luigi
 import luigi.cmdline
+import luigi.cmdline_parser
+import luigi.execution_summary
+import luigi.interface
 import luigi.retcodes
+import luigi.setup_logging
 from luigi.cmdline_parser import CmdlineParser
 
 import gokart
 import gokart.slack
+from gokart.build import WorkerSchedulerFactory
 from gokart.object_storage import ObjectStorage
 
 logger = getLogger(__name__)
@@ -80,6 +86,47 @@ def _try_to_send_event_summary_to_slack(slack_api: gokart.slack.SlackAPI | None,
     slack_api.send_snippet(comment=comment, title='event.txt', content=content)
 
 
+def _run_with_retcodes(argv):
+    """run_with_retcodes equivalent that uses gokart's WorkerSchedulerFactory."""
+    retcode_logger = logging.getLogger('luigi-interface')
+    with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
+        retcodes = luigi.retcodes.retcode()
+
+    worker = None
+    try:
+        worker = luigi.interface._run(argv, worker_scheduler_factory=WorkerSchedulerFactory()).worker
+    except luigi.interface.PidLockAlreadyTakenExit:
+        sys.exit(retcodes.already_running)
+    except Exception:
+        env_params = luigi.interface.core()
+        luigi.setup_logging.InterfaceLogging.setup(env_params)
+        retcode_logger.exception('Uncaught exception in luigi')
+        sys.exit(retcodes.unhandled_exception)
+
+    with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
+        task_sets = luigi.execution_summary._summary_dict(worker)
+        root_task = luigi.execution_summary._root_task(worker)
+        non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
+
+    def has(status):
+        assert status in luigi.execution_summary._ORDERED_STATUSES
+        return status in non_empty_categories
+
+    codes_and_conds = (
+        (retcodes.missing_data, has('still_pending_ext')),
+        (retcodes.task_failed, has('failed')),
+        (retcodes.already_running, has('run_by_other_worker')),
+        (retcodes.scheduling_error, has('scheduling_error')),
+        (retcodes.not_run, has('not_run')),
+    )
+    expected_ret_code = max(code * (1 if cond else 0) for code, cond in codes_and_conds)
+
+    if expected_ret_code == 0 and root_task not in task_sets['completed'] and root_task not in task_sets['already_done']:
+        sys.exit(retcodes.not_run)
+    else:
+        sys.exit(expected_ret_code)
+
+
 def run(cmdline_args=None, set_retcode=True):
     cmdline_args = cmdline_args or sys.argv[1:]
 
@@ -98,7 +145,7 @@ def run(cmdline_args=None, set_retcode=True):
     event_aggregator = gokart.slack.EventAggregator()
     try:
         event_aggregator.set_handlers()
-        luigi.cmdline.luigi_run(cmdline_args)
+        _run_with_retcodes(cmdline_args)
     except SystemExit as e:
         _try_to_send_event_summary_to_slack(slack_api, event_aggregator, cmdline_args)
         sys.exit(e.code)
