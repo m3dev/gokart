@@ -118,15 +118,16 @@ def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'pola
     """
     task_class = task if isinstance(task, type) else task.__class__
 
-    if not hasattr(task_class, '__orig_bases__'):
-        return 'pandas'
+    # Walk the MRO to find TaskOnKart[...] even when defined on a parent class
+    mro = task_class.mro() if hasattr(task_class, 'mro') else [task_class]
 
-    for base in task_class.__orig_bases__:
-        origin = get_origin(base)
-        # Check if this is a TaskOnKart subclass
-        if origin and hasattr(origin, '__name__') and origin.__name__ == 'TaskOnKart':
-            args = get_args(base)
-            if args:
+    for cls in mro:
+        for base in getattr(cls, '__orig_bases__', ()):
+            origin = get_origin(base)
+            if origin and hasattr(origin, '__name__') and origin.__name__ == 'TaskOnKart':
+                args = get_args(base)
+                if not args:
+                    continue
                 df_type = args[0]
                 module = getattr(df_type, '__module__', '')
 

@@ -236,16 +236,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
 
-    def _create_processor_for_dataframe_type(self, file_path: str) -> FileProcessor | None:
-        """
-        Create a file processor with appropriate return_type based on task's type parameter.
-
-        Args:
-            file_path: Path to the file
-
-        Returns:
-            FileProcessor with return_type set, or None to use default processor
-        """
+    def _create_processor_for_dataframe_type(self, file_path: str) -> FileProcessor:
         df_type = get_dataframe_type_from_task(self)
         return make_file_processor(file_path, dataframe_type=df_type, store_index_in_feather=self.store_index_in_feather)
 

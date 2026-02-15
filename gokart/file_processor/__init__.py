@@ -161,7 +161,7 @@ class FeatherFileProcessor(FileProcessor):
         return self._impl.dump(obj, file)
 
 
-def make_file_processor(file_path: str, dataframe_type: DataFrameType = 'pandas', store_index_in_feather: bool = True) -> FileProcessor:
+def make_file_processor(file_path: str, store_index_in_feather: bool = True, *, dataframe_type: DataFrameType = 'pandas') -> FileProcessor:
     """Create a file processor based on file extension with default parameters."""
     extension2processor = {
         '.txt': TextFileProcessor(),

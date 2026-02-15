@@ -168,3 +168,21 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
 
         task = _DerivedLazyTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
+
+    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    def test_nested_inheritance_polars_with_mixin(self):
+        """Derived class with multiple bases should still detect polars through MRO."""
+
+        class _Mixin:
+            pass
+
+        class _BasePolarsTaskWithMixin(TaskOnKart[pl.DataFrame]):
+            pass
+
+        # Multiple inheritance gives _DerivedTask its own __orig_bases__,
+        # which shadows the parent's and doesn't contain TaskOnKart[...].
+        class _DerivedTaskWithMixin(_BasePolarsTaskWithMixin, _Mixin):
+            pass
+
+        task = _DerivedTaskWithMixin()
+        self.assertEqual(get_dataframe_type_from_task(task), 'polars')
