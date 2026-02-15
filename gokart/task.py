@@ -19,13 +19,13 @@ import gokart
 import gokart.target
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
-from gokart.file_processor import FileProcessor
+from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 from gokart.task_complete_check import task_complete_check_wrapper
-from gokart.utils import FlattenableItems, flatten, map_flattenable_items
+from gokart.utils import FlattenableItems, flatten, get_dataframe_type_from_task, map_flattenable_items
 
 logger = getLogger(__name__)
 
@@ -219,6 +219,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
 
+        # Auto-select processor based on type parameter if not provided
+        if processor is None and relative_file_path is not None:
+            processor = self._create_processor_for_dataframe_type(file_path)
+
         task_lock_params = make_task_lock_params(
             file_path=file_path,
             unique_id=unique_id,
@@ -231,6 +235,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return gokart.target.make_target(
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
+
+    def _create_processor_for_dataframe_type(self, file_path: str) -> FileProcessor:
+        df_type = get_dataframe_type_from_task(self)
+        return make_file_processor(file_path, dataframe_type=df_type, store_index_in_feather=self.store_index_in_feather)
 
     def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (
