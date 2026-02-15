@@ -67,7 +67,7 @@ from gokart.parameter import ExplicitBoolParameter
 
 logger = logging.getLogger(__name__)
 
-# Use fork context instead of the default (spawn on macOS), which is not compatible with the multiprocessing
+# Use fork context instead of the default (spawn on macOS), which ensures compatibility with gokart's multiprocessing requirements.
 _fork_context = multiprocessing.get_context('fork')
 _ForkProcess = _fork_context.Process
 
