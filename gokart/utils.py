@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable
 from io import BytesIO
-from typing import Any, Protocol, TypeAlias, TypeVar
+from typing import Any, Literal, Protocol, TypeAlias, TypeVar, get_args, get_origin
 
 import dill
 import luigi
@@ -92,3 +92,52 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> An
         assert file.seekable(), f'{file} is not seekable.'
         file.seek(0)
         return pd.read_pickle(file)
+
+
+def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'polars-lazy']:
+    """
+    Extract DataFrame type from TaskOnKart[T] type parameter.
+
+    Examines the type parameter T of a TaskOnKart subclass to determine
+    whether it uses pandas or polars DataFrames/LazyFrames.
+
+    Args:
+        task: A TaskOnKart instance or class
+
+    Returns:
+        'pandas', 'polars', or 'polars-lazy' (defaults to 'pandas' if type cannot be determined)
+
+    Examples:
+        >>> class MyTask(TaskOnKart[pd.DataFrame]): pass
+        >>> get_dataframe_type_from_task(MyTask())
+        'pandas'
+
+        >>> class MyPolarsTask(TaskOnKart[pl.DataFrame]): pass
+        >>> get_dataframe_type_from_task(MyPolarsTask())
+        'polars'
+    """
+    task_class = task if isinstance(task, type) else task.__class__
+
+    # Walk the MRO to find TaskOnKart[...] even when defined on a parent class
+    mro = task_class.mro() if hasattr(task_class, 'mro') else [task_class]
+
+    for cls in mro:
+        for base in getattr(cls, '__orig_bases__', ()):
+            origin = get_origin(base)
+            if origin and hasattr(origin, '__name__') and origin.__name__ == 'TaskOnKart':
+                args = get_args(base)
+                if not args:
+                    continue
+                df_type = args[0]
+                module = getattr(df_type, '__module__', '')
+
+                # Check module name to determine DataFrame type
+                if 'polars' in module:
+                    name = getattr(df_type, '__name__', '')
+                    if name == 'LazyFrame':
+                        return 'polars-lazy'
+                    return 'polars'
+                elif 'pandas' in module:
+                    return 'pandas'
+
+    return 'pandas'  # Default to pandas for backward compatibility

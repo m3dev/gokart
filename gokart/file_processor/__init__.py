@@ -161,21 +161,21 @@ class FeatherFileProcessor(FileProcessor):
         return self._impl.dump(obj, file)
 
 
-def make_file_processor(file_path: str, store_index_in_feather: bool) -> FileProcessor:
+def make_file_processor(file_path: str, store_index_in_feather: bool = True, *, dataframe_type: DataFrameType = 'pandas') -> FileProcessor:
     """Create a file processor based on file extension with default parameters."""
     extension2processor = {
         '.txt': TextFileProcessor(),
         '.ini': TextFileProcessor(),
-        '.csv': CsvFileProcessor(sep=','),
-        '.tsv': CsvFileProcessor(sep='\t'),
+        '.csv': CsvFileProcessor(sep=',', dataframe_type=dataframe_type),
+        '.tsv': CsvFileProcessor(sep='\t', dataframe_type=dataframe_type),
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
-        '.json': JsonFileProcessor(),
-        '.ndjson': JsonFileProcessor(orient='records'),
+        '.json': JsonFileProcessor(dataframe_type=dataframe_type),
+        '.ndjson': JsonFileProcessor(dataframe_type=dataframe_type, orient='records'),
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
-        '.parquet': ParquetFileProcessor(compression='gzip'),
-        '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather),
+        '.parquet': ParquetFileProcessor(compression='gzip', dataframe_type=dataframe_type),
+        '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather, dataframe_type=dataframe_type),
         '.png': BinaryFileProcessor(),
         '.jpg': BinaryFileProcessor(),
     }
