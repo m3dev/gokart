@@ -76,8 +76,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
     significant: bool = luigi.BoolParameter(
         default=True, description='If this is false, this task is not treated as a part of dependent tasks for the unique id.', significant=False
     )
-    fix_random_seed_methods: tuple[str] = luigi.ListParameter(
-        default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False
+    fix_random_seed_methods: tuple[str, ...] = luigi.ListParameter(
+        default=('random.seed', 'numpy.random.seed'), description='Fix random seed method list.', significant=False
     )
     FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER = -42497368
     fix_random_seed_value: int = luigi.IntParameter(
@@ -580,4 +580,4 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return f'{param_value.get_task_family()}({param_value.make_unique_id()})'
         if isinstance(param_obj, ListTaskInstanceParameter):
             return f'[{", ".join(f"{v.get_task_family()}({v.make_unique_id()})" for v in param_value)}]'
-        return param_obj.serialize(param_value)
+        return param_obj.serialize(param_value)  # type: ignore

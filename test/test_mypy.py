@@ -69,6 +69,8 @@ MyTask(foo='1', baz='not bool', complete_check_at_run='not bool')
         """
         test_code = """
 import enum
+import datetime
+from typing import Any
 import luigi
 import gokart
 
@@ -77,12 +79,12 @@ class MyEnum(enum.Enum):
     FOO = enum.auto()
 
 class MyTask(gokart.TaskOnKart):
-    foo = luigi.IntParameter()
-    bar = luigi.DateParameter()
-    baz = gokart.TaskInstanceParameter()
-    qux = luigi.NumericalParameter(var_type=int)
-    quux = luigi.ChoiceParameter(choices=[1, 2, 3], var_type=int)
-    corge = luigi.EnumParameter(enum=MyEnum)
+    foo: int = luigi.IntParameter()
+    bar: datetime.date = luigi.DateParameter()
+    baz: gokart.TaskOnKart[Any] = gokart.TaskInstanceParameter()
+    qux: int = luigi.NumericalParameter(var_type=int)
+    quux: int = luigi.ChoiceParameter(choices=[1, 2, 3], var_type=int)
+    corge: MyEnum = luigi.EnumParameter(enum=MyEnum)
 
 MyTask(foo="1", bar=1, baz=1, qux='1', quux='1', corge=1)
 """
@@ -103,13 +105,14 @@ MyTask(foo="1", bar=1, baz=1, qux='1', quux='1', corge=1)
         """
         test_code = """
 from datetime import date
+from typing import Any
 import luigi
 import gokart
 
 class MyTask(gokart.TaskOnKart):
-    foo = luigi.IntParameter()
-    bar = luigi.DateParameter()
-    baz = gokart.TaskInstanceParameter()
+    foo: int = luigi.IntParameter()
+    bar: date = luigi.DateParameter()
+    baz: gokart.TaskOnKart[Any] = gokart.TaskInstanceParameter()
 
 MyTask(foo=1, bar=date.today(), baz=gokart.TaskOnKart())
 """
@@ -128,8 +131,8 @@ import luigi
 import gokart
 
 class MyTask(gokart.TaskOnKart):
-    foo = luigi.IntParameter()
-    bar = luigi.Parameter(default="bar")
+    foo: int = luigi.IntParameter()
+    bar: str = luigi.Parameter(default="bar")
 
 MyTask()
     """
@@ -149,9 +152,9 @@ import gokart
 
 class MyTask(gokart.TaskOnKart):
     # issue: foo is missing
-    foo = luigi.IntParameter()
+    foo: int = luigi.IntParameter()
     # bar has default value, so it is not required to set it.
-    bar = luigi.Parameter(default="bar")
+    bar: str = luigi.Parameter(default="bar")
 
 MyTask()
     """

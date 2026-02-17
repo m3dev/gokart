@@ -147,6 +147,15 @@ class TaskOnKartPlugin(Plugin):
           foo: int = luigi.IntParameter()
           ```
         """
+        default_type = ctx.default_return_type
+        if isinstance(default_type, Instance):
+            for base in default_type.type.bases:
+                if isinstance(base, Instance) and PARAMETER_FULLNAME_MATCHER.match(base.type.fullname):
+                    # base.args contains the type argument (e.g., [int] for IntParameter)
+                    if len(base.args) == 1:
+                        return base.args[0]
+                    break
+
         try:
             default_idx = ctx.callee_arg_names.index('default')
         # if no `default` argument is found, return AnyType with unannotated type.
@@ -156,16 +165,13 @@ class TaskOnKartPlugin(Plugin):
         default_args = ctx.args[default_idx]
 
         if default_args:
-            default_type = ctx.arg_types[0][0]
+            default_type = ctx.arg_types[default_idx][0]
             default_arg = default_args[0]
 
             # Fallback to default Any type if the field is required
             if not isinstance(default_arg, EllipsisExpr):
                 return default_type
-        # NOTE: This is a workaround to avoid the error between type annotation and parameter type.
-        #       As the following code snippet, the type of `foo` is `int` but the assigned value is `luigi.IntParameter()`.
-        #       foo: int = luigi.IntParameter()
-        # TODO: infer mypy type from the parameter type.
+
         return AnyType(TypeOfAny.unannotated)
 
 
