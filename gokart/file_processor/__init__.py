@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Literal
 
 # Export common processors and types from base
 from gokart.file_processor.base import (
@@ -67,7 +68,7 @@ class CsvFileProcessor(FileProcessor):
 class JsonFileProcessor(FileProcessor):
     """JSON file processor with automatic backend selection based on dataframe_type."""
 
-    def __init__(self, orient: str | None = None, dataframe_type: DataFrameType = 'pandas'):
+    def __init__(self, orient: Literal['split', 'records', 'index', 'table', 'columns', 'values'] | None = None, dataframe_type: DataFrameType = 'pandas'):
         """
         JSON file processor with support for both pandas and polars DataFrames.
 

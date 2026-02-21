@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import TYPE_CHECKING, Literal
 
 import luigi
 import luigi.format
@@ -11,13 +12,18 @@ from luigi.format import TextFormat
 from gokart.file_processor.base import FileProcessor
 from gokart.object_storage import ObjectStorage
 
+_CsvEncoding = Literal['utf8', 'utf8-lossy']
+_ParquetCompression = Literal['lz4', 'uncompressed', 'snappy', 'gzip', 'brotli', 'zstd']
+
 try:
     import polars as pl
 
     HAS_POLARS = True
 except ImportError:
     HAS_POLARS = False
-    pl = None  # type: ignore
+
+if TYPE_CHECKING:
+    import polars as pl
 
 
 class CsvFileProcessorPolars(FileProcessor):
@@ -36,12 +42,12 @@ class CsvFileProcessorPolars(FileProcessor):
 
     def load(self, file):
         try:
+            # scan_csv/read_csv only support 'utf8' and 'utf8-lossy'
+            encoding: _CsvEncoding = 'utf8' if self._encoding in ('utf-8', 'utf8') else 'utf8-lossy'
             if self._lazy:
                 # scan_csv requires a file path, not a file object
-                # Also, scan_csv uses 'utf8' instead of 'utf-8'
-                encoding = 'utf8' if self._encoding == 'utf-8' else self._encoding
                 return pl.scan_csv(file.name, separator=self._sep, encoding=encoding)
-            return pl.read_csv(file, separator=self._sep, encoding=self._encoding)
+            return pl.read_csv(file, separator=self._sep, encoding=encoding)
         except Exception as e:
             # Handle empty data gracefully
             if 'empty' in str(e).lower() or 'no data' in str(e).lower():
@@ -98,11 +104,11 @@ class JsonFileProcessorPolars(FileProcessor):
 class ParquetFileProcessorPolars(FileProcessor):
     """Parquet file processor for polars DataFrames."""
 
-    def __init__(self, engine='pyarrow', compression=None, lazy: bool = False):
+    def __init__(self, engine='pyarrow', compression: _ParquetCompression | None = None, lazy: bool = False):
         if not HAS_POLARS:
             raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._engine = engine  # Ignored for polars
-        self._compression = compression
+        self._compression: _ParquetCompression | None = compression
         self._lazy = lazy
         super().__init__()
 
@@ -127,8 +133,8 @@ class ParquetFileProcessorPolars(FileProcessor):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
             raise TypeError(f'requires pl.DataFrame or pl.LazyFrame, but {type(obj)} is passed.')
-        # polars write_parquet requires a file path
-        obj.write_parquet(file.name, compression=self._compression)
+        # polars write_parquet requires a file path; default to 'zstd' when compression is None
+        obj.write_parquet(file.name, compression=self._compression or 'zstd')
 
 
 class FeatherFileProcessorPolars(FileProcessor):
