@@ -1,10 +1,14 @@
 import unittest
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
 
 from gokart.task import TaskOnKart
 from gokart.utils import flatten, get_dataframe_type_from_task, map_flattenable_items
+
+if TYPE_CHECKING:
+    import polars as pl
 
 try:
     import polars as pl

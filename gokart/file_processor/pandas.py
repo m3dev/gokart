@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import Literal
 
 import luigi
 import luigi.format
@@ -36,11 +37,14 @@ class CsvFileProcessorPandas(FileProcessor):
         obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True, encoding=self._encoding)
 
 
+_JsonOrient = Literal['split', 'records', 'index', 'table', 'columns', 'values']
+
+
 class JsonFileProcessorPandas(FileProcessor):
     """JSON file processor for pandas DataFrames."""
 
-    def __init__(self, orient: str | None = None):
-        self._orient = orient
+    def __init__(self, orient: _JsonOrient | None = None):
+        self._orient: _JsonOrient | None = orient
 
     def format(self):
         return luigi.format.Nop
@@ -54,7 +58,7 @@ class JsonFileProcessorPandas(FileProcessor):
     def dump(self, obj, file):
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
-        if not isinstance(obj, pd.DataFrame | pd.Series | dict):
+        if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.')
         obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
 
@@ -62,8 +66,8 @@ class JsonFileProcessorPandas(FileProcessor):
 class ParquetFileProcessorPandas(FileProcessor):
     """Parquet file processor for pandas DataFrames."""
 
-    def __init__(self, engine='pyarrow', compression=None):
-        self._engine = engine
+    def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression=None):
+        self._engine: Literal['auto', 'pyarrow', 'fastparquet'] = engine
         self._compression = compression
         super().__init__()
 
@@ -116,7 +120,7 @@ class FeatherFileProcessorPandas(FileProcessor):
                 if index_name == 'None':
                     index_name = None
                 loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
-                loaded_df = loaded_df.drop(columns={index_column})
+                loaded_df = loaded_df.drop(columns=[index_column])
 
         return loaded_df
 

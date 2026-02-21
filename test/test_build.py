@@ -137,12 +137,12 @@ class RunTest(unittest.TestCase):
             def run(self):
                 raise CheckException()
 
-        try:
-            t = FailTask()
+        t = FailTask()
+        with self.assertRaises(GokartBuildError) as cm:
             gokart.build(t, reset_register=False, log_level=logging.CRITICAL)
-        except GokartBuildError as e:
-            self.assertEqual(len(e.raised_exceptions), 1)
-            self.assertIsInstance(e.raised_exceptions[t.make_unique_id()][0], CheckException)
+        e = cm.exception
+        self.assertEqual(len(e.raised_exceptions), 1)
+        self.assertIsInstance(e.raised_exceptions[t.make_unique_id()][0], CheckException)
 
 
 class LoggerConfigTest(unittest.TestCase):

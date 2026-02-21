@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from io import BytesIO
 from logging import getLogger
-from typing import Literal
+from typing import Any, Literal
 
 import dill
 import luigi
@@ -21,16 +21,13 @@ DataFrameType = Literal['pandas', 'polars', 'polars-lazy']
 
 class FileProcessor:
     @abstractmethod
-    def format(self):
-        pass
+    def format(self) -> Any: ...
 
     @abstractmethod
-    def load(self, file):
-        pass
+    def load(self, file) -> Any: ...
 
     @abstractmethod
-    def dump(self, obj, file):
-        pass
+    def dump(self, obj, file) -> None: ...
 
 
 class BinaryFileProcessor(FileProcessor):
@@ -62,7 +59,7 @@ class _ChunkedLargeFileReader:
     def __getattr__(self, item):
         return getattr(self._file, item)
 
-    def read(self, n):
+    def read(self, n: int) -> bytes:
         if n >= (1 << 31):
             logger.info(f'reading a large file with total_bytes={n}.')
             buffer = bytearray(n)
@@ -73,8 +70,17 @@ class _ChunkedLargeFileReader:
                 buffer[idx : idx + batch_size] = self._file.read(batch_size)
                 idx += batch_size
             logger.info('done.')
-            return buffer
+            return bytes(buffer)
         return self._file.read(n)
+
+    def readline(self) -> bytes:
+        return self._file.readline()
+
+    def seek(self, offset: int) -> None:
+        return self._file.seek(offset)
+
+    def seekable(self) -> bool:
+        return self._file.seekable()
 
 
 class PickleFileProcessor(FileProcessor):
