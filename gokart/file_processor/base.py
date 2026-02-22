@@ -65,7 +65,7 @@ class _ChunkedLargeFileReader:
             buffer = bytearray(n)
             idx = 0
             while idx < n:
-                batch_size = min(n - idx, 1 << 31 - 1)
+                batch_size = min(n - idx, (1 << 31) - 1)
                 logger.info(f'reading bytes [{idx}, {idx + batch_size})...')
                 buffer[idx : idx + batch_size] = self._file.read(batch_size)
                 idx += batch_size
@@ -77,7 +77,7 @@ class _ChunkedLargeFileReader:
         return self._file.readline()
 
     def seek(self, offset: int) -> None:
-        return self._file.seek(offset)
+        self._file.seek(offset)
 
     def seekable(self) -> bool:
         return self._file.seekable()
@@ -104,7 +104,7 @@ class PickleFileProcessor(FileProcessor):
         idx = 0
         while idx < n:
             logger.info(f'writing a file with total_bytes={n}...')
-            batch_size = min(n - idx, 1 << 31 - 1)
+            batch_size = min(n - idx, (1 << 31) - 1)
             logger.info(f'writing bytes [{idx}, {idx + batch_size})')
             file.write(buffer[idx : idx + batch_size])
             idx += batch_size
