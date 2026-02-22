@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import tempfile
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
 from luigi import LocalTarget
 
 from gokart.file_processor import CsvFileProcessor, FeatherFileProcessor, JsonFileProcessor, ParquetFileProcessor
+
+if TYPE_CHECKING:
+    import polars as pl
 
 try:
     import polars as pl

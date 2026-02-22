@@ -476,11 +476,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         success_methods: list[str] = []
         for method_name in methods:
             try:
-                for i, x in enumerate(method_name.split('.')):
-                    if i == 0:
-                        m = import_module(x)
-                    else:
-                        m = getattr(m, x)
+                parts = method_name.split('.')
+                m: Any = import_module(parts[0])
+                for x in parts[1:]:
+                    m = getattr(m, x)
                 m(random_seed)  # type: ignore
                 success_methods.append(method_name)
             except ModuleNotFoundError:
