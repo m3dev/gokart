@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 
 
-def assert_frame_contents_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs):
+def assert_frame_contents_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs: Any) -> None:
     """
     Assert that two DataFrames are equal.
     This function is mostly same as pandas.testing.assert_frame_equal, however

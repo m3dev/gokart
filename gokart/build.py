@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from functools import partial
 from logging import getLogger
-from typing import Literal, Protocol, TypeVar, cast, overload
+from typing import Any, Literal, Protocol, TypeVar, cast, overload
 
 import backoff
 import luigi
@@ -43,7 +43,7 @@ class LoggerConfig:
 class GokartBuildError(Exception):
     """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution."""
 
-    def __init__(self, message, raised_exceptions: dict[str, list[Exception]]):
+    def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]]) -> None:
         super().__init__(message)
         self.raised_exceptions = raised_exceptions
 
@@ -68,17 +68,17 @@ class WorkerProtocol(Protocol):
 
     def __enter__(self) -> WorkerProtocol: ...
 
-    def __exit__(self, type, value, traceback) -> Literal[False]: ...
+    def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]: ...
 
 
 class WorkerSchedulerFactory:
     def create_local_scheduler(self) -> scheduler.Scheduler:
         return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 
-    def create_remote_scheduler(self, url) -> rpc.RemoteScheduler:
+    def create_remote_scheduler(self, url: str) -> rpc.RemoteScheduler:
         return rpc.RemoteScheduler(url)
 
-    def create_worker(self, scheduler: scheduler.Scheduler, worker_processes: int, assistant=False) -> WorkerProtocol:
+    def create_worker(self, scheduler: scheduler.Scheduler, worker_processes: int, assistant: bool = False) -> WorkerProtocol:
         return worker.Worker(scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
@@ -124,7 +124,7 @@ class TaskDumpConfig:
     output_type: TaskDumpOutputType = TaskDumpOutputType.NONE
 
 
-def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskDumpConfig()):
+def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskDumpConfig()) -> None:
     match task_dump_config:
         case TaskDumpConfig(mode=TaskDumpMode.NONE, output_type=TaskDumpOutputType.NONE):
             pass
@@ -155,7 +155,7 @@ def build(
     log_level: int = logging.ERROR,
     task_lock_exception_max_tries: int = 10,
     task_lock_exception_max_wait_seconds: int = 600,
-    **env_params,
+    **env_params: Any,
 ) -> T: ...
 
 
@@ -167,7 +167,7 @@ def build(
     log_level: int = logging.ERROR,
     task_lock_exception_max_tries: int = 10,
     task_lock_exception_max_wait_seconds: int = 600,
-    **env_params,
+    **env_params: Any,
 ) -> None: ...
 
 
@@ -179,7 +179,7 @@ def build(
     task_lock_exception_max_tries: int = 10,
     task_lock_exception_max_wait_seconds: int = 600,
     task_dump_config: TaskDumpConfig = TaskDumpConfig(),
-    **env_params,
+    **env_params: Any,
 ) -> T | None:
     """
     Run gokart task for local interpreter.

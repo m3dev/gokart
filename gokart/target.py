@@ -34,7 +34,7 @@ class TargetOnKart(luigi.Target):
 
     def dump(
         self,
-        obj,
+        obj: Any,
         lock_at_dump: bool = True,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, str] | None = None,
@@ -75,7 +75,7 @@ class TargetOnKart(luigi.Target):
     @abstractmethod
     def _dump(
         self,
-        obj,
+        obj: Any,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
@@ -118,7 +118,7 @@ class SingleFileTarget(TargetOnKart):
 
     def _dump(
         self,
-        obj,
+        obj: Any,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
@@ -145,8 +145,8 @@ class ModelTarget(TargetOnKart):
         self,
         file_path: str,
         temporary_directory: str,
-        load_function,
-        save_function,
+        load_function: Any,
+        save_function: Any,
         task_lock_params: TaskLockParams,
     ) -> None:
         self._zip_client = make_zip_client(file_path, temporary_directory)
@@ -170,7 +170,7 @@ class ModelTarget(TargetOnKart):
 
     def _dump(
         self,
-        obj,
+        obj: Any,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
@@ -209,7 +209,7 @@ class LargeDataFrameProcessor:
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
 
-    def save(self, df: pd.DataFrame, file_path: str):
+    def save(self, df: pd.DataFrame, file_path: str) -> None:
         dir_path = os.path.dirname(file_path)
         os.makedirs(dir_path, exist_ok=True)
 
@@ -268,8 +268,8 @@ def make_target(
 def make_model_target(
     file_path: str,
     temporary_directory: str,
-    save_function,
-    load_function,
+    save_function: Any,
+    load_function: Any,
     unique_id: str | None = None,
     task_lock_params: TaskLockParams | None = None,
 ) -> TargetOnKart:

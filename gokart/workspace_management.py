@@ -11,14 +11,14 @@ from gokart.utils import flatten
 logger = getLogger(__name__)
 
 
-def _get_all_output_file_paths(task: gokart.TaskOnKart):
+def _get_all_output_file_paths(task: gokart.TaskOnKart) -> list[str]:
     output_paths = [t.path() for t in flatten(task.output())]
     children = flatten(task.requires())
     output_paths.extend(itertools.chain.from_iterable([_get_all_output_file_paths(child) for child in children]))
     return output_paths
 
 
-def delete_local_unnecessary_outputs(task: gokart.TaskOnKart):
+def delete_local_unnecessary_outputs(task: gokart.TaskOnKart) -> None:
     task.make_unique_id()  # this is required to make unique ids.
     all_files = {str(path) for path in pathlib.Path(task.workspace_directory).rglob('*.*')}
     log_files = {str(path) for path in pathlib.Path(os.path.join(task.workspace_directory, 'log')).rglob('*.*')}

@@ -46,7 +46,7 @@ def _get_all_tasks(task: gokart.TaskOnKart) -> list[gokart.TaskOnKart]:
     return result
 
 
-def _run_with_test_status(task: gokart.TaskOnKart):
+def _run_with_test_status(task: gokart.TaskOnKart) -> _TestStatus:
     test_message = _TestStatus(task)
     try:
         task.run()
@@ -56,7 +56,7 @@ def _run_with_test_status(task: gokart.TaskOnKart):
     return test_message
 
 
-def _test_run_with_empty_data_frame(cmdline_args: list[str], test_run_params: test_run):
+def _test_run_with_empty_data_frame(cmdline_args: list[str], test_run_params: test_run) -> None:
     from unittest.mock import patch
 
     try:
@@ -78,7 +78,7 @@ def _test_run_with_empty_data_frame(cmdline_args: list[str], test_run_params: te
         sys.exit(1)
 
 
-def try_to_run_test_for_empty_data_frame(cmdline_args: list[str]):
+def try_to_run_test_for_empty_data_frame(cmdline_args: list[str]) -> None:
     with CmdlineParser.global_instance(cmdline_args):
         test_run_params = test_run()
 
