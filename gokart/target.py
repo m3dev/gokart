@@ -7,7 +7,7 @@ from abc import abstractmethod
 from datetime import datetime
 from glob import glob
 from logging import getLogger
-from typing import Any
+from typing import Any, cast
 
 import luigi
 import numpy as np
@@ -107,7 +107,7 @@ class SingleFileTarget(TargetOnKart):
         self._task_lock_params = task_lock_params
 
     def _exists(self) -> bool:
-        return self._target.exists()
+        return cast(bool, self._target.exists())
 
     def _get_task_lock_params(self) -> TaskLockParams:
         return self._task_lock_params

@@ -90,7 +90,7 @@ def _get_output(task: TaskOnKart[T]) -> T:
     if isinstance(output, dict):
         return cast(T, {k: t.load() for k, t in output.items() if isinstance(t, TargetOnKart)})
     if isinstance(output, TargetOnKart):
-        return output.load()
+        return cast(T, output.load())
     raise ValueError(f'output type is not supported: {type(output)}')
 
 
@@ -223,4 +223,4 @@ def build(
                 raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
             return _get_output(task) if return_value else None
 
-        return _build_task()
+        return cast(T | None, _build_task())

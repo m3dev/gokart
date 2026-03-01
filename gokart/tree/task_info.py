@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import cast
 
 import pandas as pd
 
@@ -9,7 +10,7 @@ from gokart.task import TaskOnKart
 from gokart.tree.task_info_formatter import make_task_info_tree, make_tree_info, make_tree_info_table_list
 
 
-def make_task_info_as_tree_str(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: list[str] | None = None):
+def make_task_info_as_tree_str(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: list[str] | None = None) -> str:
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
 
@@ -30,7 +31,7 @@ def make_task_info_as_tree_str(task: TaskOnKart, details: bool = False, abbr: bo
     """
     task_info = make_task_info_tree(task, ignore_task_names=ignore_task_names)
     result = make_tree_info(task_info=task_info, indent='', last=True, details=details, abbr=abbr, visited_tasks=set())
-    return result
+    return cast(str, result)
 
 
 def make_task_info_as_table(task: TaskOnKart, ignore_task_names: list[str] | None = None):

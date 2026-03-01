@@ -50,7 +50,7 @@ import threading
 import time
 import traceback
 from collections.abc import Generator
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import luigi
 import luigi.scheduler
@@ -154,7 +154,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
         if self.task_completion_check_at_run and self.check_complete(self.task):
             logger.warning(f'{self.task} is skipped because the task is already completed.')
             return None
-        return self.task.run()
+        return cast(collections.abc.Generator | None, self.task.run())
 
     def _run_get_new_deps(self) -> list[tuple[str, str, dict[str, str]]] | None:
         task_gen = self._run_task()
@@ -261,7 +261,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
     def _handle_run_exception(self, ex: BaseException) -> str:
         logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
         self.task.trigger_event(Event.FAILURE, self.task, ex)
-        return self.task.on_failure(ex)
+        return cast(str, self.task.on_failure(ex))
 
     def _recursive_terminate(self) -> None:
         import psutil
@@ -289,7 +289,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
         try:
             return self._recursive_terminate()
         except ImportError:
-            return super().terminate()
+            super().terminate()
 
     @contextlib.contextmanager
     def _forward_attributes(self):
@@ -807,7 +807,7 @@ class Worker:
 
     def _get_work_task_id(self, get_work_response: dict[str, Any]) -> str | None:
         if get_work_response.get('task_id') is not None:
-            return get_work_response['task_id']
+            return cast(str, get_work_response['task_id'])
         elif 'batch_id' in get_work_response:
             try:
                 task = load_task(
@@ -829,7 +829,7 @@ class Worker:
                 status=RUNNING,
                 batch_id=get_work_response['batch_id'],
             )
-            return task.task_id
+            return cast(str, task.task_id)
         else:
             return None
 
@@ -1035,9 +1035,9 @@ class Worker:
         elif self._assistant:
             return True
         elif self._config.count_last_scheduled:
-            return get_work_response.n_pending_last_scheduled > 0
+            return cast(bool, get_work_response.n_pending_last_scheduled > 0)
         elif self._config.count_uniques:
-            return get_work_response.n_unique_pending > 0
+            return cast(bool, get_work_response.n_unique_pending > 0)
         elif get_work_response.n_pending_tasks == 0:
             return False
         elif not self._config.max_keep_alive_idle_duration:

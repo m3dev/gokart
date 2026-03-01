@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from gokart.in_memory.repository import InMemoryCacheRepository
 from gokart.required_task_output import RequiredTaskOutput
@@ -44,7 +44,7 @@ class InMemoryTarget(TargetOnKart):
         if not _repository.has(self._data_key):
             raise ValueError(f'No object(s) which id is {self._data_key} are stored before.')
         time = _repository.get_last_modification_time(self._data_key)
-        return time
+        return cast(datetime, time)
 
     def _path(self) -> str:
         # TODO: this module name `_path` migit not be appropriate
