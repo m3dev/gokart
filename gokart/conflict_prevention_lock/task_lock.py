@@ -27,7 +27,7 @@ class TaskLockException(Exception):
 
 
 class RedisClient:
-    _instances: dict = {}
+    _instances: dict[Any, Any] = {}
 
     def __new__(cls, *args, **kwargs):
         key = (args, tuple(sorted(kwargs.items())))

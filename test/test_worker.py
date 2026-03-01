@@ -10,7 +10,7 @@ import gokart
 from gokart.worker import Worker, gokart_worker
 
 
-class _DummyTask(gokart.TaskOnKart):
+class _DummyTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     random_id = luigi.Parameter()
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from logging import getLogger
+from typing import Any
 
 import luigi
 
@@ -11,7 +12,7 @@ logger = getLogger(__name__)
 
 
 def make_tree_info(
-    task: TaskOnKart,
+    task: TaskOnKart[Any],
     indent: str = '',
     last: bool = True,
     details: bool = False,
@@ -43,7 +44,7 @@ def make_tree_info(
     return make_task_info_as_tree_str(task=task, details=details, abbr=abbr, ignore_task_names=ignore_task_names)
 
 
-class tree_info(TaskOnKart):
+class tree_info(TaskOnKart[Any]):
     mode: str = luigi.Parameter(default='', description='This must be in ["simple", "all"].')
     output_path: str = luigi.Parameter(default='tree.txt', description='Output file path.')
 

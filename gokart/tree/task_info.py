@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import pandas as pd
 
@@ -9,7 +10,7 @@ from gokart.task import TaskOnKart
 from gokart.tree.task_info_formatter import make_task_info_tree, make_tree_info, make_tree_info_table_list
 
 
-def make_task_info_as_tree_str(task: TaskOnKart, details: bool = False, abbr: bool = True, ignore_task_names: list[str] | None = None) -> str:
+def make_task_info_as_tree_str(task: TaskOnKart[Any], details: bool = False, abbr: bool = True, ignore_task_names: list[str] | None = None) -> str:
     """
     Return a string representation of the tasks, their statuses/parameters in a dependency tree format
 
@@ -33,7 +34,7 @@ def make_task_info_as_tree_str(task: TaskOnKart, details: bool = False, abbr: bo
     return result
 
 
-def make_task_info_as_table(task: TaskOnKart, ignore_task_names: list[str] | None = None) -> pd.DataFrame:
+def make_task_info_as_table(task: TaskOnKart[Any], ignore_task_names: list[str] | None = None) -> pd.DataFrame:
     """Return a table containing information about dependent tasks.
 
     Parameters
@@ -54,7 +55,7 @@ def make_task_info_as_table(task: TaskOnKart, ignore_task_names: list[str] | Non
     return task_info_table
 
 
-def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: list[str] | None = None) -> None:
+def dump_task_info_table(task: TaskOnKart[Any], task_info_dump_path: str, ignore_task_names: list[str] | None = None) -> None:
     """Dump a table containing information about dependent tasks.
 
     Parameters
@@ -79,7 +80,7 @@ def dump_task_info_table(task: TaskOnKart, task_info_dump_path: str, ignore_task
     task_info_target.dump(obj=task_info_table, lock_at_dump=False)
 
 
-def dump_task_info_tree(task: TaskOnKart, task_info_dump_path: str, ignore_task_names: list[str] | None = None, use_unique_id: bool = True) -> None:
+def dump_task_info_tree(task: TaskOnKart[Any], task_info_dump_path: str, ignore_task_names: list[str] | None = None, use_unique_id: bool = True) -> None:
     """Dump the task info tree object (TaskInfo) to a pickle file.
 
     Parameters

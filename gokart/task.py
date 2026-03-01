@@ -143,11 +143,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def output(self) -> FlattenableItems[TargetOnKart]:
         return self.make_target()
 
-    def requires(self) -> FlattenableItems[TaskOnKart]:
+    def requires(self) -> FlattenableItems[TaskOnKart[Any]]:
         tasks = self.make_task_instance_dictionary()
         return tasks or []  # when tasks is empty dict, then this returns empty list.
 
-    def make_task_instance_dictionary(self) -> dict[str, TaskOnKart]:
+    def make_task_instance_dictionary(self) -> dict[str, TaskOnKart[Any]]:
         return {key: var for key, var in vars(self).items() if self.is_task_on_kart(var)}
 
     @staticmethod
@@ -395,7 +395,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             dependencies.append(self.get_own_code())
         return hashlib.md5(str(dependencies).encode()).hexdigest()
 
-    def _get_input_targets(self, target: None | str | TargetOnKart | TaskOnKart | list[TaskOnKart]) -> FlattenableItems[TargetOnKart]:
+    def _get_input_targets(self, target: None | str | TargetOnKart | TaskOnKart[Any] | list[TaskOnKart[Any]]) -> FlattenableItems[TargetOnKart]:
         if target is None:
             return self.input()
         if isinstance(target, str):
@@ -438,7 +438,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _get_task_log_target(self):
         return self.make_target(f'log/task_log/{type(self).__name__}.pkl')
 
-    def get_task_log(self) -> dict:
+    def get_task_log(self) -> dict[str, Any]:
         target = self._get_task_log_target()
         if self.task_log:
             return self.task_log
@@ -455,7 +455,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _get_task_params_target(self):
         return self.make_target(f'log/task_params/{type(self).__name__}.pkl')
 
-    def get_task_params(self) -> dict:
+    def get_task_params(self) -> dict[str, Any]:
         target = self._get_task_log_target()
         if target.exists():
             return cast(dict[Any, Any], self.load(target))

@@ -1,4 +1,5 @@
 import unittest
+from typing import Any
 
 import luigi
 
@@ -6,12 +7,12 @@ import gokart
 from gokart import TaskOnKart
 
 
-class _DummySubTask(TaskOnKart):
+class _DummySubTask(TaskOnKart[Any]):
     task_namespace = __name__
     pass
 
 
-class _DummyTask(TaskOnKart):
+class _DummyTask(TaskOnKart[Any]):
     task_namespace = __name__
     param = luigi.IntParameter()
     task = gokart.TaskInstanceParameter(default=_DummySubTask())

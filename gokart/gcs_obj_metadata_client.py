@@ -95,7 +95,7 @@ class GCSObjectMetadataClient:
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
-    ) -> dict | Any:
+    ) -> dict[str, Any] | Any:
         # If metadata from response when getting bucket and object information is not dictionary,
         # something wrong might be happened, so return original metadata, no patched.
         if not isinstance(metadata, dict):

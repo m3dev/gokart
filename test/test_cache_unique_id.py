@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import Any
 
 import luigi
 import luigi.mock
@@ -7,7 +8,7 @@ import luigi.mock
 import gokart
 
 
-class _DummyTask(gokart.TaskOnKart):
+class _DummyTask(gokart.TaskOnKart[Any]):
     def requires(self):
         return _DummyTaskDep()
 
@@ -15,8 +16,8 @@ class _DummyTask(gokart.TaskOnKart):
         self.dump(self.load())
 
 
-class _DummyTaskDep(gokart.TaskOnKart):
-    param = luigi.Parameter()
+class _DummyTaskDep(gokart.TaskOnKart[str]):
+    param: str = luigi.Parameter()
 
     def run(self):
         self.dump(self.param)

@@ -1,5 +1,6 @@
 import random
 import unittest
+from typing import Any
 from unittest.mock import patch
 
 import gokart
@@ -75,7 +76,7 @@ class TestMakeRedisParams(unittest.TestCase):
 
 class TestMakeTaskLockParamsForRun(unittest.TestCase):
     def test_make_task_lock_params_for_run(self):
-        class _SampleDummyTask(gokart.TaskOnKart):
+        class _SampleDummyTask(gokart.TaskOnKart[Any]):
             pass
 
         task_self = _SampleDummyTask(

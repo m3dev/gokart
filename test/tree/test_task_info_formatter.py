@@ -1,10 +1,11 @@
 import unittest
+from typing import Any
 
 import gokart
 from gokart.tree.task_info_formatter import RequiredTask, _make_requires_info
 
 
-class _RequiredTaskExampleTaskA(gokart.TaskOnKart):
+class _RequiredTaskExampleTaskA(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
 

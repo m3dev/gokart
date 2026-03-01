@@ -125,7 +125,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
         self,
         task: luigi.Task,
         worker_id: str,
-        result_queue: multiprocessing.Queue,
+        result_queue: multiprocessing.Queue[Any],
         status_reporter: luigi.worker.TaskStatusReporter,
         use_multiprocessing: bool = False,
         worker_timeout: int = 0,
@@ -150,11 +150,11 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
         # completeness check using the cache
         self.check_complete = functools.partial(luigi.worker.check_complete_cached, completion_cache=task_completion_cache)
 
-    def _run_task(self) -> collections.abc.Generator | None:
+    def _run_task(self) -> collections.abc.Generator[Any, Any, Any] | None:
         if self.task_completion_check_at_run and self.check_complete(self.task):
             logger.warning(f'{self.task} is skipped because the task is already completed.')
             return None
-        return cast(collections.abc.Generator | None, self.task.run())
+        return cast(collections.abc.Generator[Any, Any, Any] | None, self.task.run())
 
     def _run_get_new_deps(self) -> list[tuple[str, str, dict[str, str]]] | None:
         task_gen = self._run_task()
@@ -447,7 +447,7 @@ class Worker:
                 pass
 
         # Keep info about what tasks are running (could be in other processes)
-        self._task_result_queue: multiprocessing.Queue = _fork_context.Queue()
+        self._task_result_queue: multiprocessing.Queue[Any] = _fork_context.Queue()
         self._running_tasks: dict[str, TaskProcess] = {}
         self._idle_since: datetime.datetime | None = None
 

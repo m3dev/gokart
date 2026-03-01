@@ -25,7 +25,7 @@ class TestPandasTypeConfig(PandasTypeConfig):
         return {'system_cd': int}
 
 
-class _DummyFailTask(gokart.TaskOnKart):
+class _DummyFailTask(gokart.TaskOnKart[pd.DataFrame]):
     task_namespace = 'test_pandas_type_check_framework'
     rerun = True
 
@@ -37,7 +37,7 @@ class _DummyFailTask(gokart.TaskOnKart):
         self.dump(df)
 
 
-class _DummyFailWithNoneTask(gokart.TaskOnKart):
+class _DummyFailWithNoneTask(gokart.TaskOnKart[pd.DataFrame]):
     task_namespace = 'test_pandas_type_check_framework'
     rerun = True
 
@@ -49,7 +49,7 @@ class _DummyFailWithNoneTask(gokart.TaskOnKart):
         self.dump(df)
 
 
-class _DummySuccessTask(gokart.TaskOnKart):
+class _DummySuccessTask(gokart.TaskOnKart[pd.DataFrame]):
     task_namespace = 'test_pandas_type_check_framework'
     rerun = True
 

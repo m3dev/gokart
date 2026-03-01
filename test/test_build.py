@@ -6,6 +6,7 @@ import os
 import sys
 import unittest
 from copy import copy
+from typing import Any
 
 if sys.version_info >= (3, 11):
     from typing import assert_type
@@ -46,7 +47,7 @@ class _DummyTaskTwoOutputs(gokart.TaskOnKart[dict[str, str]]):
         self.dump(self.param2, 'out2')
 
 
-class _DummyFailedTask(gokart.TaskOnKart):
+class _DummyFailedTask(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def run(self):
@@ -97,7 +98,7 @@ class RunTest(unittest.TestCase):
         self.assertEqual(output, 'done')
 
     def test_read_config(self):
-        class _DummyTask(gokart.TaskOnKart):
+        class _DummyTask(gokart.TaskOnKart[Any]):
             task_namespace = 'test_read_config'
             param = luigi.Parameter()
 
@@ -133,7 +134,7 @@ class RunTest(unittest.TestCase):
         class CheckException(Exception):
             pass
 
-        class FailTask(gokart.TaskOnKart):
+        class FailTask(gokart.TaskOnKart[Any]):
             def run(self):
                 raise CheckException()
 
@@ -179,7 +180,7 @@ class ProcessTaskInfoTest(unittest.TestCase):
                 self.assertIn(member=str(task.make_unique_id()), container=log_stream.getvalue())
 
 
-class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart):
+class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart[Any]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.failed_counter = 0
