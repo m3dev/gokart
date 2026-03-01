@@ -51,7 +51,7 @@ test = [
   "fakeredis",
   "lupa",
   "matplotlib",
-  "moto",
+  "moto>=4.0", # for use mock_aws api
   "mypy",
   "polars>=0.19.0",
   "pytest",
