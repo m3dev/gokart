@@ -118,6 +118,7 @@ no_implicit_optional = true
 strict_optional = true
 strict_equality = true
 warn_unused_ignores = true
+warn_return_any = true
 
 [tool.pytest.ini_options]
 testpaths = ["test"]

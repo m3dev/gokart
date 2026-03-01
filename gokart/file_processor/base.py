@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from io import BytesIO
 from logging import getLogger
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import dill
 import luigi
@@ -71,16 +71,16 @@ class _ChunkedLargeFileReader:
                 idx += batch_size
             logger.info('done.')
             return bytes(buffer)
-        return self._file.read(n)
+        return cast(bytes, self._file.read(n))
 
     def readline(self) -> bytes:
-        return self._file.readline()
+        return cast(bytes, self._file.readline())
 
     def seek(self, offset: int) -> None:
         self._file.seek(offset)
 
     def seekable(self) -> bool:
-        return self._file.seekable()
+        return cast(bool, self._file.seekable())
 
 
 class PickleFileProcessor(FileProcessor):

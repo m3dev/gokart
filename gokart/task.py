@@ -9,7 +9,7 @@ import types
 from collections.abc import Callable, Generator, Iterable
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Generic, TypeVar, overload
+from typing import Any, Generic, TypeVar, cast, overload
 
 import luigi
 import pandas as pd
@@ -138,7 +138,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
 
     def input(self) -> FlattenableItems[TargetOnKart]:
-        return super().input()
+        return cast(FlattenableItems[TargetOnKart], super().input())
 
     def output(self) -> FlattenableItems[TargetOnKart]:
         return self.make_target()
@@ -184,7 +184,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         return self._check_modification_time()
 
-    def _check_modification_time(self):
+    def _check_modification_time(self) -> bool:
         common_path = set(t.path() for t in flatten(self.input())) & set(t.path() for t in flatten(self.output()))
         input_tasks = [t for t in flatten(self.input()) if t.path() not in common_path]
         output_tasks = [t for t in flatten(self.output()) if t.path() not in common_path]
@@ -332,7 +332,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             else:
                 yield targets.load()
 
-        return _load(self._get_input_targets(target))
+        return cast(Generator[Any, None, None], _load(self._get_input_targets(target)))
 
     @overload
     def dump(self, obj: T, target: None = None, custom_labels: dict[Any, Any] | None = None) -> None: ...
@@ -443,7 +443,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if self.task_log:
             return self.task_log
         if target.exists():
-            return self.load(target)
+            return cast(dict[Any, Any], self.load(target))
         return dict()
 
     @luigi.Task.event_handler(luigi.Event.SUCCESS)
@@ -458,7 +458,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def get_task_params(self) -> dict:
         target = self._get_task_log_target()
         if target.exists():
-            return self.load(target)
+            return cast(dict[Any, Any], self.load(target))
         return dict()
 
     @luigi.Task.event_handler(luigi.Event.START)
@@ -504,7 +504,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def get_processing_time(self) -> str:
         target = self._get_processing_time_target()
         if target.exists():
-            return self.load(target)
+            return cast(str, self.load(target))
         return 'unknown'
 
     @luigi.Task.event_handler(luigi.Event.PROCESSING_TIME)

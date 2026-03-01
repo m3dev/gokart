@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import cast
 
 import luigi
 import luigi.contrib.gcs
@@ -36,22 +37,22 @@ class ObjectStorage:
     @staticmethod
     def exists(path: str) -> bool:
         if path.startswith('s3://'):
-            return S3Config().get_s3_client().exists(path)
+            return cast(bool, S3Config().get_s3_client().exists(path))
         elif path.startswith('gs://'):
-            return GCSConfig().get_gcs_client().exists(path)
+            return cast(bool, GCSConfig().get_gcs_client().exists(path))
         else:
             raise
 
     @staticmethod
     def get_timestamp(path: str) -> datetime:
         if path.startswith('s3://'):
-            return S3Config().get_s3_client().get_key(path).last_modified
+            return cast(datetime, S3Config().get_s3_client().get_key(path).last_modified)
         elif path.startswith('gs://'):
             # for gcs object
             # should PR to luigi
             bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)
             result = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
-            return result['updated']
+            return cast(datetime, result['updated'])
         else:
             raise
 
