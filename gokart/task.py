@@ -480,7 +480,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 m: Any = import_module(parts[0])
                 for x in parts[1:]:
                     m = getattr(m, x)
-                m(random_seed)  # type: ignore
+                m(random_seed)
                 success_methods.append(method_name)
             except ModuleNotFoundError:
                 pass
