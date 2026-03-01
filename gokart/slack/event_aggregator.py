@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from logging import getLogger
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import luigi
 
@@ -47,5 +47,5 @@ class EventAggregator:
         self._failure_events.append(failure)
 
     @staticmethod
-    def _task_to_str(task) -> str:
+    def _task_to_str(task: Any) -> str:
         return f'{type(task).__name__}:[{task.make_unique_id()}]'

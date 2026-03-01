@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 class CsvFileProcessorPolars(FileProcessor):
     """CSV file processor for polars DataFrames."""
 
-    def __init__(self, sep=',', encoding: str = 'utf-8', lazy: bool = False):
+    def __init__(self, sep: str = ',', encoding: str = 'utf-8', lazy: bool = False) -> None:
         if not HAS_POLARS:
             raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._sep = sep
@@ -104,7 +104,7 @@ class JsonFileProcessorPolars(FileProcessor):
 class ParquetFileProcessorPolars(FileProcessor):
     """Parquet file processor for polars DataFrames."""
 
-    def __init__(self, engine='pyarrow', compression: _ParquetCompression | None = None, lazy: bool = False):
+    def __init__(self, engine: str = 'pyarrow', compression: _ParquetCompression | None = None, lazy: bool = False) -> None:
         if not HAS_POLARS:
             raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._engine = engine  # Ignored for polars

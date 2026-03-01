@@ -101,7 +101,7 @@ def make_task_info_tree(task: TaskOnKart, ignore_task_names: list[str] | None = 
     return task_info
 
 
-def make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, abbr: bool, visited_tasks: set[str]):
+def make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, abbr: bool, visited_tasks: set[str]) -> str:
     result = '\n' + indent
     if last:
         result += '└─-'
@@ -128,7 +128,7 @@ def make_tree_info(task_info: TaskInfo, indent: str, last: bool, details: bool, 
     return result
 
 
-def make_tree_info_table_list(task_info: TaskInfo, visited_tasks: set[str]):
+def make_tree_info_table_list(task_info: TaskInfo, visited_tasks: set[str]) -> list[dict[str, typing.Any]]:
     task_id = task_info.get_task_id()
     if task_id in visited_tasks:
         return []

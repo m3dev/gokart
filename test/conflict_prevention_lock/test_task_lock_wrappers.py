@@ -8,11 +8,11 @@ from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 
 
-def _sample_func_with_error(a: int, b: str):
+def _sample_func_with_error(a: int, b: str) -> None:
     raise Exception()
 
 
-def _sample_long_func(a: int, b: str):
+def _sample_long_func(a: int, b: str) -> dict[str, int | str]:
     time.sleep(2.7)
     return dict(a=a, b=b)
 

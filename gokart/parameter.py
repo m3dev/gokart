@@ -4,7 +4,7 @@ import bz2
 import datetime
 import json
 from logging import getLogger
-from typing import Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 from warnings import warn
 
 import luigi
@@ -114,7 +114,7 @@ S = TypeVar('S', bound=Serializable)
 
 
 class SerializableParameter(luigi.Parameter, Generic[S]):
-    def __init__(self, object_type: type[S], *args, **kwargs):
+    def __init__(self, object_type: type[S], *args: Any, **kwargs: Any) -> None:
         self._object_type = object_type
         super().__init__(*args, **kwargs)
 

@@ -23,12 +23,12 @@ class PandasTypeConfig(luigi.Config):
         pass
 
     @classmethod
-    def check(cls, df: pd.DataFrame):
+    def check(cls, df: pd.DataFrame) -> None:
         for column_name, column_type in cls.type_dict().items():
             cls._check_column(df, column_name, column_type)
 
     @classmethod
-    def _check_column(cls, df, column_name, column_type):
+    def _check_column(cls, df: pd.DataFrame, column_name: str, column_type: type) -> None:
         if column_name not in df.columns:
             return
 
@@ -40,7 +40,7 @@ class PandasTypeConfig(luigi.Config):
 class PandasTypeConfigMap(luigi.Config):
     """To initialize this class only once, this inherits luigi.Config."""
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         task_names = Register.task_names()
         task_classes = [Register.get_task_cls(task_name) for task_name in task_names]
@@ -48,6 +48,6 @@ class PandasTypeConfigMap(luigi.Config):
             task_class.task_namespace: task_class for task_class in task_classes if issubclass(task_class, PandasTypeConfig) and task_class != PandasTypeConfig
         }
 
-    def check(self, obj, task_namespace: str):
+    def check(self, obj: Any, task_namespace: str) -> None:
         if isinstance(obj, pd.DataFrame) and task_namespace in self._map:
             self._map[task_namespace].check(obj)

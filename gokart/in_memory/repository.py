@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import datetime
 from typing import Any
 
 from .data import InMemoryData
@@ -15,7 +16,7 @@ class InMemoryCacheRepository:
     def get_value(self, key: str) -> Any:
         return self._get_data(key).value
 
-    def get_last_modification_time(self, key: str):
+    def get_last_modification_time(self, key: str) -> datetime:
         return self._get_data(key).last_modification_time
 
     def _get_data(self, key: str) -> InMemoryData:

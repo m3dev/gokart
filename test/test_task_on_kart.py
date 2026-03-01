@@ -420,7 +420,7 @@ class TaskTest(unittest.TestCase):
         self.assertRaises(EmptyDumpError, lambda: task.dump(pd.DataFrame()))
 
     @patch('luigi.configuration.get_config')
-    def test_add_configuration(self, mock_config: Mock):
+    def test_add_configuration(self, mock_config: Mock) -> None:
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
         kwargs: dict[str, Any] = dict()
         _DummyTask._add_configuration(kwargs, '_DummyTask')
@@ -429,7 +429,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(True, kwargs['bool_param'])
 
     @patch('luigi.cmdline_parser.CmdlineParser.get_instance')
-    def test_add_cofigureation_evaluation_order(self, mock_cmdline: Mock):
+    def test_add_cofigureation_evaluation_order(self, mock_cmdline: Mock) -> None:
         """
         in case TaskOnKart._add_configuration will break evaluation order
         @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
@@ -464,8 +464,8 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(task_c.requires().complete())  # This is an instance of _DummyTaskB.
         self.assertTrue(task_c.requires().requires().complete())  # This is an instance of _DummyTaskA.
 
-    def test_significant_flag(self):
-        def _make_task(significant: bool, has_required_task: bool):
+    def test_significant_flag(self) -> None:
+        def _make_task(significant: bool, has_required_task: bool) -> gokart.TaskOnKart:
             class _MyDummyTaskA(gokart.TaskOnKart):
                 task_namespace = f'{__name__}_{significant}_{has_required_task}'
 
@@ -570,7 +570,7 @@ class TaskTest(unittest.TestCase):
 
 
 class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
-    def dump(self, _obj: Any, _target: Any = None, _custom_labels: Any = None):
+    def dump(self, _obj: Any, _target: Any = None, _custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass
 
@@ -582,7 +582,7 @@ class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
 
 
 class _DummyTaskWithCompleted(gokart.TaskOnKart):
-    def dump(self, obj: Any, _target: Any = None, custom_labels: Any = None):
+    def dump(self, obj: Any, _target: Any = None, custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass
 

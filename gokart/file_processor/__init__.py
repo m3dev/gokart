@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Literal
+from typing import Any, Literal
 
 # Export common processors and types from base
 from gokart.file_processor.base import (
@@ -35,7 +35,7 @@ from gokart.file_processor.polars import (
 class CsvFileProcessor(FileProcessor):
     """CSV file processor with automatic backend selection based on dataframe_type."""
 
-    def __init__(self, sep=',', encoding: str = 'utf-8', dataframe_type: DataFrameType = 'pandas'):
+    def __init__(self, sep: str = ',', encoding: str = 'utf-8', dataframe_type: DataFrameType = 'pandas') -> None:
         """
         CSV file processor with support for both pandas and polars DataFrames.
 
@@ -99,7 +99,7 @@ class JsonFileProcessor(FileProcessor):
 class ParquetFileProcessor(FileProcessor):
     """Parquet file processor with automatic backend selection based on dataframe_type."""
 
-    def __init__(self, engine='pyarrow', compression=None, dataframe_type: DataFrameType = 'pandas'):
+    def __init__(self, engine: Any = 'pyarrow', compression: Any = None, dataframe_type: DataFrameType = 'pandas') -> None:
         """
         Parquet file processor with support for both pandas and polars DataFrames.
 

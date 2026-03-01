@@ -28,18 +28,18 @@ class TestInMemoryTarget:
     def clear_repo(self) -> None:
         InMemoryCacheRepository().clear()
 
-    def test_dump_and_load_data(self, target: InMemoryTarget):
+    def test_dump_and_load_data(self, target: InMemoryTarget) -> None:
         dumped = 'dummy_data'
         target.dump(dumped)
         loaded = target.load()
         assert loaded == dumped
 
-    def test_exist(self, target: InMemoryTarget):
+    def test_exist(self, target: InMemoryTarget) -> None:
         assert not target.exists()
         target.dump('dummy_data')
         assert target.exists()
 
-    def test_last_modified_time(self, target: InMemoryTarget):
+    def test_last_modified_time(self, target: InMemoryTarget) -> None:
         input = 'dummy_data'
         target.dump(input)
         time = target.last_modification_time()
