@@ -17,7 +17,7 @@ from gokart.object_storage import ObjectStorage
 class CsvFileProcessorPandas(FileProcessor):
     """CSV file processor for pandas DataFrames."""
 
-    def __init__(self, sep=',', encoding: str = 'utf-8'):
+    def __init__(self, sep: str = ',', encoding: str = 'utf-8') -> None:
         self._sep = sep
         self._encoding = encoding
         super().__init__()
@@ -66,7 +66,7 @@ class JsonFileProcessorPandas(FileProcessor):
 class ParquetFileProcessorPandas(FileProcessor):
     """Parquet file processor for pandas DataFrames."""
 
-    def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression=None):
+    def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression: str | None = None) -> None:
         self._engine: Literal['auto', 'pyarrow', 'fastparquet'] = engine
         self._compression = compression
         super().__init__()

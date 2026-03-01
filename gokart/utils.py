@@ -20,7 +20,7 @@ class FileLike(Protocol):
     def seekable(self) -> bool: ...
 
 
-def add_config(file_path: str):
+def add_config(file_path: str) -> None:
     _, ext = os.path.splitext(file_path)
     luigi.configuration.core.parser = ext  # type: ignore
     assert luigi.configuration.add_config_path(file_path)

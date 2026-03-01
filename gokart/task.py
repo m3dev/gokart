@@ -240,7 +240,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         df_type = get_dataframe_type_from_task(self)
         return make_file_processor(file_path, dataframe_type=df_type, store_index_in_feather=self.store_index_in_feather)
 
-    def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte=int(2**26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte: int = int(2**26)) -> TargetOnKart:
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.zip')
         )
@@ -266,7 +266,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def make_model_target(
         self, relative_file_path: str, save_function: Callable[[Any, str], None], load_function: Callable[[str], Any], use_unique_id: bool = True
-    ):
+    ) -> TargetOnKart:
         """
         Make target for models which generate multiple files in saving, e.g. gensim.Word2Vec, Tensorflow, and so on.
 
@@ -360,7 +360,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
     @staticmethod
-    def get_code(target_class) -> set[str]:
+    def get_code(target_class: Any) -> set[str]:
         def has_sourcecode(obj):
             return inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isframe(obj) or inspect.iscode(obj)
 
@@ -574,9 +574,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         task_str = f'{self.get_task_family()}[{self.make_unique_id()}]({", ".join(repr_parts)})'
         return task_str
 
-    def _make_representation(self, param_obj: luigi.Parameter, param_value):
+    def _make_representation(self, param_obj: luigi.Parameter, param_value: Any) -> str:
         if isinstance(param_obj, TaskInstanceParameter):
             return f'{param_value.get_task_family()}({param_value.make_unique_id()})'
         if isinstance(param_obj, ListTaskInstanceParameter):
             return f'[{", ".join(f"{v.get_task_family()}({v.make_unique_id()})" for v in param_value)}]'
-        return param_obj.serialize(param_value)
+        return str(param_obj.serialize(param_value))

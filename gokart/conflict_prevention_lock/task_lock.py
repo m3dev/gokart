@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import os
 from logging import getLogger
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -47,7 +47,7 @@ class RedisClient:
         return self._redis_client
 
 
-def _extend_lock(task_lock: redis.lock.Lock, redis_timeout: int):
+def _extend_lock(task_lock: redis.lock.Lock, redis_timeout: int) -> None:
     task_lock.extend(additional_time=redis_timeout, replace_ttl=True)
 
 
@@ -75,7 +75,7 @@ def set_lock_scheduler(task_lock: redis.lock.Lock, task_lock_params: TaskLockPar
     return scheduler
 
 
-def make_task_lock_key(file_path: str, unique_id: str | None):
+def make_task_lock_key(file_path: str, unique_id: str | None) -> str:
     basename_without_ext = os.path.splitext(os.path.basename(file_path))[0]
     return f'{basename_without_ext}_{unique_id}'
 
@@ -105,7 +105,7 @@ def make_task_lock_params(
     return task_lock_params
 
 
-def make_task_lock_params_for_run(task_self, lock_extend_seconds: int = 10) -> TaskLockParams:
+def make_task_lock_params_for_run(task_self: Any, lock_extend_seconds: int = 10) -> TaskLockParams:
     task_path_name = os.path.join(task_self.__module__.replace('.', '/'), f'{type(task_self).__name__}')
     unique_id = task_self.make_unique_id() + '-run'
     task_lock_key = make_task_lock_key(file_path=task_path_name, unique_id=unique_id)

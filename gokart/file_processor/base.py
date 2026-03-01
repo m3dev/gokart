@@ -24,10 +24,10 @@ class FileProcessor:
     def format(self) -> Any: ...
 
     @abstractmethod
-    def load(self, file) -> Any: ...
+    def load(self, file: Any) -> Any: ...
 
     @abstractmethod
-    def dump(self, obj, file) -> None: ...
+    def dump(self, obj: Any, file: Any) -> None: ...
 
 
 class BinaryFileProcessor(FileProcessor):
@@ -53,7 +53,7 @@ class BinaryFileProcessor(FileProcessor):
 
 
 class _ChunkedLargeFileReader:
-    def __init__(self, file) -> None:
+    def __init__(self, file: Any) -> None:
         self._file = file
 
     def __getattr__(self, item):

@@ -20,7 +20,7 @@ class FileNotUploadedError(RuntimeError):
 
 
 class SlackAPI:
-    def __init__(self, token, channel: str, to_user: str) -> None:
+    def __init__(self, token: str, channel: str, to_user: str) -> None:
         self._client = slack_sdk.WebClient(token=token)
         self._channel_id = self._get_channel_id(channel)
         self._to_user = to_user if to_user == '' or to_user.startswith('@') else '@' + to_user

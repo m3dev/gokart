@@ -10,7 +10,7 @@ from gokart.conflict_prevention_lock.task_lock import TaskLockParams, set_lock_s
 logger = getLogger(__name__)
 
 
-def wrap_dump_with_lock(func: Callable, task_lock_params: TaskLockParams, exist_check: Callable):
+def wrap_dump_with_lock(func: Callable, task_lock_params: TaskLockParams, exist_check: Callable) -> Callable:
     """Redis lock wrapper function for TargetOnKart.dump().
     When TargetOnKart.dump() is called, dump() will be wrapped with redis lock and cache existance check.
     https://github.com/m3dev/gokart/issues/265
@@ -35,7 +35,7 @@ def wrap_dump_with_lock(func: Callable, task_lock_params: TaskLockParams, exist_
     return wrapper
 
 
-def wrap_load_with_lock(func, task_lock_params: TaskLockParams):
+def wrap_load_with_lock(func: Callable, task_lock_params: TaskLockParams) -> Callable:
     """Redis lock wrapper function for TargetOnKart.load().
     When TargetOnKart.load() is called, redis lock will be locked and released before load().
     https://github.com/m3dev/gokart/issues/265
@@ -58,7 +58,7 @@ def wrap_load_with_lock(func, task_lock_params: TaskLockParams):
     return wrapper
 
 
-def wrap_remove_with_lock(func, task_lock_params: TaskLockParams):
+def wrap_remove_with_lock(func: Callable, task_lock_params: TaskLockParams) -> Callable:
     """Redis lock wrapper function for TargetOnKart.remove().
     When TargetOnKart.remove() is called, remove() will be simply wrapped with redis lock.
     https://github.com/m3dev/gokart/issues/265
@@ -86,7 +86,7 @@ def wrap_remove_with_lock(func, task_lock_params: TaskLockParams):
     return wrapper
 
 
-def wrap_run_with_lock(run_func: Callable[[], Any], task_lock_params: TaskLockParams):
+def wrap_run_with_lock(run_func: Callable[[], Any], task_lock_params: TaskLockParams) -> Callable[[], Any]:
     @functools.wraps(run_func)
     def wrapped():
         task_lock = set_task_lock(task_lock_params=task_lock_params)

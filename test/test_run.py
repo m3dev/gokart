@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import luigi
@@ -60,13 +61,13 @@ class RunTest(unittest.TestCase):
         self.assertTrue(gokart.make_tree_info(_DummyTask(param='test')), tree_info.output().load())
 
     @patch('gokart.make_tree_info')
-    def test_try_to_send_event_summary_to_slack(self, make_tree_info_mock: MagicMock):
+    def test_try_to_send_event_summary_to_slack(self, make_tree_info_mock: MagicMock) -> None:
         event_aggregator_mock = MagicMock()
         event_aggregator_mock.get_summury.return_value = f'{__name__}._DummyTask'
         event_aggregator_mock.get_event_list.return_value = f'{__name__}._DummyTask:[]'
         make_tree_info_mock.return_value = 'tree'
 
-        def get_content(content: str, **kwargs):
+        def get_content(content: str, **kwargs: Any) -> None:
             self.output = content
 
         slack_api_mock = MagicMock()

@@ -307,7 +307,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
 # This code and the task_process_context config key currently feels a bit ad-hoc.
 # Discussion on generalizing it into a plugin system: https://github.com/spotify/luigi/issues/1897
 class ContextManagedTaskProcess(TaskProcess):
-    def __init__(self, context, *args, **kwargs) -> None:
+    def __init__(self, context: Any, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.context = context
 
@@ -1019,7 +1019,7 @@ class Worker:
             time.sleep(wait_interval)
             yield
 
-    def _keep_alive(self, get_work_response) -> bool:
+    def _keep_alive(self, get_work_response: Any) -> bool:
         """
         Returns true if a worker should stay alive given.
 
@@ -1049,7 +1049,7 @@ class Worker:
             logger.debug('[%s] %s until shutdown', self._id, time_to_shutdown)
             return time_to_shutdown > datetime.timedelta(0)
 
-    def handle_interrupt(self, signum, _) -> None:
+    def handle_interrupt(self, signum: int, _: Any) -> None:
         """
         Stops the assistant from asking for more work on SIGUSR1
         """

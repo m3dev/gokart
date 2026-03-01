@@ -14,7 +14,7 @@ class TestInMemoryCacheRepository:
         repo.clear()
         return repo
 
-    def test_set(self, repo: Repo):
+    def test_set(self, repo: Repo) -> None:
         repo.set_value('dummy_key', dummy_num)
         assert repo.size == 1
         for key, value in repo.get_gen():
@@ -23,7 +23,7 @@ class TestInMemoryCacheRepository:
         repo.set_value('another_key', 'another_value')
         assert repo.size == 2
 
-    def test_get(self, repo: Repo):
+    def test_get(self, repo: Repo) -> None:
         repo.set_value('dummy_key', dummy_num)
         repo.set_value('another_key', 'another_value')
 
@@ -34,18 +34,18 @@ class TestInMemoryCacheRepository:
         assert repo.get_value('dummy_key') == dummy_num
         assert repo.get_value('another_key') == 'another_value'
 
-    def test_empty(self, repo: Repo):
+    def test_empty(self, repo: Repo) -> None:
         assert repo.empty()
         repo.set_value('dummmy_key', dummy_num)
         assert not repo.empty()
 
-    def test_has(self, repo: Repo):
+    def test_has(self, repo: Repo) -> None:
         assert not repo.has('dummy_key')
         repo.set_value('dummy_key', dummy_num)
         assert repo.has('dummy_key')
         assert not repo.has('not_exist_key')
 
-    def test_remove(self, repo: Repo):
+    def test_remove(self, repo: Repo) -> None:
         repo.set_value('dummy_key', dummy_num)
 
         with pytest.raises(AssertionError):
@@ -54,7 +54,7 @@ class TestInMemoryCacheRepository:
         repo.remove('dummy_key')
         assert not repo.has('dummy_key')
 
-    def test_last_modification_time(self, repo: Repo):
+    def test_last_modification_time(self, repo: Repo) -> None:
         repo.set_value('dummy_key', dummy_num)
         date1 = repo.get_last_modification_time('dummy_key')
         time.sleep(0.1)

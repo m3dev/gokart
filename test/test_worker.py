@@ -22,7 +22,7 @@ class _DummyTask(gokart.TaskOnKart):
 
 
 class TestWorkerRun:
-    def test_run(self, monkeypatch: pytest.MonkeyPatch):
+    def test_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Check run is called when the task is not completed"""
         sch = scheduler.Scheduler()
         worker = Worker(scheduler=sch)
@@ -59,7 +59,7 @@ class TestWorkerSkipIfCompletedPreRun:
             pytest.param(False, False, False, id='not skipped when not completed and task_completion_check_at_run is False'),
         ],
     )
-    def test_skip_task(self, monkeypatch: pytest.MonkeyPatch, task_completion_check_at_run: bool, is_completed: bool, expect_skipped: bool):
+    def test_skip_task(self, monkeypatch: pytest.MonkeyPatch, task_completion_check_at_run: bool, is_completed: bool, expect_skipped: bool) -> None:
         sch = scheduler.Scheduler()
         worker = Worker(scheduler=sch, config=gokart_worker(task_completion_check_at_run=task_completion_check_at_run))
 
