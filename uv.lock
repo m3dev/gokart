@@ -616,7 +616,7 @@ test = [
     { name = "fakeredis" },
     { name = "lupa" },
     { name = "matplotlib" },
-    { name = "moto" },
+    { name = "moto", specifier = ">=4.0" },
     { name = "mypy" },
     { name = "polars", specifier = ">=0.19.0" },
     { name = "pytest" },
