@@ -19,7 +19,7 @@ from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
 from gokart.task import EmptyDumpError
 
 
-class _DummyTask(gokart.TaskOnKart):
+class _DummyTask(gokart.TaskOnKart[Any]):
     task_namespace = __name__
     param = luigi.IntParameter(default=1)
     list_param = luigi.ListParameter(default=['a', 'b'])
@@ -29,7 +29,7 @@ class _DummyTask(gokart.TaskOnKart):
         return None
 
 
-class _DummyTaskA(gokart.TaskOnKart):
+class _DummyTaskA(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
@@ -37,7 +37,7 @@ class _DummyTaskA(gokart.TaskOnKart):
 
 
 @inherits(_DummyTaskA)
-class _DummyTaskB(gokart.TaskOnKart):
+class _DummyTaskB(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
@@ -48,7 +48,7 @@ class _DummyTaskB(gokart.TaskOnKart):
 
 
 @inherits(_DummyTaskB)
-class _DummyTaskC(gokart.TaskOnKart):
+class _DummyTaskC(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
@@ -58,22 +58,22 @@ class _DummyTaskC(gokart.TaskOnKart):
         return self.clone(_DummyTaskB)
 
 
-class _DummyTaskD(gokart.TaskOnKart):
+class _DummyTaskD(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
 
-class _DummyTaskWithoutLock(gokart.TaskOnKart):
+class _DummyTaskWithoutLock(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def run(self):
         pass
 
 
-class _DummySubTaskWithPrivateParameter(gokart.TaskOnKart):
+class _DummySubTaskWithPrivateParameter(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
 
-class _DummyTaskWithPrivateParameter(gokart.TaskOnKart):
+class _DummyTaskWithPrivateParameter(gokart.TaskOnKart[Any]):
     task_namespace = __name__
     int_param = luigi.IntParameter()
     private_int_param = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
@@ -179,7 +179,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.pkl', pathlib.Path(default_target._target.path).name)  # type: ignore
 
     def test_clone_with_special_params(self):
-        class _DummyTaskRerun(gokart.TaskOnKart):
+        class _DummyTaskRerun(gokart.TaskOnKart[Any]):
             a = luigi.BoolParameter(default=False)
 
         task = _DummyTaskRerun(a=True, rerun=True)
@@ -220,7 +220,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(task.get_own_code().replace(' ', ''), task_scripts.replace(' ', ''))
 
     def test_make_unique_id_with_own_code(self):
-        class _MyDummyTaskA(gokart.TaskOnKart):
+        class _MyDummyTaskA(gokart.TaskOnKart[str]):
             _visible_in_registry = False
 
             def run(self):
@@ -230,7 +230,7 @@ class TaskTest(unittest.TestCase):
         task_with_code_unique_id = _MyDummyTaskA(serialized_task_definition_check=True).make_unique_id()
         self.assertNotEqual(task_unique_id, task_with_code_unique_id)
 
-        class _MyDummyTaskA(gokart.TaskOnKart):  # type: ignore
+        class _MyDummyTaskA(gokart.TaskOnKart[str]):  # type: ignore
             _visible_in_registry = False
 
             def run(self):
@@ -435,7 +435,7 @@ class TaskTest(unittest.TestCase):
         @see https://luigi.readthedocs.io/en/stable/parameters.html#parameter-resolution-order
         """
 
-        class DummyTaskAddConfiguration(gokart.TaskOnKart):
+        class DummyTaskAddConfiguration(gokart.TaskOnKart[Any]):
             aa = luigi.IntParameter()
 
         luigi.configuration.get_config().set('DummyTaskAddConfiguration', 'aa', '3')
@@ -465,11 +465,11 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(task_c.requires().requires().complete())  # This is an instance of _DummyTaskA.
 
     def test_significant_flag(self) -> None:
-        def _make_task(significant: bool, has_required_task: bool) -> gokart.TaskOnKart:
-            class _MyDummyTaskA(gokart.TaskOnKart):
+        def _make_task(significant: bool, has_required_task: bool) -> gokart.TaskOnKart[Any]:
+            class _MyDummyTaskA(gokart.TaskOnKart[Any]):
                 task_namespace = f'{__name__}_{significant}_{has_required_task}'
 
-            class _MyDummyTaskB(gokart.TaskOnKart):
+            class _MyDummyTaskB(gokart.TaskOnKart[Any]):
                 task_namespace = f'{__name__}_{significant}_{has_required_task}'
 
                 def requires(self):
@@ -487,10 +487,10 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(y_task.make_unique_id(), z_task.make_unique_id())
 
     def test_default_requires(self):
-        class _WithoutTaskInstanceParameter(gokart.TaskOnKart):
+        class _WithoutTaskInstanceParameter(gokart.TaskOnKart[Any]):
             task_namespace = __name__
 
-        class _WithTaskInstanceParameter(gokart.TaskOnKart):
+        class _WithTaskInstanceParameter(gokart.TaskOnKart[Any]):
             task_namespace = __name__
             a_task = gokart.TaskInstanceParameter()
 
@@ -537,12 +537,12 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart((gokart.TaskOnKart(), gokart.TaskOnKart())))
 
     def test_serialize_and_deserialize_default_values(self):
-        task: gokart.TaskOnKart = gokart.TaskOnKart()
-        deserialized: gokart.TaskOnKart = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
+        task: gokart.TaskOnKart[Any] = gokart.TaskOnKart()
+        deserialized: gokart.TaskOnKart[Any] = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
 
     def test_to_str_params_changes_on_values_and_flags(self):
-        class _DummyTaskWithParams(gokart.TaskOnKart):
+        class _DummyTaskWithParams(gokart.TaskOnKart[Any]):
             task_namespace = __name__
             param: str = luigi.Parameter()
 
@@ -553,7 +553,7 @@ class TaskTest(unittest.TestCase):
         self.assertNotEqual(t1.to_str_params(), t1.to_str_params(only_significant=True))
 
     def test_should_lock_run_when_set(self):
-        class _DummyTaskWithLock(gokart.TaskOnKart):
+        class _DummyTaskWithLock(gokart.TaskOnKart[str]):
             def run(self):
                 self.dump('hello')
 
@@ -569,7 +569,7 @@ class TaskTest(unittest.TestCase):
             gokart.TaskOnKart(redis_host='host', redis_timeout=180, should_lock_run=True)
 
 
-class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
+class _DummyTaskWithNonCompleted(gokart.TaskOnKart[Any]):
     def dump(self, _obj: Any, _target: Any = None, _custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass
@@ -581,7 +581,7 @@ class _DummyTaskWithNonCompleted(gokart.TaskOnKart):
         return False
 
 
-class _DummyTaskWithCompleted(gokart.TaskOnKart):
+class _DummyTaskWithCompleted(gokart.TaskOnKart[Any]):
     def dump(self, obj: Any, _target: Any = None, custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass

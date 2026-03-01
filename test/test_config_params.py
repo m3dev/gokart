@@ -1,4 +1,5 @@
 import unittest
+from typing import Any
 
 import luigi
 from luigi.cmdline_parser import CmdlineParser
@@ -20,13 +21,13 @@ class ConfigClass(luigi.Config):
 
 
 @inherits_config_params(ConfigClass)
-class Inherited(gokart.TaskOnKart):
+class Inherited(gokart.TaskOnKart[Any]):
     param_a = luigi.Parameter()
     param_b = luigi.Parameter(default='overrided')
 
 
 @inherits_config_params(ConfigClass, parameter_alias={'param_a': 'param_d'})
-class Inherited2(gokart.TaskOnKart):
+class Inherited2(gokart.TaskOnKart[Any]):
     param_c = luigi.Parameter()
     param_d = luigi.Parameter()
 

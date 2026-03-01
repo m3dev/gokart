@@ -11,7 +11,7 @@ from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 
 
-class _DummyTaskOnKart(gokart.TaskOnKart):
+class _DummyTaskOnKart(gokart.TaskOnKart[str]):
     task_namespace = __name__
 
     def run(self):

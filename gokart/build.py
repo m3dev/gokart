@@ -62,7 +62,7 @@ class WorkerProtocol(Protocol):
     This protocol is determined by luigi.worker.Worker.
     """
 
-    def add(self, task: TaskOnKart) -> bool: ...
+    def add(self, task: TaskOnKart[Any]) -> bool: ...
 
     def run(self) -> bool: ...
 
@@ -124,7 +124,7 @@ class TaskDumpConfig:
     output_type: TaskDumpOutputType = TaskDumpOutputType.NONE
 
 
-def process_task_info(task: TaskOnKart, task_dump_config: TaskDumpConfig = TaskDumpConfig()) -> None:
+def process_task_info(task: TaskOnKart[Any], task_dump_config: TaskDumpConfig = TaskDumpConfig()) -> None:
     match task_dump_config:
         case TaskDumpConfig(mode=TaskDumpMode.NONE, output_type=TaskDumpOutputType.NONE):
             pass

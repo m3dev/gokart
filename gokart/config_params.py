@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import luigi
 
 import gokart
@@ -18,7 +20,7 @@ class inherits_config_params:
         self._config_class: type[luigi.Config] = config_class
         self._parameter_alias: dict[str, str] = parameter_alias if parameter_alias is not None else {}
 
-    def __call__(self, task_class: type[gokart.TaskOnKart]) -> type[gokart.TaskOnKart]:
+    def __call__(self, task_class: type[gokart.TaskOnKart[Any]]) -> type[gokart.TaskOnKart[Any]]:
         # wrap task to prevent task name from being changed
         @luigi.task._task_wraps(task_class)
         class Wrapped(task_class):  # type: ignore

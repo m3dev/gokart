@@ -3,11 +3,12 @@ from __future__ import annotations
 import functools
 from collections.abc import Callable
 from logging import getLogger
+from typing import Any
 
 logger = getLogger(__name__)
 
 
-def task_complete_check_wrapper(run_func: Callable, complete_check_func: Callable) -> Callable:
+def task_complete_check_wrapper(run_func: Callable[..., Any], complete_check_func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(run_func)
     def wrapper(*args, **kwargs):
         if complete_check_func():

@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from logging import getLogger
+from typing import Any
 
 import luigi
 import luigi.cmdline
@@ -49,7 +50,7 @@ def _try_tree_info(cmdline_args):
 
 def _try_to_delete_unnecessary_output_file(cmdline_args: list[str]) -> None:
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        task = cp.get_task_obj()  # type: gokart.TaskOnKart
+        task: gokart.TaskOnKart[Any] = cp.get_task_obj()
         if task.delete_unnecessary_output_files:
             if ObjectStorage.if_object_storage_path(task.workspace_directory):
                 logger.info('delete-unnecessary-output-files is not support s3/gcs.')

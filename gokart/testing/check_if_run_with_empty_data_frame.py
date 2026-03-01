@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import Any
 
 import luigi
 from luigi.cmdline_parser import CmdlineParser
@@ -14,7 +15,7 @@ test_logger.addHandler(logging.StreamHandler())
 test_logger.setLevel(logging.INFO)
 
 
-class test_run(gokart.TaskOnKart):
+class test_run(gokart.TaskOnKart[Any]):
     pandas: bool = luigi.BoolParameter()
     namespace: str | None = luigi.OptionalParameter(
         default=None, description='When task namespace is not defined explicitly, please use "__not_user_specified".'
@@ -22,7 +23,7 @@ class test_run(gokart.TaskOnKart):
 
 
 class _TestStatus:
-    def __init__(self, task: gokart.TaskOnKart) -> None:
+    def __init__(self, task: gokart.TaskOnKart[Any]) -> None:
         self.namespace = task.task_namespace
         self.name = type(task).__name__
         self.task_id = task.make_unique_id()
@@ -39,14 +40,14 @@ class _TestStatus:
         return self.status != 'OK'
 
 
-def _get_all_tasks(task: gokart.TaskOnKart) -> list[gokart.TaskOnKart]:
+def _get_all_tasks(task: gokart.TaskOnKart[Any]) -> list[gokart.TaskOnKart[Any]]:
     result = [task]
     for o in flatten(task.requires()):
         result.extend(_get_all_tasks(o))
     return result
 
 
-def _run_with_test_status(task: gokart.TaskOnKart) -> _TestStatus:
+def _run_with_test_status(task: gokart.TaskOnKart[Any]) -> _TestStatus:
     test_message = _TestStatus(task)
     try:
         task.run()

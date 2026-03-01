@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 import warnings
 from dataclasses import dataclass
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from gokart.task import TaskOnKart
 from gokart.utils import FlattenableItems, flatten
@@ -14,10 +14,10 @@ class TaskInfo:
     name: str
     unique_id: str
     output_paths: list[str]
-    params: dict
+    params: dict[str, Any]
     processing_time: str
     is_complete: str
-    task_log: dict
+    task_log: dict[str, Any]
     requires: FlattenableItems[RequiredTask]
     children_task_infos: list[TaskInfo]
 
@@ -59,7 +59,7 @@ def _make_requires_info(requires):
     raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `Iterarble[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 
 
-def make_task_info_tree(task: TaskOnKart, ignore_task_names: list[str] | None = None, cache: dict[str, TaskInfo] | None = None) -> TaskInfo:
+def make_task_info_tree(task: TaskOnKart[Any], ignore_task_names: list[str] | None = None, cache: dict[str, TaskInfo] | None = None) -> TaskInfo:
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
         is_task_complete = task.complete()

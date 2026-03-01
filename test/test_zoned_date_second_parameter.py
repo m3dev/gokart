@@ -6,7 +6,7 @@ from luigi.cmdline_parser import CmdlineParser
 from gokart import TaskOnKart, ZonedDateSecondParameter
 
 
-class ZonedDateSecondParameterTaskWithoutDefault(TaskOnKart):
+class ZonedDateSecondParameterTaskWithoutDefault(TaskOnKart[datetime.datetime]):
     task_namespace = __name__
     dt: datetime.datetime = ZonedDateSecondParameter()
 
@@ -14,7 +14,7 @@ class ZonedDateSecondParameterTaskWithoutDefault(TaskOnKart):
         self.dump(self.dt)
 
 
-class ZonedDateSecondParameterTaskWithDefault(TaskOnKart):
+class ZonedDateSecondParameterTaskWithDefault(TaskOnKart[datetime.datetime]):
     task_namespace = __name__
     dt: datetime.datetime = ZonedDateSecondParameter(default=datetime.datetime(2025, 2, 21, 12, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=9))))
 

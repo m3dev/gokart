@@ -1,6 +1,7 @@
 import json
 import tempfile
 from dataclasses import asdict, dataclass
+from typing import Any
 
 import luigi
 import pytest
@@ -25,7 +26,7 @@ class Config:
         return cls(**json.loads(s))
 
 
-class SerializableParameterWithOutDefault(TaskOnKart):
+class SerializableParameterWithOutDefault(TaskOnKart[Any]):
     task_namespace = __name__
     config: Config = SerializableParameter(object_type=Config)
 
@@ -33,7 +34,7 @@ class SerializableParameterWithOutDefault(TaskOnKart):
         self.dump(self.config)
 
 
-class SerializableParameterWithDefault(TaskOnKart):
+class SerializableParameterWithDefault(TaskOnKart[Any]):
     task_namespace = __name__
     config: Config = SerializableParameter(object_type=Config, default=Config(foo=1, bar='bar'))
 

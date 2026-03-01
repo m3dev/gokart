@@ -12,7 +12,7 @@ import gokart
 from gokart.tree.task_info import dump_task_info_table, dump_task_info_tree, make_task_info_as_tree_str, make_task_info_tree
 
 
-class _SubTask(gokart.TaskOnKart):
+class _SubTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     param = luigi.IntParameter()
 
@@ -23,7 +23,7 @@ class _SubTask(gokart.TaskOnKart):
         self.dump(f'task uid = {self.make_unique_id()}')
 
 
-class _Task(gokart.TaskOnKart):
+class _Task(gokart.TaskOnKart[str]):
     task_namespace = __name__
     param = luigi.IntParameter(default=10)
     sub = gokart.TaskInstanceParameter(default=_SubTask(param=20))
@@ -38,7 +38,7 @@ class _Task(gokart.TaskOnKart):
         self.dump(f'task uid = {self.make_unique_id()}')
 
 
-class _DoubleLoadSubTask(gokart.TaskOnKart):
+class _DoubleLoadSubTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     sub1 = gokart.TaskInstanceParameter()
     sub2 = gokart.TaskInstanceParameter()
@@ -145,15 +145,15 @@ class TestInfo(unittest.TestCase):
         self.assertTrue(tree.children_task_infos[0] is tree.children_task_infos[1])
 
 
-class _TaskInfoExampleTaskA(gokart.TaskOnKart):
+class _TaskInfoExampleTaskA(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
 
-class _TaskInfoExampleTaskB(gokart.TaskOnKart):
+class _TaskInfoExampleTaskB(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
 
-class _TaskInfoExampleTaskC(gokart.TaskOnKart):
+class _TaskInfoExampleTaskC(gokart.TaskOnKart[str]):
     task_namespace = __name__
 
     def requires(self):

@@ -7,7 +7,7 @@ import luigi.mock
 import gokart
 
 
-class _SubDummyTask(gokart.TaskOnKart):
+class _SubDummyTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     param = luigi.IntParameter()
 
@@ -15,7 +15,7 @@ class _SubDummyTask(gokart.TaskOnKart):
         self.dump('test')
 
 
-class _DummyTask(gokart.TaskOnKart):
+class _DummyTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     sub_task = gokart.TaskInstanceParameter()
 
