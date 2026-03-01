@@ -404,7 +404,7 @@ class TaskTest(unittest.TestCase):
         target = Mock(spec=TargetOnKart)
         task.output = Mock(return_value=target)  # type: ignore
 
-        task.dump(1)  # type: ignore
+        task.dump(1)
         target.dump.assert_called_once()
 
     def test_fail_on_empty_dump(self):

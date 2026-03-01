@@ -112,6 +112,13 @@ plugins = ["gokart.mypy:plugin"]
 
 check_untyped_defs = true
 
+warn_unused_configs = true
+warn_redundant_casts = true
+no_implicit_optional = true
+strict_optional = true
+strict_equality = true
+warn_unused_ignores = true
+
 [tool.pytest.ini_options]
 testpaths = ["test"]
 addopts = "-n auto -s -v --durations=0"
