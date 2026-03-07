@@ -17,7 +17,7 @@ class _DummyTask(gokart.TaskOnKart[Any]):
 
 
 class _DummyTaskDep(gokart.TaskOnKart[str]):
-    param: str = luigi.Parameter()
+    param: luigi.Parameter = luigi.Parameter()
 
     def run(self):
         self.dump(self.param)
@@ -29,21 +29,28 @@ class CacheUniqueIDTest(unittest.TestCase):
         luigi.mock.MockFileSystem().clear()
         os.environ.clear()
 
+    @staticmethod
+    def _set_param(cls, attr_name: str, param: luigi.Parameter) -> None:  # type: ignore
+        # Luigi 3.8.0+ uses __set_name__ to register _attribute_name on Parameter descriptors.
+        # When assigning after class creation (bypassing the metaclass), call it manually.
+        param.__set_name__(cls, attr_name)
+        setattr(cls, attr_name, param)
+
     def test_cache_unique_id_true(self):
-        _DummyTaskDep.param = luigi.Parameter(default='original_param')
+        self._set_param(_DummyTaskDep, 'param', luigi.Parameter(default='original_param'))
 
         output1 = gokart.build(_DummyTask(cache_unique_id=True), reset_register=False)
 
-        _DummyTaskDep.param = luigi.Parameter(default='updated_param')
+        self._set_param(_DummyTaskDep, 'param', luigi.Parameter(default='updated_param'))
         output2 = gokart.build(_DummyTask(cache_unique_id=True), reset_register=False)
         self.assertEqual(output1, output2)
 
     def test_cache_unique_id_false(self):
-        _DummyTaskDep.param = luigi.Parameter(default='original_param')
+        self._set_param(_DummyTaskDep, 'param', luigi.Parameter(default='original_param'))
 
         output1 = gokart.build(_DummyTask(cache_unique_id=False), reset_register=False)
 
-        _DummyTaskDep.param = luigi.Parameter(default='updated_param')
+        self._set_param(_DummyTaskDep, 'param', luigi.Parameter(default='updated_param'))
         output2 = gokart.build(_DummyTask(cache_unique_id=False), reset_register=False)
         self.assertNotEqual(output1, output2)
 

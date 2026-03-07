@@ -27,7 +27,7 @@ class TestPandasTypeConfig(PandasTypeConfig):
 
 class _DummyFailTask(gokart.TaskOnKart[pd.DataFrame]):
     task_namespace = 'test_pandas_type_check_framework'
-    rerun = True
+    rerun = luigi.BoolParameter(default=True)
 
     def output(self):
         return self.make_target('dummy.pkl')
@@ -39,7 +39,7 @@ class _DummyFailTask(gokart.TaskOnKart[pd.DataFrame]):
 
 class _DummyFailWithNoneTask(gokart.TaskOnKart[pd.DataFrame]):
     task_namespace = 'test_pandas_type_check_framework'
-    rerun = True
+    rerun = luigi.BoolParameter(default=True)
 
     def output(self):
         return self.make_target('dummy.pkl')
@@ -51,7 +51,7 @@ class _DummyFailWithNoneTask(gokart.TaskOnKart[pd.DataFrame]):
 
 class _DummySuccessTask(gokart.TaskOnKart[pd.DataFrame]):
     task_namespace = 'test_pandas_type_check_framework'
-    rerun = True
+    rerun = luigi.BoolParameter(default=True)
 
     def output(self):
         return self.make_target('dummy.pkl')

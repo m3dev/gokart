@@ -24,14 +24,14 @@ class _DummyInvalidSubClassTask(TaskOnKart[Any]):
 
 class _DummyTask(TaskOnKart[Any]):
     task_namespace = __name__
-    param = luigi.IntParameter()
-    task = TaskInstanceParameter(default=_DummySubTask())
+    param: luigi.IntParameter = luigi.IntParameter()
+    task: TaskInstanceParameter[_DummySubTask] = TaskInstanceParameter(default=_DummySubTask())
 
 
 class _DummyListTask(TaskOnKart[Any]):
     task_namespace = __name__
-    param = luigi.IntParameter()
-    task = ListTaskInstanceParameter(default=[_DummySubTask(), _DummySubTask()])
+    param: luigi.IntParameter = luigi.IntParameter()
+    task: ListTaskInstanceParameter[_DummySubTask] = ListTaskInstanceParameter(default=[_DummySubTask(), _DummySubTask()])
 
 
 class TaskInstanceParameterTest(unittest.TestCase):
@@ -51,12 +51,12 @@ class TaskInstanceParameterTest(unittest.TestCase):
         self.assertEqual(parsed.task_id, original.task_id)
 
     def test_invalid_class(self):
-        self.assertRaises(TypeError, lambda: gokart.TaskInstanceParameter(expected_type=1))  # not type instance
+        self.assertRaises(TypeError, lambda: gokart.TaskInstanceParameter(expected_type=1))  # type: ignore
 
     def test_params_with_correct_param_type(self):
         class _DummyPipelineA(TaskOnKart[Any]):
             task_namespace = __name__
-            subtask = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
+            subtask: gokart.TaskInstanceParameter[_DummySubTask] = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
 
         task = _DummyPipelineA(subtask=_DummyCorrectSubClassTask())
         self.assertEqual(task.requires()['subtask'], _DummyCorrectSubClassTask())  # type: ignore
@@ -64,10 +64,10 @@ class TaskInstanceParameterTest(unittest.TestCase):
     def test_params_with_invalid_param_type(self):
         class _DummyPipelineB(TaskOnKart[Any]):
             task_namespace = __name__
-            subtask = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
+            subtask: gokart.TaskInstanceParameter[_DummySubTask] = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
 
         with self.assertRaises(TypeError):
-            _DummyPipelineB(subtask=_DummyInvalidSubClassTask())
+            _DummyPipelineB(subtask=_DummyInvalidSubClassTask())  # type: ignore
 
 
 class ListTaskInstanceParameterTest(unittest.TestCase):
@@ -75,12 +75,12 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
         _DummyTask.clear_instance_cache()
 
     def test_invalid_class(self):
-        self.assertRaises(TypeError, lambda: gokart.ListTaskInstanceParameter(expected_elements_type=1))  # not type instance
+        self.assertRaises(TypeError, lambda: gokart.ListTaskInstanceParameter(expected_elements_type=1))  # type: ignore  # not type instance
 
     def test_list_params_with_correct_param_types(self):
         class _DummyPipelineC(TaskOnKart[Any]):
             task_namespace = __name__
-            subtask = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
+            subtask: gokart.ListTaskInstanceParameter[_DummySubTask] = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         task = _DummyPipelineC(subtask=[_DummyCorrectSubClassTask()])
         self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(),))  # type: ignore
@@ -88,10 +88,10 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
     def test_list_params_with_invalid_param_types(self):
         class _DummyPipelineD(TaskOnKart[Any]):
             task_namespace = __name__
-            subtask = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
+            subtask: gokart.ListTaskInstanceParameter[_DummySubTask] = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         with self.assertRaises(TypeError):
-            _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask()])
+            _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask()])  # type: ignore
 
 
 if __name__ == '__main__':
