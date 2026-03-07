@@ -107,9 +107,9 @@ class TwoDumpTask(gokart.TaskOnKart[int]):
 
 class AddTask(gokart.TaskOnKart[int]):
     # `a` requires a task to dump `int`
-    a: gokart.TaskOnKart[int] = gokart.TaskInstanceParameter()
+    a: gokart.TaskInstanceParameter[gokart.TaskOnKart[int]] = gokart.TaskInstanceParameter()
     # `b` requires a task to dump `int`
-    b: gokart.TaskOnKart[int] = gokart.TaskInstanceParameter()
+    b: gokart.TaskInstanceParameter[gokart.TaskOnKart[int]] = gokart.TaskInstanceParameter()
 
     def requires(self):
         return dict(a=self.a, b=self.b)

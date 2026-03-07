@@ -141,7 +141,7 @@ The :func:`~gokart.build` is inline code.
     import luigi
 
     class SampleTask(gokart.TaskOnKart[str]):
-        param = luigi.Parameter()
+        param: luigi.Parameter = luigi.Parameter()
 
         def run(self):
             self.dump(self.param)

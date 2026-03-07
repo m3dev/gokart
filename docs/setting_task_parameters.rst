@@ -2,7 +2,7 @@
 Setting Task Parameters
 ============================
 
-There are several ways to set task parameters. 
+There are several ways to set task parameters.
 
 - Set parameter from command line
 - Set parameter at config file
@@ -26,7 +26,7 @@ Set parameter at config file
     [sample.SomeTask]
     param = Hello
 
-Above config file (``config.ini``) must be read before ``gokart.run()`` as the following code: 
+Above config file (``config.ini``) must be read before ``gokart.run()`` as the following code:
 
 .. code:: python
 
@@ -68,12 +68,12 @@ Parameter values can be inherited from other task using ``@inherits_config_param
 .. code:: python
 
     class MasterConfig(luigi.Config):
-        param: str = luigi.Parameter()
-        param2: str = luigi.Parameter()
+        param: luigi.Parameter = luigi.Parameter()
+        param2: luigi.Parameter = luigi.Parameter()
 
     @inherits_config_params(MasterConfig)
     class SomeTask(gokart.TaskOnKart):
-        param: str = luigi.Parameter()
+        param: luigi.Parameter = luigi.Parameter()
 
 
 This is useful when multiple tasks has the same parameter. In the above example, parameter settings of ``MasterConfig`` will be inherited to all tasks decorated with ``@inherits_config_params(MasterConfig)`` as ``SomeTask``.
@@ -84,12 +84,12 @@ In the above example, ``param2`` will not be available in ``SomeTask``, since ``
 .. code:: python
 
     class MasterConfig(luigi.Config):
-        param: str = luigi.Parameter()
-        param2: str = luigi.Parameter()
+        param: luigi.Parameter = luigi.Parameter()
+        param2: luigi.Parameter = luigi.Parameter()
 
     @inherits_config_params(MasterConfig, parameter_alias={'param2': 'param3'})
     class SomeTask(gokart.TaskOnKart):
-        param3: str = luigi.Parameter()
+        param3: luigi.Parameter = luigi.Parameter()
 
 
 You may also set a parameter name alias by setting ``parameter_alias``.

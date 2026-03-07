@@ -17,7 +17,7 @@ How ``TaskOnKart`` helps to define a task looks like:
 
 
     class TaskA(gokart.TaskOnKart[str]):
-        param = luigi.Parameter()
+        param: luigi.Parameter = luigi.Parameter()
 
         def output(self):
             return self.make_target('output_of_task_a.pkl')
@@ -28,7 +28,7 @@ How ``TaskOnKart`` helps to define a task looks like:
 
 
     class TaskB(gokart.TaskOnKart[str]):
-        param = luigi.Parameter()
+        param: luigi.Parameter = luigi.Parameter()
 
         def requires(self):
             return TaskA(param='world')

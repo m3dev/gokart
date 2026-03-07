@@ -11,9 +11,9 @@ Also please refer to :doc:`task_settings` section.
 .. code:: python
 
     class Task(gokart.TaskOnKart):
-        param_a = luigi.Parameter()
-        param_c = luigi.ListParameter()
-        param_d = luigi.IntParameter(default=1)
+        param_a: luigi.Parameter = luigi.Parameter()
+        param_c: luigi.ListParameter = luigi.ListParameter()
+        param_d: luigi.IntParameter = luigi.IntParameter(default=1)
 
 Please refer to `luigi document <https://luigi.readthedocs.io/en/stable/api/luigi.parameter.html>`_ for a list of parameter types.
 
@@ -42,7 +42,7 @@ The :func:`~gokart.parameter.TaskInstanceParameter` executes a task using the re
 
 
     class TaskB(gokart.TaskOnKart[str]):
-        require_task = gokart.TaskInstanceParameter()
+        require_task: gokart.TaskInstanceParameter = gokart.TaskInstanceParameter()
 
         def requires(self):
             return self.require_task
@@ -120,7 +120,7 @@ Example
             return cls(**json.loads(s))
 
     class DummyTask(gokart.TaskOnKart):
-        config: Config = gokart.SerializableParameter(object_type=Config)
+        config: gokart.SerializableParameter[Config] = gokart.SerializableParameter(object_type=Config)
 
         def run(self):
             # Save the `config` object as part of the task result.
