@@ -12,7 +12,7 @@ from gokart.run import _try_to_send_event_summary_to_slack
 
 class _DummyTask(gokart.TaskOnKart[Any]):
     task_namespace = __name__
-    param = luigi.Parameter()
+    param: luigi.Parameter = luigi.Parameter()
 
 
 class RunTest(unittest.TestCase):

@@ -12,7 +12,7 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10, <4"
 dependencies = [
-  "luigi",
+  "luigi>=3.8.0",
   "boto3",
   "slack-sdk",
   "pandas",
@@ -108,7 +108,6 @@ quote-style = "single"
 
 [tool.mypy]
 ignore_missing_imports = true
-plugins = ["gokart.mypy:plugin"]
 
 check_untyped_defs = true
 

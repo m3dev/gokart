@@ -21,9 +21,9 @@ from gokart.task import EmptyDumpError
 
 class _DummyTask(gokart.TaskOnKart[Any]):
     task_namespace = __name__
-    param = luigi.IntParameter(default=1)
-    list_param = luigi.ListParameter(default=['a', 'b'])
-    bool_param = luigi.BoolParameter()
+    param: luigi.IntParameter = luigi.IntParameter(default=1)
+    list_param: luigi.ListParameter[tuple[str, ...]] = luigi.ListParameter(default=('a', 'b'))
+    bool_param: luigi.BoolParameter = luigi.BoolParameter()
 
     def output(self):
         return None
@@ -75,10 +75,10 @@ class _DummySubTaskWithPrivateParameter(gokart.TaskOnKart[Any]):
 
 class _DummyTaskWithPrivateParameter(gokart.TaskOnKart[Any]):
     task_namespace = __name__
-    int_param = luigi.IntParameter()
-    private_int_param = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
-    task_param = TaskInstanceParameter()
-    list_task_param = ListTaskInstanceParameter()
+    int_param: luigi.IntParameter = luigi.IntParameter()
+    private_int_param: luigi.IntParameter = luigi.IntParameter(visibility=ParameterVisibility.PRIVATE)
+    task_param: TaskInstanceParameter[Any] = TaskInstanceParameter()
+    list_task_param: ListTaskInstanceParameter[Any] = ListTaskInstanceParameter()
 
 
 class TaskTest(unittest.TestCase):
@@ -180,7 +180,7 @@ class TaskTest(unittest.TestCase):
 
     def test_clone_with_special_params(self):
         class _DummyTaskRerun(gokart.TaskOnKart[Any]):
-            a = luigi.BoolParameter(default=False)
+            a: luigi.BoolParameter = luigi.BoolParameter(default=False)
 
         task = _DummyTaskRerun(a=True, rerun=True)
         cloned = task.clone(_DummyTaskRerun)
@@ -492,7 +492,7 @@ class TaskTest(unittest.TestCase):
 
         class _WithTaskInstanceParameter(gokart.TaskOnKart[Any]):
             task_namespace = __name__
-            a_task = gokart.TaskInstanceParameter()
+            a_task: gokart.TaskInstanceParameter[Any] = gokart.TaskInstanceParameter()
 
         without_task = _WithoutTaskInstanceParameter()
         self.assertListEqual(without_task.requires(), [])  # type: ignore
@@ -544,7 +544,7 @@ class TaskTest(unittest.TestCase):
     def test_to_str_params_changes_on_values_and_flags(self):
         class _DummyTaskWithParams(gokart.TaskOnKart[Any]):
             task_namespace = __name__
-            param: str = luigi.Parameter()
+            param: luigi.Parameter = luigi.Parameter()
 
         t1 = _DummyTaskWithParams(param='a')
         self.assertEqual(t1.to_str_params(), t1.to_str_params())  # cache

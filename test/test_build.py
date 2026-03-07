@@ -25,7 +25,7 @@ from gokart.conflict_prevention_lock.task_lock import TaskLockException
 
 class _DummyTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
-    param: str = luigi.Parameter()
+    param: luigi.Parameter = luigi.Parameter()
 
     def output(self):
         return self.make_target('./test/dummy.pkl')
@@ -36,8 +36,8 @@ class _DummyTask(gokart.TaskOnKart[str]):
 
 class _DummyTaskTwoOutputs(gokart.TaskOnKart[dict[str, str]]):
     task_namespace = __name__
-    param1: str = luigi.Parameter()
-    param2: str = luigi.Parameter()
+    param1: luigi.Parameter = luigi.Parameter()
+    param2: luigi.Parameter = luigi.Parameter()
 
     def output(self):
         return {'out1': self.make_target('./test/dummy1.pkl'), 'out2': self.make_target('./test/dummy2.pkl')}
@@ -63,7 +63,7 @@ class _ParallelRunner(gokart.TaskOnKart[str]):
 
 
 class _LoadRequires(gokart.TaskOnKart[str]):
-    task: gokart.TaskOnKart[str] = gokart.TaskInstanceParameter()
+    task: gokart.TaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.TaskInstanceParameter()
 
     def requires(self):
         return self.task

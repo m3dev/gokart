@@ -1,4 +1,5 @@
 import unittest
+from typing import Any
 from unittest.mock import patch
 
 import luigi
@@ -9,7 +10,7 @@ import gokart
 
 class _SubDummyTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
-    param = luigi.IntParameter()
+    param: luigi.IntParameter = luigi.IntParameter()
 
     def run(self):
         self.dump('test')
@@ -17,7 +18,7 @@ class _SubDummyTask(gokart.TaskOnKart[str]):
 
 class _DummyTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
-    sub_task = gokart.TaskInstanceParameter()
+    sub_task: gokart.TaskInstanceParameter[gokart.TaskOnKart[Any]] = gokart.TaskInstanceParameter()
 
     def output(self):
         return self.make_target('test.txt')

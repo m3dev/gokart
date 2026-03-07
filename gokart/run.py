@@ -134,11 +134,11 @@ def run(cmdline_args=None, set_retcode=True):
     cmdline_args = cmdline_args or sys.argv[1:]
 
     if set_retcode:
-        luigi.retcodes.retcode.already_running = 10
-        luigi.retcodes.retcode.missing_data = 20
-        luigi.retcodes.retcode.not_run = 30
-        luigi.retcodes.retcode.task_failed = 40
-        luigi.retcodes.retcode.scheduling_error = 50
+        luigi.retcodes.retcode.already_running = 10  # type: ignore
+        luigi.retcodes.retcode.missing_data = 20  # type: ignore
+        luigi.retcodes.retcode.not_run = 30  # type: ignore
+        luigi.retcodes.retcode.task_failed = 40  # type: ignore
+        luigi.retcodes.retcode.scheduling_error = 50  # type: ignore
 
     _try_tree_info(cmdline_args)
     _try_to_delete_unnecessary_output_file(cmdline_args)

@@ -8,7 +8,7 @@ from gokart import TaskOnKart, ZonedDateSecondParameter
 
 class ZonedDateSecondParameterTaskWithoutDefault(TaskOnKart[datetime.datetime]):
     task_namespace = __name__
-    dt: datetime.datetime = ZonedDateSecondParameter()
+    dt: ZonedDateSecondParameter = ZonedDateSecondParameter()
 
     def run(self):
         self.dump(self.dt)
@@ -16,7 +16,9 @@ class ZonedDateSecondParameterTaskWithoutDefault(TaskOnKart[datetime.datetime]):
 
 class ZonedDateSecondParameterTaskWithDefault(TaskOnKart[datetime.datetime]):
     task_namespace = __name__
-    dt: datetime.datetime = ZonedDateSecondParameter(default=datetime.datetime(2025, 2, 21, 12, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=9))))
+    dt: ZonedDateSecondParameter = ZonedDateSecondParameter(
+        default=datetime.datetime(2025, 2, 21, 12, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=9)))
+    )
 
     def run(self):
         self.dump(self.dt)

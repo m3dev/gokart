@@ -147,7 +147,7 @@ Modify ``example/gokart_example/model/sample.py`` as follows:
 
     class StringToSplit(GokartTask):
         """Like the function to divide received data by spaces."""
-        task = gokart.TaskInstanceParameter()
+        task: gokart.TaskInstanceParameter = gokart.TaskInstanceParameter()
 
         def run(self):
             sample = self.load('task')
@@ -240,7 +240,7 @@ Add new parameter on dependent tasks like following:
 .. code:: python
 
     class Sample(GokartTask):
-        version = luigi.IntParameter(default=1)
+        version: luigi.IntParameter = luigi.IntParameter(default=1)
 
         def run(self):
             self.dump('sample output version {self.version}')

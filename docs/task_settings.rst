@@ -83,7 +83,7 @@ If you want to change the parameter of TaskA and rerun TaskB and TaskC, recommen
 .. code:: python
 
     class TaskA(gokart.TaskOnKart):
-        __version = luigi.IntParameter(default=1)
+        __version: luigi.IntParameter = luigi.IntParameter(default=1)
 
 If the hash value of TaskA will change, the dependent tasks (in this case, TaskB and TaskC) will rerun.
 

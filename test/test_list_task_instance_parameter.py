@@ -14,8 +14,8 @@ class _DummySubTask(TaskOnKart[Any]):
 
 class _DummyTask(TaskOnKart[Any]):
     task_namespace = __name__
-    param = luigi.IntParameter()
-    task = gokart.TaskInstanceParameter(default=_DummySubTask())
+    param: luigi.IntParameter = luigi.IntParameter()
+    task: gokart.TaskInstanceParameter[_DummySubTask] = gokart.TaskInstanceParameter(default=_DummySubTask())
 
 
 class ListTaskInstanceParameterTest(unittest.TestCase):
