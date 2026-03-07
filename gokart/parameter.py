@@ -3,8 +3,14 @@ from __future__ import annotations
 import bz2
 import datetime
 import json
+import sys
 from logging import getLogger
-from typing import Any, Generic, Protocol, TypeVar, Unpack
+from typing import Any, Generic, Protocol, TypeVar
+
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
 from warnings import warn
 
 import luigi
