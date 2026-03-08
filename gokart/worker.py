@@ -332,7 +332,7 @@ class gokart_worker(luigi.Config):
     NOTE: use snake_case for this class to match the luigi.Config convention.
     """
 
-    id: luigi.Parameter = luigi.Parameter(default='', description='Override the auto-generated worker_id')
+    id: luigi.StrParameter = luigi.StrParameter(default='', description='Override the auto-generated worker_id')
     ping_interval: luigi.FloatParameter = luigi.FloatParameter(
         default=1.0,
         config_path=dict(section='core', name='worker-ping-interval'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
@@ -349,7 +349,7 @@ class gokart_worker(luigi.Config):
     count_last_scheduled: luigi.BoolParameter = luigi.BoolParameter(
         default=False, description='Keep a worker alive only if there are pending tasks which it was the last to schedule.'
     )
-    wait_interval: luigi.BoolParameter = luigi.FloatParameter(
+    wait_interval: luigi.FloatParameter = luigi.FloatParameter(
         default=1.0,
         config_path=dict(section='core', name='worker-wait-interval'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
     )
@@ -365,8 +365,8 @@ class gokart_worker(luigi.Config):
         default=0,
         config_path=dict(section='core', name='worker-timeout'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
     )
-    task_limit: luigi.IntParameter = luigi.IntParameter(
-        default=None,  # type: ignore
+    task_limit: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
+        default=None,  # type: ignore[arg-type]  # OptionalIntParameter.__init__ inherits IntParameter's signature
         config_path=dict(section='core', name='worker-task-limit'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
     )
     retry_external_tasks: luigi.BoolParameter = luigi.BoolParameter(
@@ -388,7 +388,7 @@ class gokart_worker(luigi.Config):
         'tasks are complete before marking them as done.',
     )
     force_multiprocessing: luigi.BoolParameter = luigi.BoolParameter(default=False, description='If true, use multiprocessing also when running with 1 worker')
-    task_process_context: luigi.OptionalParameter = luigi.OptionalParameter(
+    task_process_context: luigi.OptionalStrParameter = luigi.OptionalStrParameter(
         default=None,
         description='If set to a fully qualified class name, the class will '
         'be instantiated with a TaskProcess as its constructor parameter and '

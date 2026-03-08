@@ -15,7 +15,13 @@ from warnings import warn
 
 import luigi
 from luigi import task_register
-from luigi.parameter import _no_value, _NoValueType, _ParameterKwargs
+
+try:
+    from luigi.parameter import _no_value, _NoValueType, _ParameterKwargs
+except ImportError:
+    _no_value = None  # type: ignore[assignment]
+    _NoValueType = type(None)  # type: ignore[assignment,misc]
+    _ParameterKwargs = dict  # type: ignore[assignment,misc]
 
 import gokart
 

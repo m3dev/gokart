@@ -10,7 +10,7 @@ from google.oauth2.service_account import Credentials
 
 
 class GCSConfig(luigi.Config):
-    gcs_credential_name: luigi.Parameter = luigi.Parameter(default='GCS_CREDENTIAL', description='GCS credential environment variable.')
+    gcs_credential_name: luigi.StrParameter = luigi.StrParameter(default='GCS_CREDENTIAL', description='GCS credential environment variable.')
     _client = None
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:

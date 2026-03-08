@@ -45,8 +45,8 @@ def make_tree_info(
 
 
 class tree_info(TaskOnKart[Any]):
-    mode: luigi.Parameter = luigi.Parameter(default='', description='This must be in ["simple", "all"].')
-    output_path: luigi.Parameter = luigi.Parameter(default='tree.txt', description='Output file path.')
+    mode: luigi.StrParameter = luigi.StrParameter(default='', description='This must be in ["simple", "all"].')
+    output_path: luigi.StrParameter = luigi.StrParameter(default='tree.txt', description='Output file path.')
 
     def output(self):
         return self.make_target(self.output_path, use_unique_id=False)
