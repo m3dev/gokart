@@ -2,10 +2,14 @@ version = 1
 revision = 3
 requires-python = ">=3.10, <4"
 resolution-markers = [
-    "python_full_version >= '3.13'",
-    "python_full_version == '3.12.*'",
-    "python_full_version == '3.11.*'",
-    "python_full_version < '3.11'",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "python_full_version >= '3.13' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform != 'win32'",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "python_full_version < '3.11' and sys_platform != 'win32'",
 ]
 
 [[package]]
@@ -89,7 +93,8 @@ name = "cffi"
 version = "1.17.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.11'",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "python_full_version < '3.11' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "pycparser", marker = "python_full_version < '3.11'" },
@@ -149,9 +154,12 @@ name = "cffi"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13'",
-    "python_full_version == '3.12.*'",
-    "python_full_version == '3.11.*'",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "python_full_version >= '3.13' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "pycparser", marker = "python_full_version >= '3.11' and implementation_name != 'PyPy'" },
@@ -434,7 +442,8 @@ name = "cryptography"
 version = "45.0.7"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.11'",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "python_full_version < '3.11' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "cffi", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_python_implementation != 'PyPy'" },
@@ -484,9 +493,12 @@ name = "cryptography"
 version = "46.0.5"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13'",
-    "python_full_version == '3.12.*'",
-    "python_full_version == '3.11.*'",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "python_full_version >= '3.13' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "cffi", version = "2.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and platform_python_implementation != 'PyPy'" },
@@ -559,6 +571,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/70/43/86fe3f9e130c4137b0f1b50784dd70a5087b911fe07fa81e53e0c4c47fea/dill-0.3.9.tar.gz", hash = "sha256:81aa267dddf68cbfe8029c42ca9ec6a4ab3b22371d1c450abc54422577b4512c", size = 187000, upload-time = "2024-09-29T00:03:20.958Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/d1/e73b6ad76f0b1fb7f23c35c6d95dbc506a9c8804f43dda8cb5b0fa6331fd/dill-0.3.9-py3-none-any.whl", hash = "sha256:468dff3b89520b474c0397703366b7b95eebe6303f108adf9b19da1f702be87a", size = 119418, upload-time = "2024-09-29T00:03:19.344Z" },
+]
+
+[[package]]
+name = "docutils"
+version = "0.22.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/b6/03bb70946330e88ffec97aefd3ea75ba575cb2e762061e0e62a213befee8/docutils-0.22.4.tar.gz", hash = "sha256:4db53b1fde9abecbb74d91230d32ab626d94f6badfc575d6db9194a49df29968", size = 2291750, upload-time = "2025-12-18T19:00:26.443Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/10/5da547df7a391dcde17f59520a231527b8571e6f46fc8efb02ccb370ab12/docutils-0.22.4-py3-none-any.whl", hash = "sha256:d0013f540772d1420576855455d050a2180186c91c15779301ac2ccb3eeb68de", size = 633196, upload-time = "2025-12-18T19:00:18.077Z" },
 ]
 
 [[package]]
@@ -704,7 +725,7 @@ requires-dist = [
     { name = "dill" },
     { name = "google-api-python-client" },
     { name = "google-auth" },
-    { name = "luigi" },
+    { name = "luigi", specifier = ">=3.8.0" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=0.19.0" },
@@ -957,15 +978,20 @@ wheels = [
 
 [[package]]
 name = "luigi"
-version = "3.6.0"
+version = "3.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "python-daemon" },
+    { name = "python-daemon", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
+    { name = "python-daemon", version = "3.1.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
     { name = "python-dateutil" },
     { name = "tenacity" },
     { name = "tornado" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/90/2930a8570da112ea8717d18269ebc93332ef34eaf1c33cfd0c1f6ae589c9/luigi-3.6.0.tar.gz", hash = "sha256:41b14850223c619d9006b30acda733e756b883fc7e60814205576647190c96e3", size = 1236109, upload-time = "2024-12-06T00:58:03.138Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/4a574c00003c2f9e1c614d9940dc5ff36d2fd6da90810c15053f04200b90/luigi-3.8.0.tar.gz", hash = "sha256:e77c37e7d8ed0b85d5da2daeae3b3f0e89c03993ff28698795f17634f1d5ac75", size = 1288264, upload-time = "2026-03-06T17:00:22.517Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/48/90e36d39a29cfdc39baa0688ed75bc05e366ccabb757559a28ae8defda9a/luigi-3.8.0-py3-none-any.whl", hash = "sha256:647aac84c4439e4d0578ea8ba0013b4d739a2c2897b9fe8e78dba8d3ecf25766", size = 1182571, upload-time = "2026-03-06T17:00:29.089Z" },
+]
 
 [[package]]
 name = "lupa"
@@ -1604,10 +1630,36 @@ wheels = [
 
 [[package]]
 name = "python-daemon"
+version = "2.1.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+]
+dependencies = [
+    { name = "docutils", marker = "sys_platform == 'win32'" },
+    { name = "lockfile", marker = "sys_platform == 'win32'" },
+    { name = "setuptools", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b2/fb/a280d65f81e9d69989c8d6c4e0bb18d7280cdcd6d406a2cc3f4eb47d4402/python-daemon-2.1.2.tar.gz", hash = "sha256:261c859be5c12ae7d4286dc6951e87e9e1a70a882a8b41fd926efc1ec4214f73", size = 76176, upload-time = "2016-10-26T10:16:01.909Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f4/59/816004688f8e8602526553cd96226f34657ce4a86daa2240c3eebb0568a3/python_daemon-2.1.2-py2.py3-none-any.whl", hash = "sha256:53da55aec3bb67b576e13a8091a2181f99b395c2eec32a5a0d91d347a5c420a7", size = 19425, upload-time = "2016-10-26T10:16:05.441Z" },
+]
+
+[[package]]
+name = "python-daemon"
 version = "3.1.2"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform != 'win32'",
+    "python_full_version < '3.11' and sys_platform != 'win32'",
+]
 dependencies = [
-    { name = "lockfile" },
+    { name = "lockfile", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3d/37/4f10e37bdabc058a32989da2daf29e57dc59dbc5395497f3d36d5f5e2694/python_daemon-3.1.2.tar.gz", hash = "sha256:f7b04335adc473de877f5117e26d5f1142f4c9f7cd765408f0877757be5afbf4", size = 71576, upload-time = "2024-12-03T08:41:07.843Z" }
 wheels = [
@@ -1770,6 +1822,15 @@ wheels = [
 ]
 
 [[package]]
+name = "setuptools"
+version = "82.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/f3/748f4d6f65d1756b9ae577f329c951cda23fb900e4de9f70900ced962085/setuptools-82.0.0.tar.gz", hash = "sha256:22e0a2d69474c6ae4feb01951cb69d515ed23728cf96d05513d36e42b62b37cb", size = 1144893, upload-time = "2026-02-08T15:08:40.206Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/c6/76dc613121b793286a3f91621d7b75a2b493e0390ddca50f11993eadf192/setuptools-82.0.0-py3-none-any.whl", hash = "sha256:70b18734b607bd1da571d097d236cfcfacaf01de45717d59e6e04b96877532e0", size = 1003468, upload-time = "2026-02-08T15:08:38.723Z" },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1798,11 +1859,11 @@ wheels = [
 
 [[package]]
 name = "tenacity"
-version = "8.5.0"
+version = "9.1.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a3/4d/6a19536c50b849338fcbe9290d562b52cbdcf30d8963d3588a68a4107df1/tenacity-8.5.0.tar.gz", hash = "sha256:8bc6c0c8a09b31e6cad13c47afbed1a567518250a9a171418582ed8d9c20ca78", size = 47309, upload-time = "2024-07-05T07:25:31.836Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/3f/8ba87d9e287b9d385a02a7114ddcef61b26f86411e121c9003eb509a1773/tenacity-8.5.0-py3-none-any.whl", hash = "sha256:b594c2a5945830c267ce6b79a166228323ed52718f30302c1359836112346687", size = 28165, upload-time = "2024-07-05T07:25:29.591Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
 ]
 
 [[package]]

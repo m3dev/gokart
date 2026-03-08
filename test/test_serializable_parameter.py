@@ -28,7 +28,7 @@ class Config:
 
 class SerializableParameterWithOutDefault(TaskOnKart[Any]):
     task_namespace = __name__
-    config: Config = SerializableParameter(object_type=Config)
+    config: SerializableParameter[Config] = SerializableParameter(object_type=Config)
 
     def run(self):
         self.dump(self.config)
@@ -36,7 +36,7 @@ class SerializableParameterWithOutDefault(TaskOnKart[Any]):
 
 class SerializableParameterWithDefault(TaskOnKart[Any]):
     task_namespace = __name__
-    config: Config = SerializableParameter(object_type=Config, default=Config(foo=1, bar='bar'))
+    config: SerializableParameter[Config] = SerializableParameter(object_type=Config, default=Config(foo=1, bar='bar'))
 
     def run(self):
         self.dump(self.config)

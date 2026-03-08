@@ -51,63 +51,71 @@ class TaskOnKart(luigi.Task, Generic[T]):
     * :py:meth:`dump` - this save a object as output of this task.
     """
 
-    workspace_directory: str = luigi.Parameter(
+    workspace_directory: luigi.Parameter[str] = luigi.Parameter(
         default='./resources/', description='A directory to set outputs on. Please use a path starts with s3:// when you use s3.', significant=False
     )
-    local_temporary_directory: str = luigi.Parameter(default='./resources/tmp/', description='A directory to save temporary files.', significant=False)
-    rerun: bool = luigi.BoolParameter(default=False, description='If this is true, this task will run even if all output files exist.', significant=False)
-    strict_check: bool = luigi.BoolParameter(
+    local_temporary_directory: luigi.Parameter[str] = luigi.Parameter(
+        default='./resources/tmp/', description='A directory to save temporary files.', significant=False
+    )
+    rerun: luigi.BoolParameter = luigi.BoolParameter(
+        default=False, description='If this is true, this task will run even if all output files exist.', significant=False
+    )
+    strict_check: luigi.BoolParameter = luigi.BoolParameter(
         default=False, description='If this is true, this task will not run only if all input and output files exist.', significant=False
     )
-    modification_time_check: bool = luigi.BoolParameter(
+    modification_time_check: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
         description='If this is true, this task will not run only if all input and output files exist,'
         ' and all input files are modified before output file are modified.',
         significant=False,
     )
-    serialized_task_definition_check: bool = luigi.BoolParameter(
+    serialized_task_definition_check: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
         description='If this is true, even if all outputs are present,this task will be executed if any changes have been made to the code.',
         significant=False,
     )
-    delete_unnecessary_output_files: bool = luigi.BoolParameter(
+    delete_unnecessary_output_files: luigi.BoolParameter = luigi.BoolParameter(
         default=False, description='If this is true, delete unnecessary output files.', significant=False
     )
-    significant: bool = luigi.BoolParameter(
+    significant: luigi.BoolParameter = luigi.BoolParameter(
         default=True, description='If this is false, this task is not treated as a part of dependent tasks for the unique id.', significant=False
     )
-    fix_random_seed_methods: tuple[str] = luigi.ListParameter(
-        default=['random.seed', 'numpy.random.seed'], description='Fix random seed method list.', significant=False
+    fix_random_seed_methods: luigi.Parameter[tuple[str, ...]] = luigi.ListParameter(
+        default=('random.seed', 'numpy.random.seed'), description='Fix random seed method list.', significant=False
     )
     FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER = -42497368
-    fix_random_seed_value: int = luigi.IntParameter(
+    fix_random_seed_value: luigi.Parameter[int] = luigi.IntParameter(
         default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.', significant=False
     )  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
-    redis_host: str | None = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
-    redis_port: int | None = luigi.OptionalIntParameter(
-        default=None,
+    redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_port: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
+        default=None,  # type: ignore
         description='Task lock check is deactivated, when None.',
         significant=False,
     )
-    redis_timeout: int = luigi.IntParameter(default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False)
+    redis_timeout: luigi.IntParameter = luigi.IntParameter(
+        default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False
+    )
 
-    fail_on_empty_dump: bool = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
-    store_index_in_feather: bool = ExplicitBoolParameter(
+    fail_on_empty_dump: luigi.Parameter[bool] = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
+    store_index_in_feather: luigi.Parameter[bool] = ExplicitBoolParameter(
         default=True, description='Wether to store index when using feather as a output object.', significant=False
     )
 
-    cache_unique_id: bool = ExplicitBoolParameter(default=True, description='Cache unique id during runtime', significant=False)
-    should_dump_supplementary_log_files: bool = ExplicitBoolParameter(
+    cache_unique_id: luigi.Parameter[bool] = ExplicitBoolParameter(default=True, description='Cache unique id during runtime', significant=False)
+    should_dump_supplementary_log_files: luigi.Parameter[bool] = ExplicitBoolParameter(
         default=True,
         description='Whether to dump supplementary files (task_log, random_seed, task_params, processing_time, module_versions) or not. \
          Note that when set to False, task_info functions (e.g. gokart.tree.task_info.make_task_info_as_tree_str()) cannot be used.',
         significant=False,
     )
-    complete_check_at_run: bool = ExplicitBoolParameter(
+    complete_check_at_run: luigi.Parameter[bool] = ExplicitBoolParameter(
         default=True, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
     )
-    should_lock_run: bool = ExplicitBoolParameter(default=False, significant=False, description='Whether to use redis lock or not at task run.')
+    should_lock_run: luigi.Parameter[bool] = ExplicitBoolParameter(
+        default=False, significant=False, description='Whether to use redis lock or not at task run.'
+    )
 
     @property
     def priority(self):

@@ -3,27 +3,48 @@ from __future__ import annotations
 import bz2
 import datetime
 import json
+import sys
 from logging import getLogger
 from typing import Any, Generic, Protocol, TypeVar
+
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
 from warnings import warn
 
 import luigi
 from luigi import task_register
+
+try:
+    from luigi.parameter import _no_value, _NoValueType, _ParameterKwargs
+except ImportError:
+    _no_value = None  # type: ignore[assignment]
+    _NoValueType = type(None)  # type: ignore[assignment,misc]
+    _ParameterKwargs = dict  # type: ignore[assignment,misc]
 
 import gokart
 
 logger = getLogger(__name__)
 
 
-class TaskInstanceParameter(luigi.Parameter):
-    def __init__(self, expected_type=None, *args, **kwargs):
+TASK_ON_KART_TYPE = TypeVar('TASK_ON_KART_TYPE', bound='gokart.TaskOnKart')  # type: ignore
+
+
+class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_KART_TYPE]):
+    def __init__(
+        self,
+        expected_type: type[TASK_ON_KART_TYPE] | None = None,
+        default: TASK_ON_KART_TYPE | _NoValueType = _no_value,
+        **kwargs: Unpack[_ParameterKwargs],
+    ):
         if expected_type is None:
             self.expected_type: type = gokart.TaskOnKart
         elif isinstance(expected_type, type):
             self.expected_type = expected_type
         else:
             raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
-        super().__init__(*args, **kwargs)
+        super().__init__(default=default, **kwargs)
 
     @staticmethod
     def _recursive(param_dict):
@@ -64,15 +85,20 @@ class _TaskInstanceEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-class ListTaskInstanceParameter(luigi.Parameter):
-    def __init__(self, expected_elements_type=None, *args, **kwargs):
+class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generic[TASK_ON_KART_TYPE]):
+    def __init__(
+        self,
+        expected_elements_type: type[TASK_ON_KART_TYPE] | None = None,
+        default: list[TASK_ON_KART_TYPE] | _NoValueType = _no_value,
+        **kwargs: Unpack[_ParameterKwargs],
+    ):
         if expected_elements_type is None:
             self.expected_elements_type: type = gokart.TaskOnKart
         elif isinstance(expected_elements_type, type):
             self.expected_elements_type = expected_elements_type
         else:
             raise TypeError(f'expected_elements_type must be a type, not {type(expected_elements_type)}')
-        super().__init__(*args, **kwargs)
+        super().__init__(default=default, **kwargs)
 
     def parse(self, s):
         return [TaskInstanceParameter().parse(x) for x in list(json.loads(s))]
@@ -113,7 +139,7 @@ class Serializable(Protocol):
 S = TypeVar('S', bound=Serializable)
 
 
-class SerializableParameter(luigi.Parameter, Generic[S]):
+class SerializableParameter(luigi.Parameter[S], Generic[S]):
     def __init__(self, object_type: type[S], *args: Any, **kwargs: Any) -> None:
         self._object_type = object_type
         super().__init__(*args, **kwargs)
@@ -125,7 +151,7 @@ class SerializableParameter(luigi.Parameter, Generic[S]):
         return x.gokart_serialize()
 
 
-class ZonedDateSecondParameter(luigi.Parameter):
+class ZonedDateSecondParameter(luigi.Parameter[datetime.datetime]):
     """
     ZonedDateSecondParameter supports a datetime.datetime object with timezone information.
 
