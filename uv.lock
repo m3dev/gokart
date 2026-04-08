@@ -562,7 +562,6 @@ dependencies = [
     { name = "slack-sdk" },
     { name = "typing-extensions", version = "4.12.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.13'" },
     { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "uritemplate" },
 ]
 
 [package.optional-dependencies]
@@ -608,7 +607,6 @@ requires-dist = [
     { name = "redis" },
     { name = "slack-sdk" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.11.0" },
-    { name = "uritemplate" },
 ]
 provides-extras = ["polars"]
 

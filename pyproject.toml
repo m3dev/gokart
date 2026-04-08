@@ -19,7 +19,6 @@ dependencies = [
   "numpy",
   "google-auth",
   "pyarrow",
-  "uritemplate",
   "google-api-python-client",
   "APScheduler",
   "redis",
