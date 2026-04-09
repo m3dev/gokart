@@ -4,12 +4,13 @@ import os
 import shutil
 from typing import cast
 
-from gokart.s3_config import S3Config
 from gokart.zip_client import ZipClient, _unzip_file
 
 
 class S3ZipClient(ZipClient):
     def __init__(self, file_path: str, temporary_directory: str) -> None:
+        from gokart.s3_config import S3Config
+
         self._file_path = file_path
         self._temporary_directory = temporary_directory
         self._client = S3Config().get_s3_client()

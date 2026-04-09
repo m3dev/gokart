@@ -9,8 +9,6 @@ from logging import getLogger
 from typing import Any, Final
 from urllib.parse import urlsplit
 
-from googleapiclient.model import makepatch
-
 from gokart.gcs_config import GCSConfig
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.utils import FlattenableItems
@@ -38,6 +36,14 @@ class GCSObjectMetadataClient:
         assert scheme == 'gs'
         path_without_initial_slash = path[1:]
         return netloc, path_without_initial_slash
+
+    @staticmethod
+    def _makepatch(original: dict[str, Any], modified: dict[str, Any]) -> dict[str, Any]:
+        try:
+            from googleapiclient.model import makepatch
+        except ImportError:
+            raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
+        return dict(makepatch(original, modified))
 
     @staticmethod
     def add_task_state_labels(
@@ -78,7 +84,7 @@ class GCSObjectMetadataClient:
                 .patch(
                     bucket=bucket,
                     object=obj,
-                    body=makepatch({'metadata': original_metadata}, {'metadata': patched_metadata}),
+                    body=GCSObjectMetadataClient._makepatch({'metadata': original_metadata}, {'metadata': patched_metadata}),
                 )
                 .execute()
             )

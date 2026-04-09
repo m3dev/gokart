@@ -550,10 +550,7 @@ source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
     { name = "backoff" },
-    { name = "boto3" },
     { name = "dill" },
-    { name = "google-api-python-client" },
-    { name = "google-auth" },
     { name = "luigi" },
     { name = "numpy" },
     { name = "pandas" },
@@ -565,8 +562,20 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "boto3" },
+    { name = "google-api-python-client" },
+    { name = "google-auth" },
+]
+gcs = [
+    { name = "google-api-python-client" },
+    { name = "google-auth" },
+]
 polars = [
     { name = "polars" },
+]
+s3 = [
+    { name = "boto3" },
 ]
 
 [package.dev-dependencies]
@@ -575,7 +584,10 @@ lint = [
     { name = "ruff" },
 ]
 test = [
+    { name = "boto3" },
     { name = "fakeredis" },
+    { name = "google-api-python-client" },
+    { name = "google-auth" },
     { name = "lupa" },
     { name = "matplotlib" },
     { name = "moto" },
@@ -595,10 +607,13 @@ test = [
 requires-dist = [
     { name = "apscheduler" },
     { name = "backoff" },
-    { name = "boto3" },
+    { name = "boto3", marker = "extra == 'all'" },
+    { name = "boto3", marker = "extra == 's3'" },
     { name = "dill" },
-    { name = "google-api-python-client" },
-    { name = "google-auth" },
+    { name = "google-api-python-client", marker = "extra == 'all'" },
+    { name = "google-api-python-client", marker = "extra == 'gcs'" },
+    { name = "google-auth", marker = "extra == 'all'" },
+    { name = "google-auth", marker = "extra == 'gcs'" },
     { name = "luigi", specifier = ">=3.8.0" },
     { name = "numpy" },
     { name = "pandas" },
@@ -608,7 +623,7 @@ requires-dist = [
     { name = "slack-sdk" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.11.0" },
 ]
-provides-extras = ["polars"]
+provides-extras = ["all", "gcs", "polars", "s3"]
 
 [package.metadata.requires-dev]
 lint = [
@@ -616,7 +631,10 @@ lint = [
     { name = "ruff" },
 ]
 test = [
+    { name = "boto3" },
     { name = "fakeredis" },
+    { name = "google-api-python-client" },
+    { name = "google-auth" },
     { name = "lupa" },
     { name = "matplotlib" },
     { name = "moto", specifier = ">=4.0" },

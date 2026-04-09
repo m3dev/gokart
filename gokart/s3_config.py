@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 
 import luigi
-import luigi.contrib.s3
 
 
 class S3Config(luigi.Config):
@@ -12,12 +11,16 @@ class S3Config(luigi.Config):
 
     _client = None
 
-    def get_s3_client(self) -> luigi.contrib.s3.S3Client:
+    def get_s3_client(self):
         if self._client is None:  # use cache as like singleton object
             self._client = self._get_s3_client()
         return self._client
 
-    def _get_s3_client(self) -> luigi.contrib.s3.S3Client:
+    def _get_s3_client(self):
+        try:
+            import luigi.contrib.s3
+        except ImportError:
+            raise ImportError('S3 support requires additional dependencies. Install them with: pip install gokart[s3]') from None
         return luigi.contrib.s3.S3Client(
             aws_access_key_id=os.environ.get(self.aws_access_key_id_name), aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name)
         )

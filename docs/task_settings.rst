@@ -25,9 +25,15 @@ It is recommended to use the config file since it does not change much.
     gokart.add_config('base.ini')
 
 
-To use the S3 or GCS repository, please set the bucket path as ``s3://{YOUR_REPOSITORY_NAME}`` or ``gs://{YOUR_REPOSITORY_NAME}`` respectively.
+To use the S3 or GCS repository, please install the corresponding extras and set the bucket path as ``s3://{YOUR_REPOSITORY_NAME}`` or ``gs://{YOUR_REPOSITORY_NAME}`` respectively.
 
-If use S3 or GCS, please set credential information to Environment Variables.
+.. code:: sh
+
+    pip install gokart[s3]   # for S3 support
+    pip install gokart[gcs]  # for GCS support
+    pip install gokart[all]  # for both S3 and GCS
+
+Also, please set credential information to Environment Variables.
 
 .. code:: sh
 
