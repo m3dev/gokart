@@ -80,3 +80,25 @@ class TestWorkerSkipIfCompletedPreRun:
                 mock_run.assert_not_called()
             else:
                 mock_run.assert_called_once()
+
+
+class TestWorkerCheckCompleteValue:
+    def test_does_not_raise_for_boolean_values(self) -> None:
+        worker = Worker(scheduler=scheduler.Scheduler())
+        worker._check_complete_value(True)
+        worker._check_complete_value(False)
+
+    def test_raises_async_completion_exception_for_traceback_wrapper(self) -> None:
+        # NOTE: When Task.complete() raises in an async check, the exception is wrapped
+        #       in TracebackWrapper. This branch must raise AsyncCompletionException.
+        worker = Worker(scheduler=scheduler.Scheduler())
+        wrapped = luigi.worker.TracebackWrapper(trace='dummy traceback')
+        with pytest.raises(luigi.worker.AsyncCompletionException):
+            worker._check_complete_value(wrapped)
+
+    def test_raises_exception_for_non_boolean_value(self) -> None:
+        # NOTE: Pass a non-bool value to verify the runtime guard against a misimplemented
+        #       Task.complete() returning a non-boolean. The type ignore is intentional.
+        worker = Worker(scheduler=scheduler.Scheduler())
+        with pytest.raises(Exception, match='Return value of Task.complete'):
+            worker._check_complete_value('not a bool')  # type: ignore[arg-type]
