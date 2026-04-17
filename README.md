@@ -54,6 +54,14 @@ Within the activated Python environment, use the following command to install go
 pip install gokart
 ```
 
+If you use S3 or GCS as a data store, install the corresponding extras:
+
+```bash
+pip install gokart[s3]   # S3 support
+pip install gokart[gcs]  # GCS support
+pip install gokart[all]  # both S3 and GCS
+```
+
 
 # Quickstart
 

@@ -13,13 +13,10 @@ readme = "README.md"
 requires-python = ">=3.10, <4"
 dependencies = [
   "luigi>=3.8.0",
-  "boto3",
   "slack-sdk",
   "pandas",
   "numpy",
-  "google-auth",
   "pyarrow",
-  "google-api-python-client",
   "APScheduler",
   "redis",
   "dill",
@@ -39,6 +36,9 @@ classifiers = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+s3 = ["boto3"]
+gcs = ["google-auth", "google-api-python-client"]
+all = ["gokart[s3]", "gokart[gcs]"]
 polars = ["polars>=0.19.0"]
 
 [project.urls]
@@ -48,6 +48,9 @@ Documentation = "https://gokart.readthedocs.io/en/latest/"
 
 [dependency-groups]
 test = [
+  "boto3",
+  "google-auth",
+  "google-api-python-client",
   "fakeredis",
   "lupa",
   "matplotlib",

@@ -4,12 +4,13 @@ import os
 import shutil
 from typing import cast
 
-from gokart.gcs_config import GCSConfig
 from gokart.zip_client import ZipClient, _unzip_file
 
 
 class GCSZipClient(ZipClient):
     def __init__(self, file_path: str, temporary_directory: str) -> None:
+        from gokart.gcs_config import GCSConfig
+
         self._file_path = file_path
         self._temporary_directory = temporary_directory
         self._client = GCSConfig().get_gcs_client()
