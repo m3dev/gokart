@@ -804,10 +804,10 @@ class Worker:
         elif not isinstance(dependency, Task):
             raise Exception(f'requires() must return Task objects but {dependency} is a {type(dependency)}')
 
-    def _check_complete_value(self, is_complete: bool) -> None:
-        if is_complete not in (True, False):
-            if isinstance(is_complete, luigi.worker.TracebackWrapper):
-                raise luigi.workerAsyncCompletionException(is_complete.trace)
+    def _check_complete_value(self, is_complete: bool | luigi.worker.TracebackWrapper) -> None:
+        if isinstance(is_complete, luigi.worker.TracebackWrapper):
+            raise luigi.worker.AsyncCompletionException(is_complete.trace)
+        if not isinstance(is_complete, bool):
             raise Exception(f'Return value of Task.complete() must be boolean (was {is_complete!r})')
 
     def _add_worker(self) -> None:
