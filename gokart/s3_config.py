@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 import luigi
-import luigi.contrib.s3
+
+if TYPE_CHECKING:
+    import luigi.contrib.s3
 
 
 class S3Config(luigi.Config):
@@ -18,6 +21,12 @@ class S3Config(luigi.Config):
         return self._client
 
     def _get_s3_client(self) -> luigi.contrib.s3.S3Client:
+        try:
+            import boto3  # noqa: F401
+        except ImportError:
+            raise ImportError('S3 support requires additional dependencies. Install them with: pip install gokart[s3]') from None
+        import luigi.contrib.s3
+
         return luigi.contrib.s3.S3Client(
             aws_access_key_id=os.environ.get(self.aws_access_key_id_name), aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name)
         )
