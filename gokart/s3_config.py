@@ -10,10 +10,12 @@ if TYPE_CHECKING:
 
 
 class S3Config(luigi.Config):
-    aws_access_key_id_name = luigi.Parameter(default='AWS_ACCESS_KEY_ID', description='AWS access key id environment variable.')
-    aws_secret_access_key_name = luigi.Parameter(default='AWS_SECRET_ACCESS_KEY', description='AWS secret access key environment variable.')
+    aws_access_key_id_name: luigi.Parameter[str] = luigi.Parameter(default='AWS_ACCESS_KEY_ID', description='AWS access key id environment variable.')
+    aws_secret_access_key_name: luigi.Parameter[str] = luigi.Parameter(
+        default='AWS_SECRET_ACCESS_KEY', description='AWS secret access key environment variable.'
+    )
 
-    _client = None
+    _client: luigi.contrib.s3.S3Client | None = None
 
     def get_s3_client(self) -> luigi.contrib.s3.S3Client:
         if self._client is None:  # use cache as like singleton object
