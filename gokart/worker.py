@@ -335,15 +335,15 @@ class gokart_worker(luigi.Config):
     id: luigi.StrParameter = luigi.StrParameter(default='', description='Override the auto-generated worker_id')
     ping_interval: luigi.FloatParameter = luigi.FloatParameter(
         default=1.0,
-        config_path=dict(section='core', name='worker-ping-interval'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        config_path=dict(section='core', name='worker-ping-interval'),
     )
     keep_alive: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
-        config_path=dict(section='core', name='worker-keep-alive'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        config_path=dict(section='core', name='worker-keep-alive'),
     )
     count_uniques: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
-        config_path=dict(section='core', name='worker-count-uniques'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        config_path=dict(section='core', name='worker-count-uniques'),
         description='worker-count-uniques means that we will keep a worker alive only if it has a unique pending task, as well as having keep-alive true',
     )
     count_last_scheduled: luigi.BoolParameter = luigi.BoolParameter(
@@ -351,7 +351,7 @@ class gokart_worker(luigi.Config):
     )
     wait_interval: luigi.FloatParameter = luigi.FloatParameter(
         default=1.0,
-        config_path=dict(section='core', name='worker-wait-interval'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        config_path=dict(section='core', name='worker-wait-interval'),
     )
     wait_jitter: luigi.FloatParameter = luigi.FloatParameter(default=5.0)
 
@@ -359,19 +359,19 @@ class gokart_worker(luigi.Config):
 
     max_reschedules: luigi.IntParameter = luigi.IntParameter(
         default=1,
-        config_path=dict(section='core', name='worker-max-reschedules'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        config_path=dict(section='core', name='worker-max-reschedules'),
     )
     timeout: luigi.IntParameter = luigi.IntParameter(
         default=0,
-        config_path=dict(section='core', name='worker-timeout'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        config_path=dict(section='core', name='worker-timeout'),
     )
     task_limit: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
-        default=None,  # type: ignore[arg-type]  # OptionalIntParameter.__init__ inherits IntParameter's signature
-        config_path=dict(section='core', name='worker-task-limit'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        default=None,
+        config_path=dict(section='core', name='worker-task-limit'),
     )
     retry_external_tasks: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
-        config_path=dict(section='core', name='retry-external-tasks'),  # type: ignore  # fix https://github.com/spotify/luigi/pull/3403
+        config_path=dict(section='core', name='retry-external-tasks'),
         description='If true, incomplete external tasks will be retested for completion while Luigi is running.',
     )
     send_failure_email: luigi.BoolParameter = luigi.BoolParameter(default=True, description='If true, send e-mails directly from the workeron failure')

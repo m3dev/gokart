@@ -90,7 +90,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
     redis_port: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
-        default=None,  # type: ignore
+        default=None,
         description='Task lock check is deactivated, when None.',
         significant=False,
     )

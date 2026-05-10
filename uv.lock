@@ -614,7 +614,7 @@ requires-dist = [
     { name = "google-api-python-client", marker = "extra == 'gcs'" },
     { name = "google-auth", marker = "extra == 'all'" },
     { name = "google-auth", marker = "extra == 'gcs'" },
-    { name = "luigi", specifier = ">=3.8.0" },
+    { name = "luigi", specifier = ">=3.8.1" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=0.19.0" },
@@ -869,7 +869,7 @@ wheels = [
 
 [[package]]
 name = "luigi"
-version = "3.8.0"
+version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-daemon", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
@@ -880,9 +880,9 @@ dependencies = [
     { name = "typing-extensions", version = "4.12.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/4a574c00003c2f9e1c614d9940dc5ff36d2fd6da90810c15053f04200b90/luigi-3.8.0.tar.gz", hash = "sha256:e77c37e7d8ed0b85d5da2daeae3b3f0e89c03993ff28698795f17634f1d5ac75", size = 1288264, upload-time = "2026-03-06T17:00:22.517Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/b1/7f3f0fed25ce71c0691336b1695d42794fdbc2ef6476f4d40198a67cc592/luigi-3.8.1.tar.gz", hash = "sha256:2fa5eb5d3474e495de09bd964f502936c08f8b1eb6e0f3ca3c8a69116c38d0c3", size = 1289938, upload-time = "2026-05-07T13:32:20.442Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/48/90e36d39a29cfdc39baa0688ed75bc05e366ccabb757559a28ae8defda9a/luigi-3.8.0-py3-none-any.whl", hash = "sha256:647aac84c4439e4d0578ea8ba0013b4d739a2c2897b9fe8e78dba8d3ecf25766", size = 1182571, upload-time = "2026-03-06T17:00:29.089Z" },
+    { url = "https://files.pythonhosted.org/packages/08/d2/20be7014f644a2019241aade4272a5d7625e53a9ad256c94b2a693d58f63/luigi-3.8.1-py3-none-any.whl", hash = "sha256:ea974b26157c327ae8f6a6f9e0ddaa09d868ce8a4010f7631c383614e0152318", size = 1183143, upload-time = "2026-05-07T13:32:23.316Z" },
 ]
 
 [[package]]
