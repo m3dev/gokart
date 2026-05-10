@@ -375,7 +375,7 @@ class gokart_worker(luigi.Config):
         config_path={'section': 'core', 'name': 'retry-external-tasks'},
         description='If true, incomplete external tasks will be retested for completion while Luigi is running.',
     )
-    send_failure_email: luigi.BoolParameter = luigi.BoolParameter(default=True, description='If true, send e-mails directly from the workeron failure')
+    send_failure_email: luigi.BoolParameter = luigi.BoolParameter(default=True, description='If true, send e-mails directly from the worker on failure')
     no_install_shutdown_handler: luigi.BoolParameter = luigi.BoolParameter(
         default=False, description='If true, the SIGUSR1 shutdown handler willNOT be install on the worker'
     )
