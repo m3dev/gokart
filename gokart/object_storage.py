@@ -64,7 +64,10 @@ class ObjectStorage:
         if path.startswith('s3://'):
             from gokart.s3_config import S3Config
 
-            return cast(datetime, S3Config().get_s3_client().get_key(path).last_modified)
+            key = S3Config().get_s3_client().get_key(path)
+            if key is None:
+                raise FileNotFoundError(f'S3 key not found: {path}')
+            return cast(datetime, key.last_modified)
         elif path.startswith('gs://'):
             from gokart.gcs_config import GCSConfig
 
