@@ -62,10 +62,10 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
             s['params'] = TaskInstanceParameter._recursive_decompress(bz2.decompress(bytes.fromhex(s['params'])).decode())
         return s
 
-    def parse(self, s):
-        if isinstance(s, str):
-            s = self._recursive_decompress(s)
-        return self._recursive(s)
+    def parse(self, x):
+        if isinstance(x, str):
+            x = self._recursive_decompress(x)
+        return self._recursive(x)
 
     def serialize(self, x):
         params = bz2.compress(json.dumps(x.to_str_params(only_significant=True)).encode()).hex()
@@ -78,11 +78,11 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
 
 
 class _TaskInstanceEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, luigi.Task):
-            return TaskInstanceParameter().serialize(obj)
+    def default(self, o):
+        if isinstance(o, luigi.Task):
+            return TaskInstanceParameter().serialize(o)
         # Let the base class default method raise the TypeError
-        return json.JSONEncoder.default(self, obj)
+        return json.JSONEncoder.default(self, o)
 
 
 class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generic[TASK_ON_KART_TYPE]):
@@ -100,8 +100,8 @@ class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generi
             raise TypeError(f'expected_elements_type must be a type, not {type(expected_elements_type)}')
         super().__init__(default=default, **kwargs)
 
-    def parse(self, s):
-        return [TaskInstanceParameter().parse(x) for x in list(json.loads(s))]
+    def parse(self, x):
+        return [TaskInstanceParameter().parse(item) for item in list(json.loads(x))]
 
     def serialize(self, x):
         return json.dumps(x, cls=_TaskInstanceEncoder)
@@ -144,8 +144,8 @@ class SerializableParameter(luigi.Parameter[S], Generic[S]):
         self._object_type = object_type
         super().__init__(*args, **kwargs)
 
-    def parse(self, s: str) -> S:
-        return self._object_type.gokart_deserialize(s)
+    def parse(self, x: str) -> S:
+        return self._object_type.gokart_deserialize(x)
 
     def serialize(self, x: S) -> str:
         return x.gokart_serialize()
@@ -163,21 +163,21 @@ class ZonedDateSecondParameter(luigi.Parameter[datetime.datetime]):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def parse(self, s):
+    def parse(self, x):
         # special character 'Z' is replaced with '+00:00'
         # because Python 3.11 and later support fromisoformat with Z at the end of the string.
-        if s.endswith('Z'):
-            s = s[:-1] + '+00:00'
-        dt = datetime.datetime.fromisoformat(s)
+        if x.endswith('Z'):
+            x = x[:-1] + '+00:00'
+        dt = datetime.datetime.fromisoformat(x)
         if dt.tzinfo is None:
             warn('The input does not have timezone information. Please consider using luigi.DateSecondParameter instead.', stacklevel=1)
         return dt
 
-    def serialize(self, dt):
-        return dt.isoformat()
+    def serialize(self, x):
+        return x.isoformat()
 
-    def normalize(self, dt):
+    def normalize(self, x):
         # override _DatetimeParameterBase.normalize to avoid do nothing to normalize except removing microsecond.
         # microsecond is removed because the number of digits of microsecond is not fixed.
         # See also luigi's implementation  https://github.com/spotify/luigi/blob/v3.6.0/luigi/parameter.py#L612
-        return dt.replace(microsecond=0)
+        return x.replace(microsecond=0)
