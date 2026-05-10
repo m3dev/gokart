@@ -226,7 +226,7 @@ class LargeDataFrameProcessor:
     def load(file_path: str) -> pd.DataFrame:
         dir_path = os.path.dirname(file_path)
 
-        return pd.concat([pd.read_pickle(file_path) for file_path in glob(os.path.join(dir_path, 'data_*.pkl'))])
+        return pd.concat([pd.read_pickle(fp) for fp in glob(os.path.join(dir_path, 'data_*.pkl'))])
 
 
 def _make_file_system_target(file_path: str, processor: FileProcessor | None = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:
