@@ -395,7 +395,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
             return task.to_str_params(only_significant=True)
 
-        dependencies = [_to_str_params(task) for task in flatten(self.requires())]
+        dependencies: list[Any] = [_to_str_params(task) for task in flatten(self.requires())]
         dependencies = [d for d in dependencies if d is not None]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
