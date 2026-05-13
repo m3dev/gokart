@@ -114,7 +114,7 @@ class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generi
 
 class ExplicitBoolParameter(luigi.BoolParameter):
     def __init__(self, *args, **kwargs):
-        luigi.Parameter.__init__(self, *args, **kwargs)
+        super(luigi.BoolParameter, self).__init__(*args, **kwargs)
 
     def _parser_kwargs(self, *args, **kwargs):  # type: ignore
         return luigi.Parameter._parser_kwargs(*args, *kwargs)
