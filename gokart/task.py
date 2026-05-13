@@ -438,7 +438,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         for param_name, param_value in self.param_kwargs.items():
             if (not only_significant) or params[param_name].significant:
                 if isinstance(params[param_name], gokart.TaskInstanceParameter):
-                    params_str[param_name] = type(param_value).__name__ + '-' + param_value.make_unique_id()
+                    params_str[param_name] = type(param_value).__name__ + '-' + cast(TaskOnKart[Any], param_value).make_unique_id()
                 else:
                     params_str[param_name] = params[param_name].serialize(param_value)
         return params_str
