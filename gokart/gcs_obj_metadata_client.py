@@ -4,9 +4,8 @@ import copy
 import functools
 import json
 import re
-from collections.abc import Iterable
 from logging import getLogger
-from typing import Any, Final
+from typing import Any, Final, cast
 from urllib.parse import urlsplit
 
 from gokart.gcs_config import GCSConfig
@@ -125,10 +124,10 @@ class GCSObjectMetadataClient:
     @staticmethod
     def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput]) -> FlattenableItems[str]:
         if isinstance(required_task_outputs, RequiredTaskOutput):
-            return required_task_outputs.serialize()
+            return cast(FlattenableItems[str], required_task_outputs.serialize())
         elif isinstance(required_task_outputs, dict):
             return {k: GCSObjectMetadataClient._get_serialized_string(v) for k, v in required_task_outputs.items()}
-        elif isinstance(required_task_outputs, Iterable):
+        elif isinstance(required_task_outputs, list | tuple):
             return [GCSObjectMetadataClient._get_serialized_string(ro) for ro in required_task_outputs]
         else:
             raise TypeError(
