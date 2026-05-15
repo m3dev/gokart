@@ -7,6 +7,7 @@ from typing import Any, NamedTuple
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler
+from redis.lock import Lock
 
 logger = getLogger(__name__)
 
@@ -47,20 +48,20 @@ class RedisClient:
         return self._redis_client
 
 
-def _extend_lock(task_lock: redis.lock.Lock, redis_timeout: int) -> None:
+def _extend_lock(task_lock: Lock, redis_timeout: int) -> None:
     task_lock.extend(additional_time=redis_timeout, replace_ttl=True)
 
 
-def set_task_lock(task_lock_params: TaskLockParams) -> redis.lock.Lock:
+def set_task_lock(task_lock_params: TaskLockParams) -> Lock:
     redis_client = RedisClient(host=task_lock_params.redis_host, port=task_lock_params.redis_port).get_redis_client()
     blocking = not task_lock_params.raise_task_lock_exception_on_collision
-    task_lock = redis.lock.Lock(redis=redis_client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
+    task_lock = Lock(redis=redis_client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
     if not task_lock.acquire(blocking=blocking):
         raise TaskLockException('Lock already taken by other task.')
     return task_lock
 
 
-def set_lock_scheduler(task_lock: redis.lock.Lock, task_lock_params: TaskLockParams) -> BackgroundScheduler:
+def set_lock_scheduler(task_lock: Lock, task_lock_params: TaskLockParams) -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
     extend_lock = functools.partial(_extend_lock, task_lock=task_lock, redis_timeout=task_lock_params.redis_timeout or 0)
     scheduler.add_job(

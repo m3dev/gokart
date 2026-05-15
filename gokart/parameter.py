@@ -4,8 +4,9 @@ import bz2
 import datetime
 import json
 import sys
+from collections.abc import Callable, Iterable
 from logging import getLogger
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, TypedDict, TypeVar
 
 if sys.version_info >= (3, 11):
     from typing import Unpack
@@ -15,15 +16,20 @@ from warnings import warn
 
 import luigi
 from luigi import task_register
-
-try:
-    from luigi.parameter import _no_value, _NoValueType, _ParameterKwargs
-except ImportError:
-    _no_value = None  # type: ignore[assignment]
-    _NoValueType = type(None)  # type: ignore[assignment,misc]
-    _ParameterKwargs = dict  # type: ignore[assignment,misc]
+from luigi.parameter import ConfigPath, ParameterVisibility, _no_value, _NoValueType
 
 import gokart
+
+
+class ParameterKwargs(TypedDict, total=False):
+    significant: bool
+    description: str | None
+    config_path: ConfigPath | None
+    positional: bool
+    always_in_help: bool
+    batch_method: Callable[[Iterable[Any]], Any] | None
+    visibility: ParameterVisibility
+
 
 logger = getLogger(__name__)
 
@@ -36,7 +42,7 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
         self,
         expected_type: type[TASK_ON_KART_TYPE] | None = None,
         default: TASK_ON_KART_TYPE | _NoValueType = _no_value,
-        **kwargs: Unpack[_ParameterKwargs],
+        **kwargs: Unpack[ParameterKwargs],
     ):
         if expected_type is None:
             self.expected_type: type = gokart.TaskOnKart
@@ -90,7 +96,7 @@ class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generi
         self,
         expected_elements_type: type[TASK_ON_KART_TYPE] | None = None,
         default: list[TASK_ON_KART_TYPE] | _NoValueType = _no_value,
-        **kwargs: Unpack[_ParameterKwargs],
+        **kwargs: Unpack[ParameterKwargs],
     ):
         if expected_elements_type is None:
             self.expected_elements_type: type = gokart.TaskOnKart
@@ -114,7 +120,7 @@ class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generi
 
 class ExplicitBoolParameter(luigi.BoolParameter):
     def __init__(self, *args, **kwargs):
-        luigi.Parameter.__init__(self, *args, **kwargs)
+        super(luigi.BoolParameter, self).__init__(*args, **kwargs)
 
     def _parser_kwargs(self, *args, **kwargs):  # type: ignore
         return luigi.Parameter._parser_kwargs(*args, *kwargs)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable
 from io import BytesIO
-from typing import Any, Literal, Protocol, TypeAlias, TypeVar, get_args, get_origin
+from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, get_origin
 
 import dill
 import luigi
@@ -27,7 +27,7 @@ def add_config(file_path: str) -> None:
 
 
 T = TypeVar('T')
-FlattenableItems: TypeAlias = T | Iterable['FlattenableItems[T]'] | dict[str, 'FlattenableItems[T]']
+FlattenableItems: TypeAlias = T | list['FlattenableItems[T]'] | tuple['FlattenableItems[T]', ...] | dict[str, 'FlattenableItems[T]']
 
 
 def flatten(targets: FlattenableItems[T]) -> list[T]:
@@ -76,7 +76,7 @@ def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) ->
         return tuple(map_flattenable_items(func, i) for i in items)
     if isinstance(items, str):
         return func(items)  # type: ignore
-    if isinstance(items, Iterable):
+    if isinstance(items, list):
         return list(map(lambda item: map_flattenable_items(func, item), items))
     return func(items)
 
@@ -91,7 +91,7 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> An
     except Exception:
         assert file.seekable(), f'{file} is not seekable.'
         file.seek(0)
-        return pd.read_pickle(file)
+        return pd.read_pickle(cast(Any, file))
 
 
 def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'polars-lazy']:

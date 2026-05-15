@@ -153,7 +153,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def requires(self) -> FlattenableItems[TaskOnKart[Any]]:
         tasks = self.make_task_instance_dictionary()
-        return tasks or []  # when tasks is empty dict, then this returns empty list.
+        if tasks:
+            return cast(FlattenableItems[TaskOnKart[Any]], tasks)
+        return []  # when tasks is empty dict, then this returns empty list.
 
     def make_task_instance_dictionary(self) -> dict[str, TaskOnKart[Any]]:
         return {key: var for key, var in vars(self).items() if self.is_task_on_kart(var)}
@@ -354,9 +356,14 @@ class TaskOnKart(luigi.Task, Generic[T]):
             if isinstance(obj, pd.DataFrame) and obj.empty:
                 raise EmptyDumpError()
 
-        required_task_outputs = map_flattenable_items(
-            lambda task: map_flattenable_items(lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()),
-            self.requires(),
+        required_task_outputs = cast(
+            FlattenableItems[RequiredTaskOutput],
+            map_flattenable_items(
+                lambda task: map_flattenable_items(
+                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()
+                ),
+                self.requires(),
+            ),
         )
 
         self._get_output_target(target).dump(
@@ -395,7 +402,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
             return task.to_str_params(only_significant=True)
 
-        dependencies = [_to_str_params(task) for task in flatten(self.requires())]
+        dependencies: list[Any] = [_to_str_params(task) for task in flatten(self.requires())]
         dependencies = [d for d in dependencies if d is not None]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
@@ -438,7 +445,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         for param_name, param_value in self.param_kwargs.items():
             if (not only_significant) or params[param_name].significant:
                 if isinstance(params[param_name], gokart.TaskInstanceParameter):
-                    params_str[param_name] = type(param_value).__name__ + '-' + param_value.make_unique_id()
+                    params_str[param_name] = type(param_value).__name__ + '-' + cast(TaskOnKart[Any], param_value).make_unique_id()
                 else:
                     params_str[param_name] = params[param_name].serialize(param_value)
         return params_str
