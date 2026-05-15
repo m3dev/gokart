@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable
 from io import BytesIO
-from typing import Any, Literal, Protocol, TypeAlias, TypeVar, get_args, get_origin
+from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, get_origin
 
 import dill
 import luigi
@@ -91,7 +91,7 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> An
     except Exception:
         assert file.seekable(), f'{file} is not seekable.'
         file.seek(0)
-        return pd.read_pickle(file)
+        return pd.read_pickle(cast(Any, file))
 
 
 def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'polars-lazy']:
