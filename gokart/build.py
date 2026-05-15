@@ -10,7 +10,7 @@ from typing import Any, Literal, Protocol, TypeVar, cast, overload
 
 import backoff
 import luigi
-from luigi import LuigiStatusCode, rpc, scheduler
+from luigi import LuigiStatusCode, rpc, scheduler, task_register
 from luigi.execution_summary import LuigiRunResult
 
 import gokart
@@ -96,10 +96,10 @@ def _get_output(task: TaskOnKart[T]) -> T:
 
 
 def _reset_register(keep={'gokart', 'luigi'}):
-    """reset luigi.task_register.Register._reg everytime gokart.build called to avoid TaskClassAmbigiousException"""
-    luigi.task_register.Register._reg = [
+    """reset task_register.Register._reg everytime gokart.build called to avoid TaskClassAmbigiousException"""
+    task_register.Register._reg = [
         x
-        for x in luigi.task_register.Register._reg
+        for x in task_register.Register._reg
         if (
             (x.__module__.split('.')[0] in keep)  # keep luigi and gokart
             or (issubclass(x, gokart.PandasTypeConfig))
