@@ -178,7 +178,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
 
             if not requires.complete(self.check_complete):
                 # not all requirements are complete, return them which adds them to the tree
-                new_deps = [(t.task_module, t.task_family, t.to_str_params()) for t in requires.flat_requirements if isinstance(t, Task)]
+                new_deps = [(t.task_module, t.task_family, t.to_str_params()) for t in cast(list[Task], requires.flat_requirements)]
                 return new_deps
 
             # get the next generator result
