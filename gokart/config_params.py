@@ -27,7 +27,7 @@ class inherits_config_params:
             @classmethod
             def get_param_values(cls, params, args, kwargs):
                 for param_key, param_value in self._config_class().param_kwargs.items():
-                    task_param_key = self._parameter_alias.get(param_key) or param_key
+                    task_param_key = self._parameter_alias.get(param_key, param_key)
 
                     if hasattr(cls, task_param_key) and task_param_key not in kwargs:
                         kwargs[task_param_key] = param_value
