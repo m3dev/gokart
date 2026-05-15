@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import luigi
 
@@ -33,4 +33,4 @@ class inherits_config_params:
                         kwargs[task_param_key] = param_value
                 return super().get_param_values(params, args, kwargs)
 
-        return Wrapped
+        return cast(type[gokart.TaskOnKart[Any]], Wrapped)

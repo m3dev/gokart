@@ -402,7 +402,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
             return task.to_str_params(only_significant=True)
 
-        dependencies = [_to_str_params(task) for task in flatten(self.requires())]
+        dependencies: list[Any] = [_to_str_params(task) for task in flatten(self.requires())]
         dependencies = [d for d in dependencies if d is not None]
         dependencies.append(self.to_str_params(only_significant=True))
         dependencies.append(self.__class__.__name__)
@@ -445,7 +445,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         for param_name, param_value in self.param_kwargs.items():
             if (not only_significant) or params[param_name].significant:
                 if isinstance(params[param_name], gokart.TaskInstanceParameter):
-                    params_str[param_name] = type(param_value).__name__ + '-' + param_value.make_unique_id()
+                    params_str[param_name] = type(param_value).__name__ + '-' + cast(TaskOnKart[Any], param_value).make_unique_id()
                 else:
                     params_str[param_name] = params[param_name].serialize(param_value)
         return params_str
