@@ -57,11 +57,11 @@ import luigi.scheduler
 import luigi.worker
 from luigi import notifications
 from luigi.event import Event
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED, RetryPolicy, Scheduler
+from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED, RetryPolicy, Scheduler
 from luigi.target import Target
 from luigi.task import DynamicRequirements, Task, flatten
 from luigi.task_register import TaskClassException, load_task
-from luigi.task_status import RUNNING
+from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
 from gokart.parameter import ExplicitBoolParameter
 
@@ -178,7 +178,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
 
             if not requires.complete(self.check_complete):
                 # not all requirements are complete, return them which adds them to the tree
-                new_deps = [(t.task_module, t.task_family, t.to_str_params()) for t in requires.flat_requirements]
+                new_deps = [(t.task_module, t.task_family, t.to_str_params()) for t in cast(list[Task], requires.flat_requirements)]
                 return new_deps
 
             # get the next generator result
@@ -205,8 +205,9 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
             if self.check_unfulfilled_deps and not _is_external(self.task):
                 missing = []
                 for dep in self.task.deps():
+                    dep = cast(Task, dep)
                     if not self.check_complete(dep):
-                        nonexistent_outputs = [output for output in flatten(dep.output()) if not output.exists()]
+                        nonexistent_outputs = [output for output in cast(list[Target], flatten(dep.output())) if not output.exists()]
                         if nonexistent_outputs:
                             missing.append(f'{dep.task_id} ({", ".join(map(str, nonexistent_outputs))})')
                         else:
@@ -335,15 +336,15 @@ class gokart_worker(luigi.Config):
     id: luigi.StrParameter = luigi.StrParameter(default='', description='Override the auto-generated worker_id')
     ping_interval: luigi.FloatParameter = luigi.FloatParameter(
         default=1.0,
-        config_path=dict(section='core', name='worker-ping-interval'),
+        config_path={'section': 'core', 'name': 'worker-ping-interval'},
     )
     keep_alive: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
-        config_path=dict(section='core', name='worker-keep-alive'),
+        config_path={'section': 'core', 'name': 'worker-keep-alive'},
     )
     count_uniques: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
-        config_path=dict(section='core', name='worker-count-uniques'),
+        config_path={'section': 'core', 'name': 'worker-count-uniques'},
         description='worker-count-uniques means that we will keep a worker alive only if it has a unique pending task, as well as having keep-alive true',
     )
     count_last_scheduled: luigi.BoolParameter = luigi.BoolParameter(
@@ -351,7 +352,7 @@ class gokart_worker(luigi.Config):
     )
     wait_interval: luigi.FloatParameter = luigi.FloatParameter(
         default=1.0,
-        config_path=dict(section='core', name='worker-wait-interval'),
+        config_path={'section': 'core', 'name': 'worker-wait-interval'},
     )
     wait_jitter: luigi.FloatParameter = luigi.FloatParameter(default=5.0)
 
@@ -359,22 +360,22 @@ class gokart_worker(luigi.Config):
 
     max_reschedules: luigi.IntParameter = luigi.IntParameter(
         default=1,
-        config_path=dict(section='core', name='worker-max-reschedules'),
+        config_path={'section': 'core', 'name': 'worker-max-reschedules'},
     )
     timeout: luigi.IntParameter = luigi.IntParameter(
         default=0,
-        config_path=dict(section='core', name='worker-timeout'),
+        config_path={'section': 'core', 'name': 'worker-timeout'},
     )
     task_limit: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
         default=None,
-        config_path=dict(section='core', name='worker-task-limit'),
+        config_path={'section': 'core', 'name': 'worker-task-limit'},
     )
     retry_external_tasks: luigi.BoolParameter = luigi.BoolParameter(
         default=False,
-        config_path=dict(section='core', name='retry-external-tasks'),
+        config_path={'section': 'core', 'name': 'retry-external-tasks'},
         description='If true, incomplete external tasks will be retested for completion while Luigi is running.',
     )
-    send_failure_email: luigi.BoolParameter = luigi.BoolParameter(default=True, description='If true, send e-mails directly from the workeron failure')
+    send_failure_email: luigi.BoolParameter = luigi.BoolParameter(default=True, description='If true, send e-mails directly from the worker on failure')
     no_install_shutdown_handler: luigi.BoolParameter = luigi.BoolParameter(
         default=False, description='If true, the SIGUSR1 shutdown handler willNOT be install on the worker'
     )
@@ -775,11 +776,12 @@ class Worker:
 
             if deps:
                 for d in deps:
+                    d = cast(Task, d)
                     self._validate_dependency(d)
                     task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
                     yield d  # return additional tasks to add
 
-                deps = [d.task_id for d in deps]
+                deps = [cast(Task, d).task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
         self._add_task(
