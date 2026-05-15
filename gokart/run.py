@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 from logging import getLogger
-from typing import Any
+from typing import Any, cast
 
 import luigi
 import luigi.cmdline
@@ -102,7 +102,7 @@ def _run_with_retcodes(argv):
         sys.exit(retcodes.already_running)
     except Exception:
         env_params = luigi.interface.core()
-        luigi.setup_logging.InterfaceLogging.setup(env_params)
+        luigi.setup_logging.InterfaceLogging.setup(cast(Any, env_params))
         retcode_logger.exception('Uncaught exception in luigi')
         sys.exit(retcodes.unhandled_exception)
 
@@ -142,7 +142,7 @@ def run(cmdline_args=None, set_retcode=True):
 
     _try_tree_info(cmdline_args)
     _try_to_delete_unnecessary_output_file(cmdline_args)
-    gokart.testing.try_to_run_test_for_empty_data_frame(cmdline_args)
+    gokart.testing.try_to_run_test_for_empty_data_frame(cmdline_args)  # pyright: ignore[reportAttributeAccessIssue]
 
     slack_api = _try_get_slack_api(cmdline_args)
     event_aggregator = gokart.slack.EventAggregator()
