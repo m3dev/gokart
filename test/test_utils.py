@@ -191,7 +191,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _DerivedTaskWithMixin()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @unittest.skipUnless(HAS_POLARS, 'polars is not installed')
+    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
     def test_intermediate_generic_class_resolves_polars_typevar(self):
         """Detect polars when the type is bound through an intermediate generic class.
 
@@ -202,25 +202,25 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         """
         _T = TypeVar('_T')
 
-        class _GenericTask(TaskOnKart[_T], Generic[_T]):
+        class _GenericBasePolarsTask(TaskOnKart[_T], Generic[_T]):
             pass
 
-        class _ConcretePolarsTask(_GenericTask[pl.DataFrame]):
+        class _DerivedGenericPolarsTask(_GenericBasePolarsTask[pl.DataFrame]):
             pass
 
-        task = _ConcretePolarsTask()
+        task = _DerivedGenericPolarsTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @unittest.skipUnless(HAS_POLARS, 'polars is not installed')
+    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
     def test_intermediate_generic_class_resolves_polars_lazyframe_typevar(self):
         """Detect polars-lazy when LazyFrame is bound through an intermediate generic class."""
         _T = TypeVar('_T')
 
-        class _GenericTask(TaskOnKart[_T], Generic[_T]):
+        class _GenericBaseLazyTask(TaskOnKart[_T], Generic[_T]):
             pass
 
-        class _ConcreteLazyTask(_GenericTask[pl.LazyFrame]):
+        class _DerivedGenericLazyTask(_GenericBaseLazyTask[pl.LazyFrame]):
             pass
 
-        task = _ConcreteLazyTask()
+        task = _DerivedGenericLazyTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
