@@ -94,6 +94,16 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> An
         return pd.read_pickle(cast(Any, file))
 
 
+def _resolve_type_var(type_arg: Any, substitutions: dict[TypeVar, Any]) -> Any:
+    # Follow a chain of TypeVar substitutions (e.g. T_a -> T_b -> pl.DataFrame) to a concrete type.
+    # seen guards against cyclic substitutions.
+    seen: set[TypeVar] = set()
+    while isinstance(type_arg, TypeVar) and type_arg in substitutions and type_arg not in seen:
+        seen.add(type_arg)
+        type_arg = substitutions[type_arg]
+    return type_arg
+
+
 def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'polars-lazy']:
     """
     Extract DataFrame type from TaskOnKart[T] type parameter.
@@ -121,14 +131,25 @@ def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'pola
     # Walk the MRO to find TaskOnKart[...] even when defined on a parent class
     mro = task_class.mro() if hasattr(task_class, 'mro') else [task_class]
 
+    # Collect TypeVar bindings so TaskOnKart[T] bound through an intermediate generic class
+    # (e.g. class Base(TaskOnKart[T]) with class Concrete(Base[pl.DataFrame])) resolves instead of
+    # falling back to pandas. The MRO runs most-derived first, so bindings are recorded before the
+    # TaskOnKart base that needs them, letting us collect and resolve in a single pass.
+    type_var_substitutions: dict[TypeVar, Any] = {}
     for cls in mro:
         for base in getattr(cls, '__orig_bases__', ()):
             origin = get_origin(base)
-            if origin and hasattr(origin, '__name__') and origin.__name__ == 'TaskOnKart':
+            if origin is None:
+                continue
+            for parameter, arg in zip(getattr(origin, '__parameters__', ()), get_args(base), strict=False):
+                if isinstance(parameter, TypeVar) and parameter not in type_var_substitutions:
+                    type_var_substitutions[parameter] = arg
+
+            if hasattr(origin, '__name__') and origin.__name__ == 'TaskOnKart':
                 args = get_args(base)
                 if not args:
                     continue
-                df_type = args[0]
+                df_type = _resolve_type_var(args[0], type_var_substitutions)
                 module = getattr(df_type, '__module__', '')
 
                 # Check module name to determine DataFrame type
