@@ -1,5 +1,5 @@
 import unittest
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 import pandas as pd
 import pytest
@@ -190,3 +190,37 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
 
         task = _DerivedTaskWithMixin()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
+
+    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    def test_intermediate_generic_class_resolves_polars_typevar(self):
+        """Detect polars when the type is bound through an intermediate generic class.
+
+        The TypeVar of ``TaskOnKart[T]`` stays unbound on the intermediate class and is
+        only bound to ``pl.DataFrame`` on a further derived class. Without resolving the
+        TypeVar substitution while walking the MRO, the unbound ``TaskOnKart[T]`` is picked
+        up, its module is ``typing``, and detection falls back to pandas.
+        """
+        _T = TypeVar('_T')
+
+        class _GenericBasePolarsTask(TaskOnKart[_T], Generic[_T]):
+            pass
+
+        class _DerivedGenericPolarsTask(_GenericBasePolarsTask[pl.DataFrame]):
+            pass
+
+        task = _DerivedGenericPolarsTask()
+        self.assertEqual(get_dataframe_type_from_task(task), 'polars')
+
+    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    def test_intermediate_generic_class_resolves_polars_lazyframe_typevar(self):
+        """Detect polars-lazy when LazyFrame is bound through an intermediate generic class."""
+        _T = TypeVar('_T')
+
+        class _GenericBaseLazyTask(TaskOnKart[_T], Generic[_T]):
+            pass
+
+        class _DerivedGenericLazyTask(_GenericBaseLazyTask[pl.LazyFrame]):
+            pass
+
+        task = _DerivedGenericLazyTask()
+        self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
