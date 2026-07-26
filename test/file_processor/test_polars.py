@@ -123,6 +123,51 @@ class TestCsvFileProcessorWithPolars:
         processor = CsvFileProcessor(dataframe_type='polars')
         assert processor._dataframe_type == 'polars'
 
+    def test_dump_and_load_polars_with_non_utf8_encoding(self):
+        """Regression test: non-utf8 encodings (e.g. 'cp932') must not crash on dump
+        and must round-trip correctly on load, instead of silently reading back
+        incorrect ('utf8-lossy') data or raising polars.exceptions.InvalidOperationError.
+        """
+        df = pl.DataFrame({'name': ['\u4f50\u85e4', '\u9234\u6728']})
+        processor = CsvFileProcessor(encoding='cp932', dataframe_type='polars')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.csv'
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+
+            with local_target.open('w') as f:
+                processor.dump(df, f)
+
+            # the file must actually be written using cp932 on disk, not utf-8
+            with open(temp_path, 'rb') as f:
+                raw = f.read()
+            assert raw == df.write_csv().encode('cp932')
+
+            with local_target.open('r') as f:
+                loaded_df = processor.load(f)
+
+            assert loaded_df.equals(df)
+
+    def test_polars_lazy_with_non_utf8_encoding_raises_clear_error(self):
+        """polars.scan_csv only supports 'utf8'/'utf8-lossy', so it cannot decode
+        arbitrary encodings while scanning a file lazily. Loading with
+        dataframe_type='polars-lazy' and a non-utf8 encoding should fail loudly
+        instead of silently returning lossily-decoded data.
+        """
+        df = pl.DataFrame({'name': ['\u4f50\u85e4', '\u9234\u6728']})
+        dump_processor = CsvFileProcessor(encoding='cp932', dataframe_type='polars')
+        lazy_processor = CsvFileProcessor(encoding='cp932', dataframe_type='polars-lazy')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.csv'
+            local_target = LocalTarget(path=temp_path, format=dump_processor.format())
+
+            with local_target.open('w') as f:
+                dump_processor.dump(df, f)
+
+            with local_target.open('r') as f, pytest.raises(ValueError, match='only supports'):
+                lazy_processor.load(f)
+
 
 @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
 class TestJsonFileProcessorWithPolars:
