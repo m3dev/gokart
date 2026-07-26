@@ -12,7 +12,6 @@ from luigi.format import TextFormat
 from gokart.file_processor.base import FileProcessor
 from gokart.object_storage import ObjectStorage
 
-_CsvEncoding = Literal['utf8', 'utf8-lossy']
 _ParquetCompression = Literal['lz4', 'uncompressed', 'snappy', 'gzip', 'brotli', 'zstd']
 
 try:
@@ -41,13 +40,34 @@ class CsvFileProcessorPolars(FileProcessor):
         return TextFormat(encoding=self._encoding)
 
     def load(self, file):
+        is_utf8 = self._encoding in ('utf-8', 'utf8')
         try:
-            # scan_csv/read_csv only support 'utf8' and 'utf8-lossy'
-            encoding: _CsvEncoding = 'utf8' if self._encoding in ('utf-8', 'utf8') else 'utf8-lossy'
             if self._lazy:
+                if not is_utf8:
+                    # scan_csv reads directly from the file path and only understands
+                    # 'utf8'/'utf8-lossy', so it cannot correctly decode arbitrary
+                    # encodings such as 'cp932'. Silently falling back to
+                    # 'utf8-lossy' would just replace undecodable bytes instead of
+                    # actually decoding them, so we fail loudly instead.
+                    raise ValueError(
+                        f"CsvFileProcessorPolars(lazy=True) only supports encoding='utf-8', got encoding={self._encoding!r}. "
+                        'polars.scan_csv cannot decode arbitrary encodings while scanning a file lazily. '
+                        f'Use lazy=False to load a CSV file encoded as {self._encoding!r}.'
+                    )
                 # scan_csv requires a file path, not a file object
-                return pl.scan_csv(file.name, separator=self._sep, encoding=encoding)
-            return pl.read_csv(file, separator=self._sep, encoding=encoding)
+                return pl.scan_csv(file.name, separator=self._sep, encoding='utf8')
+
+            if is_utf8:
+                return pl.read_csv(file, separator=self._sep, encoding='utf8')
+
+            # `file` was opened by luigi using TextFormat(encoding=self._encoding),
+            # so reading from it already yields correctly-decoded text regardless
+            # of the original file encoding. Re-encode that text as UTF-8 bytes and
+            # let polars parse it as UTF-8, since polars.read_csv's own `encoding`
+            # argument only supports 'utf8' and 'utf8-lossy' and therefore cannot
+            # correctly decode arbitrary encodings such as 'cp932' on its own.
+            content = file.read()
+            return pl.read_csv(BytesIO(content.encode('utf-8')), separator=self._sep, encoding='utf8')
         except Exception as e:
             # Handle empty data gracefully
             if 'empty' in str(e).lower() or 'no data' in str(e).lower():
@@ -59,7 +79,18 @@ class CsvFileProcessorPolars(FileProcessor):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
             raise TypeError(f'requires pl.DataFrame or pl.LazyFrame, but {type(obj)} is passed.')
-        obj.write_csv(file, separator=self._sep, include_header=True)
+
+        if self._encoding in ('utf-8', 'utf8'):
+            obj.write_csv(file, separator=self._sep, include_header=True)
+            return
+
+        # polars can only write CSV directly to a file-like object as UTF-8, and
+        # raises polars.exceptions.InvalidOperationError for any other encoding
+        # (even though `file` here was opened by luigi using
+        # TextFormat(encoding=self._encoding)). Get the CSV content as a string
+        # instead and let `file` apply the requested encoding when writing it.
+        csv_str = obj.write_csv(separator=self._sep, include_header=True)
+        file.write(csv_str)
 
 
 class JsonFileProcessorPolars(FileProcessor):
