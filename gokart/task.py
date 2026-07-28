@@ -145,13 +145,17 @@ class TaskOnKart(luigi.Task, Generic[T]):
             task_lock_params = make_task_lock_params_for_run(task_self=self)
             self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
 
-    def input(self) -> FlattenableItems[TargetOnKart]:
+    # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
+    # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)
+    # is flagged as incompatible even though it is a valid covariant refinement.
+    # Suppress until luigi makes FlattenableItems covariant upstream.
+    def input(self) -> FlattenableItems[TargetOnKart]:  # pyright: ignore[reportIncompatibleMethodOverride]
         return cast(FlattenableItems[TargetOnKart], super().input())
 
-    def output(self) -> FlattenableItems[TargetOnKart]:
+    def output(self) -> FlattenableItems[TargetOnKart]:  # pyright: ignore[reportIncompatibleMethodOverride]
         return self.make_target()
 
-    def requires(self) -> FlattenableItems[TaskOnKart[Any]]:
+    def requires(self) -> FlattenableItems[TaskOnKart[Any]]:  # pyright: ignore[reportIncompatibleMethodOverride]
         tasks = self.make_task_instance_dictionary()
         if tasks:
             return cast(FlattenableItems[TaskOnKart[Any]], tasks)
