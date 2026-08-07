@@ -48,7 +48,7 @@ class RequiredTask(NamedTuple):
     unique_id: str
 
 
-def _make_requires_info(requires):
+def _make_requires_info(requires: Any) -> FlattenableItems[RequiredTask]:
     if isinstance(requires, TaskOnKart):
         return RequiredTask(name=requires.__class__.__name__, unique_id=requires.make_unique_id())
     elif isinstance(requires, dict):
