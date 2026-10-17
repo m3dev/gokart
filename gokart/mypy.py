@@ -7,7 +7,6 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 from __future__ import annotations
 
 import re
-import sys
 import warnings
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -75,17 +74,10 @@ class TaskOnKartPluginOptions:
 
     @classmethod
     def _parse_toml(cls, config_file: str) -> dict[str, Any]:
-        if sys.version_info >= (3, 11):
-            import tomllib as toml_
-        else:
-            try:
-                import tomli as toml_
-            except ImportError:  # pragma: no cover
-                warnings.warn('install tomli to parse pyproject.toml under Python 3.10', stacklevel=1)
-                return {}
+        import tomllib
 
         with open(config_file, 'rb') as f:
-            return toml_.load(f)
+            return tomllib.load(f)
 
     @classmethod
     def parse_config_file(cls, config_file: str) -> TaskOnKartPluginOptions:
