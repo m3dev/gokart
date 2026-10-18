@@ -3,16 +3,9 @@ from __future__ import annotations
 import io
 import logging
 import os
-import sys
 import unittest
 from copy import copy
-from typing import Any
-
-if sys.version_info >= (3, 11):
-    from typing import assert_type
-else:
-    from typing_extensions import assert_type
-
+from typing import Any, assert_type
 from unittest.mock import patch
 
 import luigi
