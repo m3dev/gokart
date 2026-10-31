@@ -23,7 +23,6 @@ dependencies = [
   "redis",
   "dill",
   "tenacity",
-  "typing-extensions>=4.11.0; python_version<'3.13'",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -53,18 +52,13 @@ test = [
   "google-auth",
   "google-api-python-client",
   "fakeredis",
-  "lupa",
   "matplotlib",
   "moto>=4.0", # for use mock_aws api
-  "mypy",
   "polars>=0.19.0",
   "pytest",
   "pytest-cov",
   "pytest-xdist",
   "testfixtures",
-  "toml",
-  "types-redis",
-  "typing-extensions>=4.11.0",
 ]
 
 lint = [
