@@ -19,9 +19,9 @@ jobs:
           - platform: macos-latest
             tox-env: "py313"
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7.0.1
     - name: Set up the latest version of uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@v10.3.3
       with:
         enable-cache: true
     - name: Install dependencies
