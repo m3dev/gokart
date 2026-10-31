@@ -12,7 +12,7 @@ import luigi
 import luigi.mock
 
 import gokart
-from gokart.build import GokartBuildError, LoggerConfig, TaskDumpConfig, TaskDumpMode, TaskDumpOutputType, process_task_info
+from gokart.build import GokartBuildError, HasLockedTaskException, LoggerConfig, TaskDumpConfig, TaskDumpMode, TaskDumpOutputType, process_task_info
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
 
 
@@ -185,9 +185,24 @@ class _FailThreeTimesAndSuccessTask(gokart.TaskOnKart[Any]):
         self.dump('done')
 
 
+class _AlwaysLockedTask(gokart.TaskOnKart[Any]):
+    def run(self):
+        raise TaskLockException()
+
+
 class TestBuildHasLockedTaskException(unittest.TestCase):
     def test_build_expo_backoff_when_luigi_failed_due_to_locked_task(self):
         gokart.build(_FailThreeTimesAndSuccessTask(), reset_register=False)
+
+    def test_build_raises_has_locked_task_exception_when_max_tries_exhausted(self):
+        with self.assertRaises(HasLockedTaskException):
+            gokart.build(
+                _AlwaysLockedTask(),
+                reset_register=False,
+                task_lock_exception_max_tries=2,
+                task_lock_exception_max_wait_seconds=1,
+                log_level=logging.CRITICAL,
+            )
 
 
 class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
