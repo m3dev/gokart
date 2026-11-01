@@ -4,14 +4,13 @@ import enum
 import io
 import logging
 from dataclasses import dataclass
-from functools import partial
 from logging import getLogger
 from typing import Any, Literal, Protocol, TypeVar, cast, overload
 
-import backoff
 import luigi
 from luigi import LuigiStatusCode, rpc, scheduler, task_register
 from luigi.execution_summary import LuigiRunResult
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random_exponential
 
 import gokart
 import gokart.tree.task_info
@@ -205,8 +204,11 @@ def build(
             else:
                 raised_exceptions.setdefault(task.make_unique_id(), []).append(exception)
 
-        @backoff.on_exception(
-            partial(backoff.expo, max_value=task_lock_exception_max_wait_seconds), HasLockedTaskException, max_tries=task_lock_exception_max_tries
+        @retry(
+            retry=retry_if_exception_type(HasLockedTaskException),
+            stop=stop_after_attempt(task_lock_exception_max_tries),
+            wait=wait_random_exponential(multiplier=0.5, max=task_lock_exception_max_wait_seconds),
+            reraise=True,
         )
         def _build_task():
             task_lock_exception_raised.flag = False
