@@ -52,6 +52,7 @@ test = [
   "google-auth",
   "google-api-python-client",
   "fakeredis",
+  "lupa",
   "matplotlib",
   "moto>=4.0", # for use mock_aws api
   "mypy",
