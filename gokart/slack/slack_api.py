@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from logging import getLogger
 
 import slack_sdk
@@ -21,6 +22,12 @@ class FileNotUploadedError(RuntimeError):
 
 class SlackAPI:
     def __init__(self, token: str, channel: str, to_user: str) -> None:
+        warnings.warn(
+            'gokart.slack (Slack notification) is deprecated and will be removed in a future major release. '
+            'Use Luigi event handlers (e.g. @luigi.Task.event_handler) to send notifications instead.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._client = slack_sdk.WebClient(token=token)
         self._channel_id = self._get_channel_id(channel)
         self._to_user = to_user if to_user == '' or to_user.startswith('@') else '@' + to_user
