@@ -23,7 +23,6 @@ dependencies = [
   "redis",
   "dill",
   "tenacity",
-  "typing-extensions>=4.11.0; python_version<'3.13'",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -62,9 +61,6 @@ test = [
   "pytest-cov",
   "pytest-xdist",
   "testfixtures",
-  "toml",
-  "types-redis",
-  "typing-extensions>=4.11.0",
 ]
 
 lint = [
