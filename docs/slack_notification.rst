@@ -1,6 +1,11 @@
 Slack notification
 =========================
 
+.. deprecated::
+   ``gokart.slack`` (Slack notification) is deprecated and will be removed in a future major release.
+   A ``DeprecationWarning`` is emitted when the notification is activated.
+   Please use Luigi event handlers instead (see `Migration`_ below).
+
 Prerequisites
 -------------
 
@@ -36,3 +41,26 @@ Write following codes pass arguments to your gokart workflow.
         cmdline_args.append(f'--SlackConfig-to-user={os.environ["SLACK_TO_USER"]}')
     gokart.run(cmdline_args)
 
+
+Migration
+---------
+
+Luigi's event handlers can send notifications to Slack (or any other service) without gokart's help.
+The following example posts a message when a task fails:
+
+.. code:: python
+
+   import os
+
+   import luigi
+   from slack_sdk import WebClient
+
+   client = WebClient(token=os.environ['SLACK_TOKEN'])
+
+
+   @luigi.Task.event_handler(luigi.Event.FAILURE)
+   def notify_failure(task, exception):
+       client.chat_postMessage(
+           channel=os.environ['SLACK_CHANNEL'],
+           text=f'Task {task} failed: {exception}',
+       )
