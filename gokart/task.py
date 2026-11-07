@@ -118,7 +118,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     )
 
     @property
-    def priority(self):
+    def priority(self):  # type: ignore[override]
         return random.Random().random()  # seed is fixed, so we need to use random.Random().random() instead f random.random()
 
     def __init__(self, *args, **kwargs):

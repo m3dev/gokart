@@ -167,37 +167,27 @@ class _TaskInfoExampleTaskC(gokart.TaskOnKart[str]):
 class TestTaskInfoTable(unittest.TestCase):
     def test_dump_task_info_table(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
-            self.dumped_data: Any = None
-
-            def _side_effect(obj, lock_at_dump):
-                self.dumped_data = obj
-
-            mock_obj.side_effect = _side_effect
             dump_task_info_table(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.csv', ignore_task_names=['_TaskInfoExampleTaskB'])
+            dumped_data = mock_obj.call_args.kwargs['obj']
 
-            self.assertEqual(set(self.dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
+            self.assertEqual(set(dumped_data['name']), {'_TaskInfoExampleTaskA', '_TaskInfoExampleTaskC'})
             self.assertEqual(
-                set(self.dumped_data.columns), {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log', 'requires'}
+                set(dumped_data.columns), {'name', 'unique_id', 'output_paths', 'params', 'processing_time', 'is_complete', 'task_log', 'requires'}
             )
 
 
 class TestTaskInfoTree(unittest.TestCase):
     def test_dump_task_info_tree(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
-            self.dumped_data: Any = None
-
-            def _side_effect(obj, lock_at_dump):
-                self.dumped_data = obj
-
-            mock_obj.side_effect = _side_effect
             dump_task_info_tree(task=_TaskInfoExampleTaskC(), task_info_dump_path='path.pkl', ignore_task_names=['_TaskInfoExampleTaskB'])
+            dumped_data = mock_obj.call_args.kwargs['obj']
 
-            self.assertEqual(self.dumped_data.name, '_TaskInfoExampleTaskC')
-            self.assertEqual(self.dumped_data.children_task_infos[0].name, '_TaskInfoExampleTaskA')
+            self.assertEqual(dumped_data.name, '_TaskInfoExampleTaskC')
+            self.assertEqual(dumped_data.children_task_infos[0].name, '_TaskInfoExampleTaskA')
 
-            self.assertEqual(self.dumped_data.requires.keys(), {'taskA', 'taskB'})
-            self.assertEqual(self.dumped_data.requires['taskA'].name, '_TaskInfoExampleTaskA')
-            self.assertEqual(self.dumped_data.requires['taskB'].name, '_TaskInfoExampleTaskB')
+            self.assertEqual(dumped_data.requires.keys(), {'taskA', 'taskB'})
+            self.assertEqual(dumped_data.requires['taskA'].name, '_TaskInfoExampleTaskA')
+            self.assertEqual(dumped_data.requires['taskB'].name, '_TaskInfoExampleTaskB')
 
     def test_dump_task_info_tree_with_invalid_path_extention(self):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:

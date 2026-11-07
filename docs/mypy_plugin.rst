@@ -1,8 +1,27 @@
-[Experimental] Mypy plugin
-===========================
+[Deprecated] Mypy plugin
+=========================
 
 Mypy plugin provides type checking for gokart tasks using Mypy.
-This feature is experimental.
+
+.. warning::
+
+    The mypy plugin is deprecated and will be removed in a future release.
+
+    Annotate parameters with the parameter type instead.
+    Type checkers that support ``dataclass_transform``, such as mypy and pyright, check this style without any plugin.
+    Note that the plugin does not support this style, so remove the plugin from your configuration when you migrate.
+
+    .. code:: python
+
+        import gokart
+        import luigi
+
+
+        class Foo(gokart.TaskOnKart[str]):
+            foo: luigi.IntParameter = luigi.IntParameter(default=1)
+            bar: luigi.StrParameter = luigi.StrParameter()
+            task: gokart.TaskInstanceParameter[gokart.TaskOnKart[int]] = gokart.TaskInstanceParameter()
+
 
 How to use
 --------------
