@@ -14,8 +14,6 @@ jobs:
         platform: ["ubuntu-latest"]
         tox-env: ["py311", "py312", "py313", "py314"]
         include:
-          - platform: macos-15
-            tox-env: "py313"
           - platform: macos-latest
             tox-env: "py313"
     steps:
