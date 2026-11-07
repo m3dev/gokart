@@ -21,13 +21,13 @@ class TaskInfo:
     requires: FlattenableItems[RequiredTask]
     children_task_infos: list[TaskInfo]
 
-    def get_task_id(self):
+    def get_task_id(self) -> str:
         return f'{self.name}_{self.unique_id}'
 
-    def get_task_title(self):
+    def get_task_title(self) -> str:
         return f'({self.is_complete}) {self.name}[{self.unique_id}]'
 
-    def get_task_detail(self):
+    def get_task_detail(self) -> str:
         return f'(parameter={self.params}, output={self.output_paths}, time={self.processing_time}, task_log={self.task_log})'
 
     def task_info_dict(self):

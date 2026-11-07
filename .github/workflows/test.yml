@@ -22,6 +22,9 @@ jobs:
       uses: astral-sh/setup-uv@v10.3.3
       with:
         enable-cache: true
+        # The default key only includes the runner's system Python, so all matrix jobs share one cache
+        # and wheels built by a job that did not save it (e.g. sdists on a new Python) are rebuilt every run.
+        cache-suffix: ${{ matrix.platform }}-${{ matrix.tox-env }}
     - name: Install dependencies
       run: |
         uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
