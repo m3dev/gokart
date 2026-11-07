@@ -26,7 +26,8 @@ logger = getLogger(__name__)
 
 
 class TargetOnKart(luigi.Target):
-    def exists(self) -> bool:
+    # luigi.Target.exists() has no annotation and its body is `pass`, so pyright infers its return type as None.
+    def exists(self) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
         return self._exists()
 
     def load(self) -> Any:
@@ -113,7 +114,8 @@ class SingleFileTarget(TargetOnKart):
         return self._task_lock_params
 
     def _load(self) -> Any:
-        with self._target.open('r') as f:
+        # luigi.target.FileSystemTarget.open() has no annotation and its body is `pass`, so pyright infers its return type as None.
+        with self._target.open('r') as f:  # pyright: ignore[reportGeneralTypeIssues]
             return self._processor.load(f)
 
     def _dump(
@@ -123,7 +125,7 @@ class SingleFileTarget(TargetOnKart):
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
-        with self._target.open('w') as f:
+        with self._target.open('w') as f:  # pyright: ignore[reportGeneralTypeIssues]
             self._processor.dump(obj, f)
         if self.path().startswith('gs://'):
             GCSObjectMetadataClient.add_task_state_labels(
