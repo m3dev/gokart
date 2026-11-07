@@ -38,6 +38,7 @@ class CsvFileProcessorPandas(FileProcessor):
 
 
 _JsonOrient = Literal['split', 'records', 'index', 'table', 'columns', 'values']
+_ParquetCompression = Literal['snappy', 'gzip', 'brotli', 'lz4', 'zstd']
 
 
 class JsonFileProcessorPandas(FileProcessor):
@@ -60,15 +61,16 @@ class JsonFileProcessorPandas(FileProcessor):
             obj = pd.DataFrame.from_dict(obj)
         if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.')
-        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
+        # pandas-stubs does not allow 'columns' and 'values' for Series.to_json; pandas raises ValueError for them at runtime.
+        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)  # type: ignore[arg-type]
 
 
 class ParquetFileProcessorPandas(FileProcessor):
     """Parquet file processor for pandas DataFrames."""
 
-    def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression: str | None = None) -> None:
+    def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression: _ParquetCompression | None = None) -> None:
         self._engine: Literal['auto', 'pyarrow', 'fastparquet'] = engine
-        self._compression = compression
+        self._compression: _ParquetCompression | None = compression
         super().__init__()
 
     def format(self):
@@ -116,7 +118,7 @@ class FeatherFileProcessorPandas(FileProcessor):
             if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
                 index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
                 index_column = index_columns[0]
-                index_name = index_column[len(self.INDEX_COLUMN_PREFIX) :]
+                index_name: str | None = index_column[len(self.INDEX_COLUMN_PREFIX) :]
                 if index_name == 'None':
                     index_name = None
                 loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
