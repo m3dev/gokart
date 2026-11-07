@@ -56,7 +56,7 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
         return flat
 
     if isinstance(targets, str):
-        return [targets]  # type: ignore
+        return [targets]
 
     if not isinstance(targets, Iterable):
         return [targets]
@@ -75,7 +75,7 @@ def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) ->
     if isinstance(items, tuple):
         return tuple(map_flattenable_items(func, i) for i in items)
     if isinstance(items, str):
-        return func(items)  # type: ignore
+        return func(items)
     if isinstance(items, list):
         return list(map(lambda item: map_flattenable_items(func, item), items))
     return func(items)
