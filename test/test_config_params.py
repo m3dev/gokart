@@ -15,21 +15,21 @@ def in_parse(cmds, deferred_computation):
 
 
 class ConfigClass(luigi.Config):
-    param_a = luigi.Parameter(default='config a')
-    param_b = luigi.Parameter(default='config b')
-    param_c = luigi.Parameter(default='config c')
+    param_a: luigi.Parameter = luigi.Parameter(default='config a')
+    param_b: luigi.Parameter = luigi.Parameter(default='config b')
+    param_c: luigi.Parameter = luigi.Parameter(default='config c')
 
 
 @inherits_config_params(ConfigClass)
 class Inherited(gokart.TaskOnKart[Any]):
-    param_a = luigi.Parameter()
-    param_b = luigi.Parameter(default='overrided')
+    param_a: luigi.Parameter = luigi.Parameter()
+    param_b: luigi.Parameter = luigi.Parameter(default='overrided')
 
 
 @inherits_config_params(ConfigClass, parameter_alias={'param_a': 'param_d'})
 class Inherited2(gokart.TaskOnKart[Any]):
-    param_c = luigi.Parameter()
-    param_d = luigi.Parameter()
+    param_c: luigi.Parameter = luigi.Parameter()
+    param_d: luigi.Parameter = luigi.Parameter()
 
 
 class ChildTask(Inherited):
@@ -37,11 +37,11 @@ class ChildTask(Inherited):
 
 
 class ChildTaskWithNewParam(Inherited):
-    param_new = luigi.Parameter()
+    param_new: luigi.Parameter = luigi.Parameter()
 
 
 class ConfigClass2(luigi.Config):
-    param_a = luigi.Parameter(default='config a from config class 2')
+    param_a: luigi.Parameter = luigi.Parameter(default='config a from config class 2')
 
 
 @inherits_config_params(ConfigClass2)
