@@ -1,9 +1,11 @@
 import unittest
-from typing import TYPE_CHECKING, Generic, TypeVar
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import pandas as pd
 import pytest
 
+from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
 from gokart.utils import flatten, get_dataframe_type_from_task, map_flattenable_items
 
@@ -21,6 +23,9 @@ except ImportError:
 class TestFlatten(unittest.TestCase):
     def test_flatten_dict(self):
         self.assertEqual(flatten({'a': 'foo', 'b': 'bar'}), ['foo', 'bar'])
+
+    def test_flatten_mapping(self):
+        self.assertEqual(flatten(MappingProxyType({'a': 'foo', 'b': 'bar'})), ['foo', 'bar'])
 
     def test_flatten_list(self):
         self.assertEqual(flatten(['foo', ['bar', 'troll']]), ['foo', 'bar', 'troll'])
@@ -49,6 +54,49 @@ class TestMapFlatten(unittest.TestCase):
             ),
             {'a': ['1', '2', '3', '4'], 'b': {'c': 'True', 'd': {'e': '5'}}},
         )
+
+    def test_map_flattenable_items_does_not_split_str(self):
+        self.assertEqual(map_flattenable_items(lambda x: x.upper(), 'abc'), 'ABC')
+        self.assertEqual(map_flattenable_items(lambda x: x.upper(), ['ab', ('cd',)]), ['AB', ('CD',)])
+
+    def test_map_flattenable_items_with_mapping(self):
+        self.assertEqual(map_flattenable_items(lambda x: str(x), MappingProxyType({'a': 1})), {'a': '1'})
+
+
+# These tasks override output() / requires() as users do. Type checkers check that the overrides are
+# compatible with TaskOnKart, which requires FlattenableItems to be covariant.
+class _IntTask(TaskOnKart[int]):
+    pass
+
+
+class _TaskWithDictOutput(TaskOnKart[Any]):
+    def output(self) -> dict[str, TargetOnKart]:
+        return {'a': self.make_target('a.pkl'), 'b': self.make_target('b.pkl')}
+
+
+class _TaskWithListOutput(TaskOnKart[Any]):
+    def output(self) -> list[TargetOnKart]:
+        return [self.make_target('a.pkl'), self.make_target('b.pkl')]
+
+
+class _TaskWithDictRequires(TaskOnKart[Any]):
+    def requires(self) -> dict[str, TaskOnKart[int]]:
+        return {'a': _IntTask(), 'b': _IntTask()}
+
+
+class _TaskWithListRequires(TaskOnKart[Any]):
+    def requires(self) -> list[_IntTask]:
+        return [_IntTask(), _IntTask()]
+
+
+class TestFlattenableItemsOverride(unittest.TestCase):
+    def test_flatten_output(self):
+        self.assertEqual(len(flatten(_TaskWithDictOutput().output())), 2)
+        self.assertEqual(len(flatten(_TaskWithListOutput().output())), 2)
+
+    def test_flatten_requires(self):
+        self.assertEqual(len(flatten(_TaskWithDictRequires().requires())), 2)
+        self.assertEqual(len(flatten(_TaskWithListRequires().requires())), 2)
 
 
 class TestGetDataFrameTypeFromTask(unittest.TestCase):
