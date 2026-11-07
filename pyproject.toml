@@ -61,11 +61,15 @@ test = [
   "pytest-cov",
   "pytest-xdist",
   "testfixtures",
+  "boto3-stubs[s3]>=1.43.126",
+  "pandas-stubs>=3.1.0.261029",
 ]
 
 lint = [
   "ruff",
   "mypy",
+  "boto3-stubs[s3]>=1.43.126",
+  "pandas-stubs>=3.1.0.261029",
 ]
 
 [tool.uv]
