@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import luigi
 import pandas as pd
+from luigi import cmdline_parser, task_register
 from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
@@ -440,10 +441,10 @@ class TaskTest(unittest.TestCase):
             aa = luigi.IntParameter()
 
         luigi.configuration.get_config().set('DummyTaskAddConfiguration', 'aa', '3')
-        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
+        mock_cmdline.return_value = cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 3)
 
-        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
+        mock_cmdline.return_value = cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 2)
 
     def test_use_rerun_with_inherits(self):
@@ -539,7 +540,7 @@ class TaskTest(unittest.TestCase):
 
     def test_serialize_and_deserialize_default_values(self):
         task: gokart.TaskOnKart[Any] = gokart.TaskOnKart()
-        deserialized: gokart.TaskOnKart[Any] = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
+        deserialized: gokart.TaskOnKart[Any] = task_register.load_task(None, task.get_task_family(), task.to_str_params())
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
 
     def test_to_str_params_changes_on_values_and_flags(self):

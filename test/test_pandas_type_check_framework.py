@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import luigi
 import pandas as pd
+from luigi import setup_logging, task_register
 from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
@@ -63,16 +64,16 @@ class _DummySuccessTask(gokart.TaskOnKart[pd.DataFrame]):
 
 class TestPandasTypeCheckFramework(unittest.TestCase):
     def setUp(self) -> None:
-        luigi.setup_logging.DaemonLogging._configured = False
-        luigi.setup_logging.InterfaceLogging._configured = False
+        setup_logging.DaemonLogging._configured = False
+        setup_logging.InterfaceLogging._configured = False
         MockFileSystem().clear()
         # same way as luigi https://github.com/spotify/luigi/blob/fe7ecf4acf7cf4c084bd0f32162c8e0721567630/test/helpers.py#L175
-        self._stashed_reg = luigi.task_register.Register._get_reg()
+        self._stashed_reg = task_register.Register._get_reg()
 
     def tearDown(self) -> None:
-        luigi.setup_logging.DaemonLogging._configured = False
-        luigi.setup_logging.InterfaceLogging._configured = False
-        luigi.task_register.Register._set_reg(self._stashed_reg)
+        setup_logging.DaemonLogging._configured = False
+        setup_logging.InterfaceLogging._configured = False
+        task_register.Register._set_reg(self._stashed_reg)
 
     @patch('sys.argv', new=['main', 'test_pandas_type_check_framework._DummyFailTask', '--log-level=CRITICAL', '--local-scheduler', '--no-lock'])
     @patch('luigi.LocalTarget', new=lambda path, **kwargs: MockTarget(path, **kwargs))
