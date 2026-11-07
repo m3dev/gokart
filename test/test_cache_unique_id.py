@@ -17,7 +17,8 @@ class _DummyTask(gokart.TaskOnKart[Any]):
 
 
 class _DummyTaskDep(gokart.TaskOnKart[str]):
-    param: luigi.Parameter = luigi.Parameter()
+    # The default is replaced in each test case.
+    param: luigi.Parameter = luigi.Parameter(default='')
 
     def run(self):
         self.dump(self.param)

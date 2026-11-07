@@ -14,6 +14,8 @@ import luigi.mock
 import gokart
 from gokart.build import GokartBuildError, HasLockedTaskException, LoggerConfig, TaskDumpConfig, TaskDumpMode, TaskDumpOutputType, process_task_info
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
+from gokart.target import TargetOnKart
+from gokart.utils import FlattenableItems
 
 
 class _DummyTask(gokart.TaskOnKart[str]):
@@ -32,7 +34,7 @@ class _DummyTaskTwoOutputs(gokart.TaskOnKart[dict[str, str]]):
     param1: luigi.Parameter = luigi.Parameter()
     param2: luigi.Parameter = luigi.Parameter()
 
-    def output(self):
+    def output(self) -> FlattenableItems[TargetOnKart]:
         return {'out1': self.make_target('./test/dummy1.pkl'), 'out2': self.make_target('./test/dummy2.pkl')}
 
     def run(self):
@@ -48,7 +50,7 @@ class _DummyFailedTask(gokart.TaskOnKart[Any]):
 
 
 class _ParallelRunner(gokart.TaskOnKart[str]):
-    def requires(self):
+    def requires(self) -> FlattenableItems[gokart.TaskOnKart[Any]]:
         return [_DummyTask(param=str(i)) for i in range(10)]
 
     def run(self):
@@ -93,7 +95,7 @@ class RunTest(unittest.TestCase):
     def test_read_config(self):
         class _DummyTask(gokart.TaskOnKart[Any]):
             task_namespace = 'test_read_config'
-            param = luigi.Parameter()
+            param: luigi.Parameter = luigi.Parameter()
 
             def run(self):
                 self.dump(self.param)
@@ -101,7 +103,8 @@ class RunTest(unittest.TestCase):
         os.environ.setdefault('test_param', 'test')
         config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'test_config.ini')
         gokart.utils.add_config(config_file_path)
-        output = gokart.build(_DummyTask(), reset_register=False)
+        # param is read from the config file.
+        output = gokart.build(_DummyTask(), reset_register=False)  # pyright: ignore[reportCallIssue]
         self.assertIsInstance(output, str)
         self.assertEqual(output, 'test')
 
