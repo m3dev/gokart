@@ -93,7 +93,8 @@ Hello, world!
 
 We introduce type-annotations to make a gokart pipeline robust.
 Please check the following example to see how to use type-annotations on gokart.
-Before using this feature, ensure to enable [mypy plugin](https://gokart.readthedocs.io/en/latest/mypy_plugin.html) feature in your project.
+Type checkers that support `dataclass_transform`, such as mypy and pyright, check this example without any plugin.
+(The [mypy plugin](https://gokart.readthedocs.io/en/latest/mypy_plugin.html) is deprecated and does not support this style.)
 
 ```python
 import gokart
@@ -132,7 +133,7 @@ class AddTask(gokart.TaskOnKart[int]):
 
 
 valid_task = AddTask(a=OneDumpTask(), b=TwoDumpTask())
-# the next line will show type error by mypy
+# the next line will show type error by type checkers
 # because `StrDumpTask` dumps `str` and `AddTask` requires `int`
 invalid_task = AddTask(a=OneDumpTask(), b=StrDumpTask())
 ```
