@@ -26,14 +26,14 @@ class _DummyTask(gokart.TaskOnKart[Any]):
     bool_param: luigi.BoolParameter = luigi.BoolParameter()
 
     def output(self):
-        return None
+        return []
 
 
 class _DummyTaskA(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
-        return None
+        return []
 
 
 @inherits(_DummyTaskA)
@@ -41,7 +41,7 @@ class _DummyTaskB(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
-        return None
+        return []
 
     def requires(self):
         return self.clone(_DummyTaskA)
@@ -52,7 +52,7 @@ class _DummyTaskC(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
-        return None
+        return []
 
     def requires(self):
         return self.clone(_DummyTaskB)
@@ -216,11 +216,12 @@ class TaskTest(unittest.TestCase):
 
     def test_get_own_code(self):
         task = _DummyTask()
-        task_scripts = 'def output(self):\nreturn None\n'
+        task_scripts = 'def output(self):\nreturn []\n'
         self.assertEqual(task.get_own_code().replace(' ', ''), task_scripts.replace(' ', ''))
 
     def test_make_unique_id_with_own_code(self):
-        class _MyDummyTaskA(gokart.TaskOnKart[str]):
+        # Redeclare the same class name to check that only the code change affects the unique id.
+        class _MyDummyTaskA(gokart.TaskOnKart[str]):  # pyright: ignore[reportRedeclaration]
             _visible_in_registry = False
 
             def run(self):
@@ -475,7 +476,7 @@ class TaskTest(unittest.TestCase):
                 def requires(self):
                     if has_required_task:
                         return _MyDummyTaskA(significant=significant)
-                    return
+                    return []
 
             return _MyDummyTaskB()
 
@@ -570,7 +571,7 @@ class TaskTest(unittest.TestCase):
 
 
 class _DummyTaskWithNonCompleted(gokart.TaskOnKart[Any]):
-    def dump(self, _obj: Any, _target: Any = None, _custom_labels: Any = None) -> None:
+    def dump(self, obj: Any, target: Any = None, custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass
 
@@ -582,7 +583,7 @@ class _DummyTaskWithNonCompleted(gokart.TaskOnKart[Any]):
 
 
 class _DummyTaskWithCompleted(gokart.TaskOnKart[Any]):
-    def dump(self, obj: Any, _target: Any = None, custom_labels: Any = None) -> None:
+    def dump(self, obj: Any, target: Any = None, custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass
 
