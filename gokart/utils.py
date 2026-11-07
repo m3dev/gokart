@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from io import BytesIO
 from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, get_origin
 
@@ -27,7 +27,7 @@ def add_config(file_path: str) -> None:
 
 
 T = TypeVar('T')
-FlattenableItems: TypeAlias = T | list['FlattenableItems[T]'] | tuple['FlattenableItems[T]', ...] | dict[str, 'FlattenableItems[T]']
+FlattenableItems: TypeAlias = T | Sequence['FlattenableItems[T]'] | Mapping[str, 'FlattenableItems[T]']
 
 
 def flatten(targets: FlattenableItems[T]) -> list[T]:
@@ -50,7 +50,7 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     if targets is None:
         return []
     flat = []
-    if isinstance(targets, dict):
+    if isinstance(targets, Mapping):
         for _, result in targets.items():
             flat += flatten(result)
         return flat
@@ -70,13 +70,14 @@ K = TypeVar('K')
 
 
 def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) -> FlattenableItems[K]:
-    if isinstance(items, dict):
+    if isinstance(items, Mapping):
         return {k: map_flattenable_items(func, v) for k, v in items.items()}
     if isinstance(items, tuple):
         return tuple(map_flattenable_items(func, i) for i in items)
+    # str is a Sequence, so it has to be checked before Sequence.
     if isinstance(items, str):
         return func(items)  # type: ignore
-    if isinstance(items, list):
+    if isinstance(items, Sequence):
         return list(map(lambda item: map_flattenable_items(func, item), items))
     return func(items)
 
