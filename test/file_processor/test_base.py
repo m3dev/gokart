@@ -70,9 +70,10 @@ class TestPickleFileProcessor(unittest.TestCase):
         processor = PickleFileProcessor()
 
         target = ObjectStorage.get_object_storage_target(file_path, processor.format())
-        with target.open('w') as f:
+        # luigi.target.FileSystemTarget.open() has no annotation and its body is `pass`, so pyright infers its return type as None.
+        with target.open('w') as f:  # pyright: ignore[reportGeneralTypeIssues]
             processor.dump(var, f)
-        with target.open('r') as f:
+        with target.open('r') as f:  # pyright: ignore[reportGeneralTypeIssues]
             loaded = processor.load(f)
 
         self.assertEqual(loaded, var)
