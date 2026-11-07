@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pickle
+import types
 import xml.etree.ElementTree as ET
 from abc import abstractmethod
 from io import BytesIO
@@ -83,6 +85,34 @@ class _ChunkedLargeFileReader:
         return cast(bool, self._file.seekable())
 
 
+class _FastPickler(pickle.Pickler):
+    """The C pickler, which dumps much faster than dill's pure-Python pickler.
+
+    It refuses the objects whose dill output loads differently, so that the caller falls back to dill:
+    anything defined in __main__ (dill stores it by value, pickle by name only),
+    bound methods (pickle restores them by looking up the function's __name__ on the instance),
+    and ndarray subclasses with instance attributes (pickle drops the attributes).
+    """
+
+    def reducer_override(self, obj: Any) -> Any:
+        if (
+            getattr(obj, '__module__', None) == '__main__'
+            or isinstance(obj, types.MethodType)
+            or (isinstance(obj, np.ndarray) and getattr(obj, '__dict__', None))
+        ):
+            raise pickle.PicklingError(f'dill pickles {type(obj)!r} differently')
+        return NotImplemented
+
+
+def _fast_dumps(obj: Any) -> bytes | None:
+    buffer = BytesIO()
+    try:
+        _FastPickler(buffer, protocol=4).dump(obj)
+    except Exception:
+        return None
+    return buffer.getvalue()
+
+
 class PickleFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
@@ -96,7 +126,8 @@ class PickleFileProcessor(FileProcessor):
         return load_dill_with_pandas_backward_compatibility(_ChunkedLargeFileReader(file))
 
     def dump(self, obj, file):
-        self._write(dill.dumps(obj, protocol=4), file)
+        dumped = _fast_dumps(obj)
+        self._write(dumped if dumped is not None else dill.dumps(obj, protocol=4), file)
 
     @staticmethod
     def _write(buffer, file):
