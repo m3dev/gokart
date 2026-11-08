@@ -62,7 +62,7 @@ class JsonFileProcessorPandas(FileProcessor):
         if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.')
         # pandas-stubs does not allow 'columns' and 'values' for Series.to_json; pandas raises ValueError for them at runtime.
-        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)  # type: ignore[arg-type]
+        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 class ParquetFileProcessorPandas(FileProcessor):

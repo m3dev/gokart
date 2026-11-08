@@ -31,11 +31,11 @@ class CacheUniqueIDTest(unittest.TestCase):
         os.environ.clear()
 
     @staticmethod
-    def _set_param(cls, attr_name: str, param: luigi.Parameter) -> None:  # type: ignore
+    def _set_param(task_class: type[gokart.TaskOnKart[Any]], attr_name: str, param: luigi.Parameter) -> None:
         # Luigi 3.8.0+ uses __set_name__ to register _attribute_name on Parameter descriptors.
         # When assigning after class creation (bypassing the metaclass), call it manually.
-        param.__set_name__(cls, attr_name)
-        setattr(cls, attr_name, param)
+        param.__set_name__(task_class, attr_name)
+        setattr(task_class, attr_name, param)
 
     def test_cache_unique_id_true(self):
         self._set_param(_DummyTaskDep, 'param', luigi.Parameter(default='original_param'))

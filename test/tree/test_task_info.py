@@ -11,7 +11,6 @@ from luigi.mock import MockFileSystem, MockTarget
 
 import gokart
 from gokart.tree.task_info import dump_task_info_table, dump_task_info_tree, make_task_info_as_tree_str, make_task_info_tree
-from gokart.utils import FlattenableItems
 
 
 class _SubTask(gokart.TaskOnKart[str]):
@@ -158,7 +157,7 @@ class _TaskInfoExampleTaskB(gokart.TaskOnKart[Any]):
 class _TaskInfoExampleTaskC(gokart.TaskOnKart[str]):
     task_namespace = __name__
 
-    def requires(self) -> FlattenableItems[gokart.TaskOnKart[Any]]:
+    def requires(self):
         return dict(taskA=_TaskInfoExampleTaskA(), taskB=_TaskInfoExampleTaskB())
 
     def run(self):

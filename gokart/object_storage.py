@@ -51,11 +51,11 @@ class ObjectStorage:
         if path.startswith('s3://'):
             from gokart.s3_config import S3Config
 
-            return cast(bool, S3Config().get_s3_client().exists(path))
+            return S3Config().get_s3_client().exists(path)
         elif path.startswith('gs://'):
             from gokart.gcs_config import GCSConfig
 
-            return cast(bool, GCSConfig().get_gcs_client().exists(path))
+            return GCSConfig().get_gcs_client().exists(path)
         else:
             raise
 
