@@ -556,7 +556,8 @@ class Worker:
         return f'Worker({worker_info_str})'
 
     def _validate_task(self, task: Task) -> None:
-        if not isinstance(task, Task):
+        # runtime validation mirroring luigi, since callers may pass non-Task objects despite the annotation
+        if not isinstance(task, Task):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise luigi.worker.TaskException(f'Can not schedule non-task {task}')
 
         if not task.initialized():
@@ -802,13 +803,13 @@ class Worker:
     def _validate_dependency(self, dependency: Task) -> None:
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
-        elif not isinstance(dependency, Task):
+        elif not isinstance(dependency, Task):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'requires() must return Task objects but {dependency} is a {type(dependency)}')
 
     def _check_complete_value(self, is_complete: bool | luigi.worker.TracebackWrapper) -> None:
         if isinstance(is_complete, luigi.worker.TracebackWrapper):
             raise luigi.worker.AsyncCompletionException(is_complete.trace)
-        if not isinstance(is_complete, bool):
+        if not isinstance(is_complete, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'Return value of Task.complete() must be boolean (was {is_complete!r})')
 
     def _add_worker(self) -> None:

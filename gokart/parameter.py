@@ -40,7 +40,7 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
     ):
         if expected_type is None:
             self.expected_type: type = gokart.TaskOnKart
-        elif isinstance(expected_type, type):
+        elif isinstance(expected_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]  # runtime guard against non-type input despite the annotation
             self.expected_type = expected_type
         else:
             raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
@@ -94,7 +94,7 @@ class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generi
     ):
         if expected_elements_type is None:
             self.expected_elements_type: type = gokart.TaskOnKart
-        elif isinstance(expected_elements_type, type):
+        elif isinstance(expected_elements_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]
             self.expected_elements_type = expected_elements_type
         else:
             raise TypeError(f'expected_elements_type must be a type, not {type(expected_elements_type)}')

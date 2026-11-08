@@ -118,6 +118,7 @@ reportUnnecessaryCast = "error"
 reportMissingTypeArgument = "error"
 reportUnusedImport = "error"
 reportConstantRedefinition = "error"
+reportUnnecessaryIsInstance = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
