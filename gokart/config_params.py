@@ -23,7 +23,7 @@ class inherits_config_params:
     def __call__(self, task_class: type[gokart.TaskOnKart[Any]]) -> type[gokart.TaskOnKart[Any]]:
         # wrap task to prevent task name from being changed
         @luigi.task._task_wraps(task_class)
-        class Wrapped(task_class):  # type: ignore
+        class Wrapped(task_class):
             @classmethod
             def get_param_values(cls, params, args, kwargs):
                 for param_key, param_value in self._config_class().param_kwargs.items():

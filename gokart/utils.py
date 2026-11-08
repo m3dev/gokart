@@ -22,7 +22,7 @@ class FileLike(Protocol):
 
 def add_config(file_path: str) -> None:
     _, ext = os.path.splitext(file_path)
-    luigi.configuration.core.parser = ext  # type: ignore
+    luigi.configuration.core.parser = ext  # pyright: ignore[reportAttributeAccessIssue]
     assert luigi.configuration.add_config_path(file_path)
 
 
@@ -56,7 +56,7 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
         return flat
 
     if isinstance(targets, str):
-        return [targets]  # type: ignore
+        return [targets]  # pyright: ignore[reportReturnType]
 
     if not isinstance(targets, Iterable):
         return [targets]
@@ -76,7 +76,7 @@ def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) ->
         return tuple(map_flattenable_items(func, i) for i in items)
     # str is a Sequence, so it has to be checked before Sequence.
     if isinstance(items, str):
-        return func(items)  # type: ignore
+        return func(items)  # pyright: ignore[reportArgumentType]
     if isinstance(items, Sequence):
         return list(map(lambda item: map_flattenable_items(func, item), items))
     return func(items)

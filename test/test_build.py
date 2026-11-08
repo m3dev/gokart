@@ -15,8 +15,7 @@ from luigi import setup_logging
 import gokart
 from gokart.build import GokartBuildError, HasLockedTaskException, LoggerConfig, TaskDumpConfig, TaskDumpMode, TaskDumpOutputType, process_task_info
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
-from gokart.target import TargetOnKart
-from gokart.utils import FlattenableItems, add_config
+from gokart.utils import add_config
 
 
 class _DummyTask(gokart.TaskOnKart[str]):
@@ -35,7 +34,7 @@ class _DummyTaskTwoOutputs(gokart.TaskOnKart[dict[str, str]]):
     param1: luigi.Parameter = luigi.Parameter()
     param2: luigi.Parameter = luigi.Parameter()
 
-    def output(self) -> FlattenableItems[TargetOnKart]:
+    def output(self):
         return {'out1': self.make_target('./test/dummy1.pkl'), 'out2': self.make_target('./test/dummy2.pkl')}
 
     def run(self):
@@ -51,7 +50,7 @@ class _DummyFailedTask(gokart.TaskOnKart[Any]):
 
 
 class _ParallelRunner(gokart.TaskOnKart[str]):
-    def requires(self) -> FlattenableItems[gokart.TaskOnKart[Any]]:
+    def requires(self):
         return [_DummyTask(param=str(i)) for i in range(10)]
 
     def run(self):

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import cast
 
 from gokart.zip_client import ZipClient, _unzip_file
 
@@ -16,7 +15,7 @@ class S3ZipClient(ZipClient):
         self._client = S3Config().get_s3_client()
 
     def exists(self) -> bool:
-        return cast(bool, self._client.exists(self._file_path))
+        return self._client.exists(self._file_path)
 
     def make_archive(self) -> None:
         extension = os.path.splitext(self._file_path)[1]

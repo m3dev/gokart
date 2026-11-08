@@ -51,7 +51,7 @@ class TaskInstanceParameterTest(unittest.TestCase):
         self.assertEqual(parsed.task_id, original.task_id)
 
     def test_invalid_class(self):
-        self.assertRaises(TypeError, lambda: gokart.TaskInstanceParameter(expected_type=1))  # type: ignore
+        self.assertRaises(TypeError, lambda: gokart.TaskInstanceParameter(expected_type=1))  # pyright: ignore[reportArgumentType]
 
     def test_params_with_correct_param_type(self):
         class _DummyPipelineA(TaskOnKart[Any]):
@@ -59,7 +59,7 @@ class TaskInstanceParameterTest(unittest.TestCase):
             subtask: gokart.TaskInstanceParameter[_DummySubTask] = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
 
         task = _DummyPipelineA(subtask=_DummyCorrectSubClassTask())
-        self.assertEqual(task.requires()['subtask'], _DummyCorrectSubClassTask())  # type: ignore
+        self.assertEqual(task.requires()['subtask'], _DummyCorrectSubClassTask())  # pyright: ignore[reportArgumentType, reportCallIssue, reportIndexIssue]
 
     def test_params_with_invalid_param_type(self):
         class _DummyPipelineB(TaskOnKart[Any]):
@@ -67,7 +67,7 @@ class TaskInstanceParameterTest(unittest.TestCase):
             subtask: gokart.TaskInstanceParameter[_DummySubTask] = gokart.TaskInstanceParameter(expected_type=_DummySubTask)
 
         with self.assertRaises(TypeError):
-            _DummyPipelineB(subtask=_DummyInvalidSubClassTask())  # type: ignore
+            _DummyPipelineB(subtask=_DummyInvalidSubClassTask())  # pyright: ignore[reportArgumentType]
 
 
 class ListTaskInstanceParameterTest(unittest.TestCase):
@@ -75,7 +75,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
         _DummyTask.clear_instance_cache()
 
     def test_invalid_class(self):
-        self.assertRaises(TypeError, lambda: gokart.ListTaskInstanceParameter(expected_elements_type=1))  # type: ignore  # not type instance
+        self.assertRaises(TypeError, lambda: gokart.ListTaskInstanceParameter(expected_elements_type=1))  # pyright: ignore[reportArgumentType]  # not type instance
 
     def test_list_params_with_correct_param_types(self):
         class _DummyPipelineC(TaskOnKart[Any]):
@@ -83,7 +83,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
             subtask: gokart.ListTaskInstanceParameter[_DummySubTask] = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         task = _DummyPipelineC(subtask=[_DummyCorrectSubClassTask()])
-        self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(),))  # type: ignore
+        self.assertEqual(task.requires()['subtask'], (_DummyCorrectSubClassTask(),))  # pyright: ignore[reportArgumentType, reportCallIssue, reportIndexIssue]
 
     def test_list_params_with_invalid_param_types(self):
         class _DummyPipelineD(TaskOnKart[Any]):
@@ -91,7 +91,7 @@ class ListTaskInstanceParameterTest(unittest.TestCase):
             subtask: gokart.ListTaskInstanceParameter[_DummySubTask] = gokart.ListTaskInstanceParameter(expected_elements_type=_DummySubTask)
 
         with self.assertRaises(TypeError):
-            _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask()])  # type: ignore
+            _DummyPipelineD(subtask=[_DummyInvalidSubClassTask(), _DummyCorrectSubClassTask()])  # pyright: ignore[reportArgumentType]
 
 
 if __name__ == '__main__':

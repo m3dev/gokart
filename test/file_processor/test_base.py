@@ -43,9 +43,9 @@ class TestPickleFileProcessor(unittest.TestCase):
 
         class A:
             def __init__(self) -> None:
-                self.run = plus1(self.run)  # type: ignore
+                self.run = plus1(self.run)
 
-            def run(self) -> int:  # type: ignore
+            def run(self) -> int:
                 return 1
 
         obj = A()

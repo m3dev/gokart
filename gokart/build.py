@@ -227,4 +227,4 @@ def build(
                 raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
             return _get_output(task) if return_value else None
 
-        return cast(T | None, _build_task())
+        return _build_task()

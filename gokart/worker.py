@@ -90,7 +90,7 @@ def _is_external(task: Task) -> bool:
 
 
 def _get_retry_policy_dict(task: Task) -> dict[str, Any]:
-    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()  # type: ignore
+    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()
 
 
 GetWorkResponse = collections.namedtuple(
@@ -106,7 +106,7 @@ GetWorkResponse = collections.namedtuple(
 )
 
 
-class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
+class TaskProcess(_ForkProcess):
     """Wrap all task execution in this class.
 
     Mainly for convenience since this is run in a separate process."""
@@ -262,7 +262,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
     def _handle_run_exception(self, ex: BaseException) -> str:
         logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
         self.task.trigger_event(Event.FAILURE, self.task, ex)
-        return cast(str, self.task.on_failure(ex))
+        return self.task.on_failure(ex)
 
     def _recursive_terminate(self) -> None:
         import psutil

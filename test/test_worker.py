@@ -101,4 +101,4 @@ class TestWorkerCheckCompleteValue:
         #       Task.complete() returning a non-boolean. The type ignore is intentional.
         worker = Worker(scheduler=scheduler.Scheduler())
         with pytest.raises(Exception, match='Return value of Task.complete'):
-            worker._check_complete_value('not a bool')  # type: ignore[arg-type]
+            worker._check_complete_value('not a bool')  # pyright: ignore[reportArgumentType]
