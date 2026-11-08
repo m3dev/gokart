@@ -1,5 +1,5 @@
 from datetime import datetime
-from time import sleep
+from unittest.mock import patch
 
 import pytest
 
@@ -41,14 +41,15 @@ class TestInMemoryTarget:
 
     def test_last_modified_time(self, target: InMemoryTarget) -> None:
         input = 'dummy_data'
-        target.dump(input)
-        time = target.last_modification_time()
-        assert isinstance(time, datetime)
+        with patch('gokart.in_memory.data.datetime') as mock_datetime:
+            mock_datetime.now.side_effect = [datetime(2024, 1, 1, 0, 0, 0), datetime(2024, 1, 1, 0, 0, 1)]
+            target.dump(input)
+            time = target.last_modification_time()
+            assert isinstance(time, datetime)
 
-        sleep(0.1)
-        another_input = 'another_data'
-        target.dump(another_input)
-        another_time = target.last_modification_time()
+            another_input = 'another_data'
+            target.dump(another_input)
+            another_time = target.last_modification_time()
         assert time < another_time
 
         target.remove()

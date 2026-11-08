@@ -1,4 +1,5 @@
-import time
+from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
@@ -55,9 +56,10 @@ class TestInMemoryCacheRepository:
         assert not repo.has('dummy_key')
 
     def test_last_modification_time(self, repo: Repo) -> None:
-        repo.set_value('dummy_key', dummy_num)
-        date1 = repo.get_last_modification_time('dummy_key')
-        time.sleep(0.1)
-        repo.set_value('dummy_key', dummy_num)
-        date2 = repo.get_last_modification_time('dummy_key')
+        with patch('gokart.in_memory.data.datetime') as mock_datetime:
+            mock_datetime.now.side_effect = [datetime(2024, 1, 1, 0, 0, 0), datetime(2024, 1, 1, 0, 0, 1)]
+            repo.set_value('dummy_key', dummy_num)
+            date1 = repo.get_last_modification_time('dummy_key')
+            repo.set_value('dummy_key', dummy_num)
+            date2 = repo.get_last_modification_time('dummy_key')
         assert date1 < date2
