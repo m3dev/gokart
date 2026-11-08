@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 try:
     import polars as pl
 
-    HAS_POLARS = True
+    _has_polars = True
 except ImportError:
-    HAS_POLARS = False
+    _has_polars = False
 
 
 class TestFlatten(unittest.TestCase):
@@ -119,7 +119,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
 
         self.assertEqual(get_dataframe_type_from_task(_PandasTaskClass), 'pandas')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_dataframe_from_instance(self):
         """Test detecting polars DataFrame from task instance."""
 
@@ -129,7 +129,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _PolarsTaskInstance()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_dataframe_from_class(self):
         """Test detecting polars DataFrame from task class."""
 
@@ -181,7 +181,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         # so it defaults to 'pandas'
         self.assertEqual(get_dataframe_type_from_task(task), 'pandas')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_nested_inheritance_polars(self):
         """Test detecting polars DataFrame type through nested inheritance."""
 
@@ -195,7 +195,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         # Function should detect 'polars' through the inheritance chain
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_lazyframe_from_instance(self):
         class _LazyTaskInstance(TaskOnKart[pl.LazyFrame]):
             pass
@@ -203,14 +203,14 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _LazyTaskInstance()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_lazyframe_from_class(self):
         class _LazyTaskClass(TaskOnKart[pl.LazyFrame]):
             pass
 
         self.assertEqual(get_dataframe_type_from_task(_LazyTaskClass), 'polars-lazy')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_nested_inheritance_polars_lazyframe(self):
         class _BaseLazyTask(TaskOnKart[pl.LazyFrame]):
             pass
@@ -221,7 +221,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _DerivedLazyTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_nested_inheritance_polars_with_mixin(self):
         """Derived class with multiple bases should still detect polars through MRO."""
 
@@ -239,7 +239,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _DerivedTaskWithMixin()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_intermediate_generic_class_resolves_polars_typevar(self):
         """Detect polars when the type is bound through an intermediate generic class.
 
@@ -259,7 +259,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _DerivedGenericPolarsTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_intermediate_generic_class_resolves_polars_lazyframe_typevar(self):
         """Detect polars-lazy when LazyFrame is bound through an intermediate generic class."""
         _T = TypeVar('_T')
