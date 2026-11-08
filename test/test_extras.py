@@ -47,19 +47,19 @@ class TestS3ExtrasNotInstalled:
             with pytest.raises(ImportError, match=r'pip install gokart\[s3\]'):
                 ObjectStorage.exists('s3://bucket/key')
 
-    def test_object_storage_get_zip_client_raises_for_s3_without_extras(self):
+    def test_object_storage_get_zip_client_raises_for_s3_without_extras(self, tmp_path):
         from gokart.object_storage import ObjectStorage
 
         with patch('builtins.__import__', side_effect=_make_import_raiser({'boto3'})):
             with pytest.raises(ImportError, match=r'pip install gokart\[s3\]'):
-                ObjectStorage.get_zip_client('s3://bucket/key.zip', '/tmp/test')
+                ObjectStorage.get_zip_client('s3://bucket/key.zip', str(tmp_path))
 
-    def test_s3_zip_client_raises_without_extras(self):
+    def test_s3_zip_client_raises_without_extras(self, tmp_path):
         from gokart.s3_zip_client import S3ZipClient
 
         with patch('builtins.__import__', side_effect=_make_import_raiser({'boto3'})):
             with pytest.raises(ImportError, match=r'pip install gokart\[s3\]'):
-                S3ZipClient(file_path='s3://bucket/key.zip', temporary_directory='/tmp/test')
+                S3ZipClient(file_path='s3://bucket/key.zip', temporary_directory=str(tmp_path))
 
     def test_object_storage_is_buffered_reader_returns_true_without_s3(self):
         from gokart.object_storage import ObjectStorage
@@ -135,26 +135,26 @@ class TestGCSExtrasNotInstalled:
                 if saved is not None:
                     sys.modules['googleapiclient'] = saved
 
-    def test_object_storage_get_zip_client_raises_for_gcs_without_extras(self):
+    def test_object_storage_get_zip_client_raises_for_gcs_without_extras(self, tmp_path):
         from gokart.object_storage import ObjectStorage
 
         with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
             saved = sys.modules.pop('googleapiclient', None)
             try:
                 with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    ObjectStorage.get_zip_client('gs://bucket/key.zip', '/tmp/test')
+                    ObjectStorage.get_zip_client('gs://bucket/key.zip', str(tmp_path))
             finally:
                 if saved is not None:
                     sys.modules['googleapiclient'] = saved
 
-    def test_gcs_zip_client_raises_without_extras(self):
+    def test_gcs_zip_client_raises_without_extras(self, tmp_path):
         from gokart.gcs_zip_client import GCSZipClient
 
         with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
             saved = sys.modules.pop('googleapiclient', None)
             try:
                 with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    GCSZipClient(file_path='gs://bucket/key.zip', temporary_directory='/tmp/test')
+                    GCSZipClient(file_path='gs://bucket/key.zip', temporary_directory=str(tmp_path))
             finally:
                 if saved is not None:
                     sys.modules['googleapiclient'] = saved
