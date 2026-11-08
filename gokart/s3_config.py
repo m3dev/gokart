@@ -24,7 +24,7 @@ class S3Config(luigi.Config):
 
     def _get_s3_client(self) -> luigi.contrib.s3.S3Client:
         try:
-            import boto3  # noqa: F401
+            import boto3  # noqa: F401  # pyright: ignore[reportUnusedImport]
         except ImportError:
             raise ImportError('S3 support requires additional dependencies. Install them with: pip install gokart[s3]') from None
         import luigi.contrib.s3
