@@ -119,4 +119,4 @@ reportMissingTypeArgument = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-addopts = "-n auto -s -v --durations=0"
+addopts = "-n auto -v"
