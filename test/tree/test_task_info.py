@@ -5,7 +5,6 @@ from typing import Any
 from unittest.mock import patch
 
 import luigi
-import luigi.mock
 from luigi import setup_logging
 from luigi.mock import MockFileSystem, MockTarget
 

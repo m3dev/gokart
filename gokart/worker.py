@@ -50,10 +50,9 @@ import threading
 import time
 import traceback
 from collections.abc import Generator
-from typing import Any, Literal, cast
+from typing import Any, Literal, NamedTuple, cast
 
 import luigi
-import luigi.scheduler
 import luigi.worker
 from luigi import notifications
 from luigi.event import Event
@@ -93,17 +92,13 @@ def _get_retry_policy_dict(task: Task) -> dict[str, Any]:
     return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()
 
 
-GetWorkResponse = collections.namedtuple(
-    'GetWorkResponse',
-    (
-        'task_id',
-        'running_tasks',
-        'n_pending_tasks',
-        'n_unique_pending',
-        'n_pending_last_scheduled',
-        'worker_state',
-    ),
-)
+class GetWorkResponse(NamedTuple):
+    task_id: str | None
+    running_tasks: Any
+    n_pending_tasks: int
+    n_unique_pending: int
+    n_pending_last_scheduled: int
+    worker_state: str
 
 
 class TaskProcess(_ForkProcess):
@@ -557,7 +552,8 @@ class Worker:
         return f'Worker({worker_info_str})'
 
     def _validate_task(self, task: Task) -> None:
-        if not isinstance(task, Task):
+        # runtime validation mirroring luigi, since callers may pass non-Task objects despite the annotation
+        if not isinstance(task, Task):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise luigi.worker.TaskException(f'Can not schedule non-task {task}')
 
         if not task.initialized():
@@ -803,13 +799,13 @@ class Worker:
     def _validate_dependency(self, dependency: Task) -> None:
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
-        elif not isinstance(dependency, Task):
+        elif not isinstance(dependency, Task):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'requires() must return Task objects but {dependency} is a {type(dependency)}')
 
     def _check_complete_value(self, is_complete: bool | luigi.worker.TracebackWrapper) -> None:
         if isinstance(is_complete, luigi.worker.TracebackWrapper):
             raise luigi.worker.AsyncCompletionException(is_complete.trace)
-        if not isinstance(is_complete, bool):
+        if not isinstance(is_complete, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'Return value of Task.complete() must be boolean (was {is_complete!r})')
 
     def _add_worker(self) -> None:

@@ -17,12 +17,12 @@ if TYPE_CHECKING:
 try:
     import polars as pl
 
-    HAS_POLARS = True
+    _has_polars = True
 except ImportError:
-    HAS_POLARS = False
+    _has_polars = False
 
 
-@pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+@pytest.mark.skipif(not _has_polars, reason='polars not installed')
 class TestCsvFileProcessorWithPolars:
     """Tests for CsvFileProcessor with polars support"""
 
@@ -124,7 +124,7 @@ class TestCsvFileProcessorWithPolars:
         assert processor._dataframe_type == 'polars'
 
 
-@pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+@pytest.mark.skipif(not _has_polars, reason='polars not installed')
 class TestJsonFileProcessorWithPolars:
     """Tests for JsonFileProcessor with polars support"""
 
@@ -220,7 +220,7 @@ class TestJsonFileProcessorWithPolars:
             assert list(loaded_df['b']) == [4, 5, 6]
 
 
-@pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+@pytest.mark.skipif(not _has_polars, reason='polars not installed')
 class TestParquetFileProcessorWithPolars:
     """Tests for ParquetFileProcessor with polars support"""
 
@@ -314,7 +314,7 @@ class TestParquetFileProcessorWithPolars:
             assert loaded_df.equals(df)
 
 
-@pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+@pytest.mark.skipif(not _has_polars, reason='polars not installed')
 class TestFeatherFileProcessorWithPolars:
     """Tests for FeatherFileProcessor with polars support"""
 
@@ -391,7 +391,7 @@ class TestFeatherFileProcessorWithPolars:
             df_polars.equals(pl.from_pandas(loaded_df))
 
 
-@pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+@pytest.mark.skipif(not _has_polars, reason='polars not installed')
 class TestLazyFrameSupport:
     """Tests for LazyFrame support in file processors using dataframe_type='polars-lazy'"""
 

@@ -18,9 +18,9 @@ _ParquetCompression = Literal['lz4', 'uncompressed', 'snappy', 'gzip', 'brotli',
 try:
     import polars as pl
 
-    HAS_POLARS = True
+    _has_polars = True
 except ImportError:
-    HAS_POLARS = False
+    _has_polars = False
 
 if TYPE_CHECKING:
     import polars as pl
@@ -30,7 +30,7 @@ class CsvFileProcessorPolars(FileProcessor):
     """CSV file processor for polars DataFrames."""
 
     def __init__(self, sep: str = ',', encoding: str = 'utf-8', lazy: bool = False) -> None:
-        if not HAS_POLARS:
+        if not _has_polars:
             raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._sep = sep
         self._encoding = encoding
@@ -66,7 +66,7 @@ class JsonFileProcessorPolars(FileProcessor):
     """JSON file processor for polars DataFrames."""
 
     def __init__(self, orient: str | None = None, lazy: bool = False):
-        if not HAS_POLARS:
+        if not _has_polars:
             raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._orient = orient
         self._lazy = lazy
@@ -105,7 +105,7 @@ class ParquetFileProcessorPolars(FileProcessor):
     """Parquet file processor for polars DataFrames."""
 
     def __init__(self, engine: str = 'pyarrow', compression: _ParquetCompression | None = None, lazy: bool = False) -> None:
-        if not HAS_POLARS:
+        if not _has_polars:
             raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         self._engine = engine  # Ignored for polars
         self._compression: _ParquetCompression | None = compression
@@ -141,7 +141,7 @@ class FeatherFileProcessorPolars(FileProcessor):
     """Feather file processor for polars DataFrames."""
 
     def __init__(self, store_index_in_feather: bool, lazy: bool = False):
-        if not HAS_POLARS:
+        if not _has_polars:
             raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
         super().__init__()
         self._store_index_in_feather = store_index_in_feather  # Ignored for polars
