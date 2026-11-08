@@ -119,6 +119,7 @@ reportMissingTypeArgument = "error"
 reportUnusedImport = "error"
 reportConstantRedefinition = "error"
 reportUnnecessaryIsInstance = "error"
+reportUntypedNamedTuple = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["test"]

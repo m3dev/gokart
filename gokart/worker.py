@@ -50,7 +50,7 @@ import threading
 import time
 import traceback
 from collections.abc import Generator
-from typing import Any, Literal, cast
+from typing import Any, Literal, NamedTuple, cast
 
 import luigi
 import luigi.worker
@@ -92,17 +92,13 @@ def _get_retry_policy_dict(task: Task) -> dict[str, Any]:
     return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()
 
 
-GetWorkResponse = collections.namedtuple(
-    'GetWorkResponse',
-    (
-        'task_id',
-        'running_tasks',
-        'n_pending_tasks',
-        'n_unique_pending',
-        'n_pending_last_scheduled',
-        'worker_state',
-    ),
-)
+class GetWorkResponse(NamedTuple):
+    task_id: str | None
+    running_tasks: Any
+    n_pending_tasks: int
+    n_unique_pending: int
+    n_pending_last_scheduled: int
+    worker_state: str
 
 
 class TaskProcess(_ForkProcess):
