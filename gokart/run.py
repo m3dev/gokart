@@ -7,7 +7,6 @@ from logging import getLogger
 from typing import Any, cast
 
 import luigi
-import luigi.cmdline
 import luigi.cmdline_parser
 import luigi.execution_summary
 import luigi.interface

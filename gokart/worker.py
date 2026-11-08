@@ -53,7 +53,6 @@ from collections.abc import Generator
 from typing import Any, Literal, cast
 
 import luigi
-import luigi.scheduler
 import luigi.worker
 from luigi import notifications
 from luigi.event import Event
