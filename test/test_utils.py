@@ -1,9 +1,11 @@
 import unittest
-from typing import TYPE_CHECKING, Generic, TypeVar
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import pandas as pd
 import pytest
 
+from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
 from gokart.utils import flatten, get_dataframe_type_from_task, map_flattenable_items
 
@@ -13,14 +15,17 @@ if TYPE_CHECKING:
 try:
     import polars as pl
 
-    HAS_POLARS = True
+    _has_polars = True
 except ImportError:
-    HAS_POLARS = False
+    _has_polars = False
 
 
 class TestFlatten(unittest.TestCase):
     def test_flatten_dict(self):
         self.assertEqual(flatten({'a': 'foo', 'b': 'bar'}), ['foo', 'bar'])
+
+    def test_flatten_mapping(self):
+        self.assertEqual(flatten(MappingProxyType({'a': 'foo', 'b': 'bar'})), ['foo', 'bar'])
 
     def test_flatten_list(self):
         self.assertEqual(flatten(['foo', ['bar', 'troll']]), ['foo', 'bar', 'troll'])
@@ -50,6 +55,49 @@ class TestMapFlatten(unittest.TestCase):
             {'a': ['1', '2', '3', '4'], 'b': {'c': 'True', 'd': {'e': '5'}}},
         )
 
+    def test_map_flattenable_items_does_not_split_str(self):
+        self.assertEqual(map_flattenable_items(lambda x: x.upper(), 'abc'), 'ABC')
+        self.assertEqual(map_flattenable_items(lambda x: x.upper(), ['ab', ('cd',)]), ['AB', ('CD',)])
+
+    def test_map_flattenable_items_with_mapping(self):
+        self.assertEqual(map_flattenable_items(lambda x: str(x), MappingProxyType({'a': 1})), {'a': '1'})
+
+
+# These tasks override output() / requires() as users do. Type checkers check that the overrides are
+# compatible with TaskOnKart, which requires FlattenableItems to be covariant.
+class _IntTask(TaskOnKart[int]):
+    pass
+
+
+class _TaskWithDictOutput(TaskOnKart[Any]):
+    def output(self) -> dict[str, TargetOnKart]:
+        return {'a': self.make_target('a.pkl'), 'b': self.make_target('b.pkl')}
+
+
+class _TaskWithListOutput(TaskOnKart[Any]):
+    def output(self) -> list[TargetOnKart]:
+        return [self.make_target('a.pkl'), self.make_target('b.pkl')]
+
+
+class _TaskWithDictRequires(TaskOnKart[Any]):
+    def requires(self) -> dict[str, TaskOnKart[int]]:
+        return {'a': _IntTask(), 'b': _IntTask()}
+
+
+class _TaskWithListRequires(TaskOnKart[Any]):
+    def requires(self) -> list[_IntTask]:
+        return [_IntTask(), _IntTask()]
+
+
+class TestFlattenableItemsOverride(unittest.TestCase):
+    def test_flatten_output(self):
+        self.assertEqual(len(flatten(_TaskWithDictOutput().output())), 2)
+        self.assertEqual(len(flatten(_TaskWithListOutput().output())), 2)
+
+    def test_flatten_requires(self):
+        self.assertEqual(len(flatten(_TaskWithDictRequires().requires())), 2)
+        self.assertEqual(len(flatten(_TaskWithListRequires().requires())), 2)
+
 
 class TestGetDataFrameTypeFromTask(unittest.TestCase):
     """Tests for get_dataframe_type_from_task function."""
@@ -71,7 +119,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
 
         self.assertEqual(get_dataframe_type_from_task(_PandasTaskClass), 'pandas')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_dataframe_from_instance(self):
         """Test detecting polars DataFrame from task instance."""
 
@@ -81,7 +129,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _PolarsTaskInstance()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_dataframe_from_class(self):
         """Test detecting polars DataFrame from task class."""
 
@@ -133,7 +181,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         # so it defaults to 'pandas'
         self.assertEqual(get_dataframe_type_from_task(task), 'pandas')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_nested_inheritance_polars(self):
         """Test detecting polars DataFrame type through nested inheritance."""
 
@@ -147,7 +195,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         # Function should detect 'polars' through the inheritance chain
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_lazyframe_from_instance(self):
         class _LazyTaskInstance(TaskOnKart[pl.LazyFrame]):
             pass
@@ -155,14 +203,14 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _LazyTaskInstance()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_polars_lazyframe_from_class(self):
         class _LazyTaskClass(TaskOnKart[pl.LazyFrame]):
             pass
 
         self.assertEqual(get_dataframe_type_from_task(_LazyTaskClass), 'polars-lazy')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_nested_inheritance_polars_lazyframe(self):
         class _BaseLazyTask(TaskOnKart[pl.LazyFrame]):
             pass
@@ -173,7 +221,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _DerivedLazyTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_nested_inheritance_polars_with_mixin(self):
         """Derived class with multiple bases should still detect polars through MRO."""
 
@@ -191,7 +239,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _DerivedTaskWithMixin()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_intermediate_generic_class_resolves_polars_typevar(self):
         """Detect polars when the type is bound through an intermediate generic class.
 
@@ -211,7 +259,7 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
         task = _DerivedGenericPolarsTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars')
 
-    @pytest.mark.skipif(not HAS_POLARS, reason='polars not installed')
+    @pytest.mark.skipif(not _has_polars, reason='polars not installed')
     def test_intermediate_generic_class_resolves_polars_lazyframe_typevar(self):
         """Detect polars-lazy when LazyFrame is bound through an intermediate generic class."""
         _T = TypeVar('_T')

@@ -50,10 +50,9 @@ import threading
 import time
 import traceback
 from collections.abc import Generator
-from typing import Any, Literal, cast
+from typing import Any, Literal, NamedTuple, cast
 
 import luigi
-import luigi.scheduler
 import luigi.worker
 from luigi import notifications
 from luigi.event import Event
@@ -90,23 +89,19 @@ def _is_external(task: Task) -> bool:
 
 
 def _get_retry_policy_dict(task: Task) -> dict[str, Any]:
-    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()  # type: ignore
+    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()
 
 
-GetWorkResponse = collections.namedtuple(
-    'GetWorkResponse',
-    (
-        'task_id',
-        'running_tasks',
-        'n_pending_tasks',
-        'n_unique_pending',
-        'n_pending_last_scheduled',
-        'worker_state',
-    ),
-)
+class GetWorkResponse(NamedTuple):
+    task_id: str | None
+    running_tasks: Any
+    n_pending_tasks: int
+    n_unique_pending: int
+    n_pending_last_scheduled: int
+    worker_state: str
 
 
-class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
+class TaskProcess(_ForkProcess):
     """Wrap all task execution in this class.
 
     Mainly for convenience since this is run in a separate process."""
@@ -262,7 +257,7 @@ class TaskProcess(_ForkProcess):  # type: ignore[valid-type, misc]
     def _handle_run_exception(self, ex: BaseException) -> str:
         logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
         self.task.trigger_event(Event.FAILURE, self.task, ex)
-        return cast(str, self.task.on_failure(ex))
+        return self.task.on_failure(ex)
 
     def _recursive_terminate(self) -> None:
         import psutil
@@ -494,14 +489,14 @@ class Worker:
         task = self._scheduled_tasks.get(task_id)
         if task:
             self._add_task_history.append((task, status, runnable))
-            kwargs['owners'] = task._owner_list()
+            kwargs['owners'] = task._owner_list()  # pyright: ignore[reportPrivateUsage]
 
         if task_id in self._batch_running_tasks:
             for batch_task in self._batch_running_tasks.pop(task_id):
                 self._add_task_history.append((batch_task, status, True))
 
         if task and kwargs.get('params'):
-            kwargs['param_visibilities'] = task._get_param_visibilities()
+            kwargs['param_visibilities'] = task._get_param_visibilities()  # pyright: ignore[reportPrivateUsage]
 
         self._scheduler.add_task(*args, **kwargs)
 
@@ -557,7 +552,8 @@ class Worker:
         return f'Worker({worker_info_str})'
 
     def _validate_task(self, task: Task) -> None:
-        if not isinstance(task, Task):
+        # runtime validation mirroring luigi, since callers may pass non-Task objects despite the annotation
+        if not isinstance(task, Task):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise luigi.worker.TaskException(f'Can not schedule non-task {task}')
 
         if not task.initialized():
@@ -585,7 +581,7 @@ class Worker:
                 family=task.task_family,
                 params=task.to_str_params(only_significant=True),
                 expl=expl,
-                owners=task._owner_list(),
+                owners=task._owner_list(),  # pyright: ignore[reportPrivateUsage]
             )
         except Exception:
             formatted_traceback = traceback.format_exc()
@@ -803,13 +799,13 @@ class Worker:
     def _validate_dependency(self, dependency: Task) -> None:
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
-        elif not isinstance(dependency, Task):
+        elif not isinstance(dependency, Task):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'requires() must return Task objects but {dependency} is a {type(dependency)}')
 
     def _check_complete_value(self, is_complete: bool | luigi.worker.TracebackWrapper) -> None:
         if isinstance(is_complete, luigi.worker.TracebackWrapper):
             raise luigi.worker.AsyncCompletionException(is_complete.trace)
-        if not isinstance(is_complete, bool):
+        if not isinstance(is_complete, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'Return value of Task.complete() must be boolean (was {is_complete!r})')
 
     def _add_worker(self) -> None:

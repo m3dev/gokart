@@ -133,17 +133,17 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # Cache to_str_params to avoid slow task creation in a deep task tree.
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
-        self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)  # type: ignore[method-assign]
+        self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
 
         if self.complete_check_at_run:
-            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)  # type: ignore
+            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
 
         if self.should_lock_run:
             self._lock_at_dump = False
             assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
             task_lock_params = make_task_lock_params_for_run(task_self=self)
-            self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)  # type: ignore
+            self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)

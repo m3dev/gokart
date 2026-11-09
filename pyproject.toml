@@ -55,17 +55,20 @@ test = [
   "lupa",
   "matplotlib",
   "moto>=4.0", # for use mock_aws api
-  "mypy",
+  "mypy", # for test_mypy.py, which tests the deprecated gokart.mypy plugin
   "polars>=0.19.0",
+  "psutil", # imported lazily by gokart.worker
   "pytest",
   "pytest-cov",
   "pytest-xdist",
   "testfixtures",
+  "boto3-stubs[s3]>=1.43.126",
+  "pandas-stubs>=3.1.0.261029",
 ]
 
 lint = [
   "ruff",
-  "mypy",
+  "pyright[nodejs]",
 ]
 
 [tool.uv]
@@ -106,21 +109,29 @@ ignore = ["B006", "B008"]
 [tool.ruff.format]
 quote-style = "single"
 
-[tool.mypy]
-ignore_missing_imports = true
+[tool.pyright]
+include = ["gokart", "test"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+reportUnnecessaryTypeIgnoreComment = "error"
+reportUnnecessaryCast = "error"
+reportMissingTypeArgument = "error"
+reportUnusedImport = "error"
+reportConstantRedefinition = "error"
+reportUnnecessaryIsInstance = "error"
+reportUntypedNamedTuple = "error"
+reportMissingTypeStubs = "error"
+reportPrivateUsage = "error"
 
-check_untyped_defs = true
+# tests legitimately reach into internals (e.g. _configured, _get_gcs_client) to set up and inspect state
+[[tool.pyright.executionEnvironments]]
+root = "test"
+extraPaths = ["."]
+reportPrivateUsage = "none"
 
-warn_unused_configs = true
-warn_redundant_casts = true
-no_implicit_optional = true
-strict_optional = true
-strict_equality = true
-warn_unused_ignores = true
-warn_return_any = true
-disallow_incomplete_defs = true
-disallow_any_generics = true
+[[tool.pyright.executionEnvironments]]
+root = "."
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-addopts = "-n auto -s -v --durations=0"
+addopts = "-n auto -v"

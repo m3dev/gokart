@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import luigi
 
@@ -22,7 +22,7 @@ class GCSConfig(luigi.Config):
 
     def _get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
         try:
-            import googleapiclient  # noqa: F401
+            import googleapiclient  # noqa: F401  # pyright: ignore[reportUnusedImport, reportMissingTypeStubs]
         except ImportError:
             raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
         import luigi.contrib.gcs
@@ -40,6 +40,6 @@ class GCSConfig(luigi.Config):
             return None
 
         if os.path.isfile(json_str):
-            return cast(Credentials, Credentials.from_service_account_file(json_str))
+            return Credentials.from_service_account_file(json_str)
 
-        return cast(Credentials, Credentials.from_service_account_info(json.loads(json_str)))
+        return Credentials.from_service_account_info(json.loads(json_str))

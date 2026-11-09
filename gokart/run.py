@@ -7,7 +7,6 @@ from logging import getLogger
 from typing import Any, cast
 
 import luigi
-import luigi.cmdline
 import luigi.cmdline_parser
 import luigi.execution_summary
 import luigi.interface
@@ -97,7 +96,7 @@ def _run_with_retcodes(argv):
 
     worker = None
     try:
-        worker = luigi.interface._run(argv, worker_scheduler_factory=WorkerSchedulerFactory()).worker
+        worker = luigi.interface._run(argv, worker_scheduler_factory=WorkerSchedulerFactory()).worker  # pyright: ignore[reportPrivateUsage]
     except luigi.interface.PidLockAlreadyTakenExit:
         sys.exit(retcodes.already_running)
     except Exception:
@@ -107,12 +106,12 @@ def _run_with_retcodes(argv):
         sys.exit(retcodes.unhandled_exception)
 
     with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
-        task_sets = luigi.execution_summary._summary_dict(worker)
-        root_task = luigi.execution_summary._root_task(worker)
+        task_sets = luigi.execution_summary._summary_dict(worker)  # pyright: ignore[reportPrivateUsage]
+        root_task = luigi.execution_summary._root_task(worker)  # pyright: ignore[reportPrivateUsage]
         non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status):
-        assert status in luigi.execution_summary._ORDERED_STATUSES
+        assert status in luigi.execution_summary._ORDERED_STATUSES  # pyright: ignore[reportPrivateUsage]
         return status in non_empty_categories
 
     codes_and_conds = (
@@ -134,11 +133,11 @@ def run(cmdline_args=None, set_retcode=True):
     cmdline_args = cmdline_args or sys.argv[1:]
 
     if set_retcode:
-        luigi.retcodes.retcode.already_running = 10  # type: ignore
-        luigi.retcodes.retcode.missing_data = 20  # type: ignore
-        luigi.retcodes.retcode.not_run = 30  # type: ignore
-        luigi.retcodes.retcode.task_failed = 40  # type: ignore
-        luigi.retcodes.retcode.scheduling_error = 50  # type: ignore
+        luigi.retcodes.retcode.already_running = 10
+        luigi.retcodes.retcode.missing_data = 20
+        luigi.retcodes.retcode.not_run = 30
+        luigi.retcodes.retcode.task_failed = 40
+        luigi.retcodes.retcode.scheduling_error = 50
 
     _try_tree_info(cmdline_args)
     _try_to_delete_unnecessary_output_file(cmdline_args)

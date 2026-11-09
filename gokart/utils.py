@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from io import BytesIO
 from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, get_origin
 
-import dill
+import dill  # pyright: ignore[reportMissingTypeStubs]
 import luigi
 import pandas as pd
 
@@ -22,12 +22,12 @@ class FileLike(Protocol):
 
 def add_config(file_path: str) -> None:
     _, ext = os.path.splitext(file_path)
-    luigi.configuration.core.parser = ext  # type: ignore
+    luigi.configuration.core.parser = ext  # pyright: ignore[reportAttributeAccessIssue]
     assert luigi.configuration.add_config_path(file_path)
 
 
 T = TypeVar('T')
-FlattenableItems: TypeAlias = T | list['FlattenableItems[T]'] | tuple['FlattenableItems[T]', ...] | dict[str, 'FlattenableItems[T]']
+FlattenableItems: TypeAlias = T | Sequence['FlattenableItems[T]'] | Mapping[str, 'FlattenableItems[T]']
 
 
 def flatten(targets: FlattenableItems[T]) -> list[T]:
@@ -50,13 +50,13 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     if targets is None:
         return []
     flat = []
-    if isinstance(targets, dict):
+    if isinstance(targets, Mapping):
         for _, result in targets.items():
             flat += flatten(result)
         return flat
 
     if isinstance(targets, str):
-        return [targets]  # type: ignore
+        return [targets]  # pyright: ignore[reportReturnType]
 
     if not isinstance(targets, Iterable):
         return [targets]
@@ -70,13 +70,14 @@ K = TypeVar('K')
 
 
 def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) -> FlattenableItems[K]:
-    if isinstance(items, dict):
+    if isinstance(items, Mapping):
         return {k: map_flattenable_items(func, v) for k, v in items.items()}
     if isinstance(items, tuple):
         return tuple(map_flattenable_items(func, i) for i in items)
+    # str is a Sequence, so it has to be checked before Sequence.
     if isinstance(items, str):
-        return func(items)  # type: ignore
-    if isinstance(items, list):
+        return func(items)  # pyright: ignore[reportArgumentType]
+    if isinstance(items, Sequence):
         return list(map(lambda item: map_flattenable_items(func, item), items))
     return func(items)
 
@@ -141,7 +142,8 @@ def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'pola
             origin = get_origin(base)
             if origin is None:
                 continue
-            for parameter, arg in zip(getattr(origin, '__parameters__', ()), get_args(base), strict=False):
+            origin_parameters: tuple[Any, ...] = getattr(origin, '__parameters__', ())
+            for parameter, arg in zip(origin_parameters, get_args(base), strict=False):
                 if isinstance(parameter, TypeVar) and parameter not in type_var_substitutions:
                     type_var_substitutions[parameter] = arg
 

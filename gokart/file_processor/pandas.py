@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Literal
+from typing import Any, Literal
 
 import luigi
 import luigi.format
@@ -25,19 +25,20 @@ class CsvFileProcessorPandas(FileProcessor):
     def format(self):
         return TextFormat(encoding=self._encoding)
 
-    def load(self, file):
+    def load(self, file: Any):
         try:
             return pd.read_csv(file, sep=self._sep, encoding=self._encoding)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.')
         obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True, encoding=self._encoding)
 
 
 _JsonOrient = Literal['split', 'records', 'index', 'table', 'columns', 'values']
+_ParquetCompression = Literal['snappy', 'gzip', 'brotli', 'lz4', 'zstd']
 
 
 class JsonFileProcessorPandas(FileProcessor):
@@ -49,32 +50,33 @@ class JsonFileProcessorPandas(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         try:
             return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(obj)
         if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.')
-        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
+        # pandas-stubs does not allow 'columns' and 'values' for Series.to_json; pandas raises ValueError for them at runtime.
+        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 class ParquetFileProcessorPandas(FileProcessor):
     """Parquet file processor for pandas DataFrames."""
 
-    def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression: str | None = None) -> None:
+    def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression: _ParquetCompression | None = None) -> None:
         self._engine: Literal['auto', 'pyarrow', 'fastparquet'] = engine
-        self._compression = compression
+        self._compression: _ParquetCompression | None = compression
         super().__init__()
 
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         # FIXME(mamo3gr): enable streaming (chunked) read with S3.
         # pandas.read_parquet accepts file-like object
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
@@ -84,7 +86,7 @@ class ParquetFileProcessorPandas(FileProcessor):
         else:
             return pd.read_parquet(BytesIO(file.read()))
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if not isinstance(obj, pd.DataFrame):
             raise TypeError(f'requires pd.DataFrame, but {type(obj)} is passed.')
         # MEMO: to_parquet only supports a filepath as string (not a file handle)
@@ -102,7 +104,7 @@ class FeatherFileProcessorPandas(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         # FIXME(mamo3gr): enable streaming (chunked) read with S3.
         # pandas.read_feather accepts file-like object
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
@@ -116,7 +118,7 @@ class FeatherFileProcessorPandas(FileProcessor):
             if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
                 index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
                 index_column = index_columns[0]
-                index_name = index_column[len(self.INDEX_COLUMN_PREFIX) :]
+                index_name: str | None = index_column[len(self.INDEX_COLUMN_PREFIX) :]
                 if index_name == 'None':
                     index_name = None
                 loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
@@ -124,7 +126,7 @@ class FeatherFileProcessorPandas(FileProcessor):
 
         return loaded_df
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if not isinstance(obj, pd.DataFrame):
             raise TypeError(f'requires pd.DataFrame, but {type(obj)} is passed.')
 

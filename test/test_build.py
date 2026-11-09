@@ -10,10 +10,12 @@ from unittest.mock import patch
 
 import luigi
 import luigi.mock
+from luigi import setup_logging
 
 import gokart
 from gokart.build import GokartBuildError, HasLockedTaskException, LoggerConfig, TaskDumpConfig, TaskDumpMode, TaskDumpOutputType, process_task_info
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
+from gokart.utils import add_config
 
 
 class _DummyTask(gokart.TaskOnKart[str]):
@@ -68,8 +70,8 @@ class _LoadRequires(gokart.TaskOnKart[str]):
 
 class RunTest(unittest.TestCase):
     def setUp(self):
-        luigi.setup_logging.DaemonLogging._configured = False
-        luigi.setup_logging.InterfaceLogging._configured = False
+        setup_logging.DaemonLogging._configured = False
+        setup_logging.InterfaceLogging._configured = False
         luigi.configuration.LuigiConfigParser._instance = None
         self.config_paths = copy(luigi.configuration.LuigiConfigParser._config_paths)
         luigi.mock.MockFileSystem().clear()
@@ -78,8 +80,8 @@ class RunTest(unittest.TestCase):
     def tearDown(self):
         luigi.configuration.LuigiConfigParser._config_paths = self.config_paths
         os.environ.clear()
-        luigi.setup_logging.DaemonLogging._configured = False
-        luigi.setup_logging.InterfaceLogging._configured = False
+        setup_logging.DaemonLogging._configured = False
+        setup_logging.InterfaceLogging._configured = False
 
     def test_build(self):
         text = 'test'
@@ -93,15 +95,16 @@ class RunTest(unittest.TestCase):
     def test_read_config(self):
         class _DummyTask(gokart.TaskOnKart[Any]):
             task_namespace = 'test_read_config'
-            param = luigi.Parameter()
+            param: luigi.Parameter = luigi.Parameter()
 
             def run(self):
                 self.dump(self.param)
 
         os.environ.setdefault('test_param', 'test')
         config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'test_config.ini')
-        gokart.utils.add_config(config_file_path)
-        output = gokart.build(_DummyTask(), reset_register=False)
+        add_config(config_file_path)
+        # param is read from the config file.
+        output = gokart.build(_DummyTask(), reset_register=False)  # pyright: ignore[reportCallIssue]
         self.assertIsInstance(output, str)
         self.assertEqual(output, 'test')
 

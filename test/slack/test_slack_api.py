@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 from slack_sdk import WebClient
 from slack_sdk.web.slack_response import SlackResponse
-from testfixtures import LogCapture
+from testfixtures import LogCapture  # pyright: ignore[reportMissingTypeStubs]
 
 import gokart.slack
 

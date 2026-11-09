@@ -29,7 +29,7 @@ class LocalTargetTest(unittest.TestCase):
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
-        with unittest.mock.patch('gokart.file_processor.base._ChunkedLargeFileReader', wraps=_ChunkedLargeFileReader) as monkey:
+        with patch('gokart.file_processor.base._ChunkedLargeFileReader', wraps=_ChunkedLargeFileReader) as monkey:
             loaded = target.load()
             monkey.assert_called()
 

@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import luigi
 import pandas as pd
+from luigi import cmdline_parser, task_register
 from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
@@ -26,14 +27,14 @@ class _DummyTask(gokart.TaskOnKart[Any]):
     bool_param: luigi.BoolParameter = luigi.BoolParameter()
 
     def output(self):
-        return None
+        return []
 
 
 class _DummyTaskA(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
-        return None
+        return []
 
 
 @inherits(_DummyTaskA)
@@ -41,7 +42,7 @@ class _DummyTaskB(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
-        return None
+        return []
 
     def requires(self):
         return self.clone(_DummyTaskA)
@@ -52,7 +53,7 @@ class _DummyTaskC(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
     def output(self):
-        return None
+        return []
 
     def requires(self):
         return self.clone(_DummyTaskB)
@@ -103,7 +104,7 @@ class TaskTest(unittest.TestCase):
 
         # depends on an uncompleted target.
         task = _DummyTask()
-        task.input = Mock(return_value=uncompleted_target)  # type: ignore
+        task.input = Mock(return_value=uncompleted_target)
         self.assertTrue(task.complete(), msg='task does not care input targets.')
 
         # make a task check its inputs.
@@ -121,8 +122,8 @@ class TaskTest(unittest.TestCase):
         # depends on an uncompleted target.
         task = _DummyTask()
         task.modification_time_check = False
-        task.input = Mock(return_value=input_target)  # type: ignore
-        task.output = Mock(return_value=output_target)  # type: ignore
+        task.input = Mock(return_value=input_target)
+        task.output = Mock(return_value=output_target)
         self.assertTrue(task.complete(), msg='task does not care modified time')
 
         # make a task check its inputs.
@@ -142,8 +143,8 @@ class TaskTest(unittest.TestCase):
 
         task = _DummyTask()
         task.modification_time_check = True
-        task.input = Mock(return_value=input_target)  # type: ignore
-        task.output = Mock(return_value=output_target)  # type: ignore
+        task.input = Mock(return_value=input_target)
+        task.output = Mock(return_value=output_target)
         self.assertTrue(task.complete())
 
     def test_complete_when_input_and_output_equal(self):
@@ -164,19 +165,19 @@ class TaskTest(unittest.TestCase):
 
         task = _DummyTask()
         task.modification_time_check = True
-        task.input = Mock(return_value=[target1, target2])  # type: ignore
-        task.output = Mock(return_value=[target1, target2])  # type: ignore
+        task.input = Mock(return_value=[target1, target2])
+        task.output = Mock(return_value=[target1, target2])
         self.assertTrue(task.complete())
 
-        task.input = Mock(return_value=[target1, target2])  # type: ignore
-        task.output = Mock(return_value=[target2, target3])  # type: ignore
+        task.input = Mock(return_value=[target1, target2])
+        task.output = Mock(return_value=[target2, target3])
         self.assertFalse(task.complete())
 
     def test_default_target(self):
         task = _DummyTaskD()
         default_target = task.output()
         self.assertIsInstance(default_target, SingleFileTarget)
-        self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.pkl', pathlib.Path(default_target._target.path).name)  # type: ignore
+        self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.pkl', pathlib.Path(default_target._target.path).name)  # pyright: ignore[reportAttributeAccessIssue]
 
     def test_clone_with_special_params(self):
         class _DummyTaskRerun(gokart.TaskOnKart[Any]):
@@ -216,11 +217,12 @@ class TaskTest(unittest.TestCase):
 
     def test_get_own_code(self):
         task = _DummyTask()
-        task_scripts = 'def output(self):\nreturn None\n'
+        task_scripts = 'def output(self):\nreturn []\n'
         self.assertEqual(task.get_own_code().replace(' ', ''), task_scripts.replace(' ', ''))
 
     def test_make_unique_id_with_own_code(self):
-        class _MyDummyTaskA(gokart.TaskOnKart[str]):
+        # Redeclare the same class name to check that only the code change affects the unique id.
+        class _MyDummyTaskA(gokart.TaskOnKart[str]):  # pyright: ignore[reportRedeclaration]
             _visible_in_registry = False
 
             def run(self):
@@ -230,7 +232,7 @@ class TaskTest(unittest.TestCase):
         task_with_code_unique_id = _MyDummyTaskA(serialized_task_definition_check=True).make_unique_id()
         self.assertNotEqual(task_unique_id, task_with_code_unique_id)
 
-        class _MyDummyTaskA(gokart.TaskOnKart[str]):  # type: ignore
+        class _MyDummyTaskA(gokart.TaskOnKart[str]):
             _visible_in_registry = False
 
             def run(self):
@@ -256,7 +258,7 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
         target.load.return_value = 1
-        task.input = Mock(return_value=target)  # type: ignore
+        task.input = Mock(return_value=target)
 
         data = task.load()
         target.load.assert_called_once()
@@ -266,7 +268,7 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
         target.load.return_value = 1
-        task.input = Mock(return_value={'target_key': target})  # type: ignore
+        task.input = Mock(return_value={'target_key': target})
 
         data = task.load()
         target.load.assert_called_once()
@@ -276,7 +278,7 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
         target.load.return_value = 1
-        task.input = Mock(return_value={'target_key': target})  # type: ignore
+        task.input = Mock(return_value={'target_key': target})
 
         data = task.load('target_key')
         target.load.assert_called_once()
@@ -288,7 +290,7 @@ class TaskTest(unittest.TestCase):
         target1.load.return_value = 1
         target2 = Mock(spec=TargetOnKart)
         target2.load.return_value = 2
-        task.input = Mock(return_value=(target1, target2))  # type: ignore
+        task.input = Mock(return_value=(target1, target2))
 
         data = task.load()
         target1.load.assert_called_once()
@@ -302,7 +304,7 @@ class TaskTest(unittest.TestCase):
         target1.load.return_value = 1
         target2 = Mock(spec=TargetOnKart)
         target2.load.return_value = 2
-        task.input = Mock(return_value={'target_key_1': target1, 'target_key_2': target2})  # type: ignore
+        task.input = Mock(return_value={'target_key_1': target1, 'target_key_2': target2})
 
         data = task.load()
         target1.load.assert_called_once()
@@ -320,7 +322,7 @@ class TaskTest(unittest.TestCase):
         task2_output.load.return_value = 1
 
         # task2 should be in requires' return values
-        task.requires = lambda: {'task2': task2}  # type: ignore
+        task.requires = lambda: {'task2': task2}
 
         actual = task.load(task2)
         self.assertEqual(actual, 1)
@@ -355,7 +357,7 @@ class TaskTest(unittest.TestCase):
         task3_output.load.return_value = 2
 
         # task2 should be in requires' return values
-        task.requires = lambda: {'tasks': [task2, task3]}  # type: ignore
+        task.requires = lambda: {'tasks': [task2, task3]}
 
         load_args: list[gokart.TaskOnKart[int]] = [task2, task3]
         actual = task.load(load_args)
@@ -365,7 +367,7 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
-        task.input = Mock(return_value=target)  # type: ignore
+        task.input = Mock(return_value=target)
         data = [x for x in task.load_generator()]
         self.assertEqual(data, [[1, 2]])
 
@@ -373,7 +375,7 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
         target.load.return_value = [1, 2]
-        task.input = Mock(return_value={'target_key': target})  # type: ignore
+        task.input = Mock(return_value={'target_key': target})
         data = [x for x in task.load_generator('target_key')]
         self.assertEqual(data, [[1, 2]])
 
@@ -393,7 +395,7 @@ class TaskTest(unittest.TestCase):
         task3_output.load.return_value = 2
 
         # task2 should be in requires' return values
-        task.requires = lambda: {'tasks': [task2, task3]}  # type: ignore
+        task.requires = lambda: {'tasks': [task2, task3]}
 
         load_args: list[gokart.TaskOnKart[int]] = [task2, task3]
         actual = [x for x in task.load_generator(load_args)]
@@ -402,7 +404,7 @@ class TaskTest(unittest.TestCase):
     def test_dump(self):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
-        task.output = Mock(return_value=target)  # type: ignore
+        task.output = Mock(return_value=target)
 
         task.dump(1)
         target.dump.assert_called_once()
@@ -411,7 +413,7 @@ class TaskTest(unittest.TestCase):
         # do not fail
         task = _DummyTask(fail_on_empty_dump=False)
         target = Mock(spec=TargetOnKart)
-        task.output = Mock(return_value=target)  # type: ignore
+        task.output = Mock(return_value=target)
         task.dump(pd.DataFrame())
         target.dump.assert_called_once()
 
@@ -439,10 +441,10 @@ class TaskTest(unittest.TestCase):
             aa = luigi.IntParameter()
 
         luigi.configuration.get_config().set('DummyTaskAddConfiguration', 'aa', '3')
-        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
+        mock_cmdline.return_value = cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 3)
 
-        mock_cmdline.return_value = luigi.cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
+        mock_cmdline.return_value = cmdline_parser.CmdlineParser(['DummyTaskAddConfiguration', '--DummyTaskAddConfiguration-aa', '2'])
         self.assertEqual(DummyTaskAddConfiguration().aa, 2)
 
     def test_use_rerun_with_inherits(self):
@@ -475,7 +477,7 @@ class TaskTest(unittest.TestCase):
                 def requires(self):
                     if has_required_task:
                         return _MyDummyTaskA(significant=significant)
-                    return
+                    return []
 
             return _MyDummyTaskB()
 
@@ -495,10 +497,10 @@ class TaskTest(unittest.TestCase):
             a_task: gokart.TaskInstanceParameter[Any] = gokart.TaskInstanceParameter()
 
         without_task = _WithoutTaskInstanceParameter()
-        self.assertListEqual(without_task.requires(), [])  # type: ignore
+        self.assertListEqual(without_task.requires(), [])  # pyright: ignore[reportArgumentType]
 
         with_task = _WithTaskInstanceParameter(a_task=without_task)
-        self.assertEqual(with_task.requires()['a_task'], without_task)  # type: ignore
+        self.assertEqual(with_task.requires()['a_task'], without_task)  # pyright: ignore[reportArgumentType, reportCallIssue, reportIndexIssue]
 
     def test_repr(self):
         task = _DummyTaskWithPrivateParameter(
@@ -538,7 +540,7 @@ class TaskTest(unittest.TestCase):
 
     def test_serialize_and_deserialize_default_values(self):
         task: gokart.TaskOnKart[Any] = gokart.TaskOnKart()
-        deserialized: gokart.TaskOnKart[Any] = luigi.task_register.load_task(None, task.get_task_family(), task.to_str_params())
+        deserialized: gokart.TaskOnKart[Any] = task_register.load_task(None, task.get_task_family(), task.to_str_params())
         self.assertDictEqual(task.to_str_params(), deserialized.to_str_params())
 
     def test_to_str_params_changes_on_values_and_flags(self):
@@ -558,7 +560,7 @@ class TaskTest(unittest.TestCase):
                 self.dump('hello')
 
         task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True)
-        self.assertEqual(task.run.__wrapped__.__name__, 'run')  # type: ignore
+        self.assertEqual(task.run.__wrapped__.__name__, 'run')  # pyright: ignore[reportAttributeAccessIssue]
 
     def test_should_fail_lock_run_when_host_unset(self):
         with self.assertRaises(AssertionError):
@@ -570,7 +572,7 @@ class TaskTest(unittest.TestCase):
 
 
 class _DummyTaskWithNonCompleted(gokart.TaskOnKart[Any]):
-    def dump(self, _obj: Any, _target: Any = None, _custom_labels: Any = None) -> None:
+    def dump(self, obj: Any, target: Any = None, custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass
 
@@ -582,7 +584,7 @@ class _DummyTaskWithNonCompleted(gokart.TaskOnKart[Any]):
 
 
 class _DummyTaskWithCompleted(gokart.TaskOnKart[Any]):
-    def dump(self, obj: Any, _target: Any = None, custom_labels: Any = None) -> None:
+    def dump(self, obj: Any, target: Any = None, custom_labels: Any = None) -> None:
         # overrive dump() to do nothing.
         pass
 
@@ -596,7 +598,7 @@ class _DummyTaskWithCompleted(gokart.TaskOnKart[Any]):
 class TestCompleteCheckAtRun(unittest.TestCase):
     def test_run_when_complete_check_at_run_is_false_and_task_is_not_completed(self):
         task = _DummyTaskWithNonCompleted(complete_check_at_run=False)
-        task.dump = Mock()  # type: ignore
+        task.dump = Mock()
         task.run()
 
         # since run() is called, dump() should be called.
@@ -604,7 +606,7 @@ class TestCompleteCheckAtRun(unittest.TestCase):
 
     def test_run_when_complete_check_at_run_is_false_and_task_is_completed(self):
         task = _DummyTaskWithCompleted(complete_check_at_run=False)
-        task.dump = Mock()  # type: ignore
+        task.dump = Mock()
         task.run()
 
         # even task is completed, since run() is called, dump() should be called.
@@ -612,7 +614,7 @@ class TestCompleteCheckAtRun(unittest.TestCase):
 
     def test_run_when_complete_check_at_run_is_true_and_task_is_not_completed(self):
         task = _DummyTaskWithNonCompleted(complete_check_at_run=True)
-        task.dump = Mock()  # type: ignore
+        task.dump = Mock()
         task.run()
 
         # since task is not completed, when run() is called, dump() should be called.
@@ -620,7 +622,7 @@ class TestCompleteCheckAtRun(unittest.TestCase):
 
     def test_run_when_complete_check_at_run_is_true_and_task_is_completed(self):
         task = _DummyTaskWithCompleted(complete_check_at_run=True)
-        task.dump = Mock()  # type: ignore
+        task.dump = Mock()
         task.run()
 
         # since task is completed, even when run() is called, dump() should not be called.

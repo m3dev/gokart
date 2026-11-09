@@ -58,10 +58,10 @@ class CsvFileProcessor(FileProcessor):
     def format(self):
         return self._impl.format()
 
-    def load(self, file):
+    def load(self, file: Any):
         return self._impl.load(file)
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         return self._impl.dump(obj, file)
 
 
@@ -89,10 +89,10 @@ class JsonFileProcessor(FileProcessor):
     def format(self):
         return self._impl.format()
 
-    def load(self, file):
+    def load(self, file: Any):
         return self._impl.load(file)
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         return self._impl.dump(obj, file)
 
 
@@ -122,10 +122,10 @@ class ParquetFileProcessor(FileProcessor):
     def format(self):
         return self._impl.format()
 
-    def load(self, file):
+    def load(self, file: Any):
         return self._impl.load(file)
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         # Use the configured implementation (pandas by default)
         return self._impl.dump(obj, file)
 
@@ -154,10 +154,10 @@ class FeatherFileProcessor(FileProcessor):
     def format(self):
         return self._impl.format()
 
-    def load(self, file):
+    def load(self, file: Any):
         return self._impl.load(file)
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         # Use the configured implementation (pandas by default)
         return self._impl.dump(obj, file)
 
