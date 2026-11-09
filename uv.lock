@@ -2567,11 +2567,14 @@ wheels = [
 
 [[package]]
 name = "testfixtures"
-version = "8.3.0"
+version = "12.4.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3b/25/d7e9d05f87e2ab84657a0dfb1f24fc295d542ac2eb221531d976ea4aa1ff/testfixtures-8.3.0.tar.gz", hash = "sha256:d4c0b84af2f267610f908009b50d6f983a4e58ade22c67bab6787b5a402d59c0", size = 137420, upload-time = "2024-06-07T18:12:27.484Z" }
+dependencies = [
+    { name = "typing-extensions", version = "4.12.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/b8/b1bd3ed5fe7df85ddaaebfd594046610151da623a7b941690c5bd1f2474a/testfixtures-12.4.0.tar.gz", hash = "sha256:cc0108614f88ace8817b587bea06615bdd225fec392ed3de8afabff5d1ef21c7", size = 203049, upload-time = "2026-10-02T14:29:25.434Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/4e/699671ba484b94bda0959b281ff59b24f728263befd13e060fa038ce3bc8/testfixtures-8.3.0-py3-none-any.whl", hash = "sha256:3d1e0e0005c4d6ac2a2ab27916704c6471047f0d2f78f2e54adf20abdacc7b10", size = 105085, upload-time = "2024-06-07T18:12:23.298Z" },
+    { url = "https://files.pythonhosted.org/packages/75/f4/87a93d6b60a24b356460bc960ce36794a5a3accd01e5fe4925d7df983314/testfixtures-12.4.0-py3-none-any.whl", hash = "sha256:621a9a752806989e3dd78229bfc86936256565bb0982736d5ec1b2e59c23229e", size = 69609, upload-time = "2026-10-02T14:29:23.926Z" },
 ]
 
 [[package]]
