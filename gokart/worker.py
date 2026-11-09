@@ -478,7 +478,7 @@ class Worker:
         self._add_task_history: list[Any] = []
         self._get_work_response_history: list[Any] = []
 
-    def _add_task(self, *args, **kwargs):
+    def _add_task(self, *args: Any, **kwargs: Any):
         """
         Call ``self._scheduler.add_task``, but store the values too so we can
         implement :py:func:`luigi.execution_summary.summary`.
@@ -924,7 +924,7 @@ class Worker:
             # Run in the same process
             task_process.run()
 
-    def _create_task_process(self, task):
+    def _create_task_process(self, task: Any):
         message_queue: Any = _fork_context.Queue() if task.accepts_messages else None
         reporter = luigi.worker.TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)

@@ -22,12 +22,12 @@ from gokart.object_storage import ObjectStorage
 logger = getLogger(__name__)
 
 
-def _run_tree_info(cmdline_args, details):
+def _run_tree_info(cmdline_args: list[str], details: bool):
     with CmdlineParser.global_instance(cmdline_args) as cp:
         gokart.tree_info().output().dump(gokart.make_tree_info(cp.get_task_obj(), details=details))
 
 
-def _try_tree_info(cmdline_args):
+def _try_tree_info(cmdline_args: list[str]):
     with CmdlineParser.global_instance(cmdline_args):
         mode = gokart.tree_info().mode
         output_path = gokart.tree_info().output().path()
@@ -88,7 +88,7 @@ def _try_to_send_event_summary_to_slack(
     slack_api.send_snippet(comment=comment, title='event.txt', content=content)
 
 
-def _run_with_retcodes(argv):
+def _run_with_retcodes(argv: list[str]):
     """run_with_retcodes equivalent that uses gokart's WorkerSchedulerFactory."""
     retcode_logger = logging.getLogger('luigi-interface')
     with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
@@ -110,7 +110,7 @@ def _run_with_retcodes(argv):
         root_task = luigi.execution_summary._root_task(worker)  # pyright: ignore[reportPrivateUsage]
         non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
-    def has(status):
+    def has(status: str):
         assert status in luigi.execution_summary._ORDERED_STATUSES  # pyright: ignore[reportPrivateUsage]
         return status in non_empty_categories
 
@@ -129,7 +129,7 @@ def _run_with_retcodes(argv):
         sys.exit(expected_ret_code)
 
 
-def run(cmdline_args=None, set_retcode=True):
+def run(cmdline_args: list[str] | None = None, set_retcode: bool = True):
     cmdline_args = cmdline_args or sys.argv[1:]
 
     if set_retcode:

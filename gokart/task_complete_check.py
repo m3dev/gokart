@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 def task_complete_check_wrapper(run_func: Callable[..., Any], complete_check_func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(run_func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any):
         if complete_check_func():
             logger.warning(f'{run_func.__name__} is skipped because the task is already completed.')
             return

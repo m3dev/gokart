@@ -5,6 +5,7 @@ import io
 import logging
 from dataclasses import dataclass
 from logging import getLogger
+from types import TracebackType
 from typing import Any, Literal, Protocol, TypeVar, cast, overload
 
 import luigi
@@ -35,7 +36,7 @@ class LoggerConfig:
         self.logger.setLevel(self.level)
         return self
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exception_type: type[BaseException] | None, exception_value: BaseException | None, traceback: TracebackType | None):
         logging.disable(self.default_level - 10)  # subtract 10 to disable below self.level
         self.logger.setLevel(self.default_level)
 
@@ -94,7 +95,7 @@ def _get_output(task: TaskOnKart[T]) -> T:
     raise ValueError(f'output type is not supported: {type(output)}')
 
 
-def _reset_register(keep={'gokart', 'luigi'}):
+def _reset_register(keep: set[str] = {'gokart', 'luigi'}):
     """reset task_register.Register._reg everytime gokart.build called to avoid TaskClassAmbigiousException"""
     task_register.Register._reg = [  # pyright: ignore[reportPrivateUsage]
         x
@@ -198,7 +199,7 @@ def build(
         raised_exceptions: dict[str, list[Exception]] = dict()
 
         @TaskOnKart.event_handler(luigi.Event.FAILURE)
-        def when_failure(task, exception):
+        def when_failure(task: Any, exception: Exception):
             if isinstance(exception, TaskLockException):
                 task_lock_exception_raised.flag = True
             else:
