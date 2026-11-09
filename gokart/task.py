@@ -121,7 +121,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def priority(self):
         return random.Random().random()  # seed is fixed, so we need to use random.Random().random() instead f random.random()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log = dict()
@@ -165,11 +165,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return {key: var for key, var in vars(self).items() if self.is_task_on_kart(var)}
 
     @staticmethod
-    def is_task_on_kart(value):
+    def is_task_on_kart(value: Any) -> bool:
         return isinstance(value, TaskOnKart) or (isinstance(value, tuple) and bool(value) and all([isinstance(v, TaskOnKart) for v in value]))
 
     @classmethod
-    def _add_configuration(cls, kwargs, section):
+    def _add_configuration(cls, kwargs: dict[str, Any], section: str) -> None:
         config = luigi.configuration.get_config()
         class_variables = dict(TaskOnKart.__dict__)
         class_variables.update(dict(cls.__dict__))
@@ -212,7 +212,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # "=" must be required in the following statements, because some tasks use input targets as output targets.
         return input_modification_time <= output_modification_time
 
-    def clone(self, cls=None, **kwargs):
+    def clone(self, cls: type[TaskOnKart[Any]] | None = None, **kwargs: Any) -> Any:
         _SPECIAL_PARAMS = {'rerun', 'strict_check', 'modification_time_check'}
         if cls is None:
             cls = self.__class__
@@ -320,7 +320,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def load(self, target: list[TaskOnKart[K]]) -> list[K]: ...
 
     def load(self, target: None | str | TargetOnKart | TaskOnKart[K] | list[TaskOnKart[K]] = None) -> Any:
-        def _load(targets):
+        def _load(targets: Any) -> Any:
             if isinstance(targets, list) or isinstance(targets, tuple):
                 return [_load(t) for t in targets]
             if isinstance(targets, dict):
@@ -336,7 +336,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def load_generator(self, target: list[TaskOnKart[K]]) -> Generator[K, None, None]: ...
 
     def load_generator(self, target: None | str | TargetOnKart | list[TaskOnKart[K]] = None) -> Generator[Any, None, None]:
-        def _load(targets):
+        def _load(targets: Any) -> Generator[Any, None, None]:
             if isinstance(targets, list) or isinstance(targets, tuple):
                 for t in targets:
                     yield from _load(t)
@@ -346,7 +346,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             else:
                 yield targets.load()
 
-        return cast(Generator[Any, None, None], _load(self._get_input_targets(target)))
+        return _load(self._get_input_targets(target))
 
     @overload
     def dump(self, obj: T, target: None = None, custom_labels: dict[Any, Any] | None = None) -> None: ...
@@ -380,7 +380,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @staticmethod
     def get_code(target_class: Any) -> set[str]:
-        def has_sourcecode(obj):
+        def has_sourcecode(obj: Any) -> bool:
             return inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isframe(obj) or inspect.iscode(obj)
 
         return {inspect.getsource(t) for _, t in inspect.getmembers(target_class, has_sourcecode)}
@@ -397,7 +397,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return unique_id
 
     def _make_hash_id(self) -> str:
-        def _to_str_params(task):
+        def _to_str_params(task: Any) -> str | dict[str, str] | None:
             if isinstance(task, TaskOnKart):
                 return str(task.make_unique_id()) if task.significant else None
 
@@ -443,8 +443,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return result
         return target
 
-    def get_info(self, only_significant=False):
-        params_str = {}
+    def get_info(self, only_significant: bool = False) -> dict[str, str]:
+        params_str: dict[str, str] = {}
         params = dict(self.get_params())
         for param_name, param_value in self.param_kwargs.items():
             if (not only_significant) or params[param_name].significant:
@@ -527,17 +527,17 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return 'unknown'
 
     @luigi.Task.event_handler(luigi.Event.PROCESSING_TIME)
-    def _dump_processing_time(self, processing_time):
+    def _dump_processing_time(self, processing_time: float) -> None:
         if self.should_dump_supplementary_log_files:
             self.dump(processing_time, self._get_processing_time_target())
 
     @classmethod
-    def restore(cls, unique_id):
+    def restore(cls, unique_id: str):
         params = TaskOnKart().make_target(f'log/task_params/{cls.__name__}_{unique_id}.pkl', use_unique_id=False).load()
         return cls.from_str_params(params)
 
     @luigi.Task.event_handler(luigi.Event.FAILURE)
-    def _log_unique_id(self, exception):
+    def _log_unique_id(self, exception: BaseException) -> None:
         logger.info(f'FAILURE:\n    task name={type(self).__name__}\n    unique id={self.make_unique_id()}')
 
     @luigi.Task.event_handler(luigi.Event.START)
@@ -575,7 +575,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         """
         return self._get_task_string(only_public=True)
 
-    def _get_task_string(self, only_public=False):
+    def _get_task_string(self, only_public: bool = False):
         """
         Convert a task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
         """
