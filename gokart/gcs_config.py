@@ -22,7 +22,7 @@ class GCSConfig(luigi.Config):
 
     def _get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
         try:
-            import googleapiclient  # noqa: F401
+            import googleapiclient  # noqa: F401  # pyright: ignore[reportUnusedImport, reportMissingTypeStubs]
         except ImportError:
             raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
         import luigi.contrib.gcs

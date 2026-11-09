@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import IO
 
 
-def _unzip_file(fp: str | IO[bytes] | os.PathLike[str], extract_dir: str) -> None:
+def unzip_file(fp: str | IO[bytes] | os.PathLike[str], extract_dir: str) -> None:
     zip_file = zipfile.ZipFile(fp)
     zip_file.extractall(extract_dir)
     zip_file.close()
@@ -49,7 +49,7 @@ class LocalZipClient(ZipClient):
         shutil.make_archive(base_name=base, format=extension[1:], root_dir=self._temporary_directory)
 
     def unpack_archive(self) -> None:
-        _unzip_file(fp=self._file_path, extract_dir=self._temporary_directory)
+        unzip_file(fp=self._file_path, extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         shutil.rmtree(self._file_path, ignore_errors=True)

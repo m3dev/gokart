@@ -22,10 +22,10 @@ class inherits_config_params:
 
     def __call__(self, task_class: type[gokart.TaskOnKart[Any]]) -> type[gokart.TaskOnKart[Any]]:
         # wrap task to prevent task name from being changed
-        @luigi.task._task_wraps(task_class)
+        @luigi.task._task_wraps(task_class)  # pyright: ignore[reportPrivateUsage]
         class Wrapped(task_class):
             @classmethod
-            def get_param_values(cls, params, args, kwargs):
+            def get_param_values(cls, params: list[tuple[str, luigi.Parameter[Any]]], args: tuple[Any, ...], kwargs: dict[str, Any]) -> list[tuple[str, Any]]:
                 for param_key, param_value in self._config_class().param_kwargs.items():
                     param_name: str = param_key
                     task_param_key = self._parameter_alias.get(param_name, param_name)

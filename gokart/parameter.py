@@ -10,7 +10,7 @@ from warnings import warn
 
 import luigi
 from luigi import task_register
-from luigi.parameter import ConfigPath, ParameterVisibility, _no_value, _NoValueType
+from luigi.parameter import ConfigPath, ParameterVisibility, _no_value, _NoValueType  # pyright: ignore[reportPrivateUsage]
 
 import gokart
 
@@ -40,14 +40,14 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
     ):
         if expected_type is None:
             self.expected_type: type = gokart.TaskOnKart
-        elif isinstance(expected_type, type):
+        elif isinstance(expected_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]  # runtime guard against non-type input despite the annotation
             self.expected_type = expected_type
         else:
             raise TypeError(f'expected_type must be a type, not {type(expected_type)}')
         super().__init__(default=default, **kwargs)
 
     @staticmethod
-    def _recursive(param_dict):
+    def _recursive(param_dict: dict[str, Any]) -> Any:
         params = param_dict['params']
         task_cls = task_register.Register.get_task_cls(param_dict['type'])
         for key, value in task_cls.get_params():
@@ -56,29 +56,29 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
         return task_cls(**params)
 
     @staticmethod
-    def _recursive_decompress(s):
-        s = dict(luigi.DictParameter().parse(s))
-        if 'params' in s:
-            s['params'] = TaskInstanceParameter._recursive_decompress(bz2.decompress(bytes.fromhex(s['params'])).decode())
-        return s
+    def _recursive_decompress(s: str) -> dict[str, Any]:
+        decompressed: dict[str, Any] = dict(luigi.DictParameter().parse(s))
+        if 'params' in decompressed:
+            decompressed['params'] = TaskInstanceParameter._recursive_decompress(bz2.decompress(bytes.fromhex(decompressed['params'])).decode())
+        return decompressed
 
-    def parse(self, x):
+    def parse(self, x: str | dict[str, Any]) -> TASK_ON_KART_TYPE:
         if isinstance(x, str):
             x = self._recursive_decompress(x)
         return self._recursive(x)
 
-    def serialize(self, x):
+    def serialize(self, x: TASK_ON_KART_TYPE) -> str:
         params = bz2.compress(json.dumps(x.to_str_params(only_significant=True)).encode()).hex()
         values = dict(type=x.get_task_family(), params=params)
         return luigi.DictParameter().serialize(values)
 
-    def _warn_on_wrong_param_type(self, param_name, param_value):
+    def _warn_on_wrong_param_type(self, param_name: str, param_value: Any) -> None:
         if not isinstance(param_value, self.expected_type):
             raise TypeError(f'{param_value} is not an instance of {self.expected_type}')
 
 
 class _TaskInstanceEncoder(json.JSONEncoder):
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         if isinstance(o, luigi.Task):
             return TaskInstanceParameter().serialize(o)
         # Let the base class default method raise the TypeError
@@ -94,29 +94,29 @@ class ListTaskInstanceParameter(luigi.Parameter[list[TASK_ON_KART_TYPE]], Generi
     ):
         if expected_elements_type is None:
             self.expected_elements_type: type = gokart.TaskOnKart
-        elif isinstance(expected_elements_type, type):
+        elif isinstance(expected_elements_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]
             self.expected_elements_type = expected_elements_type
         else:
             raise TypeError(f'expected_elements_type must be a type, not {type(expected_elements_type)}')
         super().__init__(default=default, **kwargs)
 
-    def parse(self, x):
+    def parse(self, x: str) -> list[TASK_ON_KART_TYPE]:
         return [TaskInstanceParameter().parse(item) for item in list(json.loads(x))]
 
-    def serialize(self, x):
+    def serialize(self, x: list[TASK_ON_KART_TYPE]) -> str:
         return json.dumps(x, cls=_TaskInstanceEncoder)
 
-    def _warn_on_wrong_param_type(self, param_name, param_value):
+    def _warn_on_wrong_param_type(self, param_name: str, param_value: Any) -> None:
         for v in param_value:
             if not isinstance(v, self.expected_elements_type):
                 raise TypeError(f'{v} is not an instance of {self.expected_elements_type}')
 
 
 class ExplicitBoolParameter(luigi.BoolParameter):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super(luigi.BoolParameter, self).__init__(*args, **kwargs)
 
-    def _parser_kwargs(self, *args, **kwargs):
+    def _parser_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         return luigi.Parameter._parser_kwargs(*args, *kwargs)
 
 
@@ -160,10 +160,10 @@ class ZonedDateSecondParameter(luigi.Parameter[datetime.datetime]):
     19:07:38 +09:00. The separator `:` can be omitted for Python3.11 and later.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def parse(self, x):
+    def parse(self, x: str) -> datetime.datetime:
         # special character 'Z' is replaced with '+00:00'
         # because Python 3.11 and later support fromisoformat with Z at the end of the string.
         if x.endswith('Z'):
@@ -173,10 +173,10 @@ class ZonedDateSecondParameter(luigi.Parameter[datetime.datetime]):
             warn('The input does not have timezone information. Please consider using luigi.DateSecondParameter instead.', stacklevel=1)
         return dt
 
-    def serialize(self, x):
+    def serialize(self, x: datetime.datetime) -> str:
         return x.isoformat()
 
-    def normalize(self, x):
+    def normalize(self, x: datetime.datetime) -> datetime.datetime:
         # override _DatetimeParameterBase.normalize to avoid do nothing to normalize except removing microsecond.
         # microsecond is removed because the number of digits of microsecond is not fixed.
         # See also luigi's implementation  https://github.com/spotify/luigi/blob/v3.6.0/luigi/parameter.py#L612

@@ -96,9 +96,9 @@ def _get_output(task: TaskOnKart[T]) -> T:
 
 def _reset_register(keep={'gokart', 'luigi'}):
     """reset task_register.Register._reg everytime gokart.build called to avoid TaskClassAmbigiousException"""
-    task_register.Register._reg = [
+    task_register.Register._reg = [  # pyright: ignore[reportPrivateUsage]
         x
-        for x in task_register.Register._reg
+        for x in task_register.Register._reg  # pyright: ignore[reportPrivateUsage]
         if (
             (x.__module__.split('.')[0] in keep)  # keep luigi and gokart
             or (issubclass(x, gokart.PandasTypeConfig))

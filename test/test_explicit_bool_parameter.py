@@ -2,7 +2,6 @@ import unittest
 from typing import Any
 
 import luigi
-import luigi.mock
 from luigi.cmdline_parser import CmdlineParser
 
 import gokart

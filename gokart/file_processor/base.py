@@ -6,7 +6,7 @@ from io import BytesIO
 from logging import getLogger
 from typing import Any, Literal, cast
 
-import dill
+import dill  # pyright: ignore[reportMissingTypeStubs]
 import luigi
 import luigi.format
 import numpy as np
@@ -45,10 +45,10 @@ class BinaryFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         return file.read()
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         file.write(obj)
 
 
@@ -56,7 +56,7 @@ class _ChunkedLargeFileReader:
     def __init__(self, file: Any) -> None:
         self._file = file
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str):
         return getattr(self._file, item)
 
     def read(self, n: int) -> bytes:
@@ -87,7 +87,7 @@ class PickleFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         if not file.seekable():
             # load_dill_with_pandas_backward_compatibility() requires file with seek() and readlines() implemented.
             # Therefore, we need to wrap with BytesIO which makes file seekable and readlinesable.
@@ -95,11 +95,11 @@ class PickleFileProcessor(FileProcessor):
             return load_dill_with_pandas_backward_compatibility(BytesIO(file.read()))
         return load_dill_with_pandas_backward_compatibility(_ChunkedLargeFileReader(file))
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         self._write(dill.dumps(obj, protocol=4), file)
 
     @staticmethod
-    def _write(buffer, file):
+    def _write(buffer: bytes | bytearray, file: Any):
         n = len(buffer)
         idx = 0
         while idx < n:
@@ -115,10 +115,10 @@ class TextFileProcessor(FileProcessor):
     def format(self):
         return None
 
-    def load(self, file):
+    def load(self, file: Any):
         return [s.rstrip() for s in file.readlines()]
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if isinstance(obj, list):
             for x in obj:
                 file.write(str(x) + '\n')
@@ -130,10 +130,10 @@ class GzipFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Gzip
 
-    def load(self, file):
+    def load(self, file: Any):
         return [s.rstrip().decode() for s in file.readlines()]
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if isinstance(obj, list):
             for x in obj:
                 file.write((str(x) + '\n').encode())
@@ -145,13 +145,13 @@ class XmlFileProcessor(FileProcessor):
     def format(self):
         return None
 
-    def load(self, file):
+    def load(self, file: Any):
         try:
             return ET.parse(file)
         except ET.ParseError:
             return ET.ElementTree()
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         assert isinstance(obj, ET.ElementTree), f'requires ET.ElementTree, but {type(obj)} is passed.'
         obj.write(file)
 
@@ -160,9 +160,9 @@ class NpzFileProcessor(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         return np.load(file)['data']
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         assert isinstance(obj, np.ndarray), f'requires np.ndarray, but {type(obj)} is passed.'
         np.savez_compressed(file, data=obj)

@@ -6,7 +6,7 @@ from logging import getLogger
 from typing import Any, NamedTuple
 
 import redis
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
 from redis.lock import Lock
 
 logger = getLogger(__name__)

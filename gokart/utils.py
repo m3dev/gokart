@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from io import BytesIO
 from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, get_origin
 
-import dill
+import dill  # pyright: ignore[reportMissingTypeStubs]
 import luigi
 import pandas as pd
 
@@ -142,7 +142,8 @@ def get_dataframe_type_from_task(task: Any) -> Literal['pandas', 'polars', 'pola
             origin = get_origin(base)
             if origin is None:
                 continue
-            for parameter, arg in zip(getattr(origin, '__parameters__', ()), get_args(base), strict=False):
+            origin_parameters: tuple[Any, ...] = getattr(origin, '__parameters__', ())
+            for parameter, arg in zip(origin_parameters, get_args(base), strict=False):
                 if isinstance(parameter, TypeVar) and parameter not in type_var_substitutions:
                     type_var_substitutions[parameter] = arg
 
