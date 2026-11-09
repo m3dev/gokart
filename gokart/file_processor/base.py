@@ -6,7 +6,7 @@ from io import BytesIO
 from logging import getLogger
 from typing import Any, Literal, cast
 
-import dill
+import dill  # pyright: ignore[reportMissingTypeStubs]
 import luigi
 import luigi.format
 import numpy as np
