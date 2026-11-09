@@ -73,7 +73,7 @@ class ObjectStorage:
 
             # for gcs object
             # should PR to luigi
-            bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)
+            bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)  # pyright: ignore[reportPrivateUsage]
             result = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
             return cast(datetime, result['updated'])
         else:

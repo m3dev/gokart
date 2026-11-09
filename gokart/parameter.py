@@ -10,7 +10,7 @@ from warnings import warn
 
 import luigi
 from luigi import task_register
-from luigi.parameter import ConfigPath, ParameterVisibility, _no_value, _NoValueType
+from luigi.parameter import ConfigPath, ParameterVisibility, _no_value, _NoValueType  # pyright: ignore[reportPrivateUsage]
 
 import gokart
 

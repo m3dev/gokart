@@ -96,7 +96,7 @@ def _run_with_retcodes(argv):
 
     worker = None
     try:
-        worker = luigi.interface._run(argv, worker_scheduler_factory=WorkerSchedulerFactory()).worker
+        worker = luigi.interface._run(argv, worker_scheduler_factory=WorkerSchedulerFactory()).worker  # pyright: ignore[reportPrivateUsage]
     except luigi.interface.PidLockAlreadyTakenExit:
         sys.exit(retcodes.already_running)
     except Exception:
@@ -106,12 +106,12 @@ def _run_with_retcodes(argv):
         sys.exit(retcodes.unhandled_exception)
 
     with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
-        task_sets = luigi.execution_summary._summary_dict(worker)
-        root_task = luigi.execution_summary._root_task(worker)
+        task_sets = luigi.execution_summary._summary_dict(worker)  # pyright: ignore[reportPrivateUsage]
+        root_task = luigi.execution_summary._root_task(worker)  # pyright: ignore[reportPrivateUsage]
         non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status):
-        assert status in luigi.execution_summary._ORDERED_STATUSES
+        assert status in luigi.execution_summary._ORDERED_STATUSES  # pyright: ignore[reportPrivateUsage]
         return status in non_empty_categories
 
     codes_and_conds = (

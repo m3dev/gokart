@@ -489,14 +489,14 @@ class Worker:
         task = self._scheduled_tasks.get(task_id)
         if task:
             self._add_task_history.append((task, status, runnable))
-            kwargs['owners'] = task._owner_list()
+            kwargs['owners'] = task._owner_list()  # pyright: ignore[reportPrivateUsage]
 
         if task_id in self._batch_running_tasks:
             for batch_task in self._batch_running_tasks.pop(task_id):
                 self._add_task_history.append((batch_task, status, True))
 
         if task and kwargs.get('params'):
-            kwargs['param_visibilities'] = task._get_param_visibilities()
+            kwargs['param_visibilities'] = task._get_param_visibilities()  # pyright: ignore[reportPrivateUsage]
 
         self._scheduler.add_task(*args, **kwargs)
 
@@ -581,7 +581,7 @@ class Worker:
                 family=task.task_family,
                 params=task.to_str_params(only_significant=True),
                 expl=expl,
-                owners=task._owner_list(),
+                owners=task._owner_list(),  # pyright: ignore[reportPrivateUsage]
             )
         except Exception:
             formatted_traceback = traceback.format_exc()

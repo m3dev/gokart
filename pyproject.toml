@@ -121,6 +121,16 @@ reportConstantRedefinition = "error"
 reportUnnecessaryIsInstance = "error"
 reportUntypedNamedTuple = "error"
 reportMissingTypeStubs = "error"
+reportPrivateUsage = "error"
+
+# tests legitimately reach into internals (e.g. _configured, _get_gcs_client) to set up and inspect state
+[[tool.pyright.executionEnvironments]]
+root = "test"
+extraPaths = ["."]
+reportPrivateUsage = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "."
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
