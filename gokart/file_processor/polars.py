@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import luigi
 import luigi.format
@@ -40,7 +40,7 @@ class CsvFileProcessorPolars(FileProcessor):
     def format(self):
         return TextFormat(encoding=self._encoding)
 
-    def load(self, file):
+    def load(self, file: Any):
         try:
             # scan_csv/read_csv only support 'utf8' and 'utf8-lossy'
             encoding: _CsvEncoding = 'utf8' if self._encoding in ('utf-8', 'utf8') else 'utf8-lossy'
@@ -54,7 +54,7 @@ class CsvFileProcessorPolars(FileProcessor):
                 return pl.LazyFrame() if self._lazy else pl.DataFrame()
             raise
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
@@ -74,7 +74,7 @@ class JsonFileProcessorPolars(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         try:
             if self._orient == 'records':
                 if self._lazy:
@@ -90,7 +90,7 @@ class JsonFileProcessorPolars(FileProcessor):
                 return pl.LazyFrame() if self._lazy else pl.DataFrame()
             raise
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
@@ -115,7 +115,7 @@ class ParquetFileProcessorPolars(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         # polars.read_parquet can handle file paths or file-like objects
         if ObjectStorage.is_buffered_reader(file):
             if self._lazy:
@@ -128,7 +128,7 @@ class ParquetFileProcessorPolars(FileProcessor):
                 return pl.read_parquet(data).lazy()
             return pl.read_parquet(data)
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
@@ -150,7 +150,7 @@ class FeatherFileProcessorPolars(FileProcessor):
     def format(self):
         return luigi.format.Nop
 
-    def load(self, file):
+    def load(self, file: Any):
         # polars uses read_ipc for feather format
         if ObjectStorage.is_buffered_reader(file):
             if self._lazy:
@@ -163,7 +163,7 @@ class FeatherFileProcessorPolars(FileProcessor):
                 return pl.read_ipc(data).lazy()
             return pl.read_ipc(data)
 
-    def dump(self, obj, file):
+    def dump(self, obj: Any, file: Any):
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
