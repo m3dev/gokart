@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 
-from gokart.zip_client import ZipClient, _unzip_file
+from gokart.zip_client import ZipClient, unzip_file
 
 
 class GCSZipClient(ZipClient):
@@ -25,7 +25,7 @@ class GCSZipClient(ZipClient):
     def unpack_archive(self) -> None:
         os.makedirs(self._temporary_directory, exist_ok=True)
         file_pointer = self._client.download(self._file_path)
-        _unzip_file(fp=file_pointer, extract_dir=self._temporary_directory)
+        unzip_file(fp=file_pointer, extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         self._client.remove(self._file_path)

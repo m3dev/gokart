@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from io import BytesIO
 from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, get_origin
 
-import dill
+import dill  # pyright: ignore[reportMissingTypeStubs]
 import luigi
 import pandas as pd
 

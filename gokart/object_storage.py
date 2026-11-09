@@ -34,7 +34,7 @@ class ObjectStorage:
             return luigi.contrib.s3.S3Target(path, client=S3Config().get_s3_client(), format=format)
         elif path.startswith('gs://'):
             try:
-                import googleapiclient  # noqa: F401  # pyright: ignore[reportUnusedImport]
+                import googleapiclient  # noqa: F401  # pyright: ignore[reportUnusedImport, reportMissingTypeStubs]
             except ImportError:
                 raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
 
@@ -73,7 +73,7 @@ class ObjectStorage:
 
             # for gcs object
             # should PR to luigi
-            bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)
+            bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)  # pyright: ignore[reportPrivateUsage]
             result = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
             return cast(datetime, result['updated'])
         else:
