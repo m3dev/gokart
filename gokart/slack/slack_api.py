@@ -32,7 +32,7 @@ class SlackAPI:
         self._channel_id = self._get_channel_id(channel)
         self._to_user = to_user if to_user == '' or to_user.startswith('@') else '@' + to_user
 
-    def _get_channel_id(self, channel_name):
+    def _get_channel_id(self, channel_name: str):
         params = {'exclude_archived': True, 'limit': 100}
         try:
             for channels in self._client.conversations_list(params=params):
@@ -45,7 +45,7 @@ class SlackAPI:
         except Exception as e:
             logger.warning(f'The job will start without slack notification: {e}')
 
-    def send_snippet(self, comment, title, content):
+    def send_snippet(self, comment: str, title: str, content: str):
         try:
             request_body = dict(
                 channels=self._channel_id, initial_comment=f'<{self._to_user}> {comment}' if self._to_user else comment, content=content, title=title
