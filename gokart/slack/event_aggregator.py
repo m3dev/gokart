@@ -39,10 +39,10 @@ class EventAggregator:
             message = 'Tasks were not executed.'
         return message
 
-    def _success(self, task):
+    def _success(self, task: Any):
         self._success_events.append(self._task_to_str(task))
 
-    def _failure(self, task, exception):
+    def _failure(self, task: Any, exception: BaseException):
         failure: FailureEvent = {'task': self._task_to_str(task), 'exception': str(exception)}
         self._failure_events.append(failure)
 

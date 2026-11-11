@@ -30,7 +30,7 @@ class TaskLockException(Exception):
 class RedisClient:
     _instances: dict[Any, Any] = {}
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any):
         key = (args, tuple(sorted(kwargs.items())))
         if cls not in cls._instances:
             cls._instances[cls] = {}
