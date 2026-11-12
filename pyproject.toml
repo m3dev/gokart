@@ -122,12 +122,17 @@ reportUnnecessaryIsInstance = "error"
 reportUntypedNamedTuple = "error"
 reportMissingTypeStubs = "error"
 reportPrivateUsage = "error"
+reportMissingParameterType = "error"
+reportUnknownParameterType = "error"
 
-# tests legitimately reach into internals (e.g. _configured, _get_gcs_client) to set up and inspect state
+# tests legitimately reach into internals (e.g. _configured, _get_gcs_client) to set up and inspect state,
+# and annotating every test helper parameter adds noise without catching real bugs
 [[tool.pyright.executionEnvironments]]
 root = "test"
 extraPaths = ["."]
 reportPrivateUsage = "none"
+reportMissingParameterType = "none"
+reportUnknownParameterType = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "."
