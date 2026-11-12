@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import luigi
 import luigi.format
@@ -58,7 +58,7 @@ class JsonFileProcessorPandas(FileProcessor):
 
     def dump(self, obj: Any, file: Any):
         if isinstance(obj, dict):
-            obj = pd.DataFrame.from_dict(obj)
+            obj = pd.DataFrame.from_dict(cast(dict[Any, Any], obj))
         if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.')
         # pandas-stubs does not allow 'columns' and 'values' for Series.to_json; pandas raises ValueError for them at runtime.
