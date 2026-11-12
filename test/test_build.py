@@ -207,6 +207,17 @@ class TestBuildHasLockedTaskException(unittest.TestCase):
                 log_level=logging.CRITICAL,
             )
 
+    def test_build_raises_has_locked_task_exception_with_multiple_workers(self):
+        with self.assertRaises(HasLockedTaskException):
+            gokart.build(
+                _AlwaysLockedTask(),
+                reset_register=False,
+                workers=2,
+                task_lock_exception_max_tries=2,
+                task_lock_exception_max_wait_seconds=1,
+                log_level=logging.CRITICAL,
+            )
+
 
 class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
     def test_build_raises_exception_on_failed_and_scheduling_failed(self):
