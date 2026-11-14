@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from logging import getLogger
 from typing import Any, TypedDict
 
@@ -20,7 +21,7 @@ class EventAggregator:
         self._failure_events: list[FailureEvent] = []
 
     def set_handlers(self):
-        handlers = [(luigi.Event.SUCCESS, self._success), (luigi.Event.FAILURE, self._failure)]
+        handlers: list[tuple[Any, Callable[..., None]]] = [(luigi.Event.SUCCESS, self._success), (luigi.Event.FAILURE, self._failure)]
         for event, handler in handlers:
             luigi.Task.event_handler(event)(handler)
 

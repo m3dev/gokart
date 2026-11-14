@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from logging import getLogger
+from typing import Any
 
 import slack_sdk
 
@@ -33,7 +34,7 @@ class SlackAPI:
         self._to_user = to_user if to_user == '' or to_user.startswith('@') else '@' + to_user
 
     def _get_channel_id(self, channel_name: str):
-        params = {'exclude_archived': True, 'limit': 100}
+        params: dict[str, Any] = {'exclude_archived': True, 'limit': 100}
         try:
             for channels in self._client.conversations_list(params=params):
                 if not channels:
