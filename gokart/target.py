@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 from abc import abstractmethod
 from datetime import datetime
@@ -207,6 +208,9 @@ class ModelTarget(TargetOnKart):
         os.makedirs(self._temporary_directory, exist_ok=True)
 
 
+_LARGE_DATA_FRAME_CHUNK_PATTERN = re.compile(r'data_(\d+)\.pkl')
+
+
 class LargeDataFrameProcessor:
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
@@ -227,8 +231,14 @@ class LargeDataFrameProcessor:
     @staticmethod
     def load(file_path: str) -> pd.DataFrame:
         dir_path = os.path.dirname(file_path)
+        # glob returns files in arbitrary order, and lexicographic order puts data_10 before data_2, so sort by chunk index.
+        chunks: list[tuple[int, str]] = []
+        for fp in glob(os.path.join(dir_path, 'data_*.pkl')):
+            m = _LARGE_DATA_FRAME_CHUNK_PATTERN.fullmatch(os.path.basename(fp))
+            if m is not None:
+                chunks.append((int(m.group(1)), fp))
 
-        return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for fp in glob(os.path.join(dir_path, 'data_*.pkl'))]))
+        return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in sorted(chunks)]))
 
 
 def _make_file_system_target(file_path: str, processor: FileProcessor | None = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:
