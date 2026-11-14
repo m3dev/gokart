@@ -99,9 +99,9 @@ class PickleFileProcessor(FileProcessor):
             if (
                 getattr(obj, '__module__', None) == '__main__'
                 or isinstance(obj, types.MethodType)
-                or (isinstance(obj, np.ndarray) and getattr(obj, '__dict__', None))
+                or (isinstance(obj, np.ndarray) and getattr(cast(Any, obj), '__dict__', None))
             ):
-                raise pickle.PicklingError(f'dill pickles {type(obj)!r} differently')
+                raise pickle.PicklingError(f'dill pickles {type(cast(Any, obj))!r} differently')
             return NotImplemented
 
     def format(self):
@@ -150,7 +150,7 @@ class TextFileProcessor(FileProcessor):
 
     def dump(self, obj: Any, file: Any):
         if isinstance(obj, list):
-            for x in obj:
+            for x in cast(list[Any], obj):
                 file.write(str(x) + '\n')
         else:
             file.write(str(obj))
@@ -165,7 +165,7 @@ class GzipFileProcessor(FileProcessor):
 
     def dump(self, obj: Any, file: Any):
         if isinstance(obj, list):
-            for x in obj:
+            for x in cast(list[Any], obj):
                 file.write((str(x) + '\n').encode())
         else:
             file.write(str(obj).encode())

@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 import warnings
 from dataclasses import dataclass
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 from gokart.task import TaskOnKart
 from gokart.utils import FlattenableItems, flatten
@@ -52,9 +52,9 @@ def _make_requires_info(requires: Any) -> FlattenableItems[RequiredTask]:
     if isinstance(requires, TaskOnKart):
         return RequiredTask(name=requires.__class__.__name__, unique_id=requires.make_unique_id())
     elif isinstance(requires, dict):
-        return {key: _make_requires_info(requires=item) for key, item in requires.items()}
+        return {key: _make_requires_info(requires=item) for key, item in cast(dict[str, Any], requires).items()}
     elif isinstance(requires, typing.Iterable):
-        return [_make_requires_info(requires=item) for item in requires]
+        return [_make_requires_info(requires=item) for item in cast(typing.Iterable[Any], requires)]
 
     raise TypeError(f'`requires` has unexpected type {type(requires)}. Must be `TaskOnKart`, `Iterarble[TaskOnKart]`, or `Dict[str, TaskOnKart]`')
 

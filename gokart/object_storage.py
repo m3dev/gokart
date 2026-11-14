@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 
 import luigi
 from luigi.format import Format
@@ -64,7 +64,7 @@ class ObjectStorage:
         if path.startswith('s3://'):
             from gokart.s3_config import S3Config
 
-            key = S3Config().get_s3_client().get_key(path)
+            key = cast(Any, S3Config().get_s3_client().get_key(path))
             if key is None:
                 raise FileNotFoundError(f'S3 key not found: {path}')
             return cast(datetime, key.last_modified)
@@ -73,8 +73,8 @@ class ObjectStorage:
 
             # for gcs object
             # should PR to luigi
-            bucket, obj = GCSConfig().get_gcs_client()._path_to_bucket_and_key(path)  # pyright: ignore[reportPrivateUsage]
-            result = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
+            bucket, obj = cast(tuple[str, str], GCSConfig().get_gcs_client()._path_to_bucket_and_key(path))  # pyright: ignore[reportPrivateUsage]
+            result = cast(Any, GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute())
             return cast(datetime, result['updated'])
         else:
             raise

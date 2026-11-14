@@ -49,9 +49,9 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     """
     if targets is None:
         return []
-    flat = []
+    flat: list[T] = []
     if isinstance(targets, Mapping):
-        for _, result in targets.items():
+        for result in cast(Mapping[str, FlattenableItems[T]], targets).values():
             flat += flatten(result)
         return flat
 
@@ -61,7 +61,7 @@ def flatten(targets: FlattenableItems[T]) -> list[T]:
     if not isinstance(targets, Iterable):
         return [targets]
 
-    for result in targets:
+    for result in cast(Iterable[FlattenableItems[T]], targets):
         flat += flatten(result)
     return flat
 
@@ -71,14 +71,14 @@ K = TypeVar('K')
 
 def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) -> FlattenableItems[K]:
     if isinstance(items, Mapping):
-        return {k: map_flattenable_items(func, v) for k, v in items.items()}
+        return {k: map_flattenable_items(func, v) for k, v in cast(Mapping[str, FlattenableItems[T]], items).items()}
     if isinstance(items, tuple):
-        return tuple(map_flattenable_items(func, i) for i in items)
+        return tuple(map_flattenable_items(func, i) for i in cast(tuple[FlattenableItems[T], ...], items))
     # str is a Sequence, so it has to be checked before Sequence.
     if isinstance(items, str):
         return func(items)  # pyright: ignore[reportArgumentType]
     if isinstance(items, Sequence):
-        return list(map(lambda item: map_flattenable_items(func, item), items))
+        return list(map(lambda item: map_flattenable_items(func, item), cast(Sequence[FlattenableItems[T]], items)))
     return func(items)
 
 

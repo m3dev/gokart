@@ -115,7 +115,7 @@ class SingleFileTarget(TargetOnKart):
 
     def _load(self) -> Any:
         # luigi.target.FileSystemTarget.open() has no annotation and its body is `pass`, so pyright infers its return type as None.
-        with self._target.open('r') as f:  # pyright: ignore[reportGeneralTypeIssues]
+        with cast(Any, self._target.open('r')) as f:
             return self._processor.load(f)
 
     def _dump(
@@ -125,7 +125,7 @@ class SingleFileTarget(TargetOnKart):
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
-        with self._target.open('w') as f:  # pyright: ignore[reportGeneralTypeIssues]
+        with cast(Any, self._target.open('w')) as f:
             self._processor.dump(obj, f)
         if self.path().startswith('gs://'):
             GCSObjectMetadataClient.add_task_state_labels(
