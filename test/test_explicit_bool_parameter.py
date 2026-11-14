@@ -50,3 +50,12 @@ class TestExplicitBoolParameter(unittest.TestCase):
         # argparse throw "expected one argument" error
         with self.assertRaises(SystemExit):
             in_parse(['ExplicitParsing', '--param'], lambda: True)
+
+    def test_parser_kwargs_with_keyword_arguments(self):
+        param = gokart.ExplicitBoolParameter()
+        expected = param._parser_kwargs('param', 'ExplicitParsing')
+
+        actual = param._parser_kwargs(param_name='param', task_name='ExplicitParsing')
+
+        self.assertEqual(actual, expected)
+        self.assertEqual(actual['dest'], 'ExplicitParsing_param')
