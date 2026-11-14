@@ -142,6 +142,16 @@ class RunTest(unittest.TestCase):
         self.assertEqual(len(e.raised_exceptions), 1)
         self.assertIsInstance(e.raised_exceptions[t.make_unique_id()][0], CheckException)
 
+    def test_build_does_not_leak_failure_event_handlers(self):
+        def count_failure_handlers() -> int:
+            return len(gokart.TaskOnKart._event_callbacks.get(gokart.TaskOnKart, {}).get(luigi.Event.FAILURE, set()))
+
+        before = count_failure_handlers()
+        gokart.build(_DummyTask(param='test'), reset_register=False)
+        with self.assertRaises(GokartBuildError):
+            gokart.build(_DummyFailedTask(), reset_register=False, log_level=logging.CRITICAL)
+        self.assertEqual(count_failure_handlers(), before)
+
 
 class LoggerConfigTest(unittest.TestCase):
     def test_logger_config(self):
@@ -154,6 +164,16 @@ class LoggerConfigTest(unittest.TestCase):
                 with LoggerConfig(level) as lc:
                     self.assertTrue(lc.logger.isEnabledFor(enable_expected))
                     self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
+
+    def test_logger_config_restores_previous_disable_level(self):
+        original_disable = logging.root.manager.disable
+        self.addCleanup(logging.disable, original_disable)
+        logging.disable(logging.WARNING)
+
+        with LoggerConfig(logging.ERROR):
+            pass
+
+        self.assertEqual(logging.root.manager.disable, logging.WARNING)
 
 
 class ProcessTaskInfoTest(unittest.TestCase):
