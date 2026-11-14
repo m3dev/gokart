@@ -173,11 +173,11 @@ class TaskProcess(_ForkProcess):
 
             if not requires.complete(self.check_complete):
                 # not all requirements are complete, return them which adds them to the tree
-                new_deps = [(t.task_module, t.task_family, t.to_str_params()) for t in cast(list[Task], requires.flat_requirements)]
+                new_deps = [(t.task_module, t.task_family, cast(dict[str, str], t.to_str_params())) for t in cast(list[Task], requires.flat_requirements)]
                 return new_deps
 
             # get the next generator result
-            next_send = requires.paths
+            next_send = cast(Any, requires.paths)
 
     def run(self) -> None:
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)
@@ -199,8 +199,7 @@ class TaskProcess(_ForkProcess):
             # irrelevant.
             if self.check_unfulfilled_deps and not _is_external(self.task):
                 missing = []
-                for dep in self.task.deps():
-                    dep = cast(Task, dep)
+                for dep in cast(list[Task], self.task.deps()):
                     if not self.check_complete(dep):
                         nonexistent_outputs = [output for output in cast(list[Target], flatten(dep.output())) if not output.exists()]
                         if nonexistent_outputs:
@@ -526,7 +525,7 @@ class Worker:
     def _generate_worker_info(self) -> list[tuple[str, Any]]:
         # Generate as much info as possible about the worker
         # Some of these calls might not be available on all OS's
-        args = [('salt', f'{random.randrange(0, 10_000_000_000):09d}'), ('workers', self.worker_processes)]
+        args: list[tuple[str, Any]] = [('salt', f'{random.randrange(0, 10_000_000_000):09d}'), ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
         except BaseException:
@@ -639,7 +638,7 @@ class Worker:
         msg = 'Cannot find task(s) sent by scheduler: {}'.format(','.join(task_ids))
         logger.exception(msg)
         subject = f'Luigi: {msg}'
-        error_message = notifications.wrap_traceback(exception)
+        error_message = cast(str, notifications.wrap_traceback(exception))
         for task_id in task_ids:
             self._add_task(
                 worker=self._id,
@@ -700,7 +699,7 @@ class Worker:
         family = task.task_family
         if family not in self._batch_families_sent:
             task_class = type(task)
-            batch_param_names = task_class.batch_param_names()
+            batch_param_names = cast(list[str], task_class.batch_param_names())
             if batch_param_names:
                 self._scheduler.add_task_batcher(
                     worker=self._id,
@@ -718,13 +717,13 @@ class Worker:
             runnable = False
 
         else:
-            formatted_traceback = None
+            formatted_traceback: str | None = None
             try:
                 self._check_complete_value(is_complete)
             except KeyboardInterrupt:
                 raise
             except luigi.worker.AsyncCompletionException as ex:
-                formatted_traceback = ex.trace
+                formatted_traceback = cast(str, ex.trace)
             except BaseException:
                 formatted_traceback = traceback.format_exc()
 
@@ -752,7 +751,7 @@ class Worker:
 
             else:
                 try:
-                    deps = task.deps()
+                    deps = cast(list[Task], task.deps())
                     self._add_task_batcher(task)
                 except Exception as ex:
                     formatted_traceback = traceback.format_exc()
@@ -772,12 +771,11 @@ class Worker:
 
             if deps:
                 for d in deps:
-                    d = cast(Task, d)
                     self._validate_dependency(d)
                     task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
                     yield d  # return additional tasks to add
 
-                deps = [cast(Task, d).task_id for d in deps]
+                deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
         self._add_task(
@@ -804,7 +802,7 @@ class Worker:
 
     def _check_complete_value(self, is_complete: bool | luigi.worker.TracebackWrapper) -> None:
         if isinstance(is_complete, luigi.worker.TracebackWrapper):
-            raise luigi.worker.AsyncCompletionException(is_complete.trace)
+            raise luigi.worker.AsyncCompletionException(cast(str, is_complete.trace))
         if not isinstance(is_complete, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'Return value of Task.complete() must be boolean (was {is_complete!r})')
 
@@ -830,10 +828,13 @@ class Worker:
             return cast(str, get_work_response['task_id'])
         elif 'batch_id' in get_work_response:
             try:
-                task = load_task(
-                    module=get_work_response.get('task_module'),
-                    task_name=get_work_response['task_family'],
-                    params_str=get_work_response['task_params'],
+                task = cast(
+                    Task,
+                    load_task(
+                        module=get_work_response.get('task_module'),
+                        task_name=get_work_response['task_family'],
+                        params_str=get_work_response['task_params'],
+                    ),
                 )
             except Exception as ex:
                 self._handle_task_load_error(ex, get_work_response['batch_task_ids'])
@@ -849,7 +850,7 @@ class Worker:
                 status=RUNNING,
                 batch_id=get_work_response['batch_id'],
             )
-            return cast(str, task.task_id)
+            return task.task_id
         else:
             return None
 
@@ -859,15 +860,18 @@ class Worker:
 
         if self.worker_processes > 0:
             logger.debug('Asking scheduler for work...')
-            r = self._scheduler.get_work(
-                worker=self._id,
-                host=self.host,
-                assistant=self._assistant,
-                current_tasks=list(self._running_tasks.keys()),
+            r = cast(
+                dict[str, Any],
+                self._scheduler.get_work(
+                    worker=self._id,
+                    host=self.host,
+                    assistant=self._assistant,
+                    current_tasks=list(self._running_tasks.keys()),
+                ),
             )
         else:
             logger.debug('Checking if tasks are still pending')
-            r = self._scheduler.count_pending(worker=self._id)
+            r = cast(dict[str, Any], self._scheduler.count_pending(worker=self._id))
 
         running_tasks = r['running_tasks']
         task_id = self._get_work_task_id(r)
@@ -991,9 +995,9 @@ class Worker:
             if status == FAILED and not external_task_retryable:
                 self._email_task_failure(task, expl)
 
-            new_deps = []
+            new_deps: list[str] = []
             if new_requirements:
-                new_req = [load_task(module, name, params) for module, name, params in new_requirements]
+                new_req = [cast(Task, load_task(module, name, params)) for module, name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
