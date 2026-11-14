@@ -52,7 +52,11 @@ class LocalZipClient(ZipClient):
         unzip_file(fp=self._file_path, extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
-        shutil.rmtree(self._file_path, ignore_errors=True)
+        # Ignore a missing archive to match S3ZipClient/GCSZipClient, whose underlying clients return False instead of raising.
+        try:
+            os.remove(self._file_path)
+        except FileNotFoundError:
+            pass
 
     @property
     def path(self) -> str:
