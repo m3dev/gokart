@@ -75,10 +75,24 @@ JsonFileProcessor
     from gokart.file_processor import JsonFileProcessor
 
     # For Polars
-    processor = JsonFileProcessor(orient='records', dataframe_type='polars')
+    processor = JsonFileProcessor(dataframe_type='polars')
 
     # For pandas (default)
-    processor = JsonFileProcessor(orient='records', dataframe_type='pandas')
+    processor = JsonFileProcessor(dataframe_type='pandas')
+
+
+NdjsonFileProcessor
+^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+    from gokart.file_processor import NdjsonFileProcessor
+
+    # For Polars
+    processor = NdjsonFileProcessor(dataframe_type='polars')
+
+    # For pandas (default)
+    processor = NdjsonFileProcessor(dataframe_type='pandas')
 
 
 ParquetFileProcessor

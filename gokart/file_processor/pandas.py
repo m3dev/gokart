@@ -65,6 +65,26 @@ class JsonFileProcessorPandas(FileProcessor):
         obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
+class NdjsonFileProcessorPandas(FileProcessor):
+    """Newline-delimited JSON file processor for pandas DataFrames."""
+
+    def format(self):
+        return luigi.format.Nop
+
+    def load(self, file: Any):
+        try:
+            return pd.read_json(file, orient='records', lines=True)
+        except pd.errors.EmptyDataError:
+            return pd.DataFrame()
+
+    def dump(self, obj: Any, file: Any):
+        if isinstance(obj, dict):
+            obj = pd.DataFrame.from_dict(cast(dict[Any, Any], obj))
+        if not isinstance(obj, pd.DataFrame | pd.Series):
+            raise TypeError(f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.')
+        obj.to_json(file, orient='records', lines=True)
+
+
 class ParquetFileProcessorPandas(FileProcessor):
     """Parquet file processor for pandas DataFrames."""
 

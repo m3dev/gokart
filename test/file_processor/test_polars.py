@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 from luigi import LocalTarget
 
-from gokart.file_processor import CsvFileProcessor, FeatherFileProcessor, JsonFileProcessor, ParquetFileProcessor
+from gokart.file_processor import CsvFileProcessor, FeatherFileProcessor, JsonFileProcessor, NdjsonFileProcessor, ParquetFileProcessor
 
 if TYPE_CHECKING:
     import polars as pl
@@ -179,9 +179,9 @@ class TestJsonFileProcessorWithPolars:
             assert loaded_df.equals(df)
 
     def test_dump_and_load_ndjson_with_polars(self):
-        """Test ndjson (records orient) with polars"""
+        """Test ndjson with polars"""
         df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-        processor = JsonFileProcessor(orient='records', dataframe_type='polars')
+        processor = NdjsonFileProcessor(dataframe_type='polars')
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = f'{temp_dir}/temp.ndjson'
@@ -195,6 +195,37 @@ class TestJsonFileProcessorWithPolars:
 
             assert isinstance(loaded_df, pl.DataFrame)
             assert loaded_df.equals(df)
+
+    @pytest.mark.parametrize('dataframe_type', ['polars', 'polars-lazy'])
+    @pytest.mark.parametrize('content', [b'', b'\n'], ids=['empty', 'newline only'])
+    def test_load_empty_ndjson_with_polars(self, dataframe_type, content):
+        processor = NdjsonFileProcessor(dataframe_type=dataframe_type)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.ndjson'
+            with open(temp_path, 'wb') as f:
+                f.write(content)
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+        loaded_df = loaded.collect() if isinstance(loaded, pl.LazyFrame) else loaded
+        assert loaded_df.equals(pl.DataFrame())
+
+    def test_records_orient_warns_and_keeps_ndjson_with_polars(self):
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        with pytest.warns(FutureWarning, match='NdjsonFileProcessor'):
+            processor = JsonFileProcessor(orient='records', dataframe_type='polars')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = f'{temp_dir}/temp.json'
+
+            local_target = LocalTarget(path=temp_path, format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(df, f)
+
+            assert pl.read_ndjson(temp_path).equals(df)
 
     def test_dump_polars_with_pandas_load(self):
         """Test that polars dump can be loaded by pandas processor"""
@@ -494,7 +525,7 @@ class TestLazyFrameSupport:
     def test_json_load_lazy_ndjson(self):
         """Test loading NDJSON as LazyFrame"""
         df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-        processor = JsonFileProcessor(orient='records', dataframe_type='polars-lazy')
+        processor = NdjsonFileProcessor(dataframe_type='polars-lazy')
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = f'{temp_dir}/temp.ndjson'
@@ -510,7 +541,7 @@ class TestLazyFrameSupport:
     def test_json_dump_lazyframe_ndjson(self):
         """Test dumping a LazyFrame to NDJSON"""
         lf = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}).lazy()
-        processor = JsonFileProcessor(orient='records', dataframe_type='polars-lazy')
+        processor = NdjsonFileProcessor(dataframe_type='polars-lazy')
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = f'{temp_dir}/temp.ndjson'
