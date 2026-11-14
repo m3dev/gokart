@@ -117,7 +117,7 @@ class ExplicitBoolParameter(luigi.BoolParameter):
         super(luigi.BoolParameter, self).__init__(*args, **kwargs)
 
     def _parser_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return cast(dict[str, Any], luigi.Parameter._parser_kwargs(*args, *kwargs))
+        return cast(dict[str, Any], luigi.Parameter._parser_kwargs(*args, **kwargs))
 
 
 T = TypeVar('T')
