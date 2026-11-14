@@ -477,7 +477,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return self.make_target(f'log/task_params/{type(self).__name__}.pkl')
 
     def get_task_params(self) -> dict[str, Any]:
-        target = self._get_task_log_target()
+        target = self._get_task_params_target()
         if target.exists():
             return cast(dict[Any, Any], self.load(target))
         return dict()
@@ -552,7 +552,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def _get_module_versions(self) -> str:
         module_versions: list[str] = []
-        for x in set([x.split('.')[0] for x in globals().keys() if isinstance(x, types.ModuleType) and '_' not in x]):
+        top_level_module_names = {v.__name__.split('.')[0] for v in globals().values() if isinstance(v, types.ModuleType)}
+        for x in sorted(name for name in top_level_module_names if '_' not in name):
             module = import_module(x)
             if '__version__' in dir(module):
                 if isinstance(module.__version__, str):
