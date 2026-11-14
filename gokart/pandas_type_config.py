@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from logging import getLogger
-from typing import Any
+from typing import Any, cast
 
 import luigi
 import numpy as np
@@ -42,8 +42,8 @@ class PandasTypeConfigMap(luigi.Config):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        task_names = Register.task_names()
-        task_classes = [Register.get_task_cls(task_name) for task_name in task_names]
+        task_names = cast(list[str], Register.task_names())
+        task_classes = [cast(type[luigi.Task], Register.get_task_cls(task_name)) for task_name in task_names]
         self._map = {
             task_class.task_namespace: task_class for task_class in task_classes if issubclass(task_class, PandasTypeConfig) and task_class != PandasTypeConfig
         }

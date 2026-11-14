@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any
+from typing import Any, cast
 
 import luigi
 from luigi.cmdline_parser import CmdlineParser
@@ -66,12 +66,15 @@ def _test_run_with_empty_data_frame(cmdline_args: list[str], test_run_params: te
         assert e.code == 0, f'original workflow does not run properly. It exited with error code {e}.'
 
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        all_tasks = _get_all_tasks(cp.get_task_obj())
+        all_tasks = _get_all_tasks(cast(gokart.TaskOnKart[Any], cp.get_task_obj()))
 
     if test_run_params.namespace is not None:
         all_tasks = [t for t in all_tasks if t.task_namespace == test_run_params.namespace]
 
-    with patch('gokart.TaskOnKart.dump', new=lambda *args, **kwargs: None):
+    def _noop_dump(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    with patch('gokart.TaskOnKart.dump', new=_noop_dump):
         test_status_list = [_run_with_test_status(t) for t in all_tasks]
 
     test_logger.info('gokart test results:\n' + '\n'.join(s.format() for s in test_status_list))

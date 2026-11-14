@@ -413,7 +413,7 @@ class TaskOnKartTransformer:
         and the second value is a dictionary of the keyword arguments that luigi.Parameter() or gokart.TaskInstanceParameter() was called with.
         """
         if isinstance(expr, CallExpr) and isinstance(expr.callee, RefExpr):
-            args = {}
+            args: dict[str, Expression] = {}
             for name, arg in zip(expr.arg_names, expr.args, strict=False):
                 if name is None:
                     # NOTE: this is a workaround to get default value from a parameter

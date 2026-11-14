@@ -42,7 +42,7 @@ class GCSObjectMetadataClient:
             from googleapiclient.model import makepatch  # pyright: ignore[reportMissingTypeStubs]
         except ImportError:
             raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
-        return dict(makepatch(original, modified))
+        return dict(cast(dict[str, Any], makepatch(original, modified)))
 
     @staticmethod
     def add_task_state_labels(
@@ -56,7 +56,7 @@ class GCSObjectMetadataClient:
         # In gokart/object_storage.get_time_stamp, could find same call.
         # _path_to_bucket_and_key is a private method, so, this might not be acceptable.
         bucket, obj = GCSObjectMetadataClient._path_to_bucket_and_key(path)
-        _response = GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute()
+        _response = cast(Any, GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute())
         if _response is None:
             logger.error(f'failed to get object from GCS bucket {bucket} and object {obj}.')
             return
@@ -76,7 +76,8 @@ class GCSObjectMetadataClient:
             # If we use update api, existing object metadata are removed, so should use patch api.
             # See the official document descriptions.
             # [Link] https://cloud.google.com/storage/docs/viewing-editing-metadata?hl=ja#rest-set-object-metadata
-            update_response = (
+            update_response = cast(
+                Any,
                 GCSConfig()
                 .get_gcs_client()
                 .client.objects()
@@ -85,7 +86,7 @@ class GCSObjectMetadataClient:
                     object=obj,
                     body=GCSObjectMetadataClient._makepatch({'metadata': original_metadata}, {'metadata': patched_metadata}),
                 )
-                .execute()
+                .execute(),
             )
             if update_response is None:
                 logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')
@@ -119,7 +120,7 @@ class GCSObjectMetadataClient:
             normalized_labels.append({'__required_task_outputs': json.dumps(GCSObjectMetadataClient._get_serialized_string(required_task_outputs))})
 
         _merged_labels = GCSObjectMetadataClient._merge_custom_labels_and_task_params_labels(normalized_labels)
-        return GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(dict(metadata) | _merged_labels)
+        return GCSObjectMetadataClient._adjust_gcs_metadata_limit_size(dict(cast(dict[str, Any], metadata)) | _merged_labels)
 
     @staticmethod
     def _get_serialized_string(required_task_outputs: FlattenableItems[RequiredTaskOutput]) -> FlattenableItems[str]:
@@ -168,7 +169,7 @@ class GCSObjectMetadataClient:
         if current_total_metadata_size <= max_gcs_metadata_size:
             return labels
         # NOTE: remove labels to stay within max metadata size.
-        to_remove = []
+        to_remove: list[str] = []
         for label_name, label_value in reversed(tuple(labels.items())):
             size = _get_label_size(label_name, label_value)
             to_remove.append(label_name)

@@ -164,7 +164,7 @@ class FeatherFileProcessor(FileProcessor):
 
 def make_file_processor(file_path: str, store_index_in_feather: bool = True, *, dataframe_type: DataFrameType = 'pandas') -> FileProcessor:
     """Create a file processor based on file extension with default parameters."""
-    extension2processor = {
+    extension2processor: dict[str, FileProcessor] = {
         '.txt': TextFileProcessor(),
         '.ini': TextFileProcessor(),
         '.csv': CsvFileProcessor(sep=',', dataframe_type=dataframe_type),
