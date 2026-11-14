@@ -29,6 +29,7 @@ class LoggerConfig:
     def __init__(self, level: int):
         self.logger = getLogger(__name__)
         self.default_level = self.logger.level
+        self.default_disable_level = logging.root.manager.disable
         self.level = level
 
     def __enter__(self):
@@ -37,7 +38,7 @@ class LoggerConfig:
         return self
 
     def __exit__(self, exception_type: type[BaseException] | None, exception_value: BaseException | None, traceback: TracebackType | None):
-        logging.disable(self.default_level - 10)  # subtract 10 to disable below self.level
+        logging.disable(self.default_disable_level)
         self.logger.setLevel(self.default_level)
 
 
@@ -228,4 +229,7 @@ def build(
                 raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
             return _get_output(task) if return_value else None
 
-        return _build_task()
+        try:
+            return _build_task()
+        finally:
+            TaskOnKart.remove_event_handler(luigi.Event.FAILURE, when_failure)
