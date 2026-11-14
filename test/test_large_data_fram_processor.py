@@ -23,7 +23,16 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
         processor.save(df, file_path)
         loaded = processor.load(file_path)
 
-        pd.testing.assert_frame_equal(loaded, df, check_like=True)
+        pd.testing.assert_frame_equal(loaded, df)
+
+    def test_save_and_load_keeps_row_order_with_more_than_ten_chunks(self):
+        file_path = os.path.join(self.temporary_directory, 'test_with_many_chunks.zip')
+        df = pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64)))
+        processor = LargeDataFrameProcessor(max_byte=800)
+        processor.save(df, file_path)
+        loaded = processor.load(file_path)
+
+        pd.testing.assert_frame_equal(loaded, df)
 
     def test_save_and_load_empty(self):
         file_path = os.path.join(self.temporary_directory, 'test_with_empty.zip')
