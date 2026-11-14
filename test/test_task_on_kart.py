@@ -402,6 +402,27 @@ class TaskTest(unittest.TestCase):
         actual = [x for x in task.load_generator(load_args)]
         self.assertEqual(actual, [1, 2])
 
+    def test_load_generator_with_dict_targets(self):
+        task = _DummyTask()
+        target1 = Mock(spec=TargetOnKart)
+        target1.load.return_value = 1
+        target2 = Mock(spec=TargetOnKart)
+        target2.load.return_value = 2
+        task.input = Mock(return_value={'a': target1, 'b': target2})
+        data = [x for x in task.load_generator()]
+        self.assertEqual(data, [1, 2])
+
+    def test_load_generator_with_nested_dict_targets(self):
+        task = _DummyTask()
+        targets = []
+        for i in range(3):
+            t = Mock(spec=TargetOnKart)
+            t.load.return_value = i
+            targets.append(t)
+        task.input = Mock(return_value={'a': [targets[0], targets[1]], 'b': {'c': targets[2]}})
+        data = [x for x in task.load_generator()]
+        self.assertEqual(data, [0, 1, 2])
+
     def test_dump(self):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
