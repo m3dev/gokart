@@ -343,8 +343,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 for t in cast(list[Any] | tuple[Any, ...], targets):
                     yield from _load(t)
             elif isinstance(targets, dict):
-                for k, t in cast(dict[str, Any], targets).items():
-                    yield from {k: _load(t)}
+                for t in cast(dict[str, Any], targets).values():
+                    yield from _load(t)
             else:
                 yield targets.load()
 
