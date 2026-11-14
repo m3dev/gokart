@@ -101,6 +101,34 @@ class JsonFileProcessorPolars(FileProcessor):
             obj.write_json(file)
 
 
+class NdjsonFileProcessorPolars(FileProcessor):
+    """Newline-delimited JSON file processor for polars DataFrames."""
+
+    def __init__(self, lazy: bool = False):
+        if not _has_polars:
+            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
+        self._lazy = lazy
+
+    def format(self):
+        return luigi.format.Nop
+
+    def load(self, file: Any):
+        data = file.read()
+        # polars cannot infer a schema from an empty NDJSON file, and scan_ndjson only raises that error at collect(),
+        # so emptiness has to be checked up front instead of catching the exception.
+        if not data or data.isspace():
+            return pl.LazyFrame() if self._lazy else pl.DataFrame()
+        source = BytesIO(data)
+        return pl.scan_ndjson(source) if self._lazy else pl.read_ndjson(source)
+
+    def dump(self, obj: Any, file: Any):
+        if isinstance(obj, pl.LazyFrame):
+            obj = obj.collect()
+        if not isinstance(obj, pl.DataFrame):
+            raise TypeError(f'requires pl.DataFrame or pl.LazyFrame, but {type(obj)} is passed.')
+        obj.write_ndjson(file)
+
+
 class ParquetFileProcessorPolars(FileProcessor):
     """Parquet file processor for polars DataFrames."""
 

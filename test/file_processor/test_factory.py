@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import unittest
+import warnings
 
 from gokart.file_processor import (
     CsvFileProcessor,
     FeatherFileProcessor,
     GzipFileProcessor,
     JsonFileProcessor,
+    NdjsonFileProcessor,
     NpzFileProcessor,
     ParquetFileProcessor,
     TextFileProcessor,
@@ -35,7 +37,13 @@ class TestMakeFileProcessor(unittest.TestCase):
 
     def test_make_file_processor_with_ndjson_extension(self):
         processor = make_file_processor('test.ndjson', store_index_in_feather=False)
-        self.assertIsInstance(processor, JsonFileProcessor)
+        self.assertIsInstance(processor, NdjsonFileProcessor)
+
+    def test_make_file_processor_does_not_emit_future_warning(self):
+        # make_file_processor instantiates processors for every extension, so a deprecated default would warn on any extension.
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', FutureWarning)
+            make_file_processor('test.csv', store_index_in_feather=False)
 
     def test_make_file_processor_with_npz_extension(self):
         processor = make_file_processor('test.npz', store_index_in_feather=False)
