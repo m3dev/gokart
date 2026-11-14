@@ -1,6 +1,7 @@
 import os
 import unittest
 from typing import Any
+from unittest.mock import patch
 
 import luigi
 import luigi.mock
@@ -28,7 +29,9 @@ class CacheUniqueIDTest(unittest.TestCase):
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
         luigi.mock.MockFileSystem().clear()
-        os.environ.clear()
+        environ_patcher = patch.dict(os.environ, clear=True)
+        environ_patcher.start()
+        self.addCleanup(environ_patcher.stop)
 
     @staticmethod
     def _set_param(task_class: type[gokart.TaskOnKart[Any]], attr_name: str, param: luigi.Parameter) -> None:
