@@ -75,11 +75,12 @@ class RunTest(unittest.TestCase):
         luigi.configuration.LuigiConfigParser._instance = None
         self.config_paths = copy(luigi.configuration.LuigiConfigParser._config_paths)
         luigi.mock.MockFileSystem().clear()
-        os.environ.clear()
+        environ_patcher = patch.dict(os.environ, clear=True)
+        environ_patcher.start()
+        self.addCleanup(environ_patcher.stop)
 
     def tearDown(self):
         luigi.configuration.LuigiConfigParser._config_paths = self.config_paths
-        os.environ.clear()
         setup_logging.DaemonLogging._configured = False
         setup_logging.InterfaceLogging._configured = False
 

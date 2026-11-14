@@ -21,7 +21,9 @@ class RunTest(unittest.TestCase):
     def setUp(self):
         luigi.configuration.LuigiConfigParser._instance = None
         luigi.mock.MockFileSystem().clear()
-        os.environ.clear()
+        environ_patcher = patch.dict(os.environ, clear=True)
+        environ_patcher.start()
+        self.addCleanup(environ_patcher.stop)
 
     @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler'])
     def test_run(self):
