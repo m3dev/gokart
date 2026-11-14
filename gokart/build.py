@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ctypes
 import enum
 import io
 import logging
+import multiprocessing
 from dataclasses import dataclass
 from logging import getLogger
 from types import TracebackType
@@ -55,7 +57,17 @@ class HasLockedTaskException(Exception):
 
 class TaskLockExceptionRaisedFlag:
     def __init__(self):
-        self.flag: bool = False
+        # With workers > 1, tasks run in forked processes and the FAILURE event is triggered there.
+        # Keep the flag in shared memory so that the parent process can see it.
+        self._flag = multiprocessing.get_context('fork').RawValue(ctypes.c_bool, False)
+
+    @property
+    def flag(self) -> bool:
+        return bool(self._flag.value)
+
+    @flag.setter
+    def flag(self, value: bool) -> None:
+        self._flag.value = value
 
 
 class WorkerProtocol(Protocol):
