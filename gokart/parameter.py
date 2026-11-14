@@ -5,7 +5,7 @@ import datetime
 import json
 from collections.abc import Callable, Iterable
 from logging import getLogger
-from typing import Any, Generic, Protocol, TypedDict, TypeVar, Unpack
+from typing import Any, Generic, Protocol, TypedDict, TypeVar, Unpack, cast
 from warnings import warn
 
 import luigi
@@ -49,15 +49,15 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
     @staticmethod
     def _recursive(param_dict: dict[str, Any]) -> Any:
         params = param_dict['params']
-        task_cls = task_register.Register.get_task_cls(param_dict['type'])
-        for key, value in task_cls.get_params():
+        task_cls = cast(type[gokart.TaskOnKart[Any]], task_register.Register.get_task_cls(param_dict['type']))
+        for key, value in cast(list[tuple[str, luigi.Parameter[Any]]], task_cls.get_params()):
             if key in params:
                 params[key] = value.parse(params[key])
         return task_cls(**params)
 
     @staticmethod
     def _recursive_decompress(s: str) -> dict[str, Any]:
-        decompressed: dict[str, Any] = dict(luigi.DictParameter().parse(s))
+        decompressed: dict[str, Any] = dict(cast(dict[str, Any], luigi.DictParameter().parse(s)))
         if 'params' in decompressed:
             decompressed['params'] = TaskInstanceParameter._recursive_decompress(bz2.decompress(bytes.fromhex(decompressed['params'])).decode())
         return decompressed
@@ -117,7 +117,7 @@ class ExplicitBoolParameter(luigi.BoolParameter):
         super(luigi.BoolParameter, self).__init__(*args, **kwargs)
 
     def _parser_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return luigi.Parameter._parser_kwargs(*args, *kwargs)
+        return cast(dict[str, Any], luigi.Parameter._parser_kwargs(*args, *kwargs))
 
 
 T = TypeVar('T')

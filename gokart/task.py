@@ -124,7 +124,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
-        self.task_log = dict()
+        self.task_log: dict[str, Any] = dict()
         self.task_unique_id = None
         super().__init__(*args, **kwargs)
         self._rerun_state = self.rerun
@@ -166,11 +166,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @staticmethod
     def is_task_on_kart(value: Any) -> bool:
-        return isinstance(value, TaskOnKart) or (isinstance(value, tuple) and bool(value) and all([isinstance(v, TaskOnKart) for v in value]))
+        return isinstance(value, TaskOnKart) or (
+            isinstance(value, tuple) and bool(cast(tuple[Any, ...], value)) and all([isinstance(v, TaskOnKart) for v in cast(tuple[Any, ...], value)])
+        )
 
     @classmethod
     def _add_configuration(cls, kwargs: dict[str, Any], section: str) -> None:
-        config = luigi.configuration.get_config()
+        config = cast(Any, luigi.configuration.get_config())
         class_variables = dict(TaskOnKart.__dict__)
         class_variables.update(dict(cls.__dict__))
         if section not in config:
@@ -218,7 +220,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             cls = self.__class__
 
         new_k = {}
-        for param_name, _ in cls.get_params():
+        for param_name, _ in cast(list[tuple[str, luigi.Parameter[Any]]], cls.get_params()):
             if param_name in kwargs:
                 new_k[param_name] = kwargs[param_name]
             elif hasattr(self, param_name) and (param_name not in _SPECIAL_PARAMS):
@@ -322,9 +324,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def load(self, target: None | str | TargetOnKart | TaskOnKart[K] | list[TaskOnKart[K]] = None) -> Any:
         def _load(targets: Any) -> Any:
             if isinstance(targets, list) or isinstance(targets, tuple):
-                return [_load(t) for t in targets]
+                return [_load(t) for t in cast(list[Any] | tuple[Any, ...], targets)]
             if isinstance(targets, dict):
-                return {k: _load(t) for k, t in targets.items()}
+                return {k: _load(t) for k, t in cast(dict[str, Any], targets).items()}
             return targets.load()
 
         return _load(self._get_input_targets(target))
@@ -338,10 +340,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def load_generator(self, target: None | str | TargetOnKart | list[TaskOnKart[K]] = None) -> Generator[Any, None, None]:
         def _load(targets: Any) -> Generator[Any, None, None]:
             if isinstance(targets, list) or isinstance(targets, tuple):
-                for t in targets:
+                for t in cast(list[Any] | tuple[Any, ...], targets):
                     yield from _load(t)
             elif isinstance(targets, dict):
-                for k, t in targets.items():
+                for k, t in cast(dict[str, Any], targets).items():
                     yield from {k: _load(t)}
             else:
                 yield targets.load()
@@ -373,7 +375,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         self._get_output_target(target).dump(
             obj,
             lock_at_dump=self._lock_at_dump,
-            task_params=super().to_str_params(only_significant=True, only_public=True),
+            task_params=cast(dict[str, str], super().to_str_params(only_significant=True, only_public=True)),
             custom_labels=custom_labels,
             required_task_outputs=required_task_outputs,
         )
@@ -404,7 +406,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             if not isinstance(task, luigi.Task):
                 raise ValueError(f'Task.requires method returns {type(task)}. You should return luigi.Task.')
 
-            return task.to_str_params(only_significant=True)
+            return cast(dict[str, str], task.to_str_params(only_significant=True))
 
         dependencies: list[Any] = [_to_str_params(task) for task in flatten(self.requires())]
         dependencies = [d for d in dependencies if d is not None]
@@ -445,8 +447,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def get_info(self, only_significant: bool = False) -> dict[str, str]:
         params_str: dict[str, str] = {}
-        params = dict(self.get_params())
-        for param_name, param_value in self.param_kwargs.items():
+        params = dict(cast(list[tuple[str, luigi.Parameter[Any]]], self.get_params()))
+        for param_name, param_value in cast(dict[str, Any], self.param_kwargs).items():
             if (not only_significant) or params[param_name].significant:
                 if isinstance(params[param_name], gokart.TaskInstanceParameter):
                     params_str[param_name] = type(param_value).__name__ + '-' + cast(TaskOnKart[Any], param_value).make_unique_id()
@@ -549,14 +551,14 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return self.make_target(f'log/module_versions/{type(self).__name__}.txt')
 
     def _get_module_versions(self) -> str:
-        module_versions = []
+        module_versions: list[str] = []
         for x in set([x.split('.')[0] for x in globals().keys() if isinstance(x, types.ModuleType) and '_' not in x]):
             module = import_module(x)
             if '__version__' in dir(module):
                 if isinstance(module.__version__, str):
                     version = module.__version__.split(' ')[0]
                 else:
-                    version = '.'.join([str(v) for v in module.__version__])
+                    version = '.'.join([str(v) for v in cast(Iterable[Any], module.__version__)])
                 module_versions.append(f'{x}=={version}')
         return '\n'.join(module_versions)
 
@@ -579,11 +581,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
         """
         Convert a task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
         """
-        params = self.get_params()
-        param_values = self.get_param_values(params, [], self.param_kwargs)
+        params = cast(list[tuple[str, luigi.Parameter[Any]]], self.get_params())
+        param_values = cast(list[tuple[str, Any]], self.get_param_values(params, [], self.param_kwargs))
 
         # Build up task id
-        repr_parts = []
+        repr_parts: list[str] = []
         param_objs = dict(params)
         for param_name, param_value in param_values:
             param_obj = param_objs[param_name]
