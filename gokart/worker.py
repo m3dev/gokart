@@ -49,8 +49,8 @@ import sys
 import threading
 import time
 import traceback
-from collections.abc import Generator
-from typing import Any, Literal, NamedTuple, cast
+from collections.abc import Callable, Generator
+from typing import Any, Literal, NamedTuple, TypeVar, cast
 
 import luigi
 import luigi.worker
@@ -82,6 +82,18 @@ fork_lock = threading.Lock()
 # unscientifically just set the final value to a floating point number that
 # "worked for me".
 _WAIT_INTERVAL_EPS = 0.00001
+
+
+# luigi's rpc_message_callback decorator is untyped; declare it as signature-preserving
+_F = TypeVar('_F', bound=Callable[..., Any])
+
+
+def _rpc_message_callback(func: _F) -> _F:
+    return cast(_F, cast(Any, luigi.worker).rpc_message_callback(func))
+
+
+def _trigger_event(task: Task, event: str, *args: Any) -> None:
+    cast(Any, task).trigger_event(event, *args)
 
 
 def _is_external(task: Task) -> bool:
@@ -143,7 +155,7 @@ class TaskProcess(_ForkProcess):
         self.task_completion_check_at_run = task_completion_check_at_run
 
         # completeness check using the cache
-        self.check_complete = functools.partial(luigi.worker.check_complete_cached, completion_cache=task_completion_cache)
+        self.check_complete: Callable[[Task], bool] = functools.partial(cast(Any, luigi.worker).check_complete_cached, completion_cache=task_completion_cache)
 
     def _run_task(self) -> collections.abc.Generator[Any, Any, Any] | None:
         if self.task_completion_check_at_run and self.check_complete(self.task):
@@ -171,9 +183,11 @@ class TaskProcess(_ForkProcess):
             if not isinstance(requires, DynamicRequirements):
                 requires = DynamicRequirements(requires)
 
-            if not requires.complete(self.check_complete):
+            if not cast(Any, requires).complete(self.check_complete):
                 # not all requirements are complete, return them which adds them to the tree
-                new_deps = [(t.task_module, t.task_family, cast(dict[str, str], t.to_str_params())) for t in cast(list[Task], requires.flat_requirements)]
+                new_deps = [
+                    (t.task_module, t.task_family, cast(dict[str, str], t.to_str_params())) for t in cast(list[Task], cast(Any, requires).flat_requirements)
+                ]
                 return new_deps
 
             # get the next generator result
@@ -209,7 +223,7 @@ class TaskProcess(_ForkProcess):
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
                     raise RuntimeError('Unfulfilled {} at run time: {}'.format(deps, ', '.join(missing)))
-            self.task.trigger_event(Event.START, self.task)
+            _trigger_event(self.task, Event.START, self.task)
             t0 = time.time()
             status = None
 
@@ -239,10 +253,10 @@ class TaskProcess(_ForkProcess):
             if new_deps:
                 logger.info('[pid %s] Worker %s new requirements      %s', os.getpid(), self.worker_id, self.task)
             elif status == DONE:
-                self.task.trigger_event(Event.PROCESSING_TIME, self.task, time.time() - t0)
+                _trigger_event(self.task, Event.PROCESSING_TIME, self.task, time.time() - t0)
                 expl = self.task.on_success()
                 logger.info('[pid %s] Worker %s done      %s', os.getpid(), self.worker_id, self.task)
-                self.task.trigger_event(Event.SUCCESS, self.task)
+                _trigger_event(self.task, Event.SUCCESS, self.task)
 
         except KeyboardInterrupt:
             raise
@@ -255,8 +269,8 @@ class TaskProcess(_ForkProcess):
 
     def _handle_run_exception(self, ex: BaseException) -> str:
         logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
-        self.task.trigger_event(Event.FAILURE, self.task, ex)
-        return self.task.on_failure(ex)
+        _trigger_event(self.task, Event.FAILURE, self.task, ex)
+        return cast(str, cast(Any, self.task).on_failure(ex))
 
     def _recursive_terminate(self) -> None:
         import psutil
@@ -437,7 +451,8 @@ class Worker:
         assert self._config.wait_jitter >= 0.0, '[worker] wait_jitter must be equal or greater than zero'
 
         self._id = worker_id
-        self._scheduler = scheduler
+        # luigi's Scheduler methods are untyped, so keep the attribute as Any
+        self._scheduler: Any = scheduler
         self._assistant = assistant
         self._stop_requesting_work = False
 
@@ -631,14 +646,14 @@ class Worker:
         formatted_subject = subject.format(task=task, host=self.host)
         formatted_headline = headline.format(task=task, host=self.host)
         command = subprocess.list2cmdline(sys.argv)
-        message = notifications.format_task_error(formatted_headline, task, command, formatted_traceback)
-        notifications.send_error_email(formatted_subject, message, task.owner_email)
+        message = cast(Any, notifications).format_task_error(formatted_headline, task, command, formatted_traceback)
+        cast(Any, notifications).send_error_email(formatted_subject, message, task.owner_email)
 
     def _handle_task_load_error(self, exception: Exception, task_ids: list[str]) -> None:
         msg = 'Cannot find task(s) sent by scheduler: {}'.format(','.join(task_ids))
         logger.exception(msg)
         subject = f'Luigi: {msg}'
-        error_message = cast(str, notifications.wrap_traceback(exception))
+        error_message = cast(str, cast(Any, notifications).wrap_traceback(exception))
         for task_id in task_ids:
             self._add_task(
                 worker=self._id,
@@ -647,7 +662,7 @@ class Worker:
                 runnable=False,
                 expl=error_message,
             )
-        notifications.send_error_email(subject, error_message)
+        cast(Any, notifications).send_error_email(subject, error_message)
 
     def add(self, task: Task, multiprocess: bool = False, processes: int = 0) -> bool:
         """
@@ -665,7 +680,7 @@ class Worker:
             queue = luigi.worker.DequeQueue()
             pool = luigi.worker.SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(luigi.worker.check_complete, [task, queue, self._task_completion_cache])
+        pool.apply_async(cast(Any, luigi.worker).check_complete, [task, queue, self._task_completion_cache])
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
@@ -679,7 +694,7 @@ class Worker:
                     if next.task_id not in seen:
                         self._validate_task(next)
                         seen.add(next.task_id)
-                        pool.apply_async(luigi.worker.check_complete, [next, queue, self._task_completion_cache])
+                        pool.apply_async(cast(Any, luigi.worker).check_complete, [next, queue, self._task_completion_cache])
                         queue_size += 1
         except (KeyboardInterrupt, luigi.worker.TaskException):
             raise
@@ -687,7 +702,7 @@ class Worker:
             self.add_succeeded = False
             formatted_traceback = traceback.format_exc()
             self._log_unexpected_error(task)
-            task.trigger_event(Event.BROKEN_TASK, task, ex)
+            _trigger_event(task, Event.BROKEN_TASK, task, ex)
             self._email_unexpected_error(task, formatted_traceback)
             raise
         finally:
@@ -730,7 +745,7 @@ class Worker:
             if formatted_traceback is not None:
                 self.add_succeeded = False
                 self._log_complete_error(task, formatted_traceback)
-                task.trigger_event(Event.DEPENDENCY_MISSING, task)
+                _trigger_event(task, Event.DEPENDENCY_MISSING, task)
                 self._email_complete_error(task, formatted_traceback)
                 deps = None
                 status = UNKNOWN
@@ -740,13 +755,13 @@ class Worker:
                 deps = None
                 status = DONE
                 runnable = False
-                task.trigger_event(Event.DEPENDENCY_PRESENT, task)
+                _trigger_event(task, Event.DEPENDENCY_PRESENT, task)
 
             elif _is_external(task):
                 deps = None
                 status = PENDING
                 runnable = self._config.retry_external_tasks
-                task.trigger_event(Event.DEPENDENCY_MISSING, task)
+                _trigger_event(task, Event.DEPENDENCY_MISSING, task)
                 logger.warning('Data for %s does not exist (yet?). The task is an external data dependency, so it cannot be run from this luigi process.', task)
 
             else:
@@ -757,7 +772,7 @@ class Worker:
                     formatted_traceback = traceback.format_exc()
                     self.add_succeeded = False
                     self._log_dependency_error(task, formatted_traceback)
-                    task.trigger_event(Event.BROKEN_TASK, task, ex)
+                    _trigger_event(task, Event.BROKEN_TASK, task, ex)
                     self._email_dependency_error(task, formatted_traceback)
                     deps = None
                     status = UNKNOWN
@@ -772,7 +787,7 @@ class Worker:
             if deps:
                 for d in deps:
                     self._validate_dependency(d)
-                    task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
+                    _trigger_event(task, Event.DEPENDENCY_DISCOVERED, task, d)
                     yield d  # return additional tasks to add
 
                 deps = [d.task_id for d in deps]
@@ -802,7 +817,7 @@ class Worker:
 
     def _check_complete_value(self, is_complete: bool | luigi.worker.TracebackWrapper) -> None:
         if isinstance(is_complete, luigi.worker.TracebackWrapper):
-            raise luigi.worker.AsyncCompletionException(cast(str, is_complete.trace))
+            raise luigi.worker.AsyncCompletionException(cast(str, cast(Any, is_complete).trace))
         if not isinstance(is_complete, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise Exception(f'Return value of Task.complete() must be boolean (was {is_complete!r})')
 
@@ -955,11 +970,11 @@ class Worker:
         for task_id, p in self._running_tasks.items():
             if not p.is_alive() and p.exitcode:
                 error_msg = f'Task {task_id} died unexpectedly with exit code {p.exitcode}'
-                p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
+                _trigger_event(p.task, Event.PROCESS_FAILURE, p.task, error_msg)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
                 error_msg = f'Task {task_id} timed out after {p.worker_timeout} seconds and was terminated.'
-                p.task.trigger_event(Event.TIMEOUT, p.task, error_msg)
+                _trigger_event(p.task, Event.TIMEOUT, p.task, error_msg)
             else:
                 continue
 
@@ -1152,7 +1167,7 @@ class Worker:
             logger.info("Worker {} successfully dispatched rpc message to function '{}'".format(*tpl))
             func(**kwargs)
 
-    @luigi.worker.rpc_message_callback
+    @_rpc_message_callback
     def set_worker_processes(self, n: int) -> None:
         # set the new value
         self.worker_processes = max(1, n)
@@ -1160,11 +1175,11 @@ class Worker:
         # tell the scheduler
         self._scheduler.add_worker(self._id, {'workers': self.worker_processes})
 
-    @luigi.worker.rpc_message_callback
+    @_rpc_message_callback
     def dispatch_scheduler_message(self, task_id: str, message_id: str, content: str, **kwargs: Any) -> None:
         task_id = str(task_id)
         if task_id in self._running_tasks:
             task_process = self._running_tasks[task_id]
             if task_process.status_reporter.scheduler_messages:
                 message = luigi.worker.SchedulerMessage(self._scheduler, task_id, message_id, content, **kwargs)
-                task_process.status_reporter.scheduler_messages.put(message)
+                cast(Any, task_process.status_reporter).scheduler_messages.put(message)
