@@ -84,6 +84,7 @@ It is also possible to specify a file format other than pkl. The supported file 
 - .tsv
 - .gz
 - .json
+- .ndjson
 - .xml
 - .npz
 - .parquet
