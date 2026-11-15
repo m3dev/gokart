@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from typing import Any, Literal
 
 # Export common processors and types from base
@@ -22,12 +23,14 @@ from gokart.file_processor.pandas import (
     CsvFileProcessorPandas,
     FeatherFileProcessorPandas,
     JsonFileProcessorPandas,
+    NdjsonFileProcessorPandas,
     ParquetFileProcessorPandas,
 )
 from gokart.file_processor.polars import (
     CsvFileProcessorPolars,
     FeatherFileProcessorPolars,
     JsonFileProcessorPolars,
+    NdjsonFileProcessorPolars,
     ParquetFileProcessorPolars,
 )
 
@@ -73,18 +76,57 @@ class JsonFileProcessor(FileProcessor):
         JSON file processor with support for both pandas and polars DataFrames.
 
         Args:
-            orient: JSON orientation. 'records' for newline-delimited JSON.
+            orient: JSON orientation. 'records' currently reads/writes newline-delimited JSON, but this is deprecated
+                and will change to a JSON array in a future release. Use NdjsonFileProcessor for newline-delimited JSON.
             dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
+        if orient == 'records':
+            warnings.warn(
+                "JsonFileProcessor(orient='records') reads/writes newline-delimited JSON, but this will change to a JSON array in a future release. "
+                'Use NdjsonFileProcessor to keep NDJSON.',
+                FutureWarning,
+                stacklevel=2,
+            )
         self._orient = orient
         self._dataframe_type = dataframe_type  # Store for tests
 
-        if dataframe_type == 'polars-lazy':
-            self._impl: FileProcessor = JsonFileProcessorPolars(orient=orient, lazy=True)
+        if orient == 'records':
+            self._impl: FileProcessor = NdjsonFileProcessor(dataframe_type=dataframe_type)
+        elif dataframe_type == 'polars-lazy':
+            self._impl = JsonFileProcessorPolars(orient=orient, lazy=True)
         elif dataframe_type == 'polars':
             self._impl = JsonFileProcessorPolars(orient=orient, lazy=False)
         else:
             self._impl = JsonFileProcessorPandas(orient=orient)
+
+    def format(self):
+        return self._impl.format()
+
+    def load(self, file: Any):
+        return self._impl.load(file)
+
+    def dump(self, obj: Any, file: Any):
+        return self._impl.dump(obj, file)
+
+
+class NdjsonFileProcessor(FileProcessor):
+    """Newline-delimited JSON (NDJSON) file processor with automatic backend selection based on dataframe_type."""
+
+    def __init__(self, dataframe_type: DataFrameType = 'pandas') -> None:
+        """
+        Newline-delimited JSON file processor with support for both pandas and polars DataFrames.
+
+        Args:
+            dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
+        """
+        self._dataframe_type = dataframe_type  # Store for tests
+
+        if dataframe_type == 'polars-lazy':
+            self._impl: FileProcessor = NdjsonFileProcessorPolars(lazy=True)
+        elif dataframe_type == 'polars':
+            self._impl = NdjsonFileProcessorPolars(lazy=False)
+        else:
+            self._impl = NdjsonFileProcessorPandas()
 
     def format(self):
         return self._impl.format()
@@ -172,7 +214,7 @@ def make_file_processor(file_path: str, store_index_in_feather: bool = True, *, 
         '.pkl': PickleFileProcessor(),
         '.gz': GzipFileProcessor(),
         '.json': JsonFileProcessor(dataframe_type=dataframe_type),
-        '.ndjson': JsonFileProcessor(dataframe_type=dataframe_type, orient='records'),
+        '.ndjson': NdjsonFileProcessor(dataframe_type=dataframe_type),
         '.xml': XmlFileProcessor(),
         '.npz': NpzFileProcessor(),
         '.parquet': ParquetFileProcessor(compression='gzip', dataframe_type=dataframe_type),
@@ -200,6 +242,7 @@ __all__ = [
     # DataFrame processors (with factory pattern)
     'CsvFileProcessor',
     'JsonFileProcessor',
+    'NdjsonFileProcessor',
     'ParquetFileProcessor',
     'FeatherFileProcessor',
     # Utility functions
