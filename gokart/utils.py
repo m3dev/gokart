@@ -23,7 +23,9 @@ class FileLike(Protocol):
 def add_config(file_path: str) -> None:
     _, ext = os.path.splitext(file_path)
     luigi.configuration.core.parser = ext  # pyright: ignore[reportAttributeAccessIssue]
-    assert luigi.configuration.add_config_path(file_path)
+    # call before asserting, so that the config is still added under `python -O`, which strips assert statements
+    added = cast(Any, luigi.configuration).add_config_path(file_path)
+    assert added
 
 
 T = TypeVar('T')
@@ -88,7 +90,7 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> An
     It is unclear whether all objects dumped by dill can be loaded by pd.read_pickle, we use dill.load as a fallback.
     """
     try:
-        return dill.load(file)
+        return cast(Any, dill).load(file)
     except Exception:
         assert file.seekable(), f'{file} is not seekable.'
         file.seek(0)

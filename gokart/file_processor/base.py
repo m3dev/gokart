@@ -117,7 +117,7 @@ class PickleFileProcessor(FileProcessor):
 
     def dump(self, obj: Any, file: Any):
         dumped = self._fast_dumps(obj)
-        self._write(dumped if dumped is not None else dill.dumps(obj, protocol=4), file)
+        self._write(dumped if dumped is not None else cast(Any, dill).dumps(obj, protocol=4), file)
 
     def _fast_dumps(self, obj: Any) -> bytes | None:
         buffer = BytesIO()
@@ -195,4 +195,4 @@ class NpzFileProcessor(FileProcessor):
 
     def dump(self, obj: Any, file: Any):
         assert isinstance(obj, np.ndarray), f'requires np.ndarray, but {type(obj)} is passed.'
-        np.savez_compressed(file, data=obj)
+        cast(Any, np).savez_compressed(file, data=obj)
