@@ -38,10 +38,17 @@ Skip completed tasks with `complete_check_at_run`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 By setting `gokart.TaskOnKart.complete_check_at_run` to True, the existence of the cache can be rechecked at run() time.
 
-Default is True, but if the check takes too much time, you can set to False to inactivate the check.
+The check is performed by the gokart worker (used by `gokart.build` and `gokart.run`) just before run(), when either `complete_check_at_run` of the task or `task_completion_check_at_run` of the `[gokart_worker]` config is True.
+Both default to True, so if the check takes too much time, set both to False to inactivate the check.
+Note that the check is not performed when the task is run without the gokart worker (e.g. `luigi.build` or the `luigi` command).
 
 .. code:: python
 
     class SampleTask1(gokart.TaskOnKart):
         complete_check_at_run = False
+
+.. code:: ini
+
+    [gokart_worker]
+    task_completion_check_at_run=false
     

@@ -24,7 +24,6 @@ from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
-from gokart.task_complete_check import task_complete_check_wrapper
 from gokart.utils import FlattenableItems, flatten, get_dataframe_type_from_task, map_flattenable_items
 
 logger = getLogger(__name__)
@@ -117,7 +116,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         significant=False,
     )
     complete_check_at_run: luigi.Parameter[bool] = ExplicitBoolParameter(
-        default=True, description='Check if output file exists at run. If exists, run() will be skipped.', significant=False
+        default=True,
+        description='Check if output file exists at run. If exists, run() will be skipped. The check is performed by the gokart worker (gokart.build / gokart.run).',
+        significant=False,
     )
     should_lock_run: luigi.Parameter[bool] = ExplicitBoolParameter(
         default=False, significant=False, description='Whether to use redis lock or not at task run.'
@@ -140,9 +141,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
-
-        if self.complete_check_at_run:
-            self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
 
         if self.should_lock_run:
             assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
