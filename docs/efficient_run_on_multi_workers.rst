@@ -26,7 +26,9 @@ The lock is extended while the task is running, and expires after `redis_timeout
         redis_port = 6379
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
-If the task is run with `luigi.build` or the luigi CLI directly, the run lock is not taken; `dump()` falls back to the dump lock and a warning is emitted.
+If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock and emits a `UserWarning`.
+This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.
+To get rid of the warning, run the task with `gokart.build` or `gokart.run`.
 
 
 Additional Option
