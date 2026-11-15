@@ -30,8 +30,8 @@ class RedisRunLock:
     def __init__(self, task_lock_params: TaskLockParams) -> None:
         self._task_lock_params = task_lock_params
         # A dedicated client keeps the worker's heartbeat thread off the shared connection pool that forked task processes use for dump/load locks.
-        client = redis.Redis(host=task_lock_params.redis_host or 'localhost', port=task_lock_params.redis_port or 6379)
-        self._lock = Lock(redis=client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
+        self._client = redis.Redis(host=task_lock_params.redis_host or 'localhost', port=task_lock_params.redis_port or 6379)
+        self._lock = Lock(redis=self._client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
 
     def try_acquire(self) -> bool:
         return bool(self._lock.acquire(blocking=False))
@@ -47,6 +47,8 @@ class RedisRunLock:
         except RedisError:
             # Raising here would crash the worker loop; the lock expires after redis_timeout anyway.
             logger.warning(f'Failed to release task RUN lock of {self._task_lock_params.redis_key}. It expires after redis_timeout.', exc_info=True)
+        finally:
+            self._client.close()
 
 
 def make_run_lock(task: Any) -> RunLock | None:
@@ -58,8 +60,9 @@ def make_run_lock(task: Any) -> RunLock | None:
 class RunLockHeartbeat:
     """Extends every held run lock periodically from a single background thread."""
 
-    def __init__(self, interval_seconds: float) -> None:
+    def __init__(self, interval_seconds: float, stop_timeout_seconds: float = 10.0) -> None:
         self._interval_seconds = interval_seconds
+        self._stop_timeout_seconds = stop_timeout_seconds
         self._locks: set[RunLock] = set()
         self._mutex = threading.Lock()
         self._stopped = threading.Event()
@@ -78,8 +81,12 @@ class RunLockHeartbeat:
 
     def stop(self) -> None:
         self._stopped.set()
-        if self._thread is not None:
-            self._thread.join()
+        if self._thread is None:
+            return
+        # The thread is a daemon, so a heartbeat stuck in a Redis call must not block the worker from exiting.
+        self._thread.join(timeout=self._stop_timeout_seconds)
+        if self._thread.is_alive():
+            logger.warning(f'Task RUN lock heartbeat did not stop within {self._stop_timeout_seconds} seconds.')
 
     def _run(self) -> None:
         while not self._stopped.wait(self._interval_seconds):

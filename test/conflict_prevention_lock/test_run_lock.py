@@ -1,6 +1,6 @@
 import threading
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import fakeredis
 import luigi
@@ -39,6 +39,17 @@ class TestMakeRunLock:
         assert isinstance(make_run_lock(_make_task()), RedisRunLock)
 
 
+def _patch_redis_recording_close(server: fakeredis.FakeServer, close_mocks: list[MagicMock]):
+    def _make_client(host: str, port: int) -> fakeredis.FakeRedis:
+        client = fakeredis.FakeRedis(server=server, host=host, port=port)
+        close_mock = MagicMock(wraps=client.close)
+        client.close = close_mock
+        close_mocks.append(close_mock)
+        return client
+
+    return patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=_make_client)
+
+
 class TestRedisRunLock:
     def test_try_acquire_and_release(self, server: fakeredis.FakeServer):
         task = _make_task()
@@ -71,6 +82,23 @@ class TestRedisRunLock:
         fakeredis.FakeRedis(server=server).delete(key)
 
         lock.release()
+
+    @pytest.mark.parametrize('expired', [pytest.param(False, id='held'), pytest.param(True, id='already expired')])
+    def test_release_closes_redis_client(self, expired: bool):
+        server = fakeredis.FakeServer()
+        close_mocks: list[MagicMock] = []
+        task = _make_task()
+        with _patch_redis_recording_close(server, close_mocks):
+            lock = make_run_lock(task)
+        assert lock is not None
+        assert lock.try_acquire()
+        if expired:
+            fakeredis.FakeRedis(server=server).delete(make_task_lock_params_for_run(task_self=task).redis_key)
+
+        lock.release()
+
+        assert len(close_mocks) == 1
+        close_mocks[0].assert_called_once()
 
     def test_extend_resets_ttl(self, server: fakeredis.FakeServer):
         task = _make_task(redis_timeout=100)
@@ -121,3 +149,32 @@ class TestRunLockHeartbeat:
             assert not removed.extended.is_set()
         finally:
             heartbeat.stop()
+
+
+class _BlockingExtendLock:
+    def __init__(self) -> None:
+        self.extending = threading.Event()
+        self.unblock = threading.Event()
+
+    def try_acquire(self) -> bool:
+        return True
+
+    def extend(self) -> None:
+        self.extending.set()
+        self.unblock.wait(timeout=10)
+
+    def release(self) -> None: ...
+
+
+class TestRunLockHeartbeatStop:
+    def test_stop_returns_with_warning_when_extend_is_stuck(self, caplog: pytest.LogCaptureFixture):
+        heartbeat = RunLockHeartbeat(interval_seconds=0.01, stop_timeout_seconds=0.01)
+        lock = _BlockingExtendLock()
+        heartbeat.add(lock)
+        assert lock.extending.wait(timeout=10), 'lock was not extended'
+        try:
+            with caplog.at_level('WARNING', logger='gokart.conflict_prevention_lock.run_lock'):
+                heartbeat.stop()
+            assert 'did not stop' in caplog.text
+        finally:
+            lock.unblock.set()
