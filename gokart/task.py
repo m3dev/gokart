@@ -6,6 +6,7 @@ import inspect
 import os
 import random
 import types
+import warnings
 from collections.abc import Callable, Generator, Iterable
 from importlib import import_module
 from logging import getLogger
@@ -144,7 +145,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
             self.run = task_complete_check_wrapper(run_func=self.run, complete_check_func=self.complete)
 
         if self.should_lock_run:
-            self._lock_at_dump = False
             assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
 
@@ -374,6 +374,14 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 self.requires(),
             ),
         )
+
+        if self.should_lock_run and self._lock_at_dump:
+            warnings.warn(
+                f'{self.get_task_family()} has should_lock_run=True, but it is not run by the gokart worker, so the run lock is not taken. '
+                'Falling back to the dump lock. Use gokart.build or gokart.run to take the run lock.',
+                UserWarning,
+                stacklevel=2,
+            )
 
         self._get_output_target(target).dump(
             obj,

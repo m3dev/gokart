@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import warnings
 from collections.abc import Callable
 from logging import getLogger
 from typing import Any, ParamSpec, TypeVar, cast
@@ -92,6 +93,14 @@ def wrap_remove_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams
 
 
 def wrap_run_with_lock(run_func: Callable[[], R], task_lock_params: TaskLockParams) -> Callable[[], R]:
+    """Deprecated: the gokart worker takes the run lock for tasks with `should_lock_run=True`. https://github.com/m3dev/gokart/issues/524"""
+    warnings.warn(
+        'wrap_run_with_lock is deprecated and will be removed in a future major release. '
+        'The gokart worker takes the run lock for tasks with should_lock_run=True.',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     @functools.wraps(run_func)
     def wrapped():
         task_lock = set_task_lock(task_lock_params=task_lock_params)

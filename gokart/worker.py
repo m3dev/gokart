@@ -999,11 +999,14 @@ class Worker:
         self.run_succeeded = False
 
     def _start_task_process(self, task_id: str, run_lock: RunLock | None) -> None:
+        task = self._scheduled_tasks[task_id]
         if run_lock is not None:
             self._run_locks[task_id] = run_lock
             self._run_lock_heartbeat.add(run_lock)
+            # The run lock already prevents concurrent dumps of this task's output.
+            task._lock_at_dump = False  # pyright: ignore[reportAttributeAccessIssue]
 
-        task_process = self._create_task_process(self._scheduled_tasks[task_id])
+        task_process = self._create_task_process(task)
 
         self._running_tasks[task_id] = task_process
 
@@ -1054,6 +1057,7 @@ class Worker:
             return
         self._run_lock_heartbeat.remove(run_lock)
         run_lock.release()
+        self._scheduled_tasks[task_id]._lock_at_dump = True  # pyright: ignore[reportAttributeAccessIssue]
 
     def _create_task_process(self, task: Any):
         message_queue: Any = _fork_context.Queue() if task.accepts_messages else None
