@@ -2,6 +2,8 @@ import os
 import threading
 import uuid
 from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import fakeredis
@@ -42,50 +44,71 @@ class TestWorkerRun:
             mock_run.assert_called_once()
 
 
-class _DummyTaskToCheckSkip(gokart.TaskOnKart[None]):
+class _DummyTaskToCheckSkip(gokart.TaskOnKart[str]):
     task_namespace = __name__
 
-    def _run(self): ...
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.complete_call_count = 0
 
     def run(self):
-        self._run()
-        self.dump(None)
+        self.dump('dumped by run')
 
     def complete(self) -> bool:
-        return False
+        self.complete_call_count += 1
+        return super().complete()
 
 
 class TestWorkerSkipIfCompletedPreRun:
     @pytest.mark.parametrize(
-        'task_completion_check_at_run,is_completed,expect_skipped',
+        'task_completion_check_at_run,complete_check_at_run,is_completed,expect_skipped',
         [
-            pytest.param(True, True, True, id='skipped when completed and task_completion_check_at_run is True'),
-            pytest.param(True, False, False, id='not skipped when not completed and task_completion_check_at_run is True'),
-            pytest.param(False, True, False, id='not skipped when completed and task_completion_check_at_run is False'),
-            pytest.param(False, False, False, id='not skipped when not completed and task_completion_check_at_run is False'),
+            pytest.param(True, True, True, True, id='skipped when completed and both checks are enabled'),
+            pytest.param(True, True, False, False, id='not skipped when not completed and both checks are enabled'),
+            pytest.param(True, False, True, True, id='skipped when completed and only task_completion_check_at_run is True'),
+            pytest.param(True, False, False, False, id='not skipped when not completed and only task_completion_check_at_run is True'),
+            pytest.param(False, True, True, True, id='skipped when completed and only complete_check_at_run is True'),
+            pytest.param(False, True, False, False, id='not skipped when not completed and only complete_check_at_run is True'),
+            pytest.param(False, False, True, False, id='not skipped when completed and both checks are disabled'),
+            pytest.param(False, False, False, False, id='not skipped when not completed and both checks are disabled'),
         ],
     )
-    def test_skip_task(self, monkeypatch: pytest.MonkeyPatch, task_completion_check_at_run: bool, is_completed: bool, expect_skipped: bool) -> None:
+    def test_skip_task(
+        self,
+        tmp_path: Path,
+        task_completion_check_at_run: bool,
+        complete_check_at_run: bool,
+        is_completed: bool,
+        expect_skipped: bool,
+    ) -> None:
         sch = scheduler.Scheduler()
         worker = Worker(scheduler=sch, config=gokart_worker(task_completion_check_at_run=task_completion_check_at_run))
 
-        mock_complete = Mock(return_value=is_completed)
-        # NOTE: set `complete_check_at_run=False` to avoid using deprecated skip logic.
-        task = _DummyTaskToCheckSkip(complete_check_at_run=False)
-        mock_run = Mock()
-        monkeypatch.setattr(task, '_run', mock_run)
+        task = _DummyTaskToCheckSkip(workspace_directory=str(tmp_path), complete_check_at_run=complete_check_at_run)
 
         with worker:
             assert worker.add(task)
-            # NOTE: mock `complete` after `add` because `add` calls `complete`
-            #       to check if the task is already completed.
-            monkeypatch.setattr(task, 'complete', mock_complete)
+            # NOTE: dump the output after `add` so that the task is scheduled but completed at run time,
+            #       e.g. by another worker.
+            if is_completed:
+                task.dump('dumped by another worker')
             assert worker.run()
 
-            if expect_skipped:
-                mock_run.assert_not_called()
-            else:
-                mock_run.assert_called_once()
+        expected = 'dumped by another worker' if expect_skipped else 'dumped by run'
+        assert task.make_target().load() == expected
+
+    def test_complete_is_checked_only_once_before_run(self, tmp_path: Path) -> None:
+        sch = scheduler.Scheduler()
+        worker = Worker(scheduler=sch, config=gokart_worker(task_completion_check_at_run=True))
+
+        task = _DummyTaskToCheckSkip(workspace_directory=str(tmp_path), complete_check_at_run=True)
+
+        with worker:
+            assert worker.add(task)
+            task.complete_call_count = 0
+            assert worker.run()
+
+        assert task.complete_call_count == 1
 
 
 class TestWorkerCheckCompleteValue:
