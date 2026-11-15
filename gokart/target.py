@@ -6,7 +6,7 @@ import re
 import shutil
 import tempfile
 from abc import abstractmethod
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from glob import glob
@@ -205,7 +205,7 @@ class ModelTarget(TargetOnKart):
         return os.path.join(working_directory, 'load_function.pkl')
 
     @contextmanager
-    def _make_working_directory(self) -> Iterator[str]:
+    def _make_working_directory(self) -> Generator[str]:
         # self._temporary_directory is the same for every call on the same file path, so each call gets its own directory.
         # Otherwise a call picks up files of a concurrent call or of a call that crashed before cleanup, and its cleanup removes files still in use.
         base = os.path.normpath(self._temporary_directory)
