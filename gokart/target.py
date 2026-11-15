@@ -119,7 +119,7 @@ class SingleFileTarget(TargetOnKart):
 
     def _load(self) -> Any:
         # luigi.target.FileSystemTarget.open() has no annotation and its body is `pass`, so pyright infers its return type as None.
-        with cast(Any, self._target.open('r')) as f:
+        with cast(Any, self._target).open('r') as f:
             return self._processor.load(f)
 
     def _dump(
@@ -129,7 +129,7 @@ class SingleFileTarget(TargetOnKart):
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
-        with cast(Any, self._target.open('w')) as f:
+        with cast(Any, self._target).open('w') as f:
             self._processor.dump(obj, f)
         if self.path().startswith('gs://'):
             GCSObjectMetadataClient.add_task_state_labels(
@@ -237,7 +237,7 @@ class LargeDataFrameProcessor:
 
         split_size = df.values.nbytes // self.max_byte + 1
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
-        for i, idx in list(enumerate(np.array_split(range(df.shape[0]), split_size))):
+        for i, idx in list(enumerate(cast(list[Any], cast(Any, np).array_split(range(df.shape[0]), split_size)))):
             df.iloc[idx[0] : idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
 
     @staticmethod

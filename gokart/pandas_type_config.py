@@ -5,7 +5,6 @@ from logging import getLogger
 from typing import Any, cast
 
 import luigi
-import numpy as np
 import pandas as pd
 from luigi.task_register import Register
 
@@ -32,7 +31,7 @@ class PandasTypeConfig(luigi.Config):
         if column_name not in df.columns:
             return
 
-        if not np.all(list(map(lambda x: isinstance(x, column_type), df[column_name]))):
+        if not all(isinstance(x, column_type) for x in df[column_name]):
             not_match = next(filter(lambda x: not isinstance(x, column_type), df[column_name]))
             raise PandasTypeError(f'expected type is "{column_type}", but "{type(not_match)}" is passed in column "{column_name}".')
 
@@ -43,7 +42,7 @@ class PandasTypeConfigMap(luigi.Config):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         task_names = cast(list[str], Register.task_names())
-        task_classes = [cast(type[luigi.Task], Register.get_task_cls(task_name)) for task_name in task_names]
+        task_classes = [cast(type[luigi.Task], cast(Any, Register).get_task_cls(task_name)) for task_name in task_names]
         self._map = {
             task_class.task_namespace: task_class for task_class in task_classes if issubclass(task_class, PandasTypeConfig) and task_class != PandasTypeConfig
         }

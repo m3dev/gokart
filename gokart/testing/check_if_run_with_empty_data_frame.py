@@ -65,7 +65,7 @@ def _test_run_with_empty_data_frame(cmdline_args: list[str], test_run_params: te
     except SystemExit as e:
         assert e.code == 0, f'original workflow does not run properly. It exited with error code {e}.'
 
-    with CmdlineParser.global_instance(cmdline_args) as cp:
+    with cast(Any, CmdlineParser).global_instance(cmdline_args) as cp:
         all_tasks = _get_all_tasks(cast(gokart.TaskOnKart[Any], cp.get_task_obj()))
 
     if test_run_params.namespace is not None:
@@ -83,7 +83,7 @@ def _test_run_with_empty_data_frame(cmdline_args: list[str], test_run_params: te
 
 
 def try_to_run_test_for_empty_data_frame(cmdline_args: list[str]) -> None:
-    with CmdlineParser.global_instance(cmdline_args):
+    with cast(Any, CmdlineParser).global_instance(cmdline_args):
         test_run_params = test_run()
 
     if test_run_params.pandas:

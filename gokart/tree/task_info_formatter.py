@@ -50,7 +50,8 @@ class RequiredTask(NamedTuple):
 
 def _make_requires_info(requires: Any) -> FlattenableItems[RequiredTask]:
     if isinstance(requires, TaskOnKart):
-        return RequiredTask(name=requires.__class__.__name__, unique_id=requires.make_unique_id())
+        task = cast(TaskOnKart[Any], requires)
+        return RequiredTask(name=type(task).__name__, unique_id=task.make_unique_id())
     elif isinstance(requires, dict):
         return {key: _make_requires_info(requires=item) for key, item in cast(dict[str, Any], requires).items()}
     elif isinstance(requires, typing.Iterable):
