@@ -6,7 +6,7 @@ import fakeredis
 
 from gokart.conflict_prevention_lock import task_lock as task_lock_module
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
-from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
+from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock, wrap_run_with_lock
 
 
 def _sample_func_with_error(a: int, b: str) -> None:
@@ -344,3 +344,10 @@ class TestWrapRemoveWithLock(unittest.TestCase):
                 fake_redis = fakeredis.FakeStrictRedis(server=server)
                 with self.assertRaises(KeyError):
                     fake_redis[task_lock_params.redis_key]
+
+
+class TestWrapRunWithLock(unittest.TestCase):
+    def test_is_deprecated(self):
+        task_lock_params = make_task_lock_params(file_path='test_dir/test_file.pkl', unique_id='123abc')
+        with self.assertWarns(DeprecationWarning):
+            wrap_run_with_lock(run_func=MagicMock(), task_lock_params=task_lock_params)
