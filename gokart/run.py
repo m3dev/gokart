@@ -22,9 +22,13 @@ from gokart.object_storage import ObjectStorage
 logger = getLogger(__name__)
 
 
+def _get_task_obj(cp: CmdlineParser) -> gokart.TaskOnKart[Any]:
+    return cast(gokart.TaskOnKart[Any], cp.get_task_obj())
+
+
 def _run_tree_info(cmdline_args: list[str], details: bool):
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        gokart.tree_info().output().dump(gokart.make_tree_info(cp.get_task_obj(), details=details))
+        gokart.tree_info().output().dump(gokart.make_tree_info(_get_task_obj(cp), details=details))
 
 
 def _try_tree_info(cmdline_args: list[str]):
@@ -49,7 +53,7 @@ def _try_tree_info(cmdline_args: list[str]):
 
 def _try_to_delete_unnecessary_output_file(cmdline_args: list[str]) -> None:
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        task: gokart.TaskOnKart[Any] = cp.get_task_obj()
+        task = _get_task_obj(cp)
         if task.delete_unnecessary_output_files:
             if ObjectStorage.if_object_storage_path(task.workspace_directory):
                 logger.info('delete-unnecessary-output-files is not support s3/gcs.')
@@ -79,7 +83,7 @@ def _try_to_send_event_summary_to_slack(
         return
     options = gokart.slack.SlackConfig()
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        task = cp.get_task_obj()
+        task = _get_task_obj(cp)
         tree_info = gokart.make_tree_info(task, details=True) if options.send_tree_info else 'Please add SlackConfig.send_tree_info to include tree-info'
         task_name = type(task).__name__
 
@@ -96,7 +100,7 @@ def _run_with_retcodes(argv: list[str]):
 
     worker = None
     try:
-        worker = luigi.interface._run(argv, worker_scheduler_factory=WorkerSchedulerFactory()).worker  # pyright: ignore[reportPrivateUsage]
+        worker = cast(Any, luigi.interface._run(argv, worker_scheduler_factory=WorkerSchedulerFactory()).worker)  # pyright: ignore[reportPrivateUsage]
     except luigi.interface.PidLockAlreadyTakenExit:
         sys.exit(retcodes.already_running)
     except Exception:
@@ -106,8 +110,8 @@ def _run_with_retcodes(argv: list[str]):
         sys.exit(retcodes.unhandled_exception)
 
     with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
-        task_sets = luigi.execution_summary._summary_dict(worker)  # pyright: ignore[reportPrivateUsage]
-        root_task = luigi.execution_summary._root_task(worker)  # pyright: ignore[reportPrivateUsage]
+        task_sets = cast(dict[str, Any], luigi.execution_summary._summary_dict(worker))  # pyright: ignore[reportPrivateUsage]
+        root_task = cast(Any, luigi.execution_summary._root_task(worker))  # pyright: ignore[reportPrivateUsage]
         non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status: str):
