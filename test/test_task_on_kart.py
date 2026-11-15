@@ -4,10 +4,12 @@ import os
 import pathlib
 import tempfile
 import unittest
+import warnings
 from datetime import datetime
 from typing import Any, cast
 from unittest.mock import Mock, patch
 
+import fakeredis
 import luigi
 import pandas as pd
 from luigi import cmdline_parser, task_register
@@ -590,13 +592,14 @@ class TaskTest(unittest.TestCase):
 
         self.assertIn(f'pandas=={pd.__version__}', module_versions)
 
-    def test_should_lock_run_when_set(self):
+    def test_should_lock_run_does_not_override_run(self):
         class _DummyTaskWithLock(gokart.TaskOnKart[str]):
             def run(self):
                 self.dump('hello')
 
-        task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True)
-        self.assertEqual(task.run.__wrapped__.__name__, 'run')  # pyright: ignore[reportAttributeAccessIssue]
+        # The run lock is taken by the gokart worker, not by wrapping `run`. https://github.com/m3dev/gokart/issues/524
+        task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True, complete_check_at_run=False)
+        self.assertNotIn('run', vars(task))
 
     def test_should_fail_lock_run_when_host_unset(self):
         with self.assertRaises(AssertionError):
@@ -605,6 +608,30 @@ class TaskTest(unittest.TestCase):
     def test_should_fail_lock_run_when_port_unset(self):
         with self.assertRaises(AssertionError):
             gokart.TaskOnKart(redis_host='host', redis_timeout=180, should_lock_run=True)
+
+    def test_should_lock_run_falls_back_to_dump_lock_without_gokart_worker(self):
+        task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
+
+        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=fakeredis.FakeRedis):
+            with self.assertWarnsRegex(UserWarning, 'should_lock_run'):
+                self.assertTrue(luigi.build([task], local_scheduler=True))
+
+        self.assertEqual(cast(TargetOnKart, task.output()).load(), 'hello')
+
+    def test_should_lock_run_does_not_warn_with_gokart_worker(self):
+        task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
+
+        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=fakeredis.FakeRedis):
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error', message='.*should_lock_run.*')
+                self.assertEqual(gokart.build(task, reset_register=False), 'hello')
+
+
+class _DummyTaskWithLockRun(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+
+    def run(self):
+        self.dump('hello')
 
 
 class _DummyTaskWithNonCompleted(gokart.TaskOnKart[Any]):
