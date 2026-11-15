@@ -62,6 +62,7 @@ from luigi.task import DynamicRequirements, Task, flatten  # pyright: ignore[rep
 from luigi.task_register import TaskClassException, load_task  # pyright: ignore[reportUnknownVariableType]
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
+from gokart.conflict_prevention_lock.run_lock import RunLock, RunLockHeartbeat, make_run_lock
 from gokart.parameter import ExplicitBoolParameter
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,16 @@ def _rpc_message_callback(func: _F) -> _F:
 
 def _trigger_event(task: Task, event: str, *args: Any) -> None:
     cast(Any, task).trigger_event(event, *args)
+
+
+_RUN_LOCK_EXTEND_SECONDS = 10
+_RUN_LOCK_MAX_RETRY_INTERVAL_SECONDS = 60.0
+
+
+class _RunLockWaiter(NamedTuple):
+    lock: RunLock
+    retry_count: int
+    retry_at: float
 
 
 def _is_external(task: Task) -> bool:
@@ -483,6 +494,12 @@ class Worker:
         self._running_tasks: dict[str, TaskProcess] = {}
         self._idle_since: datetime.datetime | None = None
 
+        # Run locks are held by this (parent) process so that they are released even if a task process dies.
+        self._run_locks: dict[str, RunLock] = {}
+        # Tasks whose run lock is held by another worker. They stay RUNNING in the scheduler (see `_get_work`) so that it hands out other tasks.
+        self._run_lock_waiters: dict[str, _RunLockWaiter] = {}
+        self._run_lock_heartbeat = RunLockHeartbeat(interval_seconds=_RUN_LOCK_EXTEND_SECONDS)
+
         # mp-safe dictionary for caching completation checks across task processes
         self._task_completion_cache = None
         if self._config.cache_task_completion:
@@ -531,9 +548,18 @@ class Worker:
         """
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
-        for task in self._running_tasks.values():
+        for task_id, task in self._running_tasks.items():
             if task.is_alive():
                 task.terminate()
+                if task_id in self._run_locks:
+                    # terminate() only sends SIGTERM. Releasing the run lock while the process is still writing output would let another worker run the task concurrently.
+                    task.join(timeout=_RUN_LOCK_EXTEND_SECONDS)
+                    if task.is_alive():
+                        logger.warning(f'Task process of {task_id} did not exit. Its run lock is left to expire after redis_timeout.')
+                        self._run_lock_heartbeat.remove(self._run_locks.pop(task_id))
+        for task_id in list(self._run_locks):
+            self._release_run_lock(task_id)
+        self._run_lock_heartbeat.stop()
         self._task_result_queue.close()
         return False  # Don't suppress exception
 
@@ -881,7 +907,7 @@ class Worker:
                     worker=self._id,
                     host=self.host,
                     assistant=self._assistant,
-                    current_tasks=list(self._running_tasks.keys()),
+                    current_tasks=[*self._running_tasks.keys(), *self._run_lock_waiters.keys()],
                 ),
             )
         else:
@@ -930,7 +956,55 @@ class Worker:
             next(self._sleeper())
             return
 
+        if task_id in self._run_lock_waiters:
+            logger.debug(f'Got already parked task id {task_id} from scheduler, taking a break')
+            next(self._sleeper())
+            return
+
         task = self._scheduled_tasks[task_id]
+        run_lock = make_run_lock(task)
+        if run_lock is not None:
+            try:
+                acquired = run_lock.try_acquire()
+            except Exception as ex:
+                self._fail_task_before_run(task_id, ex)
+                return
+            if not acquired:
+                logger.info(f'Run lock of {task_id} is held by another worker. Other tasks run first.')
+                self._run_lock_waiters[task_id] = self._next_run_lock_waiter(run_lock, retry_count=0)
+                return
+        self._start_task_process(task_id, run_lock)
+
+    def _fail_task_before_run(self, task_id: str, ex: Exception) -> None:
+        # Report the failure like a failed run() so that a Redis outage fails only this task instead of crashing the whole worker loop.
+        task = self._scheduled_tasks[task_id]
+        logger.exception(f'Failed to take the run lock of {task_id}.')
+        _trigger_event(task, Event.FAILURE, task, ex)
+        expl = cast(str, cast(Any, task).on_failure(ex))
+        self._email_task_failure(task, expl)
+        self._add_task(
+            worker=self._id,
+            task_id=task_id,
+            status=FAILED,
+            expl=json.dumps(expl),
+            resources=task.process_resources(),
+            runnable=None,
+            params=task.to_str_params(),
+            family=task.task_family,
+            module=task.task_module,
+            new_deps=[],
+            assistant=self._assistant,
+            retry_policy_dict=_get_retry_policy_dict(task),
+        )
+        self.run_succeeded = False
+
+    def _start_task_process(self, task_id: str, run_lock: RunLock | None) -> None:
+        task = self._scheduled_tasks[task_id]
+        if run_lock is not None:
+            self._run_locks[task_id] = run_lock
+            self._run_lock_heartbeat.add(run_lock)
+            # The run lock already prevents concurrent dumps of this task's output.
+            task._lock_at_dump = False  # pyright: ignore[reportAttributeAccessIssue]
 
         task_process = self._create_task_process(task)
 
@@ -942,6 +1016,48 @@ class Worker:
         else:
             # Run in the same process
             task_process.run()
+
+    def _next_run_lock_waiter(self, run_lock: RunLock, retry_count: int) -> _RunLockWaiter:
+        # Cap the exponent: `float * 2**n` overflows once n reaches 1024, i.e. after ~17 hours of 60-second retries.
+        interval = min(self._config.wait_interval * 2 ** min(retry_count, 32), _RUN_LOCK_MAX_RETRY_INTERVAL_SECONDS)
+        retry_at = time.time() + interval + random.uniform(0, self._config.wait_jitter)
+        return _RunLockWaiter(lock=run_lock, retry_count=retry_count, retry_at=retry_at)
+
+    def _start_run_lock_waiters(self) -> bool:
+        """Start waiting tasks whose run lock has become available. Returns True if any task was started."""
+        started = False
+        now = time.time()
+        for task_id, waiter in list(self._run_lock_waiters.items()):
+            if len(self._running_tasks) >= self.worker_processes:
+                break
+            if waiter.retry_at > now:
+                continue
+            try:
+                acquired = waiter.lock.try_acquire()
+            except Exception as ex:
+                del self._run_lock_waiters[task_id]
+                self._fail_task_before_run(task_id, ex)
+                continue
+            if acquired:
+                del self._run_lock_waiters[task_id]
+                self._start_task_process(task_id, waiter.lock)
+                started = True
+            else:
+                self._run_lock_waiters[task_id] = self._next_run_lock_waiter(waiter.lock, retry_count=waiter.retry_count + 1)
+        return started
+
+    def _sleep_until_next_run_lock_retry(self) -> None:
+        retry_at = min(waiter.retry_at for waiter in self._run_lock_waiters.values())
+        # Wake up at least every wait_interval so that tasks that became runnable meanwhile are not delayed by the lock backoff.
+        time.sleep(min(max(retry_at - time.time(), 0), self._config.wait_interval))
+
+    def _release_run_lock(self, task_id: str) -> None:
+        run_lock = self._run_locks.pop(task_id, None)
+        if run_lock is None:
+            return
+        self._run_lock_heartbeat.remove(run_lock)
+        run_lock.release()
+        self._scheduled_tasks[task_id]._lock_at_dump = True  # pyright: ignore[reportAttributeAccessIssue]
 
     def _create_task_process(self, task: Any):
         message_queue: Any = _fork_context.Queue() if task.accepts_messages else None
@@ -1033,6 +1149,7 @@ class Worker:
             )
 
             self._running_tasks.pop(task_id)
+            self._release_run_lock(task_id)
 
             # re-add task to reschedule missing dependencies
             if missing:
@@ -1119,6 +1236,9 @@ class Worker:
                 logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
                 self._handle_next_task()
 
+            if self._start_run_lock_waiters():
+                continue
+
             get_work_response = self._get_work()
 
             if get_work_response.worker_state == WORKER_STATE_DISABLED:
@@ -1127,6 +1247,10 @@ class Worker:
             if get_work_response.task_id is None:
                 if not self._stop_requesting_work:
                     self._log_remote_tasks(get_work_response)
+                # Parked tasks are already claimed from the scheduler, so wait for them like running tasks, even when phasing out.
+                if len(self._running_tasks) == 0 and self._run_lock_waiters:
+                    self._sleep_until_next_run_lock_retry()
+                    continue
                 if len(self._running_tasks) == 0:
                     self._idle_since = self._idle_since or datetime.datetime.now()
                     if self._keep_alive(get_work_response):
