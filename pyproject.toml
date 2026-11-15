@@ -64,6 +64,7 @@ test = [
   "testfixtures",
   "boto3-stubs[s3]>=1.43.126",
   "pandas-stubs>=3.1.0.261029",
+  "google-api-python-client-stubs",
 ]
 
 lint = [

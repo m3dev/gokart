@@ -39,7 +39,7 @@ class GCSObjectMetadataClient:
     @staticmethod
     def _makepatch(original: dict[str, Any], modified: dict[str, Any]) -> dict[str, Any]:
         try:
-            from googleapiclient.model import makepatch  # pyright: ignore[reportMissingTypeStubs, reportUnknownVariableType]
+            from googleapiclient.model import makepatch  # pyright: ignore[reportUnknownVariableType]
         except ImportError:
             raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
         return dict(cast(dict[str, Any], makepatch(original, modified)))
