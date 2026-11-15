@@ -23,7 +23,9 @@ class FileLike(Protocol):
 def add_config(file_path: str) -> None:
     _, ext = os.path.splitext(file_path)
     luigi.configuration.core.parser = ext  # pyright: ignore[reportAttributeAccessIssue]
-    assert cast(Any, luigi.configuration).add_config_path(file_path)
+    # call before asserting, so that the config is still added under `python -O`, which strips assert statements
+    added = cast(Any, luigi.configuration).add_config_path(file_path)
+    assert added
 
 
 T = TypeVar('T')

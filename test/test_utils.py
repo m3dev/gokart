@@ -1,4 +1,7 @@
+import subprocess
+import sys
 import unittest
+from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -272,3 +275,15 @@ class TestGetDataFrameTypeFromTask(unittest.TestCase):
 
         task = _DerivedGenericLazyTask()
         self.assertEqual(get_dataframe_type_from_task(task), 'polars-lazy')
+
+
+class TestAddConfig:
+    def test_add_config_under_optimized_python(self, tmp_path: Path) -> None:
+        """`python -O` strips assert statements, but the config file must still be added."""
+        config_file = tmp_path / 'test.ini'
+        config_file.write_text('[section]\nkey=value\n')
+        code = f'from gokart.utils import add_config; import luigi; add_config({str(config_file)!r}); print(luigi.configuration.get_config().get("section", "key"))'
+
+        result = subprocess.run([sys.executable, '-O', '-c', code], capture_output=True, text=True, check=True)
+
+        assert result.stdout.strip() == 'value'
