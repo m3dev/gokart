@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from logging import getLogger
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 import luigi
 
@@ -23,7 +23,7 @@ class EventAggregator:
     def set_handlers(self):
         handlers: list[tuple[Any, Callable[..., None]]] = [(luigi.Event.SUCCESS, self._success), (luigi.Event.FAILURE, self._failure)]
         for event, handler in handlers:
-            luigi.Task.event_handler(event)(handler)
+            cast(Any, luigi.Task).event_handler(event)(handler)
 
     def get_summary(self) -> str:
         return f'Success: {len(self._success_events)}; Failure: {len(self._failure_events)}'
