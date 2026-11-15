@@ -9,7 +9,7 @@ import types
 from collections.abc import Callable, Generator, Iterable
 from importlib import import_module
 from logging import getLogger
-from typing import Any, Generic, TypeVar, cast, overload
+from typing import Any, Generic, Self, TypeVar, cast, overload
 
 import luigi
 import pandas as pd
@@ -31,12 +31,18 @@ logger = getLogger(__name__)
 
 
 T = TypeVar('T')
+_F = TypeVar('_F', bound=Callable[..., Any])
 K = TypeVar('K')
 
 
 # NOTE: inherited from AssertionError for backward compatibility (Formerly, Gokart raises that exception when a task dumps an empty DataFrame).
 class EmptyDumpError(AssertionError):
     """Raised when the task attempts to dump an empty DataFrame even though it is prohibited (``fail_on_empty_dump`` is set to True)"""
+
+
+def _event_handler(event: str) -> Callable[[_F], _F]:
+    # luigi's event_handler decorator is untyped; declare it as signature-preserving
+    return cast(Callable[[_F], _F], cast(Any, luigi.Task).event_handler(event))
 
 
 class TaskOnKart(luigi.Task, Generic[T]):
@@ -126,7 +132,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
         self.task_log: dict[str, Any] = dict()
         self.task_unique_id = None
-        super().__init__(*args, **kwargs)
+        cast(Any, super()).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
 
@@ -172,7 +178,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @classmethod
     def _add_configuration(cls, kwargs: dict[str, Any], section: str) -> None:
-        config = cast(Any, luigi.configuration.get_config())
+        config = cast(Any, luigi.configuration).get_config()
         class_variables = dict(TaskOnKart.__dict__)
         class_variables.update(dict(cls.__dict__))
         if section not in config:
@@ -447,8 +453,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def get_info(self, only_significant: bool = False) -> dict[str, str]:
         params_str: dict[str, str] = {}
-        params = dict(cast(list[tuple[str, luigi.Parameter[Any]]], self.get_params()))
-        for param_name, param_value in cast(dict[str, Any], self.param_kwargs).items():
+        params = cast(dict[str, Any], dict(cast(list[tuple[str, luigi.Parameter[Any]]], self.get_params())))
+        for param_name, param_value in cast(dict[str, Any], cast(Any, self).param_kwargs).items():
             if (not only_significant) or params[param_name].significant:
                 if isinstance(params[param_name], gokart.TaskInstanceParameter):
                     params_str[param_name] = type(param_value).__name__ + '-' + cast(TaskOnKart[Any], param_value).make_unique_id()
@@ -467,7 +473,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return cast(dict[Any, Any], self.load(target))
         return dict()
 
-    @luigi.Task.event_handler(luigi.Event.SUCCESS)
+    @_event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
         self.task_log['file_path'] = [target.path() for target in flatten(self.output())]
         if self.should_dump_supplementary_log_files:
@@ -482,7 +488,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return cast(dict[Any, Any], self.load(target))
         return dict()
 
-    @luigi.Task.event_handler(luigi.Event.START)
+    @_event_handler(luigi.Event.START)
     def _set_random_seed(self):
         if self.should_dump_supplementary_log_files:
             random_seed = self._get_random_seed()
@@ -514,7 +520,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return self.fix_random_seed_value
         return int(self.make_unique_id(), 16) % (2**32 - 1)  # maximum numpy.random.seed
 
-    @luigi.Task.event_handler(luigi.Event.START)
+    @_event_handler(luigi.Event.START)
     def _dump_task_params(self):
         if self.should_dump_supplementary_log_files:
             self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
@@ -528,21 +534,21 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return cast(str, self.load(target))
         return 'unknown'
 
-    @luigi.Task.event_handler(luigi.Event.PROCESSING_TIME)
+    @_event_handler(luigi.Event.PROCESSING_TIME)
     def _dump_processing_time(self, processing_time: float) -> None:
         if self.should_dump_supplementary_log_files:
             self.dump(processing_time, self._get_processing_time_target())
 
     @classmethod
-    def restore(cls, unique_id: str):
+    def restore(cls, unique_id: str) -> Self:
         params = TaskOnKart().make_target(f'log/task_params/{cls.__name__}_{unique_id}.pkl', use_unique_id=False).load()
-        return cls.from_str_params(params)
+        return cast(Self, cast(Any, cls).from_str_params(params))
 
-    @luigi.Task.event_handler(luigi.Event.FAILURE)
+    @_event_handler(luigi.Event.FAILURE)
     def _log_unique_id(self, exception: BaseException) -> None:
         logger.info(f'FAILURE:\n    task name={type(self).__name__}\n    unique id={self.make_unique_id()}')
 
-    @luigi.Task.event_handler(luigi.Event.START)
+    @_event_handler(luigi.Event.START)
     def _dump_module_versions(self):
         if self.should_dump_supplementary_log_files:
             self.dump(self._get_module_versions(), self._get_module_versions_target())
@@ -583,7 +589,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         Convert a task representation like `MyTask(param1=1.5, param2='5', data_task=DataTask(id=35tyi))`
         """
         params = cast(list[tuple[str, luigi.Parameter[Any]]], self.get_params())
-        param_values = cast(list[tuple[str, Any]], self.get_param_values(params, [], self.param_kwargs))
+        param_values = cast(list[tuple[str, Any]], cast(Any, self).get_param_values(params, [], cast(Any, self).param_kwargs))
 
         # Build up task id
         repr_parts: list[str] = []
@@ -601,4 +607,4 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return f'{param_value.get_task_family()}({param_value.make_unique_id()})'
         if isinstance(param_obj, ListTaskInstanceParameter):
             return f'[{", ".join(f"{v.get_task_family()}({v.make_unique_id()})" for v in param_value)}]'
-        return str(param_obj.serialize(param_value))
+        return str(cast(Any, param_obj).serialize(param_value))

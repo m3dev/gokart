@@ -49,15 +49,15 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
     @staticmethod
     def _recursive(param_dict: dict[str, Any]) -> Any:
         params = param_dict['params']
-        task_cls = cast(type[gokart.TaskOnKart[Any]], task_register.Register.get_task_cls(param_dict['type']))
+        task_cls = cast(type[gokart.TaskOnKart[Any]], cast(Any, task_register.Register).get_task_cls(param_dict['type']))
         for key, value in cast(list[tuple[str, luigi.Parameter[Any]]], task_cls.get_params()):
             if key in params:
-                params[key] = value.parse(params[key])
+                params[key] = cast(Any, value).parse(params[key])
         return task_cls(**params)
 
     @staticmethod
     def _recursive_decompress(s: str) -> dict[str, Any]:
-        decompressed: dict[str, Any] = dict(cast(dict[str, Any], luigi.DictParameter().parse(s)))
+        decompressed: dict[str, Any] = dict(cast(dict[str, Any], cast(Any, luigi.DictParameter()).parse(s)))
         if 'params' in decompressed:
             decompressed['params'] = TaskInstanceParameter._recursive_decompress(bz2.decompress(bytes.fromhex(decompressed['params'])).decode())
         return decompressed
@@ -70,7 +70,7 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
     def serialize(self, x: TASK_ON_KART_TYPE) -> str:
         params = bz2.compress(json.dumps(x.to_str_params(only_significant=True)).encode()).hex()
         values = dict(type=x.get_task_family(), params=params)
-        return luigi.DictParameter().serialize(values)
+        return cast(str, cast(Any, luigi.DictParameter()).serialize(values))
 
     def _warn_on_wrong_param_type(self, param_name: str, param_value: Any) -> None:
         if not isinstance(param_value, self.expected_type):
@@ -80,7 +80,7 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
 class _TaskInstanceEncoder(json.JSONEncoder):
     def default(self, o: Any) -> Any:
         if isinstance(o, luigi.Task):
-            return TaskInstanceParameter().serialize(o)
+            return cast(str, cast(Any, TaskInstanceParameter()).serialize(o))
         # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, o)
 
@@ -117,7 +117,7 @@ class ExplicitBoolParameter(luigi.BoolParameter):
         super(luigi.BoolParameter, self).__init__(*args, **kwargs)
 
     def _parser_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return cast(dict[str, Any], luigi.Parameter._parser_kwargs(*args, **kwargs))
+        return cast(dict[str, Any], cast(Any, luigi.Parameter)._parser_kwargs(*args, **kwargs))
 
 
 T = TypeVar('T')

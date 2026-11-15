@@ -199,7 +199,7 @@ def build(
         task_lock_exception_raised = TaskLockExceptionRaisedFlag()
         raised_exceptions: dict[str, list[Exception]] = dict()
 
-        @TaskOnKart.event_handler(luigi.Event.FAILURE)
+        @cast(Any, TaskOnKart).event_handler(luigi.Event.FAILURE)
         def when_failure(task: Any, exception: Exception):
             if isinstance(exception, TaskLockException):
                 task_lock_exception_raised.flag = True
@@ -214,7 +214,7 @@ def build(
         )
         def _build_task():
             task_lock_exception_raised.flag = False
-            result = luigi.build(
+            result = cast(Any, luigi).build(
                 [task],
                 worker_scheduler_factory=WorkerSchedulerFactory(),
                 local_scheduler=True,
@@ -232,4 +232,4 @@ def build(
         try:
             return _build_task()
         finally:
-            TaskOnKart.remove_event_handler(luigi.Event.FAILURE, when_failure)
+            cast(Any, TaskOnKart).remove_event_handler(luigi.Event.FAILURE, when_failure)
