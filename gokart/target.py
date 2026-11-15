@@ -237,7 +237,7 @@ class LargeDataFrameProcessor:
 
         split_size = df.values.nbytes // self.max_byte + 1
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
-        for i, idx in list(enumerate(cast(list[Any], cast(Any, np).array_split(range(df.shape[0]), split_size)))):
+        for i, idx in enumerate(cast(Any, np).array_split(range(df.shape[0]), split_size)):
             df.iloc[idx[0] : idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
 
     @staticmethod
