@@ -4,7 +4,10 @@ import hashlib
 import os
 import re
 import shutil
+import tempfile
 from abc import abstractmethod
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from glob import glob
 from logging import getLogger
@@ -165,12 +168,10 @@ class ModelTarget(TargetOnKart):
         return self._task_lock_params
 
     def _load(self) -> Any:
-        self._make_temporary_directory()
-        self._zip_client.unpack_archive()
-        self._load_function = self._load_function or make_target(self._load_function_path()).load()
-        model = self._load_function(self._model_path())
-        self._remove_temporary_directory()
-        return model
+        with self._make_working_directory() as working_directory:
+            make_zip_client(self._zip_client.path, working_directory).unpack_archive()
+            self._load_function = self._load_function or make_target(self._load_function_path(working_directory)).load()
+            return self._load_function(self._model_path(working_directory))
 
     def _dump(
         self,
@@ -179,13 +180,12 @@ class ModelTarget(TargetOnKart):
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
-        self._make_temporary_directory()
-        self._save_function(obj, self._model_path())
-        make_target(self._load_function_path()).dump(
-            self._load_function, task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs
-        )
-        self._zip_client.make_archive()
-        self._remove_temporary_directory()
+        with self._make_working_directory() as working_directory:
+            self._save_function(obj, self._model_path(working_directory))
+            make_target(self._load_function_path(working_directory)).dump(
+                self._load_function, task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs
+            )
+            make_zip_client(self._zip_client.path, working_directory).make_archive()
 
     def _remove(self) -> None:
         self._zip_client.remove()
@@ -196,19 +196,28 @@ class ModelTarget(TargetOnKart):
     def _path(self) -> str:
         return self._zip_client.path
 
-    def _model_path(self):
-        return os.path.join(self._temporary_directory, 'model.pkl')
+    @staticmethod
+    def _model_path(working_directory: str) -> str:
+        return os.path.join(working_directory, 'model.pkl')
 
-    def _load_function_path(self):
-        return os.path.join(self._temporary_directory, 'load_function.pkl')
+    @staticmethod
+    def _load_function_path(working_directory: str) -> str:
+        return os.path.join(working_directory, 'load_function.pkl')
 
-    def _remove_temporary_directory(self):
-        shutil.rmtree(self._temporary_directory)
-
-    def _make_temporary_directory(self):
-        # The directory path is deterministic per file path, so files left by a dump that crashed before cleanup must not leak into this one.
-        shutil.rmtree(self._temporary_directory, ignore_errors=True)
-        os.makedirs(self._temporary_directory)
+    @contextmanager
+    def _make_working_directory(self) -> Iterator[str]:
+        # self._temporary_directory is the same for every call on the same file path, so each call gets its own directory.
+        # Otherwise a call picks up files of a concurrent call or of a call that crashed before cleanup, and its cleanup removes files still in use.
+        base = os.path.normpath(self._temporary_directory)
+        os.makedirs(os.path.dirname(base), exist_ok=True)
+        call_directory = tempfile.mkdtemp(prefix=f'{os.path.basename(base)}_', dir=os.path.dirname(base))
+        try:
+            # Object storage zip clients write the archive next to their directory, so nest it to remove the archive together.
+            working_directory = os.path.join(call_directory, 'model')
+            os.makedirs(working_directory)
+            yield working_directory
+        finally:
+            shutil.rmtree(call_directory, ignore_errors=True)
 
 
 _LARGE_DATA_FRAME_CHUNK_PATTERN = re.compile(r'data_(\d+)\.pkl')
