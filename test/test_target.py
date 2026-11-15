@@ -12,7 +12,7 @@ from matplotlib import pyplot
 from moto import mock_aws
 
 from gokart.file_processor.base import _ChunkedLargeFileReader
-from gokart.target import make_model_target, make_target
+from gokart.target import LargeDataFrameProcessor, make_model_target, make_target
 from test.util import _get_temporary_directory
 
 
@@ -264,6 +264,74 @@ class ModelTargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, obj)
+
+    def _make_large_data_frame_target(self, file_path: str, load_function=None):
+        processor = LargeDataFrameProcessor(max_byte=800)
+        return make_model_target(
+            file_path=file_path,
+            temporary_directory=self.temporary_directory,
+            save_function=processor.save,
+            load_function=load_function or processor.load,
+        )
+
+    def _dump_large_data_frame_while(self, file_path: str, df: pd.DataFrame, callback) -> None:
+        # Runs callback while the chunks of this dump are on disk, which reproduces both a concurrent dump and a dump that crashed before cleanup.
+        processor = LargeDataFrameProcessor(max_byte=800)
+
+        def save_function(obj, path):
+            processor.save(obj, path)
+            callback()
+
+        make_model_target(file_path=file_path, temporary_directory=self.temporary_directory, save_function=save_function, load_function=processor.load).dump(df)
+
+    def test_large_data_frame_dump_ignores_chunks_of_another_dump(self):
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
+        df = pd.DataFrame(dict(data=np.arange(10, dtype=np.float64)))
+        target = self._make_large_data_frame_target(file_path)
+        loaded = []
+
+        def dump_and_load():
+            target.dump(df)
+            loaded.append(target.load())
+
+        self._dump_large_data_frame_while(file_path, pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64))), dump_and_load)
+
+        pd.testing.assert_frame_equal(loaded[0], df)
+
+    def test_large_data_frame_load_ignores_chunks_of_another_dump(self):
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
+        df = pd.DataFrame(dict(data=np.arange(10, dtype=np.float64)))
+        target = self._make_large_data_frame_target(file_path)
+        target.dump(df)
+        loaded = []
+
+        self._dump_large_data_frame_while(file_path, pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64))), lambda: loaded.append(target.load()))
+
+        pd.testing.assert_frame_equal(loaded[0], df)
+
+    def test_large_data_frame_load_keeps_chunks_of_another_dump(self):
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
+        target = self._make_large_data_frame_target(file_path)
+        target.dump(pd.DataFrame(dict(data=np.arange(10, dtype=np.float64))))
+        df = pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64)))
+
+        self._dump_large_data_frame_while(file_path, df, target.load)
+
+        pd.testing.assert_frame_equal(target.load(), df)
+
+    def test_large_data_frame_load_keeps_files_of_another_load(self):
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
+        df = pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64)))
+        another_target = self._make_large_data_frame_target(file_path)
+        another_target.dump(df)
+
+        def load_function(path):
+            another_target.load()
+            return LargeDataFrameProcessor.load(path)
+
+        target = self._make_large_data_frame_target(file_path, load_function=load_function)
+
+        pd.testing.assert_frame_equal(target.load(), df)
 
     @mock_aws
     def test_model_target_on_s3(self):
