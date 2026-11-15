@@ -51,11 +51,11 @@ class ObjectStorage:
         if path.startswith('s3://'):
             from gokart.s3_config import S3Config
 
-            return S3Config().get_s3_client().exists(path)
+            return cast(bool, cast(Any, S3Config().get_s3_client()).exists(path))
         elif path.startswith('gs://'):
             from gokart.gcs_config import GCSConfig
 
-            return GCSConfig().get_gcs_client().exists(path)
+            return cast(bool, cast(Any, GCSConfig().get_gcs_client()).exists(path))
         else:
             raise
 
@@ -64,7 +64,7 @@ class ObjectStorage:
         if path.startswith('s3://'):
             from gokart.s3_config import S3Config
 
-            key = cast(Any, S3Config().get_s3_client().get_key(path))
+            key = cast(Any, S3Config().get_s3_client()).get_key(path)
             if key is None:
                 raise FileNotFoundError(f'S3 key not found: {path}')
             return cast(datetime, key.last_modified)
@@ -73,8 +73,8 @@ class ObjectStorage:
 
             # for gcs object
             # should PR to luigi
-            bucket, obj = cast(tuple[str, str], GCSConfig().get_gcs_client()._path_to_bucket_and_key(path))  # pyright: ignore[reportPrivateUsage]
-            result = cast(Any, GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute())
+            bucket, obj = cast(tuple[str, str], cast(Any, GCSConfig().get_gcs_client())._path_to_bucket_and_key(path))
+            result = cast(Any, GCSConfig().get_gcs_client()).client.objects().get(bucket=bucket, object=obj).execute()
             return cast(datetime, result['updated'])
         else:
             raise

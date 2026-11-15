@@ -56,7 +56,7 @@ class GCSObjectMetadataClient:
         # In gokart/object_storage.get_time_stamp, could find same call.
         # _path_to_bucket_and_key is a private method, so, this might not be acceptable.
         bucket, obj = GCSObjectMetadataClient._path_to_bucket_and_key(path)
-        _response = cast(Any, GCSConfig().get_gcs_client().client.objects().get(bucket=bucket, object=obj).execute())
+        _response = cast(Any, GCSConfig().get_gcs_client()).client.objects().get(bucket=bucket, object=obj).execute()
         if _response is None:
             logger.error(f'failed to get object from GCS bucket {bucket} and object {obj}.')
             return
@@ -76,17 +76,15 @@ class GCSObjectMetadataClient:
             # If we use update api, existing object metadata are removed, so should use patch api.
             # See the official document descriptions.
             # [Link] https://cloud.google.com/storage/docs/viewing-editing-metadata?hl=ja#rest-set-object-metadata
-            update_response = cast(
-                Any,
-                GCSConfig()
-                .get_gcs_client()
+            update_response = (
+                cast(Any, GCSConfig().get_gcs_client())
                 .client.objects()
                 .patch(
                     bucket=bucket,
                     object=obj,
                     body=GCSObjectMetadataClient._makepatch({'metadata': original_metadata}, {'metadata': patched_metadata}),
                 )
-                .execute(),
+                .execute()
             )
             if update_response is None:
                 logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')

@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Callable
 from logging import getLogger
-from typing import ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, set_lock_scheduler, set_task_lock
 
@@ -35,7 +35,7 @@ def wrap_dump_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams, 
         finally:
             logger.debug(f'Task DUMP lock of {task_lock_params.redis_key} released.')
             task_lock.release()
-            scheduler.shutdown()
+            cast(Any, scheduler).shutdown()
 
     return wrapper
 
@@ -56,7 +56,7 @@ def wrap_load_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams) 
         logger.debug(f'Task LOAD lock of {task_lock_params.redis_key} locked.')
         task_lock.release()
         logger.debug(f'Task LOAD lock of {task_lock_params.redis_key} released.')
-        scheduler.shutdown()
+        cast(Any, scheduler).shutdown()
         result = func(*args, **kwargs)
         return result
 
@@ -80,12 +80,12 @@ def wrap_remove_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams
             result = func(*args, **kwargs)
             task_lock.release()
             logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released.')
-            scheduler.shutdown()
+            cast(Any, scheduler).shutdown()
             return result
         except BaseException as e:
             logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released with BaseException.')
             task_lock.release()
-            scheduler.shutdown()
+            cast(Any, scheduler).shutdown()
             raise e
 
     return wrapper
@@ -102,12 +102,12 @@ def wrap_run_with_lock(run_func: Callable[[], R], task_lock_params: TaskLockPara
             result = run_func()
             task_lock.release()
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released.')
-            scheduler.shutdown()
+            cast(Any, scheduler).shutdown()
             return result
         except BaseException as e:
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released with BaseException.')
             task_lock.release()
-            scheduler.shutdown()
+            cast(Any, scheduler).shutdown()
             raise e
 
     return wrapped
