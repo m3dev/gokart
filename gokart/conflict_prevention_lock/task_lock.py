@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import os
 from logging import getLogger
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 import redis
 from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
@@ -63,8 +63,9 @@ def set_task_lock(task_lock_params: TaskLockParams) -> Lock:
 
 def set_lock_scheduler(task_lock: Lock, task_lock_params: TaskLockParams) -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
+    scheduler_any = cast(Any, scheduler)
     extend_lock = functools.partial(_extend_lock, task_lock=task_lock, redis_timeout=task_lock_params.redis_timeout or 0)
-    scheduler.add_job(
+    scheduler_any.add_job(
         extend_lock,
         'interval',
         seconds=task_lock_params.lock_extend_seconds,
@@ -72,7 +73,7 @@ def set_lock_scheduler(task_lock: Lock, task_lock_params: TaskLockParams) -> Bac
         misfire_grace_time=task_lock_params.redis_timeout,
         coalesce=False,
     )
-    scheduler.start()
+    scheduler_any.start()
     return scheduler
 
 
