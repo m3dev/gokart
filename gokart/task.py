@@ -17,8 +17,7 @@ from luigi.parameter import ParameterVisibility
 
 import gokart
 import gokart.target
-from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
-from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_run_with_lock
+from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
@@ -148,8 +147,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
             self._lock_at_dump = False
             assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
-            task_lock_params = make_task_lock_params_for_run(task_self=self)
-            self.run = wrap_run_with_lock(run_func=self.run, task_lock_params=task_lock_params)
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)

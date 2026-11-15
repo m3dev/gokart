@@ -590,13 +590,14 @@ class TaskTest(unittest.TestCase):
 
         self.assertIn(f'pandas=={pd.__version__}', module_versions)
 
-    def test_should_lock_run_when_set(self):
+    def test_should_lock_run_does_not_override_run(self):
         class _DummyTaskWithLock(gokart.TaskOnKart[str]):
             def run(self):
                 self.dump('hello')
 
-        task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True)
-        self.assertEqual(task.run.__wrapped__.__name__, 'run')  # pyright: ignore[reportAttributeAccessIssue]
+        # The run lock is taken by the gokart worker, not by wrapping `run`. https://github.com/m3dev/gokart/issues/524
+        task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True, complete_check_at_run=False)
+        self.assertNotIn('run', vars(task))
 
     def test_should_fail_lock_run_when_host_unset(self):
         with self.assertRaises(AssertionError):
