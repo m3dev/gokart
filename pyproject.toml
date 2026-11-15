@@ -128,6 +128,7 @@ reportUnknownParameterType = "error"
 reportUnknownVariableType = "error"
 reportUnknownArgumentType = "error"
 reportUnknownLambdaType = "error"
+reportUnknownMemberType = "error"
 
 # tests legitimately reach into internals (e.g. _configured, _get_gcs_client) to set up and inspect state,
 # and annotating every test helper parameter adds noise without catching real bugs
@@ -140,6 +141,7 @@ reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "."
