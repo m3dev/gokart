@@ -58,8 +58,8 @@ from luigi import notifications
 from luigi.event import Event
 from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED, RetryPolicy, Scheduler
 from luigi.target import Target
-from luigi.task import DynamicRequirements, Task, flatten
-from luigi.task_register import TaskClassException, load_task
+from luigi.task import DynamicRequirements, Task, flatten  # pyright: ignore[reportUnknownVariableType]
+from luigi.task_register import TaskClassException, load_task  # pyright: ignore[reportUnknownVariableType]
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
 from gokart.parameter import ExplicitBoolParameter
