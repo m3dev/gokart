@@ -113,25 +113,12 @@ quote-style = "single"
 [tool.pyright]
 include = ["gokart", "test"]
 pythonVersion = "3.11"
-typeCheckingMode = "standard"
+typeCheckingMode = "strict"
+# not part of strict
 reportUnnecessaryTypeIgnoreComment = "error"
-reportUnnecessaryCast = "error"
-reportMissingTypeArgument = "error"
-reportUnusedImport = "error"
-reportConstantRedefinition = "error"
-reportUnnecessaryIsInstance = "error"
-reportUntypedNamedTuple = "error"
-reportMissingTypeStubs = "error"
-reportPrivateUsage = "error"
-reportMissingParameterType = "error"
-reportUnknownParameterType = "error"
-reportUnknownVariableType = "error"
-reportUnknownArgumentType = "error"
-reportUnknownLambdaType = "error"
-reportUnknownMemberType = "error"
 
 # tests legitimately reach into internals (e.g. _configured, _get_gcs_client) to set up and inspect state,
-# and annotating every test helper parameter adds noise without catching real bugs
+# and annotating every test helper parameter adds noise without catching real bugs, so the strict-only rules are turned off for tests
 [[tool.pyright.executionEnvironments]]
 root = "test"
 extraPaths = ["."]
@@ -142,6 +129,9 @@ reportUnknownVariableType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownLambdaType = "none"
 reportUnknownMemberType = "none"
+reportUntypedClassDecorator = "none"
+reportUnusedClass = "none"
+reportUnusedFunction = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "."
