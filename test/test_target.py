@@ -12,7 +12,7 @@ from matplotlib import pyplot
 from moto import mock_aws
 
 from gokart.file_processor.base import _ChunkedLargeFileReader
-from gokart.target import make_model_target, make_target
+from gokart.target import LargeDataFrameProcessor, make_model_target, make_target
 from test.util import _get_temporary_directory
 
 
@@ -264,6 +264,43 @@ class ModelTargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, obj)
+
+    def _leave_stale_large_data_frame_chunks(self, file_path: str) -> None:
+        processor = LargeDataFrameProcessor(max_byte=800)
+
+        def crashing_save_function(obj, path):
+            processor.save(obj, path)
+            raise RuntimeError('crash before cleanup')
+
+        target = make_model_target(
+            file_path=file_path, temporary_directory=self.temporary_directory, save_function=crashing_save_function, load_function=processor.load
+        )
+        with self.assertRaises(RuntimeError):
+            target.dump(pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64))))
+
+    def _make_large_data_frame_target(self, file_path: str):
+        processor = LargeDataFrameProcessor(max_byte=800)
+        return make_model_target(file_path=file_path, temporary_directory=self.temporary_directory, save_function=processor.save, load_function=processor.load)
+
+    def test_large_data_frame_dump_ignores_stale_chunks_left_by_failed_dump(self):
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
+        self._leave_stale_large_data_frame_chunks(file_path)
+
+        df = pd.DataFrame(dict(data=np.arange(10, dtype=np.float64)))
+        target = self._make_large_data_frame_target(file_path)
+        target.dump(df)
+
+        pd.testing.assert_frame_equal(target.load(), df)
+
+    def test_large_data_frame_load_ignores_stale_chunks_left_by_failed_dump(self):
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
+        df = pd.DataFrame(dict(data=np.arange(10, dtype=np.float64)))
+        target = self._make_large_data_frame_target(file_path)
+        target.dump(df)
+
+        self._leave_stale_large_data_frame_chunks(file_path)
+
+        pd.testing.assert_frame_equal(target.load(), df)
 
     @mock_aws
     def test_model_target_on_s3(self):

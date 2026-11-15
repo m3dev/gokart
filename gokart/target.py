@@ -165,6 +165,7 @@ class ModelTarget(TargetOnKart):
         return self._task_lock_params
 
     def _load(self) -> Any:
+        self._make_temporary_directory()
         self._zip_client.unpack_archive()
         self._load_function = self._load_function or make_target(self._load_function_path()).load()
         model = self._load_function(self._model_path())
@@ -205,7 +206,9 @@ class ModelTarget(TargetOnKart):
         shutil.rmtree(self._temporary_directory)
 
     def _make_temporary_directory(self):
-        os.makedirs(self._temporary_directory, exist_ok=True)
+        # The directory path is deterministic per file path, so files left by a dump that crashed before cleanup must not leak into this one.
+        shutil.rmtree(self._temporary_directory, ignore_errors=True)
+        os.makedirs(self._temporary_directory)
 
 
 _LARGE_DATA_FRAME_CHUNK_PATTERN = re.compile(r'data_(\d+)\.pkl')
