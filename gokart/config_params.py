@@ -26,12 +26,12 @@ class inherits_config_params:
         class Wrapped(task_class):
             @classmethod
             def get_param_values(cls, params: list[tuple[str, luigi.Parameter[Any]]], args: tuple[Any, ...], kwargs: dict[str, Any]) -> list[tuple[str, Any]]:
-                for param_key, param_value in self._config_class().param_kwargs.items():
+                for param_key, param_value in cast(dict[str, Any], self._config_class().param_kwargs).items():
                     param_name: str = param_key
                     task_param_key = self._parameter_alias.get(param_name, param_name)
 
                     if hasattr(cls, task_param_key) and task_param_key not in kwargs:
                         kwargs[task_param_key] = param_value
-                return super().get_param_values(params, args, kwargs)
+                return cast(list[tuple[str, Any]], super().get_param_values(params, args, kwargs))
 
         return cast(type[gokart.TaskOnKart[Any]], Wrapped)
