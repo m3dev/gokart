@@ -168,8 +168,12 @@ class TaskProcess(_ForkProcess):
         # completeness check using the cache
         self.check_complete: Callable[[Task], bool] = functools.partial(cast(Any, luigi.worker).check_complete_cached, completion_cache=task_completion_cache)
 
+    def _should_check_completion_at_run(self) -> bool:
+        # `TaskOnKart.complete_check_at_run` used to skip run() by itself, so keep honoring it even when the worker-level check is disabled.
+        return self.task_completion_check_at_run or bool(getattr(self.task, 'complete_check_at_run', False))
+
     def _run_task(self) -> collections.abc.Generator[Any, Any, Any] | None:
-        if self.task_completion_check_at_run and self.check_complete(self.task):
+        if self._should_check_completion_at_run() and self.check_complete(self.task):
             logger.warning(f'{self.task} is skipped because the task is already completed.')
             return None
         return cast(collections.abc.Generator[Any, Any, Any] | None, self.task.run())
