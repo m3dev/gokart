@@ -836,6 +836,7 @@ test = [
     { name = "boto3-stubs", extra = ["s3"] },
     { name = "fakeredis" },
     { name = "google-api-python-client" },
+    { name = "google-api-python-client-stubs" },
     { name = "google-auth" },
     { name = "lupa" },
     { name = "matplotlib" },
@@ -882,6 +883,7 @@ test = [
     { name = "boto3-stubs", extras = ["s3"], specifier = ">=1.43.126" },
     { name = "fakeredis" },
     { name = "google-api-python-client" },
+    { name = "google-api-python-client-stubs" },
     { name = "google-auth" },
     { name = "lupa" },
     { name = "matplotlib" },
@@ -914,7 +916,7 @@ wheels = [
 
 [[package]]
 name = "google-api-python-client"
-version = "2.160.0"
+version = "2.202.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-api-core" },
@@ -923,9 +925,22 @@ dependencies = [
     { name = "httplib2" },
     { name = "uritemplate" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/af/42/cbf81242376c99d6e5248e62aa4376bfde5bbefbe0a69b1b06fd4b73ab25/google_api_python_client-2.160.0.tar.gz", hash = "sha256:a8ccafaecfa42d15d5b5c3134ced8de08380019717fc9fb1ed510ca58eca3b7e", size = 12304236, upload-time = "2025-01-27T23:30:28.498Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/59/70df770dd367e268f0382fc98c6976d1e210e47351f263cced5b95989ee0/google_api_python_client-2.202.0.tar.gz", hash = "sha256:ae126c8e91f43c331e23dbd83bc4a8075699dd48089cebc7295f6ab2f5850fc5", size = 16541462, upload-time = "2026-11-10T14:27:35.639Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/35/41623ac3b581781169eed7f5fcd24bc114c774dc491fab5c05d8eb81af36/google_api_python_client-2.160.0-py2.py3-none-any.whl", hash = "sha256:63d61fb3e4cf3fb31a70a87f45567c22f6dfe87bbfa27252317e3e2c42900db4", size = 12814302, upload-time = "2025-01-27T23:30:24.604Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/a3/023b1fe763bd91cfd43aa2c2960a0f1620f0a4c184bbbfc3e3f6fdc31b06/google_api_python_client-2.202.0-py3-none-any.whl", hash = "sha256:aaa90064c9bb642ff1d065b22ca8958a2cb6e345909cefe70d0e5452fc50e08b", size = 17148227, upload-time = "2026-11-10T14:27:32.918Z" },
+]
+
+[[package]]
+name = "google-api-python-client-stubs"
+version = "1.40.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-python-client" },
+    { name = "types-httplib2" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b5/90/6cbfac1e3270b8a51cf81db89ce9a0f543bc6382ed7c99613761d548b77e/google_api_python_client_stubs-1.40.0.tar.gz", hash = "sha256:2a573b1ee80502e9d226fa4dcdad21765ef709264ea6c2f72ef1a88f920e295a", size = 2851868, upload-time = "2026-08-22T20:28:56.708Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/c3/f0d47e2ef666fd0c8804cd4e9bdcc873454ebec93ee893665cfbf9e76d2d/google_api_python_client_stubs-1.40.0-py3-none-any.whl", hash = "sha256:aa2b6cf8ea354970f1100e189ac176ae096d7d22846083a9a086d0f7f4a1858e", size = 3870340, upload-time = "2026-08-22T20:28:54.739Z" },
 ]
 
 [[package]]
@@ -2627,6 +2642,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/d4/13973391071552e03acb308d93f6deb4fb535a769a6bbdafdb4cafcb2f91/tornado-6.6.1-cp315-cp315t-win32.whl", hash = "sha256:2fbfd2510b6163b189773155a8246c025cb260ccc7cd12ad18c36c54f5617bb9", size = 535422, upload-time = "2026-11-09T21:09:18.525Z" },
     { url = "https://files.pythonhosted.org/packages/19/94/c952b625904b63fdac5b747f2eeaca64ab5d36cdb8faff57effa57162d87/tornado-6.6.1-cp315-cp315t-win_amd64.whl", hash = "sha256:3c35091add5863feb9cf651851bb1b23592f1f9551b5dfed72837c83ea4e5b85", size = 535713, upload-time = "2026-11-09T21:09:20.061Z" },
     { url = "https://files.pythonhosted.org/packages/f8/62/8d0c0c42f3346f3f2455738d3bc689bbd8efba38abf7b90ab2b8294eae83/tornado-6.6.1-cp315-cp315t-win_arm64.whl", hash = "sha256:065bc741478b168df9baf754956a3010c04d1330bb45a84833d807c29e11b257", size = 535719, upload-time = "2026-11-09T21:09:21.317Z" },
+]
+
+[[package]]
+name = "types-httplib2"
+version = "0.32.1.20261029"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/e8/d848bff57950c6cc142c603c6529f9acc14cc8a5b3972a9b7bf46f2397c6/types_httplib2-0.32.1.20261029.tar.gz", hash = "sha256:b1dbb861ecd4644e2097b7aa1d9046217f985792f6dc9a9d3397e7f079f52718", size = 12003, upload-time = "2026-10-29T07:44:30.203Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/7a/74077271ef44c2bd1dcf3d2b9ddbbe84d13472f028c71243873cd9c92c73/types_httplib2-0.32.1.20261029-py3-none-any.whl", hash = "sha256:fe4ac38d6f2879afd944dea6b5c2cee6ee29e71f09ee5ad34c345614dd2c187f", size = 11511, upload-time = "2026-10-29T07:44:29.327Z" },
 ]
 
 [[package]]
