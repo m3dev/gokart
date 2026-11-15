@@ -216,8 +216,8 @@ class TestWorkerRunLock:
             monkeypatch.setattr(task, '_complete', _complete)
             assert worker.run()
 
-        # Both the worker's check and the task's `complete_check_at_run` check happen inside the lock.
-        assert lock_held_at_check == [True, True]
+        # Completion is checked only once, by the worker, inside the lock.
+        assert lock_held_at_check == [True]
 
     def test_locked_task_is_parked_and_other_task_runs_first(self, monkeypatch: pytest.MonkeyPatch, redis_server: fakeredis.FakeServer) -> None:
         # The scheduler hands out the locked task first.
