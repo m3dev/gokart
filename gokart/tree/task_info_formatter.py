@@ -61,19 +61,20 @@ def _make_requires_info(requires: Any) -> FlattenableItems[RequiredTask]:
 
 
 def make_task_info_tree(task: TaskOnKart[Any], ignore_task_names: list[str] | None = None, cache: dict[str, TaskInfo] | None = None) -> TaskInfo:
+    name = task.__class__.__name__
+    unique_id = task.make_unique_id()
+
+    # Look up before complete(): it hits remote storage and recurses into requires, and a shared task would repeat both.
+    cache = {} if cache is None else cache
+    cache_id = f'{name}_{unique_id}'
+    if cache_id in cache:
+        return cache[cache_id]
+
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
         is_task_complete = task.complete()
 
-    name = task.__class__.__name__
-    unique_id = task.make_unique_id()
     output_paths: list[str] = [t.path() for t in flatten(task.output())]
-
-    cache = {} if cache is None else cache
-    cache_id = f'{name}_{unique_id}_{is_task_complete}'
-    if cache_id in cache:
-        return cache[cache_id]
-
     params = task.get_info(only_significant=True)
     processing_time = task.get_processing_time()
     if isinstance(processing_time, float):
