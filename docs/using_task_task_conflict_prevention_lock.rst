@@ -49,3 +49,4 @@ How to use
 3. Done
     
     With the above configuration, all tasks that inherits gokart.TaskOnKart will ask the redis server if any other node is not trying to access the same cache file at the same time whenever they access the file with dump or load.
+    The gokart worker also takes a run lock so that the same task does not run on several nodes at once. See :doc:`efficient_run_on_multi_workers`.

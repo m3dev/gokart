@@ -601,6 +601,14 @@ class TaskTest(unittest.TestCase):
         task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True, complete_check_at_run=False)
         self.assertNotIn('run', vars(task))
 
+    def test_should_lock_run_defaults_to_redis_configuration(self):
+        self.assertTrue(gokart.TaskOnKart(redis_host='host', redis_port=123).should_lock_run)
+        self.assertFalse(gokart.TaskOnKart(redis_host='host').should_lock_run)
+        self.assertFalse(gokart.TaskOnKart().should_lock_run)
+
+    def test_should_lock_run_can_be_disabled_with_redis(self):
+        self.assertFalse(gokart.TaskOnKart(redis_host='host', redis_port=123, should_lock_run=False).should_lock_run)
+
     def test_should_fail_lock_run_when_host_unset(self):
         with self.assertRaises(AssertionError):
             gokart.TaskOnKart(redis_port=123, redis_timeout=180, should_lock_run=True)
@@ -614,6 +622,16 @@ class TaskTest(unittest.TestCase):
 
         with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=fakeredis.FakeRedis):
             with self.assertWarnsRegex(UserWarning, 'should_lock_run'):
+                self.assertTrue(luigi.build([task], local_scheduler=True))
+
+        self.assertEqual(cast(TargetOnKart, task.output()).load(), 'hello')
+
+    def test_default_should_lock_run_falls_back_to_dump_lock_without_warning(self):
+        task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399)
+
+        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=fakeredis.FakeRedis):
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error', message='.*should_lock_run.*')
                 self.assertTrue(luigi.build([task], local_scheduler=True))
 
         self.assertEqual(cast(TargetOnKart, task.output()).load(), 'hello')

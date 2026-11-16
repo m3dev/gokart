@@ -21,7 +21,7 @@ import gokart.target
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.pandas_type_config import PandasTypeConfigMap
-from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
+from gokart.parameter import ExplicitBoolParameter, ExplicitOptionalBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart
 from gokart.utils import FlattenableItems, flatten, get_dataframe_type_from_task, map_flattenable_items
@@ -120,8 +120,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         description='Check if output file exists at run. If exists, run() will be skipped. The check is performed by the gokart worker (gokart.build / gokart.run).',
         significant=False,
     )
-    should_lock_run: luigi.Parameter[bool] = ExplicitBoolParameter(
-        default=False, significant=False, description='Whether to use redis lock or not at task run.'
+    should_lock_run: ExplicitOptionalBoolParameter = ExplicitOptionalBoolParameter(
+        default=None,
+        significant=False,
+        description='Whether the gokart worker takes a redis run lock before run(). When unset, it is True if redis_host and redis_port are set.',
     )
 
     @property
@@ -142,6 +144,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
 
+        self._is_should_lock_run_explicit = self.should_lock_run is not None
+        if self.should_lock_run is None:
+            self.should_lock_run = self.redis_host is not None and self.redis_port is not None
         if self.should_lock_run:
             assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
             assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
@@ -373,7 +378,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             ),
         )
 
-        if self.should_lock_run and self._lock_at_dump:
+        if self._is_should_lock_run_explicit and self.should_lock_run and self._lock_at_dump:
             warnings.warn(
                 f'{self.get_task_family()} has should_lock_run=True, but it is not run by the gokart worker, so the run lock is not taken. '
                 'Falling back to the dump lock. Use gokart.build or gokart.run to take the run lock.',

@@ -11,7 +11,8 @@ Here we introduce `should_lock_run` feature to improve this inefficiency.
 
 Suppress run() of the same task with `should_lock_run`
 ------------------------------------------------------
-When `gokart.TaskOnKart.should_lock_run` is set to True, the gokart worker takes a run lock before it runs the task.
+When `gokart.TaskOnKart.should_lock_run` is True, the gokart worker takes a run lock before it runs the task.
+If `should_lock_run` is not set, it is True when `redis_host` and `redis_port` are set. Set it to False to disable the run lock, e.g. for cheap tasks where running twice is faster than waiting.
 If the same task is run()-ing by another worker, the task waits without failing, and other tasks that can be executed at that time are given priority.
 After the other worker releases the lock, the task is retried. If the other worker has already finished the task, it is skipped because its output exists.
 
@@ -26,7 +27,8 @@ The lock is extended while the task is running, and expires after `redis_timeout
         redis_port = 6379
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
-If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock and emits a `UserWarning`.
+If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock.
+A `UserWarning` is emitted only when `should_lock_run=True` is set explicitly.
 This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.
 To get rid of the warning, run the task with `gokart.build` or `gokart.run`.
 
