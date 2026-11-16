@@ -165,10 +165,8 @@ def redis_server() -> Iterator[fakeredis.FakeServer]:
         yield server
 
 
-def _make_run_lock_task(priority: float = 0.0, should_lock_run: bool | None = True) -> _RunLockTask:
-    return _RunLockTask(
-        random_id=uuid.uuid4().hex, fixed_priority=priority, redis_host='0.0.0.0', redis_port=12345, redis_timeout=180, should_lock_run=should_lock_run
-    )
+def _make_run_lock_task(priority: float = 0.0) -> _RunLockTask:
+    return _RunLockTask(random_id=uuid.uuid4().hex, fixed_priority=priority, redis_host='0.0.0.0', redis_port=12345, redis_timeout=180, should_lock_run=True)
 
 
 def _run_lock_key(task: gokart.TaskOnKart[str]) -> str:
@@ -205,13 +203,17 @@ class TestWorkerRunLock:
         assert not fakeredis.FakeRedis(server=redis_server).exists(_run_lock_key(task))
 
     @pytest.mark.parametrize(
-        ('should_lock_run', 'expected_held'),
-        [pytest.param(None, True, id='default-with-redis'), pytest.param(False, False, id='disabled')],
+        ('should_lock_run', 'redis_host', 'expected_held'),
+        [
+            pytest.param(True, '0.0.0.0', True, id='enabled'),
+            pytest.param(False, '0.0.0.0', False, id='disabled'),
+            pytest.param(True, None, False, id='redis-unset'),
+        ],
     )
-    def test_lock_follows_should_lock_run(
-        self, monkeypatch: pytest.MonkeyPatch, redis_server: fakeredis.FakeServer, should_lock_run: bool | None, expected_held: bool
+    def test_lock_follows_should_lock_run_and_redis(
+        self, monkeypatch: pytest.MonkeyPatch, redis_server: fakeredis.FakeServer, should_lock_run: bool, redis_host: str | None, expected_held: bool
     ) -> None:
-        task = _make_run_lock_task(should_lock_run=should_lock_run)
+        task = _RunLockTask(random_id=uuid.uuid4().hex, redis_host=redis_host, redis_port=12345, should_lock_run=should_lock_run)
         held_during_run: list[bool] = []
 
         def _run() -> None:

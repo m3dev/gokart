@@ -120,11 +120,6 @@ class ExplicitBoolParameter(luigi.BoolParameter):
         return cast(dict[str, Any], cast(Any, luigi.Parameter)._parser_kwargs(*args, **kwargs))
 
 
-class ExplicitOptionalBoolParameter(luigi.OptionalBoolParameter):
-    def _parser_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return cast(dict[str, Any], cast(Any, luigi.Parameter)._parser_kwargs(*args, **kwargs))
-
-
 T = TypeVar('T')
 
 
