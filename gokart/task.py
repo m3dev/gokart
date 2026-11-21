@@ -184,28 +184,35 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 kwargs[key] = class_variables[key].parse(value)
 
     def complete(self) -> bool:
+        outputs = flatten(self.output())
         if self._rerun_state:
-            for target in flatten(self.output()):
+            for target in outputs:
                 target.remove()
             self._rerun_state = False
             return False
 
-        is_completed = all([t.exists() for t in flatten(self.output())])
+        # Generators short-circuit on the first False, avoiding needless remote `exists` calls.
+        if not all(t.exists() for t in outputs):
+            return False
 
-        if self.strict_check or self.modification_time_check:
-            requirements = flatten(self.requires())
-            inputs = flatten(self.input())
-            is_completed = is_completed and all([task.complete() for task in requirements]) and all([i.exists() for i in inputs])
+        if not (self.strict_check or self.modification_time_check):
+            return True
 
-        if not self.modification_time_check or not is_completed or not self.input():
-            return is_completed
+        raw_inputs = self.input()
+        inputs = flatten(raw_inputs)
+        if not all(task.complete() for task in flatten(self.requires())) or not all(i.exists() for i in inputs):
+            return False
 
-        return self._check_modification_time()
+        if not self.modification_time_check or not raw_inputs:
+            return True
 
-    def _check_modification_time(self) -> bool:
-        common_path = set(t.path() for t in flatten(self.input())) & set(t.path() for t in flatten(self.output()))
-        input_tasks = [t for t in flatten(self.input()) if t.path() not in common_path]
-        output_tasks = [t for t in flatten(self.output()) if t.path() not in common_path]
+        return self._check_modification_time(inputs, outputs)
+
+    @staticmethod
+    def _check_modification_time(inputs: list[TargetOnKart], outputs: list[TargetOnKart]) -> bool:
+        common_path = set(t.path() for t in inputs) & set(t.path() for t in outputs)
+        input_tasks = [t for t in inputs if t.path() not in common_path]
+        output_tasks = [t for t in outputs if t.path() not in common_path]
 
         input_modification_time = max([target.last_modification_time() for target in input_tasks]) if input_tasks else None
         output_modification_time = min([target.last_modification_time() for target in output_tasks]) if output_tasks else None

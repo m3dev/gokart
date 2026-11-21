@@ -177,6 +177,95 @@ class TaskTest(unittest.TestCase):
         task.output = Mock(return_value=[target2, target3])
         self.assertFalse(task.complete())
 
+    @staticmethod
+    def _target(exists: bool, path: str, mtime: datetime = datetime(2018, 1, 1, 9, 0, 0)) -> Mock:
+        target = Mock(spec=TargetOnKart)
+        target.exists.return_value = exists
+        target.path.return_value = path
+        target.last_modification_time.return_value = mtime
+        return target
+
+    def test_complete_stops_checking_outputs_at_first_missing(self):
+        missing = self._target(False, 'missing.pkl')
+        later = self._target(True, 'later.pkl')
+
+        task = _DummyTask()
+        task.output = Mock(return_value=[missing, later])
+
+        self.assertFalse(task.complete())
+        missing.exists.assert_called_once()
+        later.exists.assert_not_called()
+
+    def test_complete_stops_checking_requirements_at_first_incomplete(self):
+        output = self._target(True, 'out.pkl')
+        incomplete = Mock(spec=gokart.TaskOnKart)
+        incomplete.complete.return_value = False
+        later = Mock(spec=gokart.TaskOnKart)
+        later.complete.return_value = True
+
+        task = _DummyTask()
+        task.strict_check = True
+        task.output = Mock(return_value=output)
+        task.requires = Mock(return_value=[incomplete, later])
+        task.input = Mock(return_value=[])
+
+        self.assertFalse(task.complete())
+        incomplete.complete.assert_called_once()
+        later.complete.assert_not_called()
+
+    def test_complete_stops_checking_inputs_at_first_missing(self):
+        output = self._target(True, 'out.pkl')
+        missing = self._target(False, 'missing_in.pkl')
+        later = self._target(True, 'later_in.pkl')
+
+        task = _DummyTask()
+        task.strict_check = True
+        task.output = Mock(return_value=output)
+        task.requires = Mock(return_value=[])
+        task.input = Mock(return_value=[missing, later])
+
+        self.assertFalse(task.complete())
+        missing.exists.assert_called_once()
+        later.exists.assert_not_called()
+
+    def test_complete_skips_requirements_and_inputs_when_output_missing(self):
+        task = _DummyTask()
+        task.strict_check = True
+        task.output = Mock(return_value=self._target(False, 'out.pkl'))
+        task.requires = Mock(return_value=[])
+        task.input = Mock(return_value=[])
+
+        self.assertFalse(task.complete())
+        task.requires.assert_not_called()
+        task.input.assert_not_called()
+
+    def test_complete_evaluates_input_and_output_once_with_modification_time_check(self):
+        task = _DummyTask()
+        task.modification_time_check = True
+        task.output = Mock(return_value=[self._target(True, 'out.pkl', datetime(2018, 1, 1, 10, 0, 0))])
+        task.requires = Mock(return_value=[])
+        task.input = Mock(return_value=[self._target(True, 'in.pkl', datetime(2018, 1, 1, 9, 0, 0))])
+
+        self.assertTrue(task.complete())
+        task.input.assert_called_once()
+        task.output.assert_called_once()
+
+    def test_complete_evaluates_output_once_without_checks(self):
+        task = _DummyTask()
+        task.output = Mock(return_value=[self._target(True, 'out.pkl')])
+
+        self.assertTrue(task.complete())
+        task.output.assert_called_once()
+
+    def test_complete_evaluates_output_once_on_rerun(self):
+        output = self._target(True, 'out.pkl')
+        task = _DummyTask(rerun=True)
+        task.output = Mock(return_value=output)
+
+        self.assertFalse(task.complete())
+        task.output.assert_called_once()
+        output.remove.assert_called_once()
+
     def test_default_target(self):
         task = _DummyTaskD()
         default_target = task.output()
