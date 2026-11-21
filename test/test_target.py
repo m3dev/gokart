@@ -5,7 +5,7 @@ import pickle
 import shutil
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import boto3
 import numpy as np
