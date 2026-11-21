@@ -20,6 +20,7 @@ import gokart
 import gokart.target
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
+from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
@@ -363,16 +364,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
             if isinstance(obj, pd.DataFrame) and obj.empty:
                 raise EmptyDumpError()
 
-        required_task_outputs = cast(
-            FlattenableItems[RequiredTaskOutput],
-            map_flattenable_items(
-                lambda task: map_flattenable_items(
-                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()
-                ),
-                self.requires(),
-            ),
-        )
-
         if self.should_lock_run and self._lock_at_dump:
             warnings.warn(
                 f'{self.get_task_family()} has should_lock_run=True, but it is not run by the gokart worker, so the run lock is not taken. '
@@ -381,12 +372,31 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 stacklevel=2,
             )
 
-        self._get_output_target(target).dump(
+        output_target = self._get_output_target(target)
+        # WHY: labels are only attached on gs:// non-log paths, and computing them (output() rebuilds, serialize) is costly.
+        task_params: dict[str, str] | None = None
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None
+        if GCSObjectMetadataClient.needs_task_state_labels(output_target.path()):
+            task_params = cast(dict[str, str], super().to_str_params(only_significant=True, only_public=True))
+            required_task_outputs = self._get_required_task_outputs()
+
+        output_target.dump(
             obj,
             lock_at_dump=self._lock_at_dump,
-            task_params=cast(dict[str, str], super().to_str_params(only_significant=True, only_public=True)),
+            task_params=task_params,
             custom_labels=custom_labels,
             required_task_outputs=required_task_outputs,
+        )
+
+    def _get_required_task_outputs(self) -> FlattenableItems[RequiredTaskOutput]:
+        return cast(
+            FlattenableItems[RequiredTaskOutput],
+            map_flattenable_items(
+                lambda task: map_flattenable_items(
+                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()
+                ),
+                self.requires(),
+            ),
         )
 
     @staticmethod
