@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import unittest
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
 from google.api_core.exceptions import PreconditionFailed
+from google.auth.exceptions import RefreshError
 from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 
 import gokart
@@ -215,16 +216,34 @@ class TestAddTaskStateLabels:
 
         assert not _blob(gcs_bucket, 'log/task_log/data.pkl').metadata
 
-    def test_reraises_when_precondition_fails_twice(self, gcs_bucket):
+    def test_only_warns_when_precondition_fails_twice(self, gcs_bucket, caplog):
         path = self._upload(gcs_bucket, 'data.pkl')
 
         with (
             patch('google.cloud.storage.Blob.patch', side_effect=PreconditionFailed('metageneration changed')) as blob_patch,
-            pytest.raises(PreconditionFailed),
+            caplog.at_level(logging.WARNING, logger='gokart.gcs_obj_metadata_client'),
         ):
             GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'})
 
         assert blob_patch.call_count == 2
+        assert 'failed to add labels' in caplog.text
+
+    def test_only_warns_when_object_is_missing(self, gcs_bucket, caplog):
+        with caplog.at_level(logging.WARNING, logger='gokart.gcs_obj_metadata_client'):
+            GCSObjectMetadataClient.add_task_state_labels(f'gs://{gcs_bucket}/missing.pkl', task_params={'param': '1'})
+
+        assert 'failed to add labels' in caplog.text
+
+    def test_only_warns_when_credential_refresh_fails(self, gcs_bucket, caplog):
+        path = self._upload(gcs_bucket, 'data.pkl')
+
+        with (
+            patch('google.cloud.storage.Blob.reload', side_effect=RefreshError('token expired')),
+            caplog.at_level(logging.WARNING, logger='gokart.gcs_obj_metadata_client'),
+        ):
+            GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'})
+
+        assert 'failed to add labels' in caplog.text
 
     def test_patches_with_generation_preconditions_and_retries_once_on_conflict(self, gcs_bucket):
         # the emulator ignores preconditions, so the conflict is simulated on the client side

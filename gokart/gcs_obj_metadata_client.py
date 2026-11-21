@@ -51,6 +51,23 @@ class GCSObjectMetadataClient:
         bucket, obj = path_to_bucket_and_key(path)
         # get_storage_client() raises the "pip install gokart[gcs]" hint, so google.api_core is imported only after it
         blob = cast(Any, GCSConfig().get_storage_client()).bucket(bucket).blob(obj)
+        from google.api_core.exceptions import GoogleAPICallError, RetryError
+        from google.auth.exceptions import GoogleAuthError
+
+        # Labels are best-effort: the data is already stored, so a labeling failure must not fail the dump.
+        # Auth errors are included because a credential refresh failure (RefreshError) is not retried by the storage library.
+        try:
+            GCSObjectMetadataClient._patch_labels(blob, task_params, custom_labels, required_task_outputs)
+        except (GoogleAPICallError, RetryError, GoogleAuthError) as e:
+            logger.warning(f'failed to add labels to {path}: {e!r}')
+
+    @staticmethod
+    def _patch_labels(
+        blob: Any,
+        task_params: dict[str, str] | None,
+        custom_labels: dict[str, str] | None,
+        required_task_outputs: FlattenableItems[RequiredTaskOutput] | None,
+    ) -> None:
         from google.api_core.exceptions import PreconditionFailed
 
         # read-modify-write guarded by generation and metageneration so a concurrent metadata update or overwrite is not clobbered;
