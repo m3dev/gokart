@@ -61,6 +61,9 @@ def build_task_state_labels(
     merged: dict[str, str] = {}
     for labels in labels_list:
         for name, value in labels.items():
+            if len(name) == 0:
+                logger.warning(f'label_name of value={value} is empty. So skip to add as a metadata.')
+                continue
             if len(value) == 0:
                 logger.warning(f'value of label_name={name} is empty. So skip to add as a metadata.')
                 continue
@@ -96,11 +99,15 @@ def _trim_to_metadata_size_limit(labels: dict[str, str]) -> dict[str, str]:
 
     trimmed = dict(labels)
     total = sum(_size(name, value) for name, value in trimmed.items())
+    dropped: list[str] = []
     for name, value in reversed(tuple(labels.items())):
         if total <= _MAX_METADATA_SIZE:
             break
         del trimmed[name]
+        dropped.append(name)
         total -= _size(name, value)
+    if dropped:
+        logger.warning(f'dropped labels {dropped} to fit the GCS object metadata size limit of {_MAX_METADATA_SIZE} bytes.')
     return trimmed
 
 
@@ -146,7 +153,7 @@ class GCSClient:
         # google-cloud-storage<3 does not retry uploads without a precondition; overwriting with the same content is idempotent for gokart.
         # filename is a randomly named temporary file, so the content type has to be guessed from the destination like luigi.contrib.gcs did
         blob = self._blob(dest_path)
-        if metadata is not None:
+        if metadata:
             # sent in the same request as the content, so labels never need a separate GET and PATCH
             blob.metadata = metadata
         blob.upload_from_filename(filename, content_type=mimetypes.guess_type(dest_path)[0], retry=DEFAULT_RETRY)

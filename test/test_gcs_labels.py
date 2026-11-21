@@ -125,14 +125,31 @@ class TestBuildTaskStateLabels(unittest.TestCase):
             got['__required_task_outputs'], '{"nested_task": {"nest": {"__gokart_task_name": "task1", "__gokart_output_path": "path/to/output1"}}}'
         )
 
+    def test_skips_empty_label_names(self):
+        # metadata goes into the upload request, so a name GCS may reject must not reach it
+        with self.assertLogs('gokart._gcs', level='WARNING'):
+            got = build_task_state_labels(task_params={'': '1', 'param': '2'})
+
+        self.assertEqual(got, {'param': '2'})
+
     def test_trim_to_metadata_size_limit_with_many_labels(self):
         large_labels = {}
         for i in range(100):
             large_labels[f'key_{i}'] = 'x' * 1000
 
-        got = _trim_to_metadata_size_limit(large_labels)
+        with self.assertLogs('gokart._gcs', level='WARNING') as logs:
+            got = _trim_to_metadata_size_limit(large_labels)
 
         self.assertEqual(list(got), [f'key_{i}' for i in range(8)])
+        self.assertIn("'key_99'", logs.output[0])
+        self.assertIn("'key_8'", logs.output[0])
+        self.assertNotIn("'key_7'", logs.output[0])
+
+    def test_trim_to_metadata_size_limit_does_not_warn_when_labels_fit(self):
+        with self.assertNoLogs('gokart._gcs', level='WARNING'):
+            got = _trim_to_metadata_size_limit({'key': 'value'})
+
+        self.assertEqual(got, {'key': 'value'})
 
 
 class TestNeedsTaskStateLabels:

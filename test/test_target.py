@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import os
 import pickle
 import shutil
@@ -492,7 +493,7 @@ class TestGCSTarget:
 
         assert not target.exists()
 
-    def test_dump_to_gcs_path_on_non_gcs_target_skips_labels(self):
+    def test_dump_to_gcs_path_on_non_gcs_target_skips_labels(self, caplog):
         # SingleFileTarget accepts any FileSystemTarget, so a gs:// path does not imply that open() takes metadata
         path = 'gs://bucket/data.pkl'
         processor = make_file_processor(path)
@@ -502,9 +503,11 @@ class TestGCSTarget:
             task_lock_params=make_task_lock_params(file_path=path, unique_id=None),
         )
 
-        target.dump(1, custom_labels={'owner': 'me'})
+        with caplog.at_level(logging.DEBUG, logger='gokart.target'):
+            target.dump(1, custom_labels={'owner': 'me'})
 
         assert target.load() == 1
+        assert 'skip task state labels' in caplog.text
 
     def test_remove(self, gcs_bucket):
         target = make_target(file_path=self._log_path(gcs_bucket, 'test.pkl'), unique_id=None)
