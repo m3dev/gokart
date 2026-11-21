@@ -2,21 +2,20 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import Any, cast
 
 from gokart.zip_client import ZipClient, unzip_file
 
 
 class GCSZipClient(ZipClient):
     def __init__(self, file_path: str, temporary_directory: str) -> None:
-        from gokart.gcs_config import GCSConfig
+        from gokart._gcs import GCSClient
 
         self._file_path = file_path
         self._temporary_directory = temporary_directory
-        self._client: Any = GCSConfig().get_gcs_client()
+        self._client = GCSClient()
 
     def exists(self) -> bool:
-        return cast(bool, self._client.exists(self._file_path))
+        return self._client.exists(self._file_path)
 
     def make_archive(self) -> None:
         extension = os.path.splitext(self._file_path)[1]
@@ -25,8 +24,8 @@ class GCSZipClient(ZipClient):
 
     def unpack_archive(self) -> None:
         os.makedirs(self._temporary_directory, exist_ok=True)
-        file_pointer = self._client.download(self._file_path)
-        unzip_file(fp=file_pointer, extract_dir=self._temporary_directory)
+        with self._client.download(self._file_path) as file_pointer:
+            unzip_file(fp=file_pointer, extract_dir=self._temporary_directory)
 
     def remove(self) -> None:
         self._client.remove(self._file_path)

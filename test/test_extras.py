@@ -108,6 +108,17 @@ class TestGCSExtrasNotInstalled:
                 if saved_parent is not None:
                     sys.modules['google.oauth2'] = saved_parent
 
+    def test_gcs_config_get_storage_client_raises_without_gcs_lib(self):
+        from gokart.gcs_config import GCSConfig
+
+        GCSConfig.clear_instance_cache()
+        try:
+            with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud'})):
+                with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
+                    GCSConfig().get_storage_client()
+        finally:
+            GCSConfig.clear_instance_cache()
+
     def test_gcs_obj_metadata_client_makepatch_raises_without_googleapiclient(self):
         from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 
@@ -126,50 +137,30 @@ class TestGCSExtrasNotInstalled:
     def test_object_storage_exists_raises_for_gcs_without_extras(self):
         from gokart.object_storage import ObjectStorage
 
-        with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
-            saved = sys.modules.pop('googleapiclient', None)
-            try:
-                with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    ObjectStorage.exists('gs://bucket/key')
-            finally:
-                if saved is not None:
-                    sys.modules['googleapiclient'] = saved
+        with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud'})):
+            with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
+                ObjectStorage.exists('gs://bucket/key')
 
     def test_object_storage_get_zip_client_raises_for_gcs_without_extras(self, tmp_path):
         from gokart.object_storage import ObjectStorage
 
-        with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
-            saved = sys.modules.pop('googleapiclient', None)
-            try:
-                with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    ObjectStorage.get_zip_client('gs://bucket/key.zip', str(tmp_path))
-            finally:
-                if saved is not None:
-                    sys.modules['googleapiclient'] = saved
+        with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud'})):
+            with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
+                ObjectStorage.get_zip_client('gs://bucket/key.zip', str(tmp_path))
 
     def test_gcs_zip_client_raises_without_extras(self, tmp_path):
         from gokart.gcs_zip_client import GCSZipClient
 
-        with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
-            saved = sys.modules.pop('googleapiclient', None)
-            try:
-                with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    GCSZipClient(file_path='gs://bucket/key.zip', temporary_directory=str(tmp_path))
-            finally:
-                if saved is not None:
-                    sys.modules['googleapiclient'] = saved
+        with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud'})):
+            with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
+                GCSZipClient(file_path='gs://bucket/key.zip', temporary_directory=str(tmp_path))
 
     def test_object_storage_get_target_raises_for_gcs_without_extras(self):
         from gokart.object_storage import ObjectStorage
 
-        with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
-            saved = sys.modules.pop('googleapiclient', None)
-            try:
-                with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    ObjectStorage.get_object_storage_target('gs://bucket/key', format=luigi.format.Nop)
-            finally:
-                if saved is not None:
-                    sys.modules['googleapiclient'] = saved
+        with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud'})):
+            with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
+                ObjectStorage.get_object_storage_target('gs://bucket/key', format=luigi.format.Nop)
 
 
 class TestExtrasInstalled:
