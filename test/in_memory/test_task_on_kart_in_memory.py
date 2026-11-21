@@ -1,6 +1,5 @@
 import random
 from pathlib import Path
-from unittest.mock import patch
 
 import luigi
 import pytest
@@ -8,7 +7,7 @@ import pytest
 import gokart
 from gokart.file_processor import PickleFileProcessor
 from gokart.in_memory import InMemoryTarget, InMemoryTargetError
-from gokart.in_memory.repository import in_memory_scope
+from gokart.in_memory.repository import acquire_repository, in_memory_scope
 
 
 class _DumpTask(gokart.TaskOnKart[str]):
@@ -34,6 +33,13 @@ class _JoinTask(gokart.TaskOnKart[str]):
 
     def requires(self):
         return {'tasks': self.tasks}
+
+
+class _UnusableOutputTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+
+    def output(self):
+        raise RuntimeError('output() must not be called')
 
 
 class _RandomTask(gokart.TaskOnKart[float]):
@@ -87,15 +93,17 @@ class TestMakeInMemoryTarget:
     def test_dump_and_load_lock_is_skipped(self) -> None:
         task = _DumpTask(param='a', redis_host='localhost', redis_port=6379)
         with in_memory_scope():
+            acquire_repository()
             task.dump('a')
             assert task.load(task.output()) == 'a'
 
     def test_gcs_labels_are_not_computed_on_gcs_workspace(self) -> None:
-        task = _DumpTask(param='a', workspace_directory='gs://bucket/resources')
-        with in_memory_scope(), patch.object(_DumpTask, '_get_required_task_outputs') as get_required_task_outputs:
+        # Computing the labels would call output() of the required task, which raises.
+        task = _JoinTask(tasks=[_UnusableOutputTask()], workspace_directory='gs://bucket/resources')
+        with in_memory_scope():
+            acquire_repository()
             task.dump('a')
             assert task.load(task.output()) == 'a'
-        get_required_task_outputs.assert_not_called()
 
 
 class TestBuildWithMakeInMemoryTarget:

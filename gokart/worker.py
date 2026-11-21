@@ -64,8 +64,8 @@ from luigi.task_register import TaskClassException, load_task  # pyright: ignore
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
 from gokart.conflict_prevention_lock.run_lock import RunLock, RunLockHeartbeat, make_run_lock
-from gokart.in_memory.repository import get_current_repository
-from gokart.in_memory.target import InMemoryTarget, InMemoryTargetError
+from gokart.in_memory.repository import InMemoryTargetError, acquire_repository
+from gokart.in_memory.target import InMemoryTarget
 from gokart.parameter import ExplicitBoolParameter
 
 logger = logging.getLogger(__name__)
@@ -774,9 +774,7 @@ class Worker:
         return [target for target in outputs if isinstance(target, InMemoryTarget)]
 
     def _check_in_memory_target_support(self, task: Task) -> None:
-        if get_current_repository() is None:
-            reason = 'InMemoryTarget can only be used inside gokart.build'
-        elif self.worker_processes > 1:
+        if self.worker_processes > 1:
             reason = f'workers={self.worker_processes} runs tasks in separate processes'
         elif self._config.force_multiprocessing:
             reason = 'force_multiprocessing runs tasks in separate processes'
@@ -785,6 +783,11 @@ class Worker:
         elif getattr(task, 'should_lock_run', False):
             reason = 'should_lock_run is set, which is not supported because the in-memory store is not shared with other processes'
         else:
+            try:
+                # WHY: the repository is created only for builds with in-memory outputs, so builds without them can run in other threads.
+                acquire_repository()
+            except InMemoryTargetError as e:
+                raise InMemoryTargetError(f'{task} has an InMemoryTarget output: {e}') from e
             return
         # WHY: the in-memory store lives in this process, so data written in a child process would be silently lost.
         raise InMemoryTargetError(f'{task} has an InMemoryTarget output, but {reason}. InMemoryTarget supports only a single process.')

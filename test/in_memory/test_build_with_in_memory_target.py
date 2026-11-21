@@ -1,3 +1,7 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
 import luigi
 import pytest
 from luigi import scheduler
@@ -22,6 +26,31 @@ class _FixedKeyTask(gokart.TaskOnKart[int]):
     def run(self):
         _run_values.append(self.value)
         self.dump(self.value)
+
+
+_blocking_task_started = threading.Event()
+_blocking_task_may_finish = threading.Event()
+
+
+class _BlockingInMemoryTask(gokart.TaskOnKart[str]):
+    """Keeps its gokart.build running until the test lets it finish."""
+
+    task_namespace = __name__
+
+    def output(self):
+        return self.make_target('blocking.pkl', persist=False)
+
+    def run(self):
+        _blocking_task_started.set()
+        assert _blocking_task_may_finish.wait(timeout=10)
+        self.dump('blocking')
+
+
+class _FileTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+
+    def run(self):
+        self.dump('file')
 
 
 class _TimeoutTask(_FixedKeyTask):
@@ -98,6 +127,37 @@ class TestUnsupportedCombinations:
         assert _run_values == []
 
     def test_outside_gokart_build(self) -> None:
-        with pytest.raises(InMemoryTargetError, match='gokart.build'):
+        with pytest.raises(InMemoryTargetError, match=r'_FixedKeyTask.*gokart\.build'):
             luigi.build([_FixedKeyTask(value=1)], local_scheduler=True, worker_scheduler_factory=WorkerSchedulerFactory())
+        assert _run_values == []
+
+
+class TestConcurrentBuildsInThreads:
+    @pytest.fixture
+    def build_in_another_thread(self):
+        _blocking_task_started.clear()
+        _blocking_task_may_finish.clear()
+        config = get_config()
+        # WHY: the worker can install its signal handler only in the main thread.
+        config.set('gokart_worker', 'no_install_shutdown_handler', 'True')
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(gokart.build, _BlockingInMemoryTask(), reset_register=False)
+                assert _blocking_task_started.wait(timeout=10)
+                try:
+                    yield
+                finally:
+                    _blocking_task_may_finish.set()
+                assert future.result() == 'blocking'
+        finally:
+            config.remove_option('gokart_worker', 'no_install_shutdown_handler')
+
+    @pytest.mark.usefixtures('build_in_another_thread')
+    def test_build_without_in_memory_target_is_not_affected(self, tmp_path: Path) -> None:
+        assert gokart.build(_FileTask(workspace_directory=str(tmp_path)), reset_register=False) == 'file'
+
+    @pytest.mark.usefixtures('build_in_another_thread')
+    def test_build_with_in_memory_target_raises(self) -> None:
+        with pytest.raises(InMemoryTargetError, match=r'_FixedKeyTask.*Another thread'):
+            gokart.build(_FixedKeyTask(value=1), reset_register=False)
         assert _run_values == []

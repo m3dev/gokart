@@ -4,14 +4,10 @@ from datetime import datetime
 from typing import Any
 
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
-from gokart.in_memory.repository import InMemoryCacheRepository, get_current_repository
+from gokart.in_memory.repository import InMemoryCacheRepository, InMemoryTargetError, get_current_repository
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart, TaskLockParams, _make_file_path  # pyright: ignore[reportPrivateUsage]
 from gokart.utils import FlattenableItems
-
-
-class InMemoryTargetError(Exception):
-    """Raised when InMemoryTarget is used in an unsupported way."""
 
 
 class InMemoryTarget(TargetOnKart):

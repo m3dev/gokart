@@ -138,7 +138,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         cast(Any, super()).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
-        self._has_only_in_memory_outputs: bool | None = None
+        self._has_only_in_memory_outputs_cache: bool | None = None
 
         # Cache to_str_params to avoid slow task creation in a deep task tree.
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
@@ -499,14 +499,15 @@ class TaskOnKart(luigi.Task, Generic[T]):
                     params_str[param_name] = params[param_name].serialize(param_value)
         return params_str
 
-    def _should_dump_supplementary_log_files(self) -> bool:
-        if not self.should_dump_supplementary_log_files:
-            return False
-        if self._has_only_in_memory_outputs is None:
+    def _has_only_in_memory_outputs(self) -> bool:
+        if self._has_only_in_memory_outputs_cache is None:
             outputs = flatten(self.output())
-            self._has_only_in_memory_outputs = bool(outputs) and all(isinstance(target, InMemoryTarget) for target in outputs)
+            self._has_only_in_memory_outputs_cache = bool(outputs) and all(isinstance(target, InMemoryTarget) for target in outputs)
+        return self._has_only_in_memory_outputs_cache
+
+    def _should_dump_supplementary_log_files(self) -> bool:
         # WHY: in-memory outputs are meant to avoid I/O to the workspace, so the log files of such tasks are not dumped either.
-        return not self._has_only_in_memory_outputs
+        return self.should_dump_supplementary_log_files and not self._has_only_in_memory_outputs()
 
     def _get_task_log_target(self):
         return self.make_target(f'log/task_log/{type(self).__name__}.pkl')
@@ -539,7 +540,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if self.should_dump_supplementary_log_files:
             random_seed = self._get_random_seed()
             seed_methods = self.try_set_seed(list(self.fix_random_seed_methods), random_seed)
-            if self._should_dump_supplementary_log_files():
+            # WHY: the seed is fixed even for a task with only in-memory outputs; only the log file is skipped.
+            if not self._has_only_in_memory_outputs():
                 self.dump({'seed': random_seed, 'seed_methods': seed_methods}, self._get_random_seeds_target())
 
     def _get_random_seeds_target(self):

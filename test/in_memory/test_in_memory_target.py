@@ -8,7 +8,7 @@ import pytest
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 from gokart.in_memory import InMemoryTarget, InMemoryTargetError, make_in_memory_target
-from gokart.in_memory.repository import in_memory_scope
+from gokart.in_memory.repository import acquire_repository, in_memory_scope
 
 
 class TestInMemoryTarget:
@@ -19,6 +19,7 @@ class TestInMemoryTarget:
     @pytest.fixture(autouse=True)
     def scope(self) -> Iterator[None]:
         with in_memory_scope():
+            acquire_repository()
             yield
 
     def test_dump_and_load_data(self, target: InMemoryTarget) -> None:
@@ -76,6 +77,7 @@ class TestInMemoryTarget:
     def test_data_is_dropped_with_scope(self, target: InMemoryTarget) -> None:
         target.dump('dummy_data')
         with in_memory_scope():
+            acquire_repository()
             assert not target.exists()
         assert target.exists()
 
