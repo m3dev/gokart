@@ -270,20 +270,20 @@ class ModelTargetTest(unittest.TestCase):
 
         self.assertEqual(loaded, obj)
 
-    @patch('gokart.target.GCSObjectMetadataClient.add_task_state_labels')
-    @patch('gokart.target.make_zip_client')
-    def test_model_target_on_gcs_adds_task_state_labels_to_zip(self, mock_make_zip_client, mock_add_task_state_labels):
-        zip_client = MagicMock(path='gs://bucket/test.zip')
-        mock_make_zip_client.return_value = zip_client
+    @patch('gokart.gcs_config.GCSConfig.get_gcs_client')
+    def test_model_target_on_gcs_adds_task_state_labels_to_zip(self, mock_get_gcs_client):
+        client = mock_get_gcs_client.return_value
+        client.client.objects.return_value.get.return_value.execute.return_value = {'metadata': {}}
         target = make_model_target(
             file_path='gs://bucket/test.zip', temporary_directory=self.temporary_directory, save_function=self._save_function, load_function=self._load_function
         )
 
-        target.dump(1, task_params={'a': '1'}, custom_labels={'b': '2'}, required_task_outputs=None)
+        target.dump(1, task_params={'a': '1'}, custom_labels={'b': '2'})
 
-        mock_add_task_state_labels.assert_called_once_with(
-            path='gs://bucket/test.zip', task_params={'a': '1'}, custom_labels={'b': '2'}, required_task_outputs=None
-        )
+        client.put.assert_called_once()
+        patch_kwargs = client.client.objects.return_value.patch.call_args.kwargs
+        self.assertEqual(patch_kwargs['object'], 'test.zip')
+        self.assertEqual(patch_kwargs['body']['metadata'], {'a': '1', 'b': '2'})
 
     @patch('gokart.target.GCSObjectMetadataClient.add_task_state_labels')
     def test_model_target_on_local_does_not_add_task_state_labels(self, mock_add_task_state_labels):
