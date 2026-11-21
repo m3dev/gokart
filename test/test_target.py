@@ -270,21 +270,6 @@ class ModelTargetTest(unittest.TestCase):
 
         self.assertEqual(loaded, obj)
 
-    @patch('gokart.gcs_config.GCSConfig.get_gcs_client')
-    def test_model_target_on_gcs_adds_task_state_labels_to_zip(self, mock_get_gcs_client):
-        client = mock_get_gcs_client.return_value
-        client.client.objects.return_value.get.return_value.execute.return_value = {'metadata': {}}
-        target = make_model_target(
-            file_path='gs://bucket/test.zip', temporary_directory=self.temporary_directory, save_function=self._save_function, load_function=self._load_function
-        )
-
-        target.dump(1, task_params={'a': '1'}, custom_labels={'b': '2'})
-
-        client.put.assert_called_once()
-        patch_kwargs = client.client.objects.return_value.patch.call_args.kwargs
-        self.assertEqual(patch_kwargs['object'], 'test.zip')
-        self.assertEqual(patch_kwargs['body']['metadata'], {'a': '1', 'b': '2'})
-
     @patch('gokart.target.GCSObjectMetadataClient.add_task_state_labels')
     def test_model_target_on_local_does_not_add_task_state_labels(self, mock_add_task_state_labels):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
@@ -414,6 +399,21 @@ class TestGCSTarget:
         blob = storage.Client().bucket(gcs_bucket).get_blob('data.pkl')
         assert blob is not None
         assert blob.metadata == {'owner': 'me', 'param': '1'}
+
+    def test_model_target_dump_attaches_labels_to_zip(self, gcs_bucket, tmp_path):
+        target = make_model_target(
+            file_path=f'gs://{gcs_bucket}/model.zip',
+            temporary_directory=str(tmp_path),
+            save_function=lambda obj, path: pickle.dump(obj, open(path, 'wb')),
+            load_function=lambda path: pickle.load(open(path, 'rb')),
+        )
+
+        target.dump(1, task_params={'a': '1'}, custom_labels={'b': '2'})
+
+        assert target.load() == 1
+        blob = storage.Client().bucket(gcs_bucket).get_blob('model.zip')
+        assert blob is not None
+        assert blob.metadata == {'a': '1', 'b': '2'}
 
     def test_dump_succeeds_when_labeling_fails(self, gcs_bucket, caplog):
         target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
