@@ -34,6 +34,9 @@ class GCSObjectMetadataClient:
 
         Callers use this to skip building task_params / required_task_outputs, which are costly and unused otherwise.
         """
+        # WHY: callers may hand over a target whose path() is not a str (e.g. a bare Mock(spec=TargetOnKart) in downstream tests).
+        if not isinstance(path, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+            return False
         return path.startswith('gs://') and not GCSObjectMetadataClient._is_log_related_path(path)
 
     # This is the copied method of luigi.gcs._path_to_bucket_and_key(path).

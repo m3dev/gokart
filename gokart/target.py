@@ -131,7 +131,7 @@ class SingleFileTarget(TargetOnKart):
     ) -> None:
         with cast(Any, self._target).open('w') as f:
             self._processor.dump(obj, f)
-        if self.path().startswith('gs://'):
+        if GCSObjectMetadataClient.needs_task_state_labels(self.path()):
             GCSObjectMetadataClient.add_task_state_labels(
                 path=self.path(), task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs
             )
