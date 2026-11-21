@@ -12,6 +12,7 @@ import unittest
 from collections.abc import Callable
 from io import BytesIO
 from typing import Any
+from unittest.mock import patch
 
 import boto3
 import numpy as np
@@ -19,6 +20,7 @@ from luigi import LocalTarget
 from moto import mock_aws
 
 from gokart.file_processor import PickleFileProcessor
+from gokart.file_processor.base import _ChunkedLargeFileReader
 from gokart.object_storage import ObjectStorage
 
 
@@ -40,6 +42,37 @@ def _dump_and_load(obj: Any) -> Any:
     processor.dump(obj, buffer)
     buffer.seek(0)
     return processor.load(buffer)
+
+
+class _ShortReadStream:
+    """Returns at most `max_per_read` bytes per read, as network streams such as S3 legitimately do."""
+
+    def __init__(self, data: bytes, max_per_read: int) -> None:
+        self._stream = BytesIO(data)
+        self._max_per_read = max_per_read
+
+    def read(self, n: int) -> bytes:
+        return self._stream.read(min(n, self._max_per_read))
+
+
+class TestChunkedLargeFileReader(unittest.TestCase):
+    def _reader(self, data: bytes, max_per_read: int) -> _ChunkedLargeFileReader:
+        return _ChunkedLargeFileReader(_ShortReadStream(data, max_per_read))
+
+    def test_read_large_with_short_reads_returns_all_bytes(self):
+        data = bytes(range(8))
+        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', 3):
+            self.assertEqual(self._reader(data, max_per_read=2).read(len(data)), data)
+
+    def test_read_large_with_full_reads_returns_all_bytes(self):
+        data = bytes(range(8))
+        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', 3):
+            self.assertEqual(self._reader(data, max_per_read=100).read(len(data)), data)
+
+    def test_read_large_stops_at_eof_and_returns_available_bytes(self):
+        data = bytes(range(5))
+        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', 3):
+            self.assertEqual(self._reader(data, max_per_read=2).read(8), data)
 
 
 class TestPickleFileProcessor(unittest.TestCase):
