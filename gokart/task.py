@@ -21,7 +21,7 @@ import gokart.target
 from gokart._gcs import needs_task_state_labels
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.in_memory.target import make_in_memory_target
+from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
@@ -138,6 +138,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         cast(Any, super()).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
         self._lock_at_dump = True
+        self._has_only_in_memory_outputs: bool | None = None
 
         # Cache to_str_params to avoid slow task creation in a deep task tree.
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
@@ -239,12 +240,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return cls(**new_k)
 
     def make_target(
-        self, relative_file_path: str | None = None, use_unique_id: bool = True, processor: FileProcessor | None = None, in_memory: bool = False
+        self, relative_file_path: str | None = None, use_unique_id: bool = True, processor: FileProcessor | None = None, persist: bool = True
     ) -> TargetOnKart:
         """
         Make output target.
 
-        :param in_memory: If this is true, the output is kept in memory during ``gokart.build`` instead of being written to a file.
+        :param persist: If this is false, the output is kept in memory during ``gokart.build`` instead of being written to a file.
             This is an experimental feature. See "Keep output in memory instead of dumping to files" in the docs.
         """
         formatted_relative_file_path = (
@@ -253,9 +254,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
 
-        if in_memory:
+        if not persist:
             if processor is not None:
-                raise ValueError('`processor` cannot be used with `in_memory=True`.')
+                raise ValueError('`processor` cannot be used with `persist=False`.')
             # WHY: the dump / load lock is skipped because the in-memory store is not shared with other processes.
             return make_in_memory_target(file_path, unique_id=unique_id)
 
@@ -395,10 +396,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
             )
 
         output_target = self._get_output_target(target)
-        # WHY: labels are only attached on gs:// non-log paths, and computing them (output() rebuilds, serialize) is costly.
+        # WHY: labels are only attached on gs:// non-log paths of files (an in-memory key may also start with gs://),
+        # and computing them (output() rebuilds, serialize) is costly.
         task_params: dict[str, str] | None = None
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None
-        if needs_task_state_labels(output_target.path()):
+        if not isinstance(output_target, InMemoryTarget) and needs_task_state_labels(output_target.path()):
             task_params = cast(dict[str, str], super().to_str_params(only_significant=True, only_public=True))
             required_task_outputs = self._get_required_task_outputs()
 
@@ -497,6 +499,15 @@ class TaskOnKart(luigi.Task, Generic[T]):
                     params_str[param_name] = params[param_name].serialize(param_value)
         return params_str
 
+    def _should_dump_supplementary_log_files(self) -> bool:
+        if not self.should_dump_supplementary_log_files:
+            return False
+        if self._has_only_in_memory_outputs is None:
+            outputs = flatten(self.output())
+            self._has_only_in_memory_outputs = bool(outputs) and all(isinstance(target, InMemoryTarget) for target in outputs)
+        # WHY: in-memory outputs are meant to avoid I/O to the workspace, so the log files of such tasks are not dumped either.
+        return not self._has_only_in_memory_outputs
+
     def _get_task_log_target(self):
         return self.make_target(f'log/task_log/{type(self).__name__}.pkl')
 
@@ -511,7 +522,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     @_event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
         self.task_log['file_path'] = [target.path() for target in flatten(self.output())]
-        if self.should_dump_supplementary_log_files:
+        if self._should_dump_supplementary_log_files():
             self.dump(self.task_log, self._get_task_log_target())
 
     def _get_task_params_target(self):
@@ -528,7 +539,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if self.should_dump_supplementary_log_files:
             random_seed = self._get_random_seed()
             seed_methods = self.try_set_seed(list(self.fix_random_seed_methods), random_seed)
-            self.dump({'seed': random_seed, 'seed_methods': seed_methods}, self._get_random_seeds_target())
+            if self._should_dump_supplementary_log_files():
+                self.dump({'seed': random_seed, 'seed_methods': seed_methods}, self._get_random_seeds_target())
 
     def _get_random_seeds_target(self):
         return self.make_target(f'log/random_seed/{type(self).__name__}.pkl')
@@ -557,7 +569,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @_event_handler(luigi.Event.START)
     def _dump_task_params(self):
-        if self.should_dump_supplementary_log_files:
+        if self._should_dump_supplementary_log_files():
             self.dump(self.to_str_params(only_significant=True), self._get_task_params_target())
 
     def _get_processing_time_target(self):
@@ -571,7 +583,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @_event_handler(luigi.Event.PROCESSING_TIME)
     def _dump_processing_time(self, processing_time: float) -> None:
-        if self.should_dump_supplementary_log_files:
+        if self._should_dump_supplementary_log_files():
             self.dump(processing_time, self._get_processing_time_target())
 
     @classmethod
@@ -585,7 +597,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @_event_handler(luigi.Event.START)
     def _dump_module_versions(self):
-        if self.should_dump_supplementary_log_files:
+        if self._should_dump_supplementary_log_files():
             self.dump(self._get_module_versions(), self._get_module_versions_target())
 
     def _get_module_versions_target(self):

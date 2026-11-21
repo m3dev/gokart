@@ -282,7 +282,7 @@ If you want to dump csv file with other encodings, you can use `encoding` parame
 Keep output in memory instead of dumping to files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can keep the output of a task in memory instead of dumping it to a file by passing ``in_memory=True`` to :func:`~gokart.task.TaskOnKart.make_target`.
+You can keep the output of a task in memory instead of dumping it to a file by passing ``persist=False`` to :func:`~gokart.task.TaskOnKart.make_target`.
 This avoids creating cache files and the I/O to the file system or to object storage such as GCS and S3.
 It is useful for intermediate outputs that you would otherwise recompute with ``rerun=True`` every time.
 
@@ -292,7 +292,7 @@ Please note that this is an experimental feature.
 
     class Feature(gokart.TaskOnKart[pd.DataFrame]):
         def output(self):
-            return self.make_target('feature.pkl', in_memory=True)
+            return self.make_target('feature.pkl', persist=False)
 
         def run(self):
             self.dump(make_feature())
@@ -300,9 +300,9 @@ Please note that this is an experimental feature.
 The key of the output is made from the file path and the unique id, in the same way as a file target.
 
 - **Lifetime**: the outputs are kept only during one ``gokart.build`` call. Every ``gokart.build`` starts with no in-memory outputs, so the tasks that have them always run, and the outputs are dropped when ``gokart.build`` returns.
-- **Early release**: an output is removed from memory as soon as every task that requires it has finished, except the output of the task passed to ``gokart.build``, which is returned. If a task requires a removed output later (for example, as a dynamic dependency yielded from ``run()``), the task is run again. Note that the luigi scheduler waits ``[scheduler] stable_done_cooldown_secs`` (10 seconds by default) before it runs the same task again. When a task in the build uses ``strict_check`` or ``modification_time_check``, outputs are kept until the build ends, because ``complete()`` of such a task checks the outputs of the dependencies of its dependencies. This applies only to tasks known when the build is scheduled, not to tasks added later as dynamic dependencies.
-- **No copy**: ``load()`` returns the dumped object itself. If a task modifies a loaded object, other tasks that load it see the change.
+- **Early release**: an output is removed from memory as soon as every task that requires it has finished, except the output of the task passed to ``gokart.build``, which is returned. Outputs are kept until the build ends instead when a task in the build uses ``strict_check`` or ``modification_time_check`` (``complete()`` of such a task checks the outputs of the dependencies of its dependencies), or yields dynamic dependencies from ``run()`` (a yielded output might have been removed already). The latter is detected only when ``run()`` itself is a generator function; if a removed output is yielded in another way, the task is run again after the luigi scheduler's ``[scheduler] stable_done_cooldown_secs`` (10 seconds by default).
+- **Shallow copy**: for a ``pandas.DataFrame``, ``dump()`` stores and ``load()`` returns a shallow copy (``copy(deep=False)``), so changes made after ``dump()`` by the dumping task, or by a task that loads the output, do not leak to other tasks, and Copy-on-Write keeps the values from being changed. Any other object is stored and returned as is without copying: if a task modifies it, other tasks that load it see the change.
 - **Only in gokart.build and in a single process**: an error is raised when the output is used outside ``gokart.build`` (e.g. ``luigi.build`` or ``gokart.run``), or with ``workers > 1``, ``[gokart_worker] force_multiprocessing``, or a worker timeout, because these run tasks in separate processes.
 - **No lock**: ``should_lock_run=True`` raises an error. When only ``redis_host`` and ``redis_port`` are set, the output is not locked at dump and load.
-- ``processor`` cannot be used with ``in_memory=True``. ``make_model_target`` and ``make_large_data_frame_target`` do not support it.
-- Supplementary log files (``log/task_log/`` etc.) are still dumped to ``workspace_directory``. Set ``should_dump_supplementary_log_files=False`` to avoid them (note that it also disables fixing the random seed with ``fix_random_seed_methods``).
+- ``processor`` cannot be used with ``persist=False``. ``make_model_target`` and ``make_large_data_frame_target`` do not support it.
+- **No log files**: when all outputs of a task use ``persist=False``, the supplementary log files (``log/task_log/``, ``log/task_params/``, ``log/random_seed/``, ``log/processing_time/`` and ``log/module_versions/``) are not dumped either. The random seed is still fixed with ``fix_random_seed_methods``. Because of this, task information tools such as ``gokart.tree.task_info`` cannot show these files for such tasks.

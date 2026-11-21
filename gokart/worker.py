@@ -36,6 +36,7 @@ import datetime
 import functools
 import getpass
 import importlib
+import inspect
 import json
 import logging
 import multiprocessing
@@ -790,9 +791,14 @@ class Worker:
 
     @staticmethod
     def _needs_in_memory_outputs_until_build_ends(task: Task) -> bool:
-        # WHY: with these checks, complete() also checks the outputs of the dependencies of its dependencies,
+        # WHY: with strict_check / modification_time_check, complete() also checks the outputs of the dependencies of its dependencies,
         # so releasing them early would make an already finished task look incomplete.
-        return bool(getattr(task, 'strict_check', False) or getattr(task, 'modification_time_check', False))
+        # A task whose run() is a generator may yield a released task, which the scheduler refuses to re-run during
+        # stable_done_cooldown_secs, so the yielding task would be re-run over and over in the meantime.
+        # inspect.unwrap sees through functools.wraps decorators, which would otherwise hide the generator.
+        return bool(
+            getattr(task, 'strict_check', False) or getattr(task, 'modification_time_check', False) or inspect.isgeneratorfunction(inspect.unwrap(task.run))
+        )
 
     def _add_dependencies(self, task_id: str, dependency_ids: list[str]) -> None:
         self._dependencies[task_id].update(dependency_ids)
@@ -813,7 +819,8 @@ class Worker:
                 continue
             for target in self._in_memory_targets[dependency_id]:
                 target.remove()
-            # WHY: a cached "complete" would let a task that requires it later (e.g. a dynamic dependency) skip re-running it and fail to load.
+            # WHY: if a released task is required again (e.g. yielded by a run() the generator check missed), a cached "complete"
+            # would let the yielding task load the removed output and fail instead of re-running the released task.
             if self._task_completion_cache is not None:
                 self._task_completion_cache.pop(dependency_id, None)
 

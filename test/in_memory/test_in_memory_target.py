@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from unittest.mock import patch
 
+import pandas as pd
 import pytest
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams
@@ -47,6 +48,25 @@ class TestInMemoryTarget:
         target.remove()
         with pytest.raises(ValueError):
             assert target.last_modification_time()
+
+    def test_load_returns_dumped_object_itself(self, target: InMemoryTarget) -> None:
+        dumped = {'a': [1]}
+        target.dump(dumped)
+        assert target.load() is dumped
+
+    def test_column_added_to_loaded_data_frame_does_not_leak(self, target: InMemoryTarget) -> None:
+        target.dump(pd.DataFrame({'a': [1, 2]}))
+        loaded = target.load()
+        loaded['b'] = [3, 4]
+        loaded.loc[0, 'a'] = 100
+        pd.testing.assert_frame_equal(target.load(), pd.DataFrame({'a': [1, 2]}))
+
+    def test_data_frame_changed_after_dump_does_not_leak(self, target: InMemoryTarget) -> None:
+        df = pd.DataFrame({'a': [1, 2]})
+        target.dump(df)
+        df['b'] = [3, 4]
+        df.loc[0, 'a'] = 100
+        pd.testing.assert_frame_equal(target.load(), pd.DataFrame({'a': [1, 2]}))
 
     def test_load_from_another_thread(self, target: InMemoryTarget) -> None:
         target.dump('dummy_data')

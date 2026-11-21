@@ -1,5 +1,6 @@
 """In-memory outputs are released once every task that requires them has finished."""
 
+import functools
 from typing import Any
 
 import luigi
@@ -33,7 +34,7 @@ class _InMemoryTask(gokart.TaskOnKart[str]):
         return self.order
 
     def output(self):
-        return self.make_target(f'{self.name}.pkl', in_memory=True)
+        return self.make_target(f'{self.name}.pkl', persist=False)
 
     def requires(self) -> Any:
         return self.upstream
@@ -45,6 +46,9 @@ class _InMemoryTask(gokart.TaskOnKart[str]):
         self.dump(self.name + ''.join(self.load()))
 
 
+_yield_task_runs: list[int] = []
+
+
 class _YieldTask(gokart.TaskOnKart[str]):
     """Requires `static` up front and `dynamic` from run(), after `static` has finished."""
 
@@ -53,14 +57,40 @@ class _YieldTask(gokart.TaskOnKart[str]):
     dynamic: gokart.TaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.TaskInstanceParameter()
 
     def output(self):
-        return self.make_target('yield.pkl', in_memory=True)
+        return self.make_target('yield.pkl', persist=False)
 
     def requires(self) -> Any:
         return self.static
 
     def run(self):  # pyright: ignore[reportIncompatibleMethodOverride]  # luigi supports dynamic dependencies by yielding from run()
+        _yield_task_runs.append(1)
         dynamic = yield self.dynamic
         self.dump(self.load(self.static) + dynamic.load())
+
+
+def _passthrough(func: Any) -> Any:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+class _DecoratedYieldTask(_YieldTask):
+    """run() returns a generator, but the decorator hides it from inspect.isgeneratorfunction."""
+
+    @_passthrough
+    def run(self):
+        _yield_task_runs.append(1)
+        dynamic = yield self.dynamic
+        self.dump(self.load(self.static) + dynamic.load())
+
+
+class _HelperYieldTask(_YieldTask):
+    """run() returns a generator made by another method, so no check on run() itself can tell that it yields."""
+
+    def run(self):
+        return super().run()
 
 
 def _key(task: gokart.TaskOnKart[Any]) -> str:
@@ -101,13 +131,36 @@ class TestReleaseInMemoryOutput:
 
         assert _key(a) in _stored_keys_at_run['e']
 
-    @pytest.mark.parametrize('cache_task_completion', [False, True])
-    def test_released_output_is_recomputed_when_required_later(self, cache_task_completion: bool) -> None:
+    def test_outputs_are_kept_when_a_task_may_yield_dynamic_dependencies(self) -> None:
+        # If a were released after b finished, the yield of a would make the scheduler re-run the yielding task over and over
+        # until a can be scheduled again.
+        _yield_task_runs.clear()
         a = _InMemoryTask(name='a')
         task = _YieldTask(static=_InMemoryTask(name='b', upstream=[a]), dynamic=a)
 
+        assert gokart.build(task, reset_register=False) == 'baa'
+        assert len(_yield_task_runs) == 1
+
+    @pytest.mark.parametrize('cache_task_completion', [False, True])
+    def test_outputs_are_kept_when_a_decorated_run_may_yield_dynamic_dependencies(self, cache_task_completion: bool) -> None:
+        _yield_task_runs.clear()
+        a = _InMemoryTask(name='a')
+        task = _DecoratedYieldTask(static=_InMemoryTask(name='b', upstream=[a]), dynamic=a)
+
         config = get_config()
         config.set('gokart_worker', 'cache_task_completion', str(cache_task_completion))
+        try:
+            assert gokart.build(task, reset_register=False) == 'baa'
+        finally:
+            config.remove_option('gokart_worker', 'cache_task_completion')
+        assert len(_yield_task_runs) == 1
+
+    def test_released_output_is_recomputed_when_required_by_an_undetected_yield(self) -> None:
+        a = _InMemoryTask(name='a')
+        task = _HelperYieldTask(static=_InMemoryTask(name='b', upstream=[a]), dynamic=a)
+
+        config = get_config()
+        config.set('gokart_worker', 'cache_task_completion', 'True')
         # WHY: the scheduler refuses to re-run a DONE task for 10 seconds by default.
         config.set('scheduler', 'stable_done_cooldown_secs', '0')
         try:

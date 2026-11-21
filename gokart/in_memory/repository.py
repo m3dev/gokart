@@ -5,7 +5,18 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 
+import pandas as pd
+
 from .data import InMemoryData
+
+
+def _shallow_copy_data_frame(value: Any) -> Any:
+    if isinstance(value, pd.DataFrame):
+        # WHY: copying at both dump and load keeps changes made by the dumping task after dump, or by a loading task, from leaking
+        # to other tasks, like a file output would. A shallow copy is cheap, and Copy-on-Write (always on since pandas 3) protects the values.
+        # Other objects are stored and returned as is to avoid copying large data.
+        return value.copy(deep=False)
+    return value
 
 
 class InMemoryCacheRepository:
@@ -13,8 +24,7 @@ class InMemoryCacheRepository:
         self._cache: dict[str, InMemoryData] = {}
 
     def get_value(self, key: str) -> Any:
-        # WHY: the dumped object itself is returned without copying, to avoid the cost of copying large data.
-        return self._get_data(key).value
+        return _shallow_copy_data_frame(self._get_data(key).value)
 
     def get_last_modification_time(self, key: str) -> datetime:
         return self._get_data(key).last_modification_time
@@ -23,7 +33,7 @@ class InMemoryCacheRepository:
         return self._cache[key]
 
     def set_value(self, key: str, obj: Any) -> None:
-        data = InMemoryData.create_data(obj)
+        data = InMemoryData.create_data(_shallow_copy_data_frame(obj))
         self._cache[key] = data
 
     def has(self, key: str) -> bool:
