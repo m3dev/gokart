@@ -17,10 +17,11 @@ import luigi
 import numpy as np
 import pandas as pd
 
+from gokart._gcs import GCSTarget, build_task_state_labels, needs_task_state_labels
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
+from gokart.gcs_zip_client import GCSZipClient
 from gokart.object_storage import ObjectStorage
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.utils import FlattenableItems
@@ -129,12 +130,15 @@ class SingleFileTarget(TargetOnKart):
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
-        with cast(Any, self._target).open('w') as f:
+        # WHY: SingleFileTarget accepts any FileSystemTarget, so a gs:// path alone does not guarantee open() takes metadata.
+        if isinstance(self._target, GCSTarget) and needs_task_state_labels(self.path()):
+            # built before writing, so an invalid label input fails the dump without leaving an object behind
+            labels = build_task_state_labels(task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs)
+            file = self._target.open('w', metadata=labels)
+        else:
+            file = cast(Any, self._target).open('w')
+        with file as f:
             self._processor.dump(obj, f)
-        if GCSObjectMetadataClient.needs_task_state_labels(self.path()):
-            GCSObjectMetadataClient.add_task_state_labels(
-                path=self.path(), task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs
-            )
 
     def _remove(self) -> None:
         self._target.remove()
@@ -180,15 +184,21 @@ class ModelTarget(TargetOnKart):
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
+        # The inner load_function.pkl is written locally, so the labels are attached to the uploaded zip itself.
+        # Built before writing, so an invalid label input fails the dump without leaving an object behind.
+        labels = (
+            build_task_state_labels(task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs)
+            if needs_task_state_labels(self._zip_client.path)
+            else None
+        )
         with self._make_working_directory() as working_directory:
             self._save_function(obj, self._model_path(working_directory))
             make_target(self._load_function_path(working_directory)).dump(self._load_function)
-            make_zip_client(self._zip_client.path, working_directory).make_archive()
-        # The inner load_function.pkl is written locally, so the labels must be attached to the uploaded zip itself.
-        if GCSObjectMetadataClient.needs_task_state_labels(self._zip_client.path):
-            GCSObjectMetadataClient.add_task_state_labels(
-                path=self._zip_client.path, task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs
-            )
+            zip_client = make_zip_client(self._zip_client.path, working_directory)
+            if isinstance(zip_client, GCSZipClient):
+                zip_client.make_archive(metadata=labels)
+            else:
+                zip_client.make_archive()
 
     def _remove(self) -> None:
         self._zip_client.remove()

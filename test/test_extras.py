@@ -119,18 +119,6 @@ class TestGCSExtrasNotInstalled:
         finally:
             GCSConfig.clear_instance_cache()
 
-    def test_add_task_state_labels_raises_for_gcs_without_extras(self):
-        from gokart.gcs_config import GCSConfig
-        from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
-
-        GCSConfig.clear_instance_cache()
-        try:
-            with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud', 'google.api_core'})):
-                with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    GCSObjectMetadataClient.add_task_state_labels('gs://bucket/key', task_params={'param': '1'})
-        finally:
-            GCSConfig.clear_instance_cache()
-
     def test_object_storage_exists_raises_for_gcs_without_extras(self):
         from gokart.object_storage import ObjectStorage
 
@@ -177,11 +165,6 @@ class TestExtrasInstalled:
         from gokart.object_storage import ObjectStorage
 
         assert ObjectStorage is not None
-
-    def test_gcs_obj_metadata_client_can_be_imported(self):
-        from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
-
-        assert GCSObjectMetadataClient is not None
 
     def test_luigi_contrib_s3_is_importable(self):
         import luigi.contrib.s3

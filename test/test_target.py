@@ -1,23 +1,28 @@
 import io
-import logging
+import json
 import os
 import pickle
 import shutil
 import unittest
 from datetime import datetime
+from typing import Any, cast
 from unittest.mock import patch
 
 import boto3
+import luigi
+import luigi.mock
 import numpy as np
 import pandas as pd
 import pytest
-from google.api_core.exceptions import PreconditionFailed
 from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 from matplotlib import pyplot
 from moto import mock_aws
 
+from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
+from gokart.file_processor import make_file_processor
 from gokart.file_processor.base import _ChunkedLargeFileReader
-from gokart.target import LargeDataFrameProcessor, make_model_target, make_target
+from gokart.required_task_output import RequiredTaskOutput
+from gokart.target import LargeDataFrameProcessor, SingleFileTarget, make_model_target, make_target
 from test.util import _get_temporary_directory
 
 
@@ -270,8 +275,8 @@ class ModelTargetTest(unittest.TestCase):
 
         self.assertEqual(loaded, obj)
 
-    @patch('gokart.target.GCSObjectMetadataClient.add_task_state_labels')
-    def test_model_target_on_local_does_not_add_task_state_labels(self, mock_add_task_state_labels):
+    @patch('gokart.target.build_task_state_labels')
+    def test_model_target_on_local_does_not_add_task_state_labels(self, mock_build_task_state_labels):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
         target = make_model_target(
             file_path=file_path, temporary_directory=self.temporary_directory, save_function=self._save_function, load_function=self._load_function
@@ -279,7 +284,7 @@ class ModelTargetTest(unittest.TestCase):
 
         target.dump(1, task_params={'a': '1'})
 
-        mock_add_task_state_labels.assert_not_called()
+        mock_build_task_state_labels.assert_not_called()
 
     def _make_large_data_frame_target(self, file_path: str, load_function=None):
         processor = LargeDataFrameProcessor(max_byte=800)
@@ -415,18 +420,91 @@ class TestGCSTarget:
         assert blob is not None
         assert blob.metadata == {'a': '1', 'b': '2'}
 
-    def test_dump_succeeds_when_labeling_fails(self, gcs_bucket, caplog):
+    def test_model_target_dump_attaches_labels_in_the_upload_request(self, gcs_bucket, tmp_path):
+        target = make_model_target(
+            file_path=f'gs://{gcs_bucket}/model.zip',
+            temporary_directory=str(tmp_path),
+            save_function=lambda obj, path: pickle.dump(obj, open(path, 'wb')),
+            load_function=lambda path: pickle.load(open(path, 'rb')),
+        )
+
+        with patch('google.cloud.storage.Blob.reload') as reload, patch('google.cloud.storage.Blob.patch') as blob_patch:
+            target.dump(1, custom_labels={'b': '2'})
+
+        reload.assert_not_called()
+        blob_patch.assert_not_called()
+        assert self._metadata(gcs_bucket, 'model.zip') == {'b': '2'}
+
+    @staticmethod
+    def _metadata(bucket: str, key: str) -> dict[str, str] | None:
+        blob = storage.Client().bucket(bucket).get_blob(key)
+        assert blob is not None
+        return blob.metadata
+
+    def test_dump_attaches_required_task_outputs_label(self, gcs_bucket):
         target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
 
-        # labels are best-effort: the data is already stored when they are attached
-        with (
-            patch('google.cloud.storage.Blob.patch', side_effect=PreconditionFailed('metageneration changed')),
-            caplog.at_level(logging.WARNING, logger='gokart.gcs_obj_metadata_client'),
-        ):
+        target.dump(1, required_task_outputs={'a': RequiredTaskOutput(task_name='TaskA', output_path='gs://b/a.pkl')})
+
+        metadata = self._metadata(gcs_bucket, 'data.pkl')
+        assert metadata is not None
+        assert json.loads(metadata['__required_task_outputs']) == {'a': {'__gokart_task_name': 'TaskA', '__gokart_output_path': 'gs://b/a.pkl'}}
+
+    def test_dump_prefers_custom_labels_and_skips_empty_values(self, gcs_bucket):
+        target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
+
+        target.dump(1, task_params={'owner': 'task', 'empty': '', 'param': '1'}, custom_labels={'owner': 'me'})
+
+        assert self._metadata(gcs_bucket, 'data.pkl') == {'owner': 'me', 'param': '1'}
+
+    def test_dump_does_not_label_log_paths(self, gcs_bucket):
+        target = make_target(file_path=self._log_path(gcs_bucket, 'test.pkl'), unique_id=None)
+
+        target.dump(1, task_params={'param': '1'})
+
+        assert not self._metadata(gcs_bucket, 'log/processing_time/test.pkl')
+
+    def test_dump_trims_labels_to_the_metadata_size_limit(self, gcs_bucket):
+        target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
+
+        target.dump(1, task_params={f'param{i}': 'x' * 1000 for i in range(10)})
+
+        metadata = self._metadata(gcs_bucket, 'data.pkl')
+        assert metadata is not None
+        assert 0 < sum(len(k.encode()) + len(v.encode()) for k, v in metadata.items()) <= 8 * 1024
+        assert target.load() == 1
+
+    def test_dump_attaches_labels_in_the_upload_request(self, gcs_bucket):
+        target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
+
+        with patch('google.cloud.storage.Blob.reload') as reload, patch('google.cloud.storage.Blob.patch') as blob_patch:
             target.dump(1, custom_labels={'owner': 'me'})
 
+        reload.assert_not_called()
+        blob_patch.assert_not_called()
+        assert self._metadata(gcs_bucket, 'data.pkl') == {'owner': 'me'}
+
+    def test_dump_with_invalid_required_task_outputs_raises_before_upload(self, gcs_bucket):
+        target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
+
+        with pytest.raises(TypeError):
+            target.dump(1, required_task_outputs=cast(Any, object()))
+
+        assert not target.exists()
+
+    def test_dump_to_gcs_path_on_non_gcs_target_skips_labels(self):
+        # SingleFileTarget accepts any FileSystemTarget, so a gs:// path does not imply that open() takes metadata
+        path = 'gs://bucket/data.pkl'
+        processor = make_file_processor(path)
+        target = SingleFileTarget(
+            target=luigi.mock.MockTarget(path, format=processor.format()),
+            processor=processor,
+            task_lock_params=make_task_lock_params(file_path=path, unique_id=None),
+        )
+
+        target.dump(1, custom_labels={'owner': 'me'})
+
         assert target.load() == 1
-        assert 'failed to add labels' in caplog.text
 
     def test_remove(self, gcs_bucket):
         target = make_target(file_path=self._log_path(gcs_bucket, 'test.pkl'), unique_id=None)
