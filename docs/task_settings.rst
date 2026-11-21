@@ -42,8 +42,24 @@ Also, please set credential information to Environment Variables.
     export AWS_SECRET_ACCESS_KEY='~~~'  # AWS secret access key
 
     # GCS
-    export GCS_CREDENTIAL='~~~'  # GCS credential
-    export DISCOVER_CACHE_LOCAL_PATH='~~~'  # The local file path of discover api cache.
+    export GCS_CREDENTIAL='~~~'  # GCS credential: a service account key file path or its JSON content
+
+If ``GCS_CREDENTIAL`` is not set, `Application Default Credentials <https://cloud.google.com/docs/authentication/application-default-credentials>`_ are used.
+
+gokart accesses GCS through `google-cloud-storage <https://cloud.google.com/python/docs/reference/storage/latest>`_.
+To access GCS from your own code with the same credentials, use ``GCSConfig().get_storage_client()``, which returns a ``google.cloud.storage.Client``.
+
+.. code:: python
+
+    from gokart.gcs_config import GCSConfig
+
+    client = GCSConfig().get_storage_client()
+    blob = client.bucket('YOUR_BUCKET').get_blob('path/to/object.pkl')
+
+.. warning::
+   ``GCSConfig().get_gcs_client()``, which returns a ``luigi.contrib.gcs.GCSClient`` built on ``google-api-python-client``, is deprecated and will be removed in a future major release, together with ``google-api-python-client`` in the ``gcs`` extra.
+   Use ``GCSConfig().get_storage_client()`` instead.
+   Errors from GCS I/O in gokart are now ``google.api_core.exceptions.GoogleAPICallError`` subclasses (e.g. ``NotFound``) instead of ``googleapiclient.errors.HttpError``.
 
 
 Rerun task

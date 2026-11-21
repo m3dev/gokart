@@ -5,6 +5,9 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from google.api_core.exceptions import PreconditionFailed
+from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
+
 import gokart
 from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 from gokart.required_task_output import RequiredTaskOutput
@@ -161,6 +164,74 @@ class TestGokartTask(unittest.TestCase):
         mock_target.dump.assert_called_once_with(
             {'key': 'value'}, lock_at_dump=task._lock_at_dump, task_params={}, custom_labels=None, required_task_outputs=[]
         )
+
+
+def _blob(bucket: str, key: str) -> Any:
+    return storage.Client().bucket(bucket).get_blob(key)
+
+
+class TestAddTaskStateLabels:
+    def _upload(self, bucket: str, key: str, metadata: dict[str, str] | None = None) -> str:
+        blob = storage.Client().bucket(bucket).blob(key)
+        blob.metadata = metadata
+        blob.upload_from_string(b'x')
+        return f'gs://{bucket}/{key}'
+
+    def test_adds_labels_and_keeps_existing_metadata(self, gcs_bucket):
+        path = self._upload(gcs_bucket, 'data.pkl', metadata={'existing': 'v'})
+
+        GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'}, custom_labels={'owner': 'me'})
+
+        assert _blob(gcs_bucket, 'data.pkl').metadata == {'existing': 'v', 'param': '1', 'owner': 'me'}
+
+    def test_does_not_patch_when_labels_are_unchanged(self, gcs_bucket):
+        path = self._upload(gcs_bucket, 'data.pkl', metadata={'param': '1'})
+
+        with patch('google.cloud.storage.Blob.patch') as blob_patch:
+            GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'})
+
+        blob_patch.assert_not_called()
+
+    def test_deletes_existing_keys_trimmed_to_fit_the_size_limit(self, gcs_bucket):
+        # overriding 'a' with a larger value pushes the total over 8 KiB, so the trailing 'b' is trimmed and must be deleted on GCS too
+        # GCS merges patched metadata into the existing one and deletes only keys sent as None; the emulator replaces it wholesale,
+        # so the patch body is inspected instead of the stored metadata
+        path = self._upload(gcs_bucket, 'data.pkl', metadata={'a': 'x' * 4000, 'b': 'y' * 4000})
+        sent: list[dict[str, Any]] = []
+
+        def _patch(blob, **kwargs):
+            sent.append(dict(blob.metadata))
+
+        with patch('google.cloud.storage.Blob.patch', autospec=True, side_effect=_patch):
+            GCSObjectMetadataClient.add_task_state_labels(path, task_params={'a': 'z' * 5000})
+
+        assert sent == [{'a': 'z' * 5000, 'b': None}]
+
+    def test_skips_log_paths(self, gcs_bucket):
+        path = self._upload(gcs_bucket, 'log/task_log/data.pkl')
+
+        GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'})
+
+        assert not _blob(gcs_bucket, 'log/task_log/data.pkl').metadata
+
+    def test_patches_with_metageneration_precondition_and_retries_once_on_conflict(self, gcs_bucket):
+        # the emulator ignores preconditions, so the conflict is simulated on the client side
+        path = self._upload(gcs_bucket, 'data.pkl')
+        original_patch = storage.Blob.patch
+        calls: list[dict[str, Any]] = []
+
+        def _patch(blob, **kwargs):
+            calls.append(kwargs)
+            if len(calls) == 1:
+                raise PreconditionFailed('metageneration changed')
+            return original_patch(blob, **kwargs)
+
+        with patch('google.cloud.storage.Blob.patch', autospec=True, side_effect=_patch):
+            GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'})
+
+        assert len(calls) == 2
+        assert all(c.get('if_metageneration_match') is not None for c in calls)
+        assert _blob(gcs_bucket, 'data.pkl').metadata == {'param': '1'}
 
 
 if __name__ == '__main__':

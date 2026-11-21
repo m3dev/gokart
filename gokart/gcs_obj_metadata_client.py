@@ -40,14 +40,6 @@ class GCSObjectMetadataClient:
         return path.startswith('gs://') and not GCSObjectMetadataClient._is_log_related_path(path)
 
     @staticmethod
-    def _makepatch(original: dict[str, Any], modified: dict[str, Any]) -> dict[str, Any]:
-        try:
-            from googleapiclient.model import makepatch  # pyright: ignore[reportUnknownVariableType]
-        except ImportError:
-            raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
-        return dict(cast(dict[str, Any], makepatch(original, modified)))
-
-    @staticmethod
     def add_task_state_labels(
         path: str,
         task_params: dict[str, str] | None = None,
@@ -57,38 +49,30 @@ class GCSObjectMetadataClient:
         if GCSObjectMetadataClient._is_log_related_path(path):
             return
         bucket, obj = path_to_bucket_and_key(path)
-        _response = cast(Any, GCSConfig().get_gcs_client()).client.objects().get(bucket=bucket, object=obj).execute()
-        if _response is None:
-            logger.error(f'failed to get object from GCS bucket {bucket} and object {obj}.')
-            return
-        response: dict[str, Any] = dict(_response)
-        original_metadata: dict[Any, Any] = {}
-        if 'metadata' in response.keys():
-            _metadata = response.get('metadata')
-            if _metadata is not None:
-                original_metadata = dict(_metadata)
-        patched_metadata = GCSObjectMetadataClient._get_patched_obj_metadata(
-            copy.deepcopy(original_metadata),
-            task_params,
-            custom_labels,
-            required_task_outputs,
-        )
-        if original_metadata != patched_metadata:
-            # If we use update api, existing object metadata are removed, so should use patch api.
-            # See the official document descriptions.
-            # [Link] https://cloud.google.com/storage/docs/viewing-editing-metadata?hl=ja#rest-set-object-metadata
-            update_response = (
-                cast(Any, GCSConfig().get_gcs_client())
-                .client.objects()
-                .patch(
-                    bucket=bucket,
-                    object=obj,
-                    body=GCSObjectMetadataClient._makepatch({'metadata': original_metadata}, {'metadata': patched_metadata}),
-                )
-                .execute()
+        # get_storage_client() raises the "pip install gokart[gcs]" hint, so google.api_core is imported only after it
+        blob = cast(Any, GCSConfig().get_storage_client()).bucket(bucket).blob(obj)
+        from google.api_core.exceptions import PreconditionFailed
+
+        # read-modify-write guarded by metageneration so a concurrent metadata update is not overwritten; retry once after re-reading
+        for attempt in range(2):
+            blob.reload()
+            original_metadata: dict[str, Any] = dict(blob.metadata or {})
+            patched_metadata = GCSObjectMetadataClient._get_patched_obj_metadata(
+                original_metadata,
+                task_params,
+                custom_labels,
+                required_task_outputs,
             )
-            if update_response is None:
-                logger.error(f'failed to patch object {obj} in bucket {bucket} and object {obj}.')
+            if original_metadata == patched_metadata:
+                return
+            # GCS merges patched metadata into the stored one, so keys trimmed by the size limit must be sent as None to be deleted
+            blob.metadata = patched_metadata | {key: None for key in original_metadata if key not in patched_metadata}
+            try:
+                blob.patch(if_metageneration_match=blob.metageneration)
+                return
+            except PreconditionFailed:
+                if attempt == 1:
+                    raise
 
     @staticmethod
     def _normalize_labels(labels: dict[str, Any] | None) -> dict[str, str]:
