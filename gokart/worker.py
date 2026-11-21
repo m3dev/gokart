@@ -63,6 +63,8 @@ from luigi.task_register import TaskClassException, load_task  # pyright: ignore
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
 from gokart.conflict_prevention_lock.run_lock import RunLock, RunLockHeartbeat, make_run_lock
+from gokart.in_memory.repository import get_current_repository
+from gokart.in_memory.target import InMemoryTarget, InMemoryTargetError
 from gokart.parameter import ExplicitBoolParameter
 
 logger = logging.getLogger(__name__)
@@ -484,6 +486,13 @@ class Worker:
 
         self.unfulfilled_counts: dict[str, int] = collections.defaultdict(int)
 
+        # For releasing in-memory outputs: the InMemoryTarget outputs of each task, the dependencies of each task,
+        # and the tasks that require each task and have not finished yet.
+        self._in_memory_targets: dict[str, list[InMemoryTarget]] = {}
+        self._dependencies: dict[str, set[str]] = collections.defaultdict(set)
+        self._unfinished_dependents: dict[str, set[str]] = collections.defaultdict(set)
+        self._release_in_memory_outputs_early = True
+
         # note that ``signal.signal(signal.SIGUSR1, fn)`` only works inside the main execution thread, which is why we
         # provide the ability to conditionally install the hook.
         if not self._config.no_install_shutdown_handler:
@@ -754,7 +763,67 @@ class Worker:
                 )
             self._batch_families_sent.add(family)
 
+    @staticmethod
+    def _get_in_memory_targets(task: Task) -> list[InMemoryTarget]:
+        try:
+            outputs = cast(list[Target], flatten(task.output()))
+        except Exception:
+            # WHY: complete() has already called output() and reports the error as a scheduling failure in _add.
+            return []
+        return [target for target in outputs if isinstance(target, InMemoryTarget)]
+
+    def _check_in_memory_target_support(self, task: Task) -> None:
+        if get_current_repository() is None:
+            reason = 'InMemoryTarget can only be used inside gokart.build'
+        elif self.worker_processes > 1:
+            reason = f'workers={self.worker_processes} runs tasks in separate processes'
+        elif self._config.force_multiprocessing:
+            reason = 'force_multiprocessing runs tasks in separate processes'
+        elif task.worker_timeout if task.worker_timeout is not None else self._config.timeout:
+            reason = 'worker_timeout runs tasks in separate processes'
+        elif getattr(task, 'should_lock_run', False):
+            reason = 'should_lock_run is set, which is not supported because the in-memory store is not shared with other processes'
+        else:
+            return
+        # WHY: the in-memory store lives in this process, so data written in a child process would be silently lost.
+        raise InMemoryTargetError(f'{task} has an InMemoryTarget output, but {reason}. InMemoryTarget supports only a single process.')
+
+    @staticmethod
+    def _needs_in_memory_outputs_until_build_ends(task: Task) -> bool:
+        # WHY: with these checks, complete() also checks the outputs of the dependencies of its dependencies,
+        # so releasing them early would make an already finished task look incomplete.
+        return bool(getattr(task, 'strict_check', False) or getattr(task, 'modification_time_check', False))
+
+    def _add_dependencies(self, task_id: str, dependency_ids: list[str]) -> None:
+        self._dependencies[task_id].update(dependency_ids)
+        for dependency_id in dependency_ids:
+            self._unfinished_dependents[dependency_id].add(task_id)
+
+    def _release_in_memory_outputs(self, finished_task_id: str) -> None:
+        """Remove the in-memory outputs that no unfinished task requires anymore.
+
+        A task that no task requires (the root task of gokart.build) is never released, so that its output can be returned.
+        """
+        if not self._release_in_memory_outputs_early:
+            return
+        for dependency_id in self._dependencies.pop(finished_task_id, set()):
+            dependents = self._unfinished_dependents[dependency_id]
+            dependents.discard(finished_task_id)
+            if dependents or dependency_id not in self._in_memory_targets:
+                continue
+            for target in self._in_memory_targets[dependency_id]:
+                target.remove()
+            # WHY: a cached "complete" would let a task that requires it later (e.g. a dynamic dependency) skip re-running it and fail to load.
+            if self._task_completion_cache is not None:
+                self._task_completion_cache.pop(dependency_id, None)
+
     def _add(self, task: Task, is_complete: bool) -> Generator[Task, None, None]:
+        in_memory_targets = self._get_in_memory_targets(task)
+        if in_memory_targets:
+            self._check_in_memory_target_support(task)
+            self._in_memory_targets[task.task_id] = in_memory_targets
+        if self._needs_in_memory_outputs_until_build_ends(task):
+            self._release_in_memory_outputs_early = False
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
             logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             deps = None
@@ -821,6 +890,7 @@ class Worker:
                     yield d  # return additional tasks to add
 
                 deps = [d.task_id for d in deps]
+                self._add_dependencies(task.task_id, deps)
 
         self._scheduled_tasks[task.task_id] = task
         self._add_task(
@@ -1136,6 +1206,7 @@ class Worker:
                 for t in new_req:
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
+                self._add_dependencies(task_id, new_deps)
 
             self._add_task(
                 worker=self._id,
@@ -1154,6 +1225,8 @@ class Worker:
 
             self._running_tasks.pop(task_id)
             self._release_run_lock(task_id)
+            if status == DONE:
+                self._release_in_memory_outputs(task_id)
 
             # re-add task to reschedule missing dependencies
             if missing:

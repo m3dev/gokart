@@ -1,0 +1,132 @@
+"""In-memory outputs are released once every task that requires them has finished."""
+
+from typing import Any
+
+import luigi
+import pytest
+from luigi.configuration import get_config
+
+import gokart
+from gokart.build import GokartBuildError
+from gokart.in_memory.repository import get_current_repository
+
+# Snapshot of the in-memory keys taken at the start of each task's run(), keyed by task name.
+_stored_keys_at_run: dict[str, set[str]] = {}
+
+
+def _stored_keys() -> set[str]:
+    repository = get_current_repository()
+    assert repository is not None
+    return {key for key, _ in repository.get_gen()}
+
+
+class _InMemoryTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+    name: luigi.Parameter[str] = luigi.Parameter()
+    upstream: gokart.ListTaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.ListTaskInstanceParameter(default=[])
+    fail: luigi.BoolParameter = luigi.BoolParameter(default=False)
+    order: luigi.IntParameter = luigi.IntParameter(default=0, significant=False)
+
+    @property
+    def priority(self):
+        # WHY: TaskOnKart randomizes priority; a fixed one makes the run order of runnable tasks deterministic.
+        return self.order
+
+    def output(self):
+        return self.make_target(f'{self.name}.pkl', in_memory=True)
+
+    def requires(self) -> Any:
+        return self.upstream
+
+    def run(self):
+        _stored_keys_at_run[self.name] = _stored_keys()
+        if self.fail:
+            raise RuntimeError('fail')
+        self.dump(self.name + ''.join(self.load()))
+
+
+class _YieldTask(gokart.TaskOnKart[str]):
+    """Requires `static` up front and `dynamic` from run(), after `static` has finished."""
+
+    task_namespace = __name__
+    static: gokart.TaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.TaskInstanceParameter()
+    dynamic: gokart.TaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.TaskInstanceParameter()
+
+    def output(self):
+        return self.make_target('yield.pkl', in_memory=True)
+
+    def requires(self) -> Any:
+        return self.static
+
+    def run(self):  # pyright: ignore[reportIncompatibleMethodOverride]  # luigi supports dynamic dependencies by yielding from run()
+        dynamic = yield self.dynamic
+        self.dump(self.load(self.static) + dynamic.load())
+
+
+def _key(task: gokart.TaskOnKart[Any]) -> str:
+    return task.output().path()  # type: ignore[union-attr]
+
+
+@pytest.fixture(autouse=True)
+def _clear_snapshots() -> None:
+    _stored_keys_at_run.clear()
+
+
+class TestReleaseInMemoryOutput:
+    def test_output_is_released_after_all_dependents_finish(self) -> None:
+        # a is required by b and c; d requires b and c. Tasks run in `order`: b, c, then d.
+        a = _InMemoryTask(name='a')
+        b = _InMemoryTask(name='b', upstream=[a], order=3)
+        c = _InMemoryTask(name='c', upstream=[a], order=2)
+        d = _InMemoryTask(name='d', upstream=[b, c])
+
+        assert gokart.build(d, reset_register=False) == 'dbaca'
+
+        assert _key(a) in _stored_keys_at_run['c']
+        assert _stored_keys_at_run['d'] == {_key(b), _key(c)}
+
+    def test_root_output_is_kept_for_return_value(self) -> None:
+        a = _InMemoryTask(name='a')
+        assert gokart.build(_InMemoryTask(name='b', upstream=[a]), reset_register=False) == 'ba'
+
+    def test_output_is_kept_when_a_dependent_fails(self) -> None:
+        a = _InMemoryTask(name='a')
+        b = _InMemoryTask(name='b', upstream=[a], order=3)
+        c = _InMemoryTask(name='c', upstream=[a], fail=True, order=2)
+        e = _InMemoryTask(name='e', upstream=[b], order=1)
+        d = _InMemoryTask(name='d', upstream=[c, e])
+
+        with pytest.raises(GokartBuildError):
+            gokart.build(d, reset_register=False)
+
+        assert _key(a) in _stored_keys_at_run['e']
+
+    @pytest.mark.parametrize('cache_task_completion', [False, True])
+    def test_released_output_is_recomputed_when_required_later(self, cache_task_completion: bool) -> None:
+        a = _InMemoryTask(name='a')
+        task = _YieldTask(static=_InMemoryTask(name='b', upstream=[a]), dynamic=a)
+
+        config = get_config()
+        config.set('gokart_worker', 'cache_task_completion', str(cache_task_completion))
+        # WHY: the scheduler refuses to re-run a DONE task for 10 seconds by default.
+        config.set('scheduler', 'stable_done_cooldown_secs', '0')
+        try:
+            assert gokart.build(task, reset_register=False) == 'baa'
+        finally:
+            config.remove_option('gokart_worker', 'cache_task_completion')
+            config.remove_option('scheduler', 'stable_done_cooldown_secs')
+
+    @pytest.mark.parametrize('check', ['strict_check', 'modification_time_check'])
+    def test_outputs_are_kept_when_complete_checks_dependencies(self, check: str) -> None:
+        # With these checks, complete() of c checks that the output of a (a dependency of b) still exists.
+        check_param: dict[str, Any] = {check: True}
+        a = _InMemoryTask(name='a', **check_param)
+        b = _InMemoryTask(name='b', upstream=[a], **check_param)
+        c = _InMemoryTask(name='c', upstream=[b], **check_param)
+
+        config = get_config()
+        config.set('gokart_worker', 'check_complete_on_run', 'True')
+        try:
+            assert gokart.build(c, reset_register=False) == 'cba'
+        finally:
+            config.remove_option('gokart_worker', 'check_complete_on_run')

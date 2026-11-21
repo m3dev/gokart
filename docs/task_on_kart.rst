@@ -279,25 +279,30 @@ If you want to dump csv file with other encodings, you can use `encoding` parame
         return self.make_target('file_name.csv', processor=CsvFileProcessor(encoding='cp932'))
         # This will dump csv as 'cp932' which is used in Windows.
 
-Cache output in memory instead of dumping to files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-You can use :class:`~InMemoryTarget` to cache output in memory instead of dumping to files by calling :func:`~gokart.target.make_in_memory_target`.
+Keep output in memory instead of dumping to files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Please note that :class:`~InMemoryTarget` is an experimental feature.
+You can keep the output of a task in memory instead of dumping it to a file by passing ``in_memory=True`` to :func:`~gokart.task.TaskOnKart.make_target`.
+This avoids creating cache files and the I/O to the file system or to object storage such as GCS and S3.
+It is useful for intermediate outputs that you would otherwise recompute with ``rerun=True`` every time.
+
+Please note that this is an experimental feature.
 
 .. code:: python
 
-    from gokart.in_memory.target import make_in_memory_target
+    class Feature(gokart.TaskOnKart[pd.DataFrame]):
+        def output(self):
+            return self.make_target('feature.pkl', in_memory=True)
 
-    def output(self):
-        unique_id = self.make_unique_id() if use_unique_id else None
-        # TaskLock is not supported in InMemoryTarget, so it's dummy
-        task_lock_params = make_task_lock_params(
-            file_path='dummy_path',
-            unique_id=unique_id,
-            redis_host=None,
-            redis_port=None,
-            redis_timeout=self.redis_timeout,
-            raise_task_lock_exception_on_collision=False,
-        )
-        return make_in_memory_target('dummy_path', task_lock_params, unique_id)
+        def run(self):
+            self.dump(make_feature())
+
+The key of the output is made from the file path and the unique id, in the same way as a file target.
+
+- **Lifetime**: the outputs are kept only during one ``gokart.build`` call. Every ``gokart.build`` starts with no in-memory outputs, so the tasks that have them always run, and the outputs are dropped when ``gokart.build`` returns.
+- **Early release**: an output is removed from memory as soon as every task that requires it has finished, except the output of the task passed to ``gokart.build``, which is returned. If a task requires a removed output later (for example, as a dynamic dependency yielded from ``run()``), the task is run again. Note that the luigi scheduler waits ``[scheduler] stable_done_cooldown_secs`` (10 seconds by default) before it runs the same task again. When a task in the build uses ``strict_check`` or ``modification_time_check``, outputs are kept until the build ends, because ``complete()`` of such a task checks the outputs of the dependencies of its dependencies. This applies only to tasks known when the build is scheduled, not to tasks added later as dynamic dependencies.
+- **No copy**: ``load()`` returns the dumped object itself. If a task modifies a loaded object, other tasks that load it see the change.
+- **Only in gokart.build and in a single process**: an error is raised when the output is used outside ``gokart.build`` (e.g. ``luigi.build`` or ``gokart.run``), or with ``workers > 1``, ``[gokart_worker] force_multiprocessing``, or a worker timeout, because these run tasks in separate processes.
+- **No lock**: ``should_lock_run=True`` raises an error. When only ``redis_host`` and ``redis_port`` are set, the output is not locked at dump and load.
+- ``processor`` cannot be used with ``in_memory=True``. ``make_model_target`` and ``make_large_data_frame_target`` do not support it.
+- Supplementary log files (``log/task_log/`` etc.) are still dumped to ``workspace_directory``. Set ``should_dump_supplementary_log_files=False`` to avoid them (note that it also disables fixing the random seed with ``fix_random_seed_methods``).

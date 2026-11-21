@@ -21,6 +21,7 @@ import gokart.target
 from gokart._gcs import needs_task_state_labels
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
+from gokart.in_memory.target import make_in_memory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
@@ -237,12 +238,26 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         return cls(**new_k)
 
-    def make_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, processor: FileProcessor | None = None) -> TargetOnKart:
+    def make_target(
+        self, relative_file_path: str | None = None, use_unique_id: bool = True, processor: FileProcessor | None = None, in_memory: bool = False
+    ) -> TargetOnKart:
+        """
+        Make output target.
+
+        :param in_memory: If this is true, the output is kept in memory during ``gokart.build`` instead of being written to a file.
+            This is an experimental feature. See "Keep output in memory instead of dumping to files" in the docs.
+        """
         formatted_relative_file_path = (
             relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.pkl')
         )
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
+
+        if in_memory:
+            if processor is not None:
+                raise ValueError('`processor` cannot be used with `in_memory=True`.')
+            # WHY: the dump / load lock is skipped because the in-memory store is not shared with other processes.
+            return make_in_memory_target(file_path, unique_id=unique_id)
 
         # Auto-select processor based on type parameter if not provided
         if processor is None and relative_file_path is not None:

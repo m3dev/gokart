@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 
@@ -8,12 +9,11 @@ from .data import InMemoryData
 
 
 class InMemoryCacheRepository:
-    _cache: dict[str, InMemoryData] = {}
-
-    def __init__(self):
-        pass
+    def __init__(self) -> None:
+        self._cache: dict[str, InMemoryData] = {}
 
     def get_value(self, key: str) -> Any:
+        # WHY: the dumped object itself is returned without copying, to avoid the cost of copying large data.
         return self._get_data(key).value
 
     def get_last_modification_time(self, key: str) -> datetime:
@@ -46,3 +46,23 @@ class InMemoryCacheRepository:
     @property
     def size(self) -> int:
         return len(self._cache)
+
+
+# WHY: a module variable instead of a ContextVar, so that threads started in a task's run() see the same repository.
+_current_repository: InMemoryCacheRepository | None = None
+
+
+def get_current_repository() -> InMemoryCacheRepository | None:
+    return _current_repository
+
+
+@contextmanager
+def in_memory_scope() -> Generator[InMemoryCacheRepository]:
+    """Provide an empty repository for in-memory targets while the context is active, and drop it on exit."""
+    global _current_repository
+    outer = _current_repository
+    _current_repository = InMemoryCacheRepository()
+    try:
+        yield _current_repository
+    finally:
+        _current_repository = outer

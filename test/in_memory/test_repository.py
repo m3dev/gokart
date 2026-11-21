@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from gokart.in_memory import InMemoryCacheRepository as Repo
+from gokart.in_memory.repository import get_current_repository, in_memory_scope
 
 dummy_num = 100
 
@@ -11,9 +12,7 @@ dummy_num = 100
 class TestInMemoryCacheRepository:
     @pytest.fixture
     def repo(self) -> Repo:
-        repo = Repo()
-        repo.clear()
-        return repo
+        return Repo()
 
     def test_set(self, repo: Repo) -> None:
         repo.set_value('dummy_key', dummy_num)
@@ -63,3 +62,26 @@ class TestInMemoryCacheRepository:
             repo.set_value('dummy_key', dummy_num)
             date2 = repo.get_last_modification_time('dummy_key')
         assert date1 < date2
+
+    def test_repositories_do_not_share_data(self) -> None:
+        Repo().set_value('dummy_key', dummy_num)
+        assert not Repo().has('dummy_key')
+
+
+class TestInMemoryScope:
+    def test_no_repository_outside_scope(self) -> None:
+        assert get_current_repository() is None
+
+    def test_scope_provides_empty_repository_and_drops_it_on_exit(self) -> None:
+        with in_memory_scope() as repo:
+            assert get_current_repository() is repo
+            assert repo.empty()
+            repo.set_value('dummy_key', dummy_num)
+        assert get_current_repository() is None
+
+    def test_nested_scope_has_its_own_repository(self) -> None:
+        with in_memory_scope() as outer:
+            outer.set_value('dummy_key', dummy_num)
+            with in_memory_scope() as inner:
+                assert not inner.has('dummy_key')
+            assert get_current_repository() is outer
