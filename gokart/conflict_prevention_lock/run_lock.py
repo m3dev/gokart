@@ -54,6 +54,8 @@ class RedisRunLock:
 def make_run_lock(task: Any) -> RunLock | None:
     if not getattr(task, 'should_lock_run', False):
         return None
+    if getattr(task, 'redis_host', None) is None or getattr(task, 'redis_port', None) is None:
+        return None
     return RedisRunLock(make_task_lock_params_for_run(task_self=task))
 
 

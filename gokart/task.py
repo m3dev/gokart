@@ -6,7 +6,6 @@ import inspect
 import os
 import random
 import types
-import warnings
 from collections.abc import Callable, Generator, Iterable
 from importlib import import_module
 from logging import getLogger
@@ -121,7 +120,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         significant=False,
     )
     should_lock_run: luigi.Parameter[bool] = ExplicitBoolParameter(
-        default=False, significant=False, description='Whether to use redis lock or not at task run.'
+        default=True,
+        significant=False,
+        description='Whether the gokart worker takes a run lock before run(). The lock is taken only when redis_host and redis_port are set.',
     )
 
     @property
@@ -141,10 +142,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
-
-        if self.should_lock_run:
-            assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
-            assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)
@@ -372,14 +369,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 self.requires(),
             ),
         )
-
-        if self.should_lock_run and self._lock_at_dump:
-            warnings.warn(
-                f'{self.get_task_family()} has should_lock_run=True, but it is not run by the gokart worker, so the run lock is not taken. '
-                'Falling back to the dump lock. Use gokart.build or gokart.run to take the run lock.',
-                UserWarning,
-                stacklevel=2,
-            )
 
         self._get_output_target(target).dump(
             obj,

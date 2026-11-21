@@ -30,13 +30,23 @@ def _make_task(redis_timeout: int = 180) -> _LockedTask:
 
 class TestMakeRunLock:
     def test_returns_none_when_should_lock_run_is_false(self):
-        assert make_run_lock(_LockedTask(redis_host='0.0.0.0', redis_port=12345)) is None
+        assert make_run_lock(_LockedTask(redis_host='0.0.0.0', redis_port=12345, should_lock_run=False)) is None
+
+    @pytest.mark.parametrize(
+        'redis_params',
+        [pytest.param({}, id='unset'), pytest.param({'redis_host': '0.0.0.0'}, id='port-unset'), pytest.param({'redis_port': 12345}, id='host-unset')],
+    )
+    def test_returns_none_when_redis_is_not_set(self, redis_params: dict[str, Any]):
+        assert make_run_lock(_LockedTask(should_lock_run=True, **redis_params)) is None
 
     def test_returns_none_for_non_gokart_task(self):
         assert make_run_lock(luigi.Task()) is None
 
     def test_returns_redis_lock_when_should_lock_run_is_true(self, server: fakeredis.FakeServer):
         assert isinstance(make_run_lock(_make_task()), RedisRunLock)
+
+    def test_returns_redis_lock_by_default_when_redis_is_set(self, server: fakeredis.FakeServer):
+        assert isinstance(make_run_lock(_LockedTask(redis_host='0.0.0.0', redis_port=12345)), RedisRunLock)
 
 
 def _patch_redis_recording_close(server: fakeredis.FakeServer, close_mocks: list[MagicMock]):

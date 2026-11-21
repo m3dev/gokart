@@ -202,6 +202,30 @@ class TestWorkerRunLock:
         assert held_during_run == [True]
         assert not fakeredis.FakeRedis(server=redis_server).exists(_run_lock_key(task))
 
+    @pytest.mark.parametrize(
+        ('should_lock_run', 'redis_host', 'expected_held'),
+        [
+            pytest.param(True, '0.0.0.0', True, id='enabled'),
+            pytest.param(False, '0.0.0.0', False, id='disabled'),
+            pytest.param(True, None, False, id='redis-unset'),
+        ],
+    )
+    def test_lock_follows_should_lock_run_and_redis(
+        self, monkeypatch: pytest.MonkeyPatch, redis_server: fakeredis.FakeServer, should_lock_run: bool, redis_host: str | None, expected_held: bool
+    ) -> None:
+        task = _RunLockTask(random_id=uuid.uuid4().hex, redis_host=redis_host, redis_port=12345, should_lock_run=should_lock_run)
+        held_during_run: list[bool] = []
+
+        def _run() -> None:
+            held_during_run.append(bool(fakeredis.FakeRedis(server=redis_server).exists(_run_lock_key(task))))
+
+        monkeypatch.setattr(task, '_run', _run)
+        with Worker(scheduler=scheduler.Scheduler()) as worker:
+            assert worker.add(task)
+            assert worker.run()
+
+        assert held_during_run == [expected_held]
+
     def test_completion_is_checked_after_lock_is_acquired(self, monkeypatch: pytest.MonkeyPatch, redis_server: fakeredis.FakeServer) -> None:
         task = _make_run_lock_task()
         lock_held_at_check: list[bool] = []
