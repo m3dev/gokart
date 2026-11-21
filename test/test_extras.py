@@ -119,20 +119,17 @@ class TestGCSExtrasNotInstalled:
         finally:
             GCSConfig.clear_instance_cache()
 
-    def test_gcs_obj_metadata_client_makepatch_raises_without_googleapiclient(self):
+    def test_add_task_state_labels_raises_for_gcs_without_extras(self):
+        from gokart.gcs_config import GCSConfig
         from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 
-        with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
-            saved = sys.modules.pop('googleapiclient.model', None)
-            saved_parent = sys.modules.pop('googleapiclient', None)
-            try:
+        GCSConfig.clear_instance_cache()
+        try:
+            with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud', 'google.api_core'})):
                 with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    GCSObjectMetadataClient._makepatch({}, {})
-            finally:
-                if saved is not None:
-                    sys.modules['googleapiclient.model'] = saved
-                if saved_parent is not None:
-                    sys.modules['googleapiclient'] = saved_parent
+                    GCSObjectMetadataClient.add_task_state_labels('gs://bucket/key', task_params={'param': '1'})
+        finally:
+            GCSConfig.clear_instance_cache()
 
     def test_object_storage_exists_raises_for_gcs_without_extras(self):
         from gokart.object_storage import ObjectStorage

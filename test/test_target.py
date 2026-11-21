@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import pickle
 import shutil
@@ -10,6 +11,7 @@ import boto3
 import numpy as np
 import pandas as pd
 import pytest
+from google.api_core.exceptions import PreconditionFailed
 from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 from matplotlib import pyplot
 from moto import mock_aws
@@ -376,6 +378,29 @@ class TestGCSTarget:
             target.dump(obj)
 
             pd.testing.assert_frame_equal(target.load(), obj)
+
+    def test_dump_attaches_labels(self, gcs_bucket):
+        target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
+
+        target.dump(1, task_params={'param': '1'}, custom_labels={'owner': 'me'})
+
+        assert target.load() == 1
+        blob = storage.Client().bucket(gcs_bucket).get_blob('data.pkl')
+        assert blob is not None
+        assert blob.metadata == {'owner': 'me', 'param': '1'}
+
+    def test_dump_succeeds_when_labeling_fails(self, gcs_bucket, caplog):
+        target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
+
+        # labels are best-effort: the data is already stored when they are attached
+        with (
+            patch('google.cloud.storage.Blob.patch', side_effect=PreconditionFailed('metageneration changed')),
+            caplog.at_level(logging.WARNING, logger='gokart.gcs_obj_metadata_client'),
+        ):
+            target.dump(1, custom_labels={'owner': 'me'})
+
+        assert target.load() == 1
+        assert 'failed to add labels' in caplog.text
 
     def test_remove(self, gcs_bucket):
         target = make_target(file_path=self._log_path(gcs_bucket, 'test.pkl'), unique_id=None)

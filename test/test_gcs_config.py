@@ -78,3 +78,13 @@ class TestGetStorageClient:
             GCSConfig(gcs_credential_name='env_name').get_storage_client()
 
         client_cls.assert_called_once_with(project=None, credentials=None)
+
+
+class TestGetGCSClientDeprecation:
+    def test_warns_and_points_to_get_storage_client(self):
+        GCSConfig.clear_instance_cache()
+        try:
+            with patch('luigi.contrib.gcs.GCSClient'), pytest.warns(DeprecationWarning, match='get_storage_client'):
+                GCSConfig().get_gcs_client()
+        finally:
+            GCSConfig.clear_instance_cache()

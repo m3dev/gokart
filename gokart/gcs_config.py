@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import warnings
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
@@ -43,6 +44,12 @@ class GCSConfig(luigi.Config):
         return storage.Client(project=getattr(credentials, 'project_id', None), credentials=credentials)
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
+        warnings.warn(
+            'GCSConfig.get_gcs_client() is deprecated and will be removed in a future major release. '
+            'gokart no longer uses luigi.contrib.gcs; use GCSConfig.get_storage_client(), which returns a google.cloud.storage.Client, instead.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self._client is None:  # use cache as like singleton object
             self._client = self._get_gcs_client()
         return self._client
