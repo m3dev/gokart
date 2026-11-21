@@ -18,7 +18,7 @@ class S3ZipClient(ZipClient):
     def exists(self) -> bool:
         return cast(bool, self._client.exists(self._file_path))
 
-    def make_archive(self) -> None:
+    def make_archive(self, metadata: dict[str, str] | None = None) -> None:
         extension = os.path.splitext(self._file_path)[1]
         if not os.path.exists(self._temporary_directory):
             # Check path existence since shutil.make_archive() of python 3.10+ does not check it.
