@@ -55,6 +55,10 @@ class BinaryFileProcessor(FileProcessor):
 
 
 class _ChunkedLargeFileReader:
+    # Overridable so that tests can exercise the chunked path without allocating gigabytes.
+    _LARGE_READ_THRESHOLD = 1 << 31
+    _MAX_READ_SIZE = (1 << 31) - 1
+
     def __init__(self, file: Any) -> None:
         self._file = file
 
@@ -62,17 +66,22 @@ class _ChunkedLargeFileReader:
         return getattr(self._file, item)
 
     def read(self, n: int) -> bytes:
-        if n >= (1 << 31):
+        if n >= self._LARGE_READ_THRESHOLD:
             logger.info(f'reading a large file with total_bytes={n}.')
             buffer = bytearray(n)
             idx = 0
             while idx < n:
-                batch_size = min(n - idx, (1 << 31) - 1)
+                batch_size = min(n - idx, self._MAX_READ_SIZE)
                 logger.info(f'reading bytes [{idx}, {idx + batch_size})...')
-                buffer[idx : idx + batch_size] = self._file.read(batch_size)
-                idx += batch_size
+                chunk = self._file.read(batch_size)
+                # A short read is legitimate for network streams, so advance by what was actually read.
+                if not chunk:
+                    logger.warning(f'reached EOF at {idx} bytes before reading total_bytes={n}.')
+                    break
+                buffer[idx : idx + len(chunk)] = chunk
+                idx += len(chunk)
             logger.info('done.')
-            return bytes(buffer)
+            return bytes(buffer[:idx])
         return cast(bytes, self._file.read(n))
 
     def readline(self) -> bytes:
