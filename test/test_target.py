@@ -5,7 +5,7 @@ import pickle
 import shutil
 import unittest
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import boto3
 import numpy as np
@@ -269,6 +269,32 @@ class ModelTargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, obj)
+
+    @patch('gokart.target.GCSObjectMetadataClient.add_task_state_labels')
+    @patch('gokart.target.make_zip_client')
+    def test_model_target_on_gcs_adds_task_state_labels_to_zip(self, mock_make_zip_client, mock_add_task_state_labels):
+        zip_client = MagicMock(path='gs://bucket/test.zip')
+        mock_make_zip_client.return_value = zip_client
+        target = make_model_target(
+            file_path='gs://bucket/test.zip', temporary_directory=self.temporary_directory, save_function=self._save_function, load_function=self._load_function
+        )
+
+        target.dump(1, task_params={'a': '1'}, custom_labels={'b': '2'}, required_task_outputs=None)
+
+        mock_add_task_state_labels.assert_called_once_with(
+            path='gs://bucket/test.zip', task_params={'a': '1'}, custom_labels={'b': '2'}, required_task_outputs=None
+        )
+
+    @patch('gokart.target.GCSObjectMetadataClient.add_task_state_labels')
+    def test_model_target_on_local_does_not_add_task_state_labels(self, mock_add_task_state_labels):
+        file_path = os.path.join(self.temporary_directory, 'test.zip')
+        target = make_model_target(
+            file_path=file_path, temporary_directory=self.temporary_directory, save_function=self._save_function, load_function=self._load_function
+        )
+
+        target.dump(1, task_params={'a': '1'})
+
+        mock_add_task_state_labels.assert_not_called()
 
     def _make_large_data_frame_target(self, file_path: str, load_function=None):
         processor = LargeDataFrameProcessor(max_byte=800)

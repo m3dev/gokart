@@ -186,6 +186,11 @@ class ModelTarget(TargetOnKart):
                 self._load_function, task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs
             )
             make_zip_client(self._zip_client.path, working_directory).make_archive()
+        # The inner load_function.pkl is written locally, so the labels must be attached to the uploaded zip itself.
+        if self._zip_client.path.startswith('gs://'):
+            GCSObjectMetadataClient.add_task_state_labels(
+                path=self._zip_client.path, task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs
+            )
 
     def _remove(self) -> None:
         self._zip_client.remove()
