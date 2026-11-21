@@ -35,7 +35,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 s3 = ["boto3"]
-gcs = ["google-cloud-storage", "google-api-python-client"]
+gcs = ["google-cloud-storage>=2", "google-api-python-client"]
 all = ["gokart[s3]", "gokart[gcs]"]
 polars = ["polars>=0.19.0"]
 

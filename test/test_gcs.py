@@ -1,5 +1,6 @@
 import os
 import tempfile
+from datetime import datetime
 
 import luigi.format
 import pytest
@@ -61,6 +62,18 @@ class TestGCSClient:
 
         with GCSClient().download(f'gs://{gcs_bucket}/empty.bin') as f:
             assert f.read() == b''
+
+    def test_get_timestamp_returns_timezone_aware_datetime(self, gcs_bucket):
+        _upload(gcs_bucket, 'data.bin', b'x')
+
+        t = GCSClient().get_timestamp(f'gs://{gcs_bucket}/data.bin')
+
+        assert isinstance(t, datetime)
+        assert t.tzinfo is not None
+
+    def test_get_timestamp_of_missing_object_raises_file_not_found(self, gcs_bucket):
+        with pytest.raises(FileNotFoundError):
+            GCSClient().get_timestamp(f'gs://{gcs_bucket}/missing.bin')
 
     def test_remove(self, gcs_bucket):
         _upload(gcs_bucket, 'data.bin', b'x')

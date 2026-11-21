@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import mimetypes
 import os
@@ -80,7 +81,9 @@ class GCSClient:
                 self._blob(path).download_to_file(fp)
             except BaseException:
                 fp.close()
-                os.remove(fp.name)
+                # a cleanup failure must not mask the download error
+                with contextlib.suppress(OSError):
+                    os.remove(fp.name)
                 raise
         return _DeleteOnCloseFile(fp.name, 'r')
 
