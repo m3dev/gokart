@@ -487,9 +487,10 @@ class Worker:
 
         self.unfulfilled_counts: dict[str, int] = collections.defaultdict(int)
 
-        # For releasing in-memory outputs: the InMemoryTarget outputs of each task, the dependencies of each task,
-        # and the tasks that require each task and have not finished yet.
+        # For releasing in-memory outputs: the InMemoryTarget outputs of each task, the tasks that output each in-memory key and
+        # have not been released yet, the dependencies of each task, and the tasks that require each task and have not finished yet.
         self._in_memory_targets: dict[str, list[InMemoryTarget]] = {}
+        self._in_memory_key_holders: dict[str, set[str]] = collections.defaultdict(set)
         self._dependencies: dict[str, set[str]] = collections.defaultdict(set)
         self._unfinished_dependents: dict[str, set[str]] = collections.defaultdict(set)
         self._release_in_memory_outputs_early = True
@@ -821,7 +822,11 @@ class Worker:
             if dependents or dependency_id not in self._in_memory_targets:
                 continue
             for target in self._in_memory_targets[dependency_id]:
-                target.remove()
+                holders = self._in_memory_key_holders[target.path()]
+                holders.discard(dependency_id)
+                # WHY: another task may output the same key (e.g. one that returns its input as its output) and still be needed.
+                if not holders:
+                    target.remove()
             # WHY: if a released task is required again (e.g. yielded by a run() the generator check missed), a cached "complete"
             # would let the yielding task load the removed output and fail instead of re-running the released task.
             if self._task_completion_cache is not None:
@@ -832,6 +837,8 @@ class Worker:
         if in_memory_targets:
             self._check_in_memory_target_support(task)
             self._in_memory_targets[task.task_id] = in_memory_targets
+            for target in in_memory_targets:
+                self._in_memory_key_holders[target.path()].add(task.task_id)
         if self._needs_in_memory_outputs_until_build_ends(task):
             self._release_in_memory_outputs_early = False
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:

@@ -13,6 +13,7 @@ from gokart.in_memory.repository import get_current_repository
 
 # Snapshot of the in-memory keys taken at the start of each task's run(), keyed by task name.
 _stored_keys_at_run: dict[str, set[str]] = {}
+_in_memory_task_runs: list[str] = []
 
 
 def _stored_keys() -> set[str]:
@@ -41,6 +42,7 @@ class _InMemoryTask(gokart.TaskOnKart[str]):
 
     def run(self):
         _stored_keys_at_run[self.name] = _stored_keys()
+        _in_memory_task_runs.append(self.name)
         if self.fail:
             raise RuntimeError('fail')
         self.dump(self.name + ''.join(self.load()))
@@ -93,6 +95,22 @@ class _HelperYieldTask(_YieldTask):
         return super().run()
 
 
+class _PassThroughTask(gokart.TaskOnKart[str]):
+    """Uses the output of the required task as its own output, so the two tasks share one in-memory key."""
+
+    task_namespace = __name__
+    upstream: gokart.TaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.TaskInstanceParameter()
+
+    def output(self):
+        return self.input()
+
+    def requires(self) -> Any:
+        return self.upstream
+
+    def run(self):
+        pass
+
+
 def _key(task: gokart.TaskOnKart[Any]) -> str:
     return task.output().path()  # type: ignore[union-attr]
 
@@ -100,6 +118,7 @@ def _key(task: gokart.TaskOnKart[Any]) -> str:
 @pytest.fixture(autouse=True)
 def _clear_snapshots() -> None:
     _stored_keys_at_run.clear()
+    _in_memory_task_runs.clear()
 
 
 class TestReleaseInMemoryOutput:
@@ -118,6 +137,15 @@ class TestReleaseInMemoryOutput:
     def test_root_output_is_kept_for_return_value(self) -> None:
         a = _InMemoryTask(name='a')
         assert gokart.build(_InMemoryTask(name='b', upstream=[a]), reset_register=False) == 'ba'
+
+    def test_output_shared_with_a_dependent_is_kept_while_the_dependent_needs_it(self) -> None:
+        # The output of a is also the output of b, so releasing a after b finished must not remove what c loads from b.
+        a = _InMemoryTask(name='a')
+        b = _PassThroughTask(upstream=a)
+        c = _InMemoryTask(name='c', upstream=[b])
+
+        assert gokart.build(c, reset_register=False) == 'ca'
+        assert _in_memory_task_runs == ['a', 'c']
 
     def test_output_is_kept_when_a_dependent_fails(self) -> None:
         a = _InMemoryTask(name='a')

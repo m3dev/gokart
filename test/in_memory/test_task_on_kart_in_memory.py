@@ -3,6 +3,7 @@ from pathlib import Path
 
 import luigi
 import pytest
+from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 
 import gokart
 from gokart.file_processor import PickleFileProcessor
@@ -135,3 +136,21 @@ class TestSupplementaryLogFiles:
         workspace = str(tmp_path / 'resources')
         gokart.build(_MixedOutputTask(workspace_directory=workspace), reset_register=False, return_value=False)
         assert list(Path(workspace).rglob('log/task_log/*.pkl'))
+
+
+class TestGCSWorkspace:
+    def test_build_writes_nothing_to_gcs(self, gcs_bucket: str) -> None:
+        workspace = f'gs://{gcs_bucket}/resources'
+        task = _JoinTask(
+            tasks=[_DumpTask(param='a', workspace_directory=workspace), _DumpTask(param='b', workspace_directory=workspace)],
+            workspace_directory=workspace,
+        )
+        assert gokart.build(task, reset_register=False) == 'a,b'
+        assert list(storage.Client().list_blobs(gcs_bucket)) == []
+
+    def test_file_output_is_still_written_to_gcs(self, gcs_bucket: str) -> None:
+        # Guards the test above: the emulator does receive what a file output dumps.
+        gokart.build(_MixedOutputTask(workspace_directory=f'gs://{gcs_bucket}/resources'), reset_register=False, return_value=False)
+        names = [blob.name for blob in storage.Client().list_blobs(gcs_bucket)]
+        assert any(name.startswith('resources/file_') for name in names)
+        assert not any(name.startswith('resources/memory_') for name in names)
