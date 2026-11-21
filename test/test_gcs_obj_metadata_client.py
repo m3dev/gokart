@@ -152,6 +152,7 @@ class TestGokartTask(unittest.TestCase):
     @patch.object(_DummyTaskOnKart, '_get_output_target')
     def test_mock_target_on_kart(self, mock_get_output_target):
         mock_target = MagicMock(spec=TargetOnKart)
+        mock_target.path.return_value = 'gs://bucket/path/data.pkl'
         mock_get_output_target.return_value = mock_target
 
         task = _DummyTaskOnKart()

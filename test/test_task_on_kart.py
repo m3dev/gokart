@@ -17,6 +17,7 @@ from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
 import gokart
+from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
@@ -517,15 +518,89 @@ class TaskTest(unittest.TestCase):
     def test_dump(self):
         task = _DummyTask()
         target = Mock(spec=TargetOnKart)
+        target.path.return_value = 'dummy.pkl'
         task.output = Mock(return_value=target)
 
         task.dump(1)
         target.dump.assert_called_once()
 
+    @staticmethod
+    def _make_required_task() -> Mock:
+        required_task = Mock()
+        required_task.get_task_family.return_value = 'RequiredTask'
+        required_task.output.return_value.path.return_value = 'gs://bucket/required.pkl'
+        return required_task
+
+    def test_dump_computes_labels_for_gcs_target(self):
+        task = _DummyTask()
+        required_task = self._make_required_task()
+        task.requires = Mock(return_value=required_task)
+        target = Mock(spec=TargetOnKart)
+        target.path.return_value = 'gs://bucket/path/data.pkl'
+        task.output = Mock(return_value=target)
+
+        task.dump(1)
+
+        required_task.output.assert_called_once()
+        kwargs = target.dump.call_args.kwargs
+        self.assertIsNotNone(kwargs['task_params'])
+        self.assertIsNotNone(kwargs['required_task_outputs'])
+        self.assertEqual(kwargs['task_params']['param'], '1')
+
+    def test_dump_skips_label_computation_for_non_gcs_target(self):
+        for path in ['s3://bucket/data.pkl', '/tmp/data.pkl', 'in_memory_key', 'gs://bucket/log/task_log/x.pkl']:
+            with self.subTest(path=path):
+                task = _DummyTask()
+                required_task = self._make_required_task()
+                task.requires = Mock(return_value=required_task)
+                target = Mock(spec=TargetOnKart)
+                target.path.return_value = path
+                task.output = Mock(return_value=target)
+
+                with patch.object(luigi.Task, 'to_str_params', autospec=True, side_effect=luigi.Task.to_str_params) as to_str_params:
+                    task.dump(1)
+
+                self.assertFalse([c for c in to_str_params.call_args_list if c.args[0] is task])
+                required_task.output.assert_not_called()
+                kwargs = target.dump.call_args.kwargs
+                self.assertIsNone(kwargs['task_params'])
+                self.assertIsNone(kwargs['required_task_outputs'])
+
+    def test_dump_model_target_skips_label_computation_for_local_path(self):
+        task = _DummyTask()
+        with tempfile.TemporaryDirectory() as tmp:
+            target = ModelTarget(
+                file_path=os.path.join(tmp, 'model.zip'),
+                temporary_directory=tmp,
+                load_function=lambda path: pathlib.Path(path).read_text(),
+                save_function=lambda obj, path: pathlib.Path(path).write_text(obj),
+                task_lock_params=TaskLockParams(None, None, None, '', False, False, 0),
+            )
+            task.output = Mock(return_value=target)
+            required_task = self._make_required_task()
+            task.requires = Mock(return_value=required_task)
+
+            task.dump('model')
+
+            required_task.output.assert_not_called()
+            self.assertTrue(target.exists())
+
+    def test_dump_tolerates_target_whose_path_is_not_stubbed(self):
+        task = _DummyTask()
+        target = Mock(spec=TargetOnKart)
+        task.output = Mock(return_value=target)
+
+        task.dump(1)
+
+        kwargs = target.dump.call_args.kwargs
+        self.assertIsNone(kwargs['task_params'])
+        self.assertIsNone(kwargs['required_task_outputs'])
+
     def test_fail_on_empty_dump(self):
         # do not fail
         task = _DummyTask(fail_on_empty_dump=False)
         target = Mock(spec=TargetOnKart)
+        target.path.return_value = 'dummy.pkl'
         task.output = Mock(return_value=target)
         task.dump(pd.DataFrame())
         target.dump.assert_called_once()

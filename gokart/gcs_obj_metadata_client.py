@@ -28,6 +28,17 @@ class GCSObjectMetadataClient:
     def _is_log_related_path(path: str) -> bool:
         return re.match(r'^gs://.+?/log/(processing_time/|task_info/|task_log/|module_versions/|random_seed/|task_params/).+', path) is not None
 
+    @staticmethod
+    def needs_task_state_labels(path: str) -> bool:
+        """Whether add_task_state_labels would actually attach labels to `path`.
+
+        Callers use this to skip building task_params / required_task_outputs, which are costly and unused otherwise.
+        """
+        # WHY: callers may hand over a target whose path() is not a str (e.g. a bare Mock(spec=TargetOnKart) in downstream tests).
+        if not isinstance(path, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+            return False
+        return path.startswith('gs://') and not GCSObjectMetadataClient._is_log_related_path(path)
+
     # This is the copied method of luigi.gcs._path_to_bucket_and_key(path).
     @staticmethod
     def _path_to_bucket_and_key(path: str) -> tuple[str, str]:
