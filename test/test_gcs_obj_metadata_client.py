@@ -5,6 +5,7 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from google.api_core.exceptions import PreconditionFailed
 from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 
@@ -214,7 +215,18 @@ class TestAddTaskStateLabels:
 
         assert not _blob(gcs_bucket, 'log/task_log/data.pkl').metadata
 
-    def test_patches_with_metageneration_precondition_and_retries_once_on_conflict(self, gcs_bucket):
+    def test_reraises_when_precondition_fails_twice(self, gcs_bucket):
+        path = self._upload(gcs_bucket, 'data.pkl')
+
+        with (
+            patch('google.cloud.storage.Blob.patch', side_effect=PreconditionFailed('metageneration changed')) as blob_patch,
+            pytest.raises(PreconditionFailed),
+        ):
+            GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'})
+
+        assert blob_patch.call_count == 2
+
+    def test_patches_with_generation_preconditions_and_retries_once_on_conflict(self, gcs_bucket):
         # the emulator ignores preconditions, so the conflict is simulated on the client side
         path = self._upload(gcs_bucket, 'data.pkl')
         original_patch = storage.Blob.patch
@@ -230,7 +242,7 @@ class TestAddTaskStateLabels:
             GCSObjectMetadataClient.add_task_state_labels(path, task_params={'param': '1'})
 
         assert len(calls) == 2
-        assert all(c.get('if_metageneration_match') is not None for c in calls)
+        assert all(c.get('if_generation_match') is not None and c.get('if_metageneration_match') is not None for c in calls)
         assert _blob(gcs_bucket, 'data.pkl').metadata == {'param': '1'}
 
 

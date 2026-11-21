@@ -53,7 +53,8 @@ class GCSObjectMetadataClient:
         blob = cast(Any, GCSConfig().get_storage_client()).bucket(bucket).blob(obj)
         from google.api_core.exceptions import PreconditionFailed
 
-        # read-modify-write guarded by metageneration so a concurrent metadata update is not overwritten; retry once after re-reading
+        # read-modify-write guarded by generation and metageneration so a concurrent metadata update or overwrite is not clobbered;
+        # metageneration alone is not enough because every freshly uploaded object starts at metageneration 1. Retry once after re-reading.
         for attempt in range(2):
             blob.reload()
             original_metadata: dict[str, Any] = dict(blob.metadata or {})
@@ -68,7 +69,7 @@ class GCSObjectMetadataClient:
             # GCS merges patched metadata into the stored one, so keys trimmed by the size limit must be sent as None to be deleted
             blob.metadata = patched_metadata | {key: None for key in original_metadata if key not in patched_metadata}
             try:
-                blob.patch(if_metageneration_match=blob.metageneration)
+                blob.patch(if_generation_match=blob.generation, if_metageneration_match=blob.metageneration)
                 return
             except PreconditionFailed:
                 if attempt == 1:
