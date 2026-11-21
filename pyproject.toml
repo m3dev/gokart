@@ -53,7 +53,7 @@ test = [
   "fakeredis",
   "lupa",
   "matplotlib",
-  "moto>=4.0", # for use mock_aws api
+  "moto>=5.1.22", # for use mock_aws api
   "mypy", # for test_mypy.py, which tests the deprecated gokart.mypy plugin
   "polars>=0.19.0",
   "psutil", # imported lazily by gokart.worker
