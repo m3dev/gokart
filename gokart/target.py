@@ -269,9 +269,8 @@ def _make_file_path(original_path: str, unique_id: str | None = None) -> str:
 
 def _get_last_modification_time(path: str) -> datetime:
     if ObjectStorage.if_object_storage_path(path):
-        if ObjectStorage.exists(path):
-            return ObjectStorage.get_timestamp(path)
-        raise FileNotFoundError(f'No such file or directory: {path}')
+        # get_timestamp raises FileNotFoundError itself, so an extra exists() round trip is unnecessary
+        return ObjectStorage.get_timestamp(path)
     return datetime.fromtimestamp(os.path.getmtime(path))
 
 

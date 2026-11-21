@@ -1,5 +1,6 @@
 import io
 import os
+import pickle
 import shutil
 import unittest
 from datetime import datetime
@@ -8,6 +9,8 @@ from unittest.mock import patch
 import boto3
 import numpy as np
 import pandas as pd
+import pytest
+from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 from matplotlib import pyplot
 from moto import mock_aws
 
@@ -349,6 +352,53 @@ class ModelTargetTest(unittest.TestCase):
         loaded = target.load()
 
         self.assertEqual(loaded, obj)
+
+
+class TestGCSTarget:
+    # log paths skip GCS label patching, which keeps these tests to the object I/O itself
+    @staticmethod
+    def _log_path(bucket: str, file_name: str) -> str:
+        return f'gs://{bucket}/log/processing_time/{file_name}'
+
+    def test_load_pickle(self, gcs_bucket):
+        storage.Client().bucket(gcs_bucket).blob('data.pkl').upload_from_string(pickle.dumps({'a': 1}))
+
+        target = make_target(file_path=f'gs://{gcs_bucket}/data.pkl', unique_id=None)
+
+        assert target.exists()
+        assert target.load() == {'a': 1}
+
+    def test_dump_and_load(self, gcs_bucket):
+        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        for file_name in ['test.pkl', 'test.csv', 'test.feather', 'test.parquet']:
+            target = make_target(file_path=self._log_path(gcs_bucket, file_name), unique_id=None)
+
+            target.dump(obj)
+
+            pd.testing.assert_frame_equal(target.load(), obj)
+
+    def test_remove(self, gcs_bucket):
+        target = make_target(file_path=self._log_path(gcs_bucket, 'test.pkl'), unique_id=None)
+        target.dump(1)
+
+        target.remove()
+
+        assert not target.exists()
+
+    def test_last_modification_time_is_timezone_aware_datetime(self, gcs_bucket):
+        target = make_target(file_path=self._log_path(gcs_bucket, 'test.pkl'), unique_id=None)
+        target.dump(1)
+
+        t = target.last_modification_time()
+
+        assert isinstance(t, datetime)
+        assert t.tzinfo is not None
+
+    def test_last_modification_time_without_file(self, gcs_bucket):
+        target = make_target(file_path=f'gs://{gcs_bucket}/missing.pkl', unique_id=None)
+
+        with pytest.raises(FileNotFoundError):
+            target.last_modification_time()
 
 
 if __name__ == '__main__':

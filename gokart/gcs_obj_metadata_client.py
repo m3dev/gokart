@@ -6,8 +6,8 @@ import json
 import re
 from logging import getLogger
 from typing import Any, Final, cast
-from urllib.parse import urlsplit
 
+from gokart._gcs import path_to_bucket_and_key
 from gokart.gcs_config import GCSConfig
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.utils import FlattenableItems
@@ -39,14 +39,6 @@ class GCSObjectMetadataClient:
             return False
         return path.startswith('gs://') and not GCSObjectMetadataClient._is_log_related_path(path)
 
-    # This is the copied method of luigi.gcs._path_to_bucket_and_key(path).
-    @staticmethod
-    def _path_to_bucket_and_key(path: str) -> tuple[str, str]:
-        (scheme, netloc, path, _, _) = urlsplit(path)
-        assert scheme == 'gs'
-        path_without_initial_slash = path[1:]
-        return netloc, path_without_initial_slash
-
     @staticmethod
     def _makepatch(original: dict[str, Any], modified: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -64,9 +56,7 @@ class GCSObjectMetadataClient:
     ) -> None:
         if GCSObjectMetadataClient._is_log_related_path(path):
             return
-        # In gokart/object_storage.get_time_stamp, could find same call.
-        # _path_to_bucket_and_key is a private method, so, this might not be acceptable.
-        bucket, obj = GCSObjectMetadataClient._path_to_bucket_and_key(path)
+        bucket, obj = path_to_bucket_and_key(path)
         _response = cast(Any, GCSConfig().get_gcs_client()).client.objects().get(bucket=bucket, object=obj).execute()
         if _response is None:
             logger.error(f'failed to get object from GCS bucket {bucket} and object {obj}.')

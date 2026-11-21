@@ -2,18 +2,41 @@ from __future__ import annotations
 
 import json
 import os
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
 import luigi
 
 if TYPE_CHECKING:
     import luigi.contrib.gcs
+    from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
     from google.oauth2.service_account import Credentials
+
+
+def import_storage() -> ModuleType:
+    try:
+        from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
+    except ImportError:
+        raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
+    return storage
 
 
 class GCSConfig(luigi.Config):
     gcs_credential_name: luigi.StrParameter = luigi.StrParameter(default='GCS_CREDENTIAL', description='GCS credential environment variable.')
     _client = None
+    _storage_client: tuple[int, storage.Client] | None = None
+
+    def get_storage_client(self) -> storage.Client:
+        # requests.Session inside the client is not fork-safe, so each process (e.g. worker_processes > 1) builds its own
+        pid = os.getpid()
+        if self._storage_client is None or self._storage_client[0] != pid:
+            self._storage_client = (pid, self._create_storage_client())
+        return self._storage_client[1]
+
+    def _create_storage_client(self) -> storage.Client:
+        storage = import_storage()
+        credentials = self._load_oauth_credentials()
+        return storage.Client(project=getattr(credentials, 'project_id', None), credentials=credentials)
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
         if self._client is None:  # use cache as like singleton object

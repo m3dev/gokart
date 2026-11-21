@@ -33,16 +33,9 @@ class ObjectStorage:
 
             return luigi.contrib.s3.S3Target(path, client=S3Config().get_s3_client(), format=format)
         elif path.startswith('gs://'):
-            try:
-                import googleapiclient  # noqa: F401  # pyright: ignore[reportUnusedImport]
-            except ImportError:
-                raise ImportError('GCS support requires additional dependencies. Install them with: pip install gokart[gcs]') from None
+            from gokart._gcs import GCSTarget
 
-            import luigi.contrib.gcs
-
-            from gokart.gcs_config import GCSConfig
-
-            return luigi.contrib.gcs.GCSTarget(path, client=GCSConfig().get_gcs_client(), format=format)
+            return GCSTarget(path, format=format)
         else:
             raise
 
@@ -53,9 +46,9 @@ class ObjectStorage:
 
             return cast(bool, cast(Any, S3Config().get_s3_client()).exists(path))
         elif path.startswith('gs://'):
-            from gokart.gcs_config import GCSConfig
+            from gokart._gcs import GCSClient
 
-            return cast(bool, cast(Any, GCSConfig().get_gcs_client()).exists(path))
+            return GCSClient().exists(path)
         else:
             raise
 
@@ -69,13 +62,9 @@ class ObjectStorage:
                 raise FileNotFoundError(f'S3 key not found: {path}')
             return cast(datetime, key.last_modified)
         elif path.startswith('gs://'):
-            from gokart.gcs_config import GCSConfig
+            from gokart._gcs import GCSClient
 
-            # for gcs object
-            # should PR to luigi
-            bucket, obj = cast(tuple[str, str], cast(Any, GCSConfig().get_gcs_client())._path_to_bucket_and_key(path))
-            result = cast(Any, GCSConfig().get_gcs_client()).client.objects().get(bucket=bucket, object=obj).execute()
-            return cast(datetime, result['updated'])
+            return GCSClient().get_timestamp(path)
         else:
             raise
 
