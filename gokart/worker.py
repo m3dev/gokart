@@ -721,21 +721,24 @@ class Worker:
             queue = luigi.worker.DequeQueue()
             pool = luigi.worker.SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(cast(Any, luigi.worker).check_complete, [task, queue, self._task_completion_cache])
+        self._check_complete_async(pool, queue, task, multiprocess)
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
         try:
-            seen = {task.task_id}
+            seen = {task.task_id: task}
             while queue_size:
                 current = queue.get()
                 queue_size -= 1
                 item, is_complete = current
+                if isinstance(item, str):
+                    # A task whose complete() check could not go through the pool comes back as its task_id. See _check_complete_async.
+                    item = seen[item]
                 for next in self._add(item, is_complete):
                     if next.task_id not in seen:
                         self._validate_task(next)
-                        seen.add(next.task_id)
-                        pool.apply_async(cast(Any, luigi.worker).check_complete, [next, queue, self._task_completion_cache])
+                        seen[next.task_id] = next
+                        self._check_complete_async(pool, queue, next, multiprocess)
                         queue_size += 1
         except (KeyboardInterrupt, luigi.worker.TaskException):
             raise
@@ -750,6 +753,23 @@ class Worker:
             pool.close()
             pool.join()
         return self.add_succeeded
+
+    def _check_complete_async(self, pool: Any, queue: Any, task: Task, multiprocess: bool) -> None:
+        args = [task, queue, self._task_completion_cache]
+        if not multiprocess:
+            # luigi.worker.SingleProcessPool.apply_async does not take error_callback, and it does not pickle the task.
+            pool.apply_async(cast(Any, luigi.worker).check_complete, args)
+            return
+
+        task_id = task.task_id
+
+        def put_error(exception: BaseException) -> None:
+            # WHY: When the task cannot go through the pool (e.g. it cannot be pickled), nothing is put on the queue
+            #      and add() would wait for it forever. Put the task_id instead of the task, which may not be picklable.
+            message = f'{task_id} could not be passed to or from a parallel scheduling process to check complete() (e.g. it cannot be pickled):\n'
+            queue.put((task_id, luigi.worker.TracebackWrapper(message + ''.join(traceback.format_exception(exception)))))
+
+        pool.apply_async(cast(Any, luigi.worker).check_complete, args, error_callback=put_error)
 
     def _add_task_batcher(self, task: Task) -> None:
         family = task.task_family

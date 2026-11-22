@@ -134,6 +134,37 @@ class TestWorkerCheckCompleteValue:
             worker._check_complete_value('not a bool')  # pyright: ignore[reportArgumentType]
 
 
+class _UnpicklableTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+    random_id: luigi.StrParameter = luigi.StrParameter()
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._unpicklable = threading.Lock()
+
+    def run(self):
+        self.dump('test')
+
+
+class TestWorkerAddWithMultiprocess:
+    def test_succeeds_for_picklable_task(self) -> None:
+        worker = Worker(scheduler=scheduler.Scheduler())
+        with worker:
+            assert worker.add(_DummyTask(random_id=uuid.uuid4().hex), multiprocess=True)
+
+    def test_fails_without_hanging_when_task_cannot_be_pickled(self, caplog: pytest.LogCaptureFixture) -> None:
+        worker = Worker(scheduler=scheduler.Scheduler())
+        results: list[bool] = []
+        with worker:
+            # WHY: A regression hangs add() forever. Run it in a daemon thread so the test fails instead of stalling CI (no pytest-timeout here).
+            thread = threading.Thread(target=lambda: results.append(worker.add(_UnpicklableTask(random_id=uuid.uuid4().hex), multiprocess=True)), daemon=True)
+            thread.start()
+            thread.join(timeout=60)
+        assert not thread.is_alive(), 'Worker.add hung on a task that cannot be pickled'
+        assert results == [False]
+        assert 'could not be passed to or from a parallel scheduling process' in caplog.text
+
+
 class _RunLockTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     random_id: luigi.StrParameter = luigi.StrParameter()

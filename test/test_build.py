@@ -93,6 +93,10 @@ class RunTest(unittest.TestCase):
         output = gokart.build(_ParallelRunner(), reset_register=False, workers=20)
         self.assertEqual(output, 'done')
 
+    def test_build_with_parallel_scheduling(self):
+        output = gokart.build(_ParallelRunner(), reset_register=False, parallel_scheduling=True)
+        self.assertEqual(output, 'done')
+
     def test_read_config(self):
         class _DummyTask(gokart.TaskOnKart[Any]):
             task_namespace = 'test_read_config'
