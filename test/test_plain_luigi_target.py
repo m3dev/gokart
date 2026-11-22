@@ -90,3 +90,10 @@ class TestTaskLog:
         task = _LocalTargetTask(path=path, workspace_directory=str(tmp_path))
         task._dump_task_log()
         assert task.task_log['file_path'] == [path]
+
+    def test_dumped_through_build(self, tmp_path: Path) -> None:
+        # The task log is dumped by luigi's SUCCESS event handler, which swallows errors, so check the dumped file itself.
+        path = str(tmp_path / 'plain.txt')
+        task = _LocalTargetTask(path=path, workspace_directory=str(tmp_path / 'resources'))
+        gokart.build(task, reset_register=False, return_value=False)
+        assert task.load(task._get_task_log_target())['file_path'] == [path]
