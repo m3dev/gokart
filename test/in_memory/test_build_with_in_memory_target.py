@@ -161,3 +161,89 @@ class TestConcurrentBuildsInThreads:
         with pytest.raises(InMemoryTargetError, match=r'_FixedKeyTask.*Another thread'):
             gokart.build(_FixedKeyTask(value=1), reset_register=False)
         assert _run_values == []
+
+
+_inner_build_running = threading.Event()
+_outer_thread_loaded = threading.Event()
+
+
+class _InnerBuildTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+
+    def output(self):
+        return self.make_target('inner.pkl', persist=False)
+
+    def run(self):
+        _inner_build_running.set()
+        assert _outer_thread_loaded.wait(timeout=10)
+        self.dump('inner')
+
+
+class _OuterDependencyTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+
+    def output(self):
+        return self.make_target('outer_dependency.pkl', persist=False)
+
+    def run(self):
+        self.dump('outer dependency')
+
+
+class _OuterTaskWithNestedBuild(gokart.TaskOnKart[str]):
+    """Loads its input in a thread it started while it runs a nested gokart.build."""
+
+    task_namespace = __name__
+
+    def requires(self):
+        return _OuterDependencyTask()
+
+    def output(self):
+        return self.make_target('outer.pkl', persist=False)
+
+    def run(self):
+        loaded: list[str] = []
+
+        def load_in_thread() -> None:
+            try:
+                assert _inner_build_running.wait(timeout=10)
+                loaded.append(self.load())
+            finally:
+                _outer_thread_loaded.set()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(load_in_thread)
+            inner = gokart.build(_InnerBuildTask(), reset_register=False)
+            future.result()
+        self.dump(f'{loaded[0]} / {inner}')
+
+
+class _OuterTaskDumpingInThread(_OuterTaskWithNestedBuild):
+    """Dumps its output in a thread it started while it runs a nested gokart.build."""
+
+    task_namespace = __name__
+
+    def run(self):
+        def dump_in_thread() -> None:
+            try:
+                assert _inner_build_running.wait(timeout=10)
+                self.dump(f'dumped during nested build from {self.load()}')
+            finally:
+                _outer_thread_loaded.set()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(dump_in_thread)
+            gokart.build(_InnerBuildTask(), reset_register=False)
+            future.result()
+
+
+class TestNestedBuild:
+    @pytest.fixture(autouse=True)
+    def _reset_events(self) -> None:
+        _inner_build_running.clear()
+        _outer_thread_loaded.clear()
+
+    def test_thread_started_by_outer_task_sees_outer_store_during_nested_build(self) -> None:
+        assert gokart.build(_OuterTaskWithNestedBuild(), reset_register=False) == 'outer dependency / inner'
+
+    def test_thread_started_by_outer_task_dumps_to_outer_store_during_nested_build(self) -> None:
+        assert gokart.build(_OuterTaskDumpingInThread(), reset_register=False) == 'dumped during nested build from outer dependency'

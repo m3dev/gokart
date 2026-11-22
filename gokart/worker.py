@@ -65,7 +65,7 @@ from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
 from gokart.conflict_prevention_lock.lock_config import LOCK_EXTEND_SECONDS
 from gokart.conflict_prevention_lock.run_lock import RunLock, RunLockHeartbeat, make_run_lock
-from gokart.in_memory.repository import InMemoryTargetError, acquire_repository
+from gokart.in_memory.repository import InMemoryCacheRepository, InMemoryTargetError, acquire_repository
 from gokart.in_memory.target import InMemoryTarget
 from gokart.parameter import ExplicitBoolParameter
 
@@ -777,7 +777,7 @@ class Worker:
             return []
         return [target for target in outputs if isinstance(target, InMemoryTarget)]
 
-    def _check_in_memory_target_support(self, task: Task) -> None:
+    def _check_in_memory_target_support(self, task: Task) -> InMemoryCacheRepository:
         if self.worker_processes > 1:
             reason = f'workers={self.worker_processes} runs tasks in separate processes'
         elif self._config.force_multiprocessing:
@@ -789,10 +789,9 @@ class Worker:
         else:
             try:
                 # WHY: the repository is created only for builds with in-memory outputs, so builds without them can run in other threads.
-                acquire_repository()
+                return acquire_repository()
             except InMemoryTargetError as e:
                 raise InMemoryTargetError(f'{task} has an InMemoryTarget output: {e}') from e
-            return
         # WHY: the in-memory store lives in this process, so data written in a child process would be silently lost.
         raise InMemoryTargetError(f'{task} has an InMemoryTarget output, but {reason}. InMemoryTarget supports only a single process.')
 
@@ -838,10 +837,11 @@ class Worker:
     def _add(self, task: Task, is_complete: bool) -> Generator[Task, None, None]:
         in_memory_targets = self._get_in_memory_targets(task)
         if in_memory_targets:
-            self._check_in_memory_target_support(task)
+            repository = self._check_in_memory_target_support(task)
             self._in_memory_targets[task.task_id] = in_memory_targets
             for target in in_memory_targets:
                 self._in_memory_key_holders[target.path()].add(task.task_id)
+                repository.register(target.path())
         if self._needs_in_memory_outputs_until_build_ends(task):
             self._release_in_memory_outputs_early = False
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:

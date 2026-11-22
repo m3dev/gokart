@@ -49,6 +49,23 @@ class EmptyDumpError(AssertionError):
     """Raised when the task attempts to dump an empty DataFrame even though it is prohibited (``fail_on_empty_dump`` is set to True)"""
 
 
+_DROPPED = object()
+
+
+def _drop_marked(items: Any) -> Any:
+    """Drop the _DROPPED items and the containers they leave empty, keeping the rest of the structure as is."""
+    # WHY: a container that was empty from the start is kept, so that the labels of tasks without in-memory inputs do not change.
+    if isinstance(items, dict):
+        pruned_dict = {key: value for key, value in ((key, _drop_marked(value)) for key, value in cast(dict[str, Any], items).items()) if value is not _DROPPED}
+        return _DROPPED if items and not pruned_dict else pruned_dict
+    if isinstance(items, list | tuple):
+        pruned = [value for value in map(_drop_marked, cast(list[Any] | tuple[Any, ...], items)) if value is not _DROPPED]
+        if items and not pruned:
+            return _DROPPED
+        return tuple(pruned) if isinstance(items, tuple) else pruned
+    return items
+
+
 def _event_handler(event: str) -> Callable[[_F], _F]:
     # luigi's event_handler decorator is untyped; declare it as signature-preserving
     return cast(Callable[[_F], _F], cast(Any, luigi.Task).event_handler(event))
@@ -233,9 +250,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @staticmethod
     def _check_modification_time(inputs: list[TargetOnKart], outputs: list[TargetOnKart]) -> bool:
-        common_path = set(t.path() for t in inputs) & set(t.path() for t in outputs)
-        input_tasks = [t for t in inputs if t.path() not in common_path]
-        output_tasks = [t for t in outputs if t.path() not in common_path]
+        # WHY: an in-memory key is built like a file path, so the path alone cannot tell a file from an in-memory output.
+        def identity(target: TargetOnKart) -> tuple[bool, str]:
+            return isinstance(target, InMemoryTarget), target.path()
+
+        common_targets = set(map(identity, inputs)) & set(map(identity, outputs))
+        input_tasks = [t for t in inputs if identity(t) not in common_targets]
+        output_tasks = [t for t in outputs if identity(t) not in common_targets]
 
         input_times = [target.last_modification_time() for target in input_tasks]
         output_times = [target.last_modification_time() for target in output_tasks]
@@ -438,16 +459,20 @@ class TaskOnKart(luigi.Task, Generic[T]):
             required_task_outputs=required_task_outputs,
         )
 
-    def _get_required_task_outputs(self) -> FlattenableItems[RequiredTaskOutput]:
-        return cast(
-            FlattenableItems[RequiredTaskOutput],
+    def _get_required_task_outputs(self) -> FlattenableItems[RequiredTaskOutput] | None:
+        # WHY: the key of an in-memory output looks like a file path (it may start with gs://), but nothing is stored there.
+        required_task_outputs = _drop_marked(
             map_flattenable_items(
                 lambda task: map_flattenable_items(
-                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()
+                    lambda output: _DROPPED
+                    if isinstance(output, InMemoryTarget)
+                    else RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()),
+                    task.output(),
                 ),
                 self.requires(),
-            ),
+            )
         )
+        return None if required_task_outputs is _DROPPED else required_task_outputs
 
     @staticmethod
     def get_code(target_class: Any) -> set[str]:
