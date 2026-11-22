@@ -7,13 +7,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-import pandas as pd
+from gokart._pandas import is_pandas_data_frame
 
 from .data import InMemoryData
 
 
 def _shallow_copy_data_frame(value: Any) -> Any:
-    if isinstance(value, pd.DataFrame):
+    if is_pandas_data_frame(value):
         # WHY: copying at both dump and load keeps changes made by the dumping task after dump, or by a loading task, from leaking
         # to other tasks, like a file output would. A shallow copy is cheap, and Copy-on-Write (always on since pandas 3) protects the values.
         # Other objects are stored and returned as is to avoid copying large data.

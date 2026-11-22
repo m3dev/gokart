@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import pandas as pd
-
+from gokart._pandas import import_pandas
 from gokart.target import make_target
 from gokart.task import TaskOnKart
 from gokart.tree.task_info_formatter import make_task_info_tree, make_tree_info, make_tree_info_table_list
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def make_task_info_as_tree_str(task: TaskOnKart[Any], details: bool = False, abbr: bool = True, ignore_task_names: list[str] | None = None) -> str:
@@ -49,6 +51,8 @@ def make_task_info_as_table(task: TaskOnKart[Any], ignore_task_names: list[str] 
         Formatted task dependency table.
     """
 
+    # WHY: checked before building the tree, which calls complete() and reads logs of every dependent task (possibly on remote storage), so a missing pandas fails fast.
+    pd = import_pandas()
     task_info = make_task_info_tree(task, ignore_task_names=ignore_task_names)
     task_info_table = pd.DataFrame(make_tree_info_table_list(task_info=task_info, visited_tasks=set()))
 

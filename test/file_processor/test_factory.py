@@ -40,7 +40,7 @@ class TestMakeFileProcessor(unittest.TestCase):
         self.assertIsInstance(processor, NdjsonFileProcessor)
 
     def test_make_file_processor_does_not_emit_future_warning(self):
-        # make_file_processor instantiates processors for every extension, so a deprecated default would warn on any extension.
+        # A deprecated default of a DataFrame processor would warn whenever a task makes a target for that extension.
         with warnings.catch_warnings():
             warnings.simplefilter('error', FutureWarning)
             make_file_processor('test.csv', store_index_in_feather=False)

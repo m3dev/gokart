@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from logging import getLogger
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import luigi
-import pandas as pd
 from luigi.task_register import Register
+
+from gokart._pandas import is_pandas_data_frame
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logger = getLogger(__name__)
 
@@ -48,5 +52,5 @@ class PandasTypeConfigMap(luigi.Config):
         }
 
     def check(self, obj: Any, task_namespace: str) -> None:
-        if isinstance(obj, pd.DataFrame) and task_namespace in self._map:
+        if is_pandas_data_frame(obj) and task_namespace in self._map:
             self._map[task_namespace].check(obj)

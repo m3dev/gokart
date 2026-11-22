@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import pandas as pd
+from gokart._pandas import import_pandas
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def assert_frame_contents_equal(actual: pd.DataFrame, expected: pd.DataFrame, **kwargs: Any) -> None:
@@ -19,6 +22,7 @@ def assert_frame_contents_equal(actual: pd.DataFrame, expected: pd.DataFrame, **
     - kwargs: Any
         Parameters passed to pandas.testing.assert_frame_equal.
     """
+    pd = import_pandas()
     assert isinstance(actual, pd.DataFrame), 'actual is not a DataFrame'
     assert isinstance(expected, pd.DataFrame), 'expected is not a DataFrame'
 

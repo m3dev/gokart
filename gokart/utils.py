@@ -7,7 +7,6 @@ from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, g
 
 import dill  # pyright: ignore[reportMissingTypeStubs]
 import luigi
-import pandas as pd
 
 
 class FileLike(Protocol):
@@ -91,7 +90,14 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> An
     """
     try:
         return cast(Any, dill).load(file)
-    except Exception:
+    except Exception as dill_error:
+        try:
+            import pandas as pd
+        except ModuleNotFoundError as e:
+            # Without pandas, the binary cannot be a pickle of an older pandas version, so the error of dill is the real cause.
+            if e.name != 'pandas':
+                raise
+            raise dill_error from None
         assert file.seekable(), f'{file} is not seekable.'
         file.seek(0)
         return pd.read_pickle(cast(Any, file))

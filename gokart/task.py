@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import importlib.metadata
 import inspect
 import os
 import random
@@ -15,12 +16,12 @@ from logging import getLogger
 from typing import Any, Generic, Self, TypeVar, cast, overload
 
 import luigi
-import pandas as pd
 from luigi.parameter import ParameterVisibility
 
 import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
+from gokart._pandas import is_pandas_data_frame
 from gokart.conflict_prevention_lock.lock_config import (
     check_object_storage_lock_settings,
     resolve_redis_lock_settings,
@@ -54,12 +55,13 @@ _DROPPED = object()
 
 
 def _is_empty_data_frame(obj: Any) -> bool:
-    if isinstance(obj, pd.DataFrame):
+    if is_pandas_data_frame(obj):
         return obj.empty
     # WHY: polars is an optional dependency, and a polars DataFrame can only exist once polars has been imported,
     # so looking it up in sys.modules is enough and needs no ImportError handling.
-    pl = sys.modules.get('polars')
-    return pl is not None and isinstance(obj, pl.DataFrame) and obj.is_empty()
+    # getattr: while another thread is importing polars, the module is in sys.modules before DataFrame is defined.
+    polars_data_frame = getattr(sys.modules.get('polars'), 'DataFrame', None)
+    return polars_data_frame is not None and isinstance(obj, polars_data_frame) and obj.is_empty()
 
 
 def _drop_marked(items: Any) -> Any:
@@ -712,7 +714,22 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _get_module_versions(self) -> str:
         module_versions: list[str] = []
         top_level_module_names = {v.__name__.split('.')[0] for v in globals().values() if isinstance(v, types.ModuleType)}
+        # WHY: pandas was always recorded while this module imported it. It is imported lazily now, so when it is not loaded yet, its version
+        # is read from the package metadata, which records it whenever pandas is installed, without importing it.
+        top_level_module_names.add('pandas')
         for x in sorted(name for name in top_level_module_names if '_' not in name):
+            if x == 'pandas':
+                # The loaded module comes first: it is the pandas the task actually uses, even when another pandas shadows the installed
+                # distribution (e.g. a source checkout on PYTHONPATH, or a vendored pandas without metadata), and it needs no sys.path scan.
+                pandas_version: str | None = getattr(sys.modules.get('pandas'), '__version__', None)
+                if pandas_version is None:
+                    try:
+                        pandas_version = importlib.metadata.version('pandas')
+                    except importlib.metadata.PackageNotFoundError:
+                        pass
+                if pandas_version is not None:
+                    module_versions.append(f'pandas=={pandas_version}')
+                continue
             module = import_module(x)
             if '__version__' in dir(module):
                 if isinstance(module.__version__, str):

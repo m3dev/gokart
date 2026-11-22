@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.metadata
 import os
 import pathlib
 import pickle
@@ -793,6 +794,33 @@ class TaskTest(unittest.TestCase):
 
     def test_get_module_versions_contains_imported_modules(self):
         module_versions = _DummyTask()._get_module_versions().split('\n')
+
+        self.assertIn(f'pandas=={pd.__version__}', module_versions)
+
+    def test_get_module_versions_records_loaded_pandas_without_distribution_metadata(self):
+        # e.g. a vendored pandas: it can be imported, but importlib.metadata does not know it.
+        def _version(name: str) -> str:
+            if name == 'pandas':
+                raise importlib.metadata.PackageNotFoundError(name)
+            return original_version(name)
+
+        original_version = importlib.metadata.version
+        with patch('importlib.metadata.version', side_effect=_version):
+            module_versions = _DummyTask()._get_module_versions().split('\n')
+
+        self.assertIn(f'pandas=={pd.__version__}', module_versions)
+
+    def test_get_module_versions_prefers_loaded_pandas_over_distribution_metadata(self):
+        # e.g. a pandas source checkout on PYTHONPATH shadows the installed distribution: the loaded one is what the task uses.
+        with patch('importlib.metadata.version', return_value='0.0.0-shadowed'):
+            module_versions = _DummyTask()._get_module_versions().split('\n')
+
+        self.assertIn(f'pandas=={pd.__version__}', module_versions)
+
+    def test_get_module_versions_records_pandas_without_importing_it(self):
+        # pandas is imported lazily, so it may not be imported yet when the module versions are dumped at the start of a task.
+        with patch.dict('sys.modules', {'pandas': None}):
+            module_versions = _DummyTask()._get_module_versions().split('\n')
 
         self.assertIn(f'pandas=={pd.__version__}', module_versions)
 
