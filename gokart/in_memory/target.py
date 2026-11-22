@@ -45,7 +45,8 @@ class InMemoryTarget(TargetOnKart):
         return self._repository(write=True).set_value(self._data_key, obj)
 
     def _remove(self) -> None:
-        self._repository(write=True).remove(self._data_key)
+        # WHY: remove() calls _exists() first, so look the key up in the same repository, not in the one a dump would go to.
+        self._repository().remove(self._data_key)
 
     def _last_modification_time(self) -> datetime:
         repository = self._repository()

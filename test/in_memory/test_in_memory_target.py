@@ -110,3 +110,18 @@ class TestInMemoryTargetOutsideBuild:
     def test_load_raises(self, target: InMemoryTarget) -> None:
         with pytest.raises(InMemoryTargetError, match='gokart.build'):
             target.load()
+
+
+class TestInMemoryTargetInThreadDuringNestedBuild:
+    def test_remove_from_repository_that_has_key(self) -> None:
+        # The nested build also outputs the key but has not dumped it yet, so exists() finds it in the outer build only.
+        target = make_in_memory_target(target_key='shared_key')
+        with in_memory_scope():
+            outer = acquire_repository()
+            outer.register('shared_key')
+            outer.set_value('shared_key', 'outer')
+            with in_memory_scope():
+                acquire_repository().register('shared_key')
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    executor.submit(target.remove).result()
+            assert not outer.has('shared_key')
