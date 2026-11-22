@@ -14,7 +14,6 @@ from logging import getLogger
 from typing import Any, cast
 
 import luigi
-import numpy as np
 import pandas as pd
 
 from gokart._gcs import GCSTarget, build_task_state_labels, needs_task_state_labels
@@ -260,11 +259,21 @@ class LargeDataFrameProcessor:
             df.to_pickle(os.path.join(dir_path, 'data_0.pkl'))
             return
 
-        # array_split yields empty chunks when split_size exceeds the row count, and idx[0] fails on them.
-        split_size = min(df.values.nbytes // self.max_byte + 1, df.shape[0])
+        # df.values would copy the whole frame just to read its size, and counts only pointers for object columns.
+        # deep=True is an upper bound for object columns (per-object header, shared objects counted once per cell),
+        # so chunks of object columns can end up well below max_byte. Erring on the small side is intended.
+        # Capping at the row count avoids empty chunks.
+        n_rows = df.shape[0]
+        total_bytes = int(df.memory_usage(index=False, deep=True).sum())
+        split_size = min(total_bytes // self.max_byte + 1, n_rows)
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
-        for i, idx in enumerate(cast(Any, np).array_split(range(df.shape[0]), split_size)):
-            df.iloc[idx[0] : idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
+        # Same boundaries as np.array_split: the first n_rows % split_size chunks get one extra row.
+        base, extra = divmod(n_rows, split_size)
+        start = 0
+        for i in range(split_size):
+            stop = start + base + (1 if i < extra else 0)
+            df.iloc[start:stop].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
+            start = stop
 
     @staticmethod
     def _chunk_paths(dir_path: str) -> list[tuple[int, str]]:
