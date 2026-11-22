@@ -7,7 +7,7 @@ import os
 import random
 import types
 import warnings
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, Sequence
 from datetime import UTC
 from importlib import import_module
 from logging import getLogger
@@ -262,9 +262,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return self._check_modification_time(inputs, outputs)
 
     @staticmethod
-    def _check_modification_time(inputs: list[TargetOnKart], outputs: list[TargetOnKart]) -> bool:
+    def _check_modification_time(inputs: Sequence[luigi.Target], outputs: Sequence[luigi.Target]) -> bool:
         # WHY: an in-memory key is built like a file path, so the path alone cannot tell a file from an in-memory output.
-        def identity(target: TargetOnKart) -> tuple[bool, str]:
+        def identity(target: luigi.Target) -> tuple[bool, str]:
             return gokart.target.is_persistent_target(target), gokart.target.target_path(target)
 
         common_targets = set(map(identity, inputs)) & set(map(identity, outputs))

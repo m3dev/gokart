@@ -291,7 +291,9 @@ def target_path(target: luigi.Target) -> str:
     """TargetOnKart.path() that also accepts plain luigi targets such as luigi.LocalTarget, whose path is an attribute."""
     if isinstance(target, TargetOnKart):
         return target.path()
-    return cast(str, cast(Any, target).path)
+    path = cast(Any, target).path
+    # WHY: a custom luigi target may mimic TargetOnKart and define path() as a method instead of an attribute.
+    return cast(str, path() if callable(path) else path)
 
 
 def target_last_modification_time(target: luigi.Target) -> datetime:

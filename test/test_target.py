@@ -570,6 +570,16 @@ class TestTargetPath:
         # luigi.LocalTarget has path as an attribute, while TargetOnKart has path() as a method.
         assert target_path(luigi.LocalTarget(str(tmp_path / 'plain.txt'))) == str(tmp_path / 'plain.txt')
 
+    def test_custom_luigi_target_with_path_method(self) -> None:
+        class _CustomTarget(luigi.Target):
+            def exists(self) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+                return True
+
+            def path(self) -> str:
+                return 'custom'
+
+        assert target_path(_CustomTarget()) == 'custom'
+
 
 class TestTargetLastModificationTime:
     def test_target_on_kart(self, tmp_path) -> None:
