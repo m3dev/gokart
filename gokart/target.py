@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import tempfile
+import warnings
 from abc import abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -244,7 +245,7 @@ class ModelTarget(TargetOnKart):
 _LARGE_DATA_FRAME_CHUNK_PATTERN = re.compile(r'data_(\d+)\.pkl')
 
 
-class LargeDataFrameProcessor:
+class _LargeDataFrameProcessor:
     def __init__(self, max_byte: int):
         # WHY: checked here, so that a missing pandas is reported when the target is created, not when a task dumps its output after run().
         import_pandas()
@@ -294,7 +295,31 @@ class LargeDataFrameProcessor:
     def load(file_path: str) -> pd.DataFrame:
         pd = import_pandas()
         dir_path = os.path.dirname(file_path)
-        return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in LargeDataFrameProcessor._chunk_paths(dir_path)]))
+        return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in _LargeDataFrameProcessor._chunk_paths(dir_path)]))
+
+
+class LargeDataFrameProcessor(_LargeDataFrameProcessor):
+    """Save a DataFrame as several pickle files, and load them back into one DataFrame.
+
+    .. warning::
+        ``LargeDataFrameProcessor`` is deprecated and will be removed in a future major release.
+        Dump the DataFrame to a single pickle file instead, e.g. with ``TaskOnKart.make_target('data.pkl')``.
+    """
+
+    _DEPRECATION_MESSAGE = (
+        'LargeDataFrameProcessor is deprecated and will be removed in a future major release. '
+        "Dump the DataFrame to a single pickle file instead, e.g. with TaskOnKart.make_target('data.pkl')."
+    )
+
+    def __init__(self, max_byte: int):
+        warnings.warn(self._DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
+        super().__init__(max_byte)
+
+    @staticmethod
+    def load(file_path: str) -> pd.DataFrame:
+        # WHY: load is a staticmethod, so code that only reads old outputs, e.g. load_function=LargeDataFrameProcessor.load, never runs __init__.
+        warnings.warn(LargeDataFrameProcessor._DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
+        return _LargeDataFrameProcessor.load(file_path)
 
 
 def is_persistent_target(target: luigi.Target) -> bool:

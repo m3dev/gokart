@@ -24,8 +24,8 @@ from gokart.file_processor import make_file_processor
 from gokart.in_memory import make_in_memory_target
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import (
-    LargeDataFrameProcessor,
     SingleFileTarget,
+    _LargeDataFrameProcessor,
     is_persistent_target,
     make_model_target,
     make_target,
@@ -294,7 +294,7 @@ class ModelTargetTest(unittest.TestCase):
         mock_build_task_state_labels.assert_not_called()
 
     def _make_large_data_frame_target(self, file_path: str, load_function=None):
-        processor = LargeDataFrameProcessor(max_byte=800)
+        processor = _LargeDataFrameProcessor(max_byte=800)
         return make_model_target(
             file_path=file_path,
             temporary_directory=self.temporary_directory,
@@ -304,7 +304,7 @@ class ModelTargetTest(unittest.TestCase):
 
     def _dump_large_data_frame_while(self, file_path: str, df: pd.DataFrame, callback) -> None:
         # Runs callback while the chunks of this dump are on disk, which reproduces both a concurrent dump and a dump that crashed before cleanup.
-        processor = LargeDataFrameProcessor(max_byte=800)
+        processor = _LargeDataFrameProcessor(max_byte=800)
 
         def save_function(obj, path):
             processor.save(obj, path)
@@ -355,7 +355,7 @@ class ModelTargetTest(unittest.TestCase):
 
         def load_function(path):
             another_target.load()
-            return LargeDataFrameProcessor.load(path)
+            return _LargeDataFrameProcessor.load(path)
 
         target = self._make_large_data_frame_target(file_path, load_function=load_function)
 

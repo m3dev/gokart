@@ -243,6 +243,24 @@ It is dumped and zipped with ``gensim.model.Word2Vec.save``.
 Please refer to :func:`~gokart.task.TaskOnKart.make_model_target`.
 
 
+TaskOnKart.make_large_data_frame_target
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning::
+   :func:`~gokart.task.TaskOnKart.make_large_data_frame_target` and ``gokart.target.LargeDataFrameProcessor`` are deprecated and will be removed in a future major release.
+
+They split a DataFrame into several pickle files and zip them. Use a single pickle file instead, which dumps and loads faster:
+
+.. code:: python
+
+    def output(self):
+        return self.make_target('data.pkl')
+
+Switching ``output()`` to a pickle file changes the output path, so the task runs once more and the existing zip is no longer used.
+Splitting only keeps the peak memory of dump lower. This still matters mainly for very large DataFrames with ``object`` dtype columns.
+See `#679 <https://github.com/m3dev/gokart/issues/679>`_ for the benchmark.
+
+
 TaskOnKart.fail_on_empty_dump
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
