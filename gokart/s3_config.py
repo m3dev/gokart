@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import os
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
 import luigi
 
+from gokart._optional_dependency import import_optional_dependency
 from gokart.conflict_prevention_lock.lock_config import LOCK_REQUEST_RETRY_DEADLINE_SECONDS, LOCK_REQUEST_TIMEOUT_SECONDS
 from gokart.process_cache import cached_per_process
 
@@ -14,6 +16,10 @@ if TYPE_CHECKING:
 
 _MIN_BOTOCORE_FOR_CONDITIONAL_WRITES = (1, 35, 69)
 _LOCK_CONNECT_TIMEOUT_SECONDS = 5
+
+
+def import_s3_dependency(module_name: str) -> ModuleType:
+    return import_optional_dependency(module_name, extra='s3', feature='S3')
 
 
 class S3Config(luigi.Config):
@@ -37,10 +43,7 @@ class S3Config(luigi.Config):
         return self._new_luigi_client()
 
     def _new_luigi_client(self, **extra: Any) -> luigi.contrib.s3.S3Client:
-        try:
-            import boto3  # noqa: F401  # pyright: ignore[reportUnusedImport]
-        except ImportError:
-            raise ImportError('S3 support requires additional dependencies. Install them with: pip install gokart[s3]') from None
+        import_s3_dependency('boto3')
         import luigi.contrib.s3
 
         return luigi.contrib.s3.S3Client(
@@ -76,7 +79,7 @@ class S3Config(luigi.Config):
 
 
 def _check_botocore_supports_conditional_writes() -> None:
-    import botocore
+    botocore = import_s3_dependency('botocore')
 
     version = tuple(int(part) for part in botocore.__version__.split('.')[:3] if part.isdigit())
     # Older botocore rejects IfMatch / IfNoneMatch on put_object and delete_object with ParamValidationError.
