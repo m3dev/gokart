@@ -7,7 +7,6 @@ from typing import Any
 import luigi
 import luigi.configuration
 import pytest
-from luigi.task_register import Register
 
 import gokart
 from gokart.conflict_prevention_lock import lock_config
@@ -21,16 +20,15 @@ class _Task(gokart.TaskOnKart[Any]):
 @pytest.fixture(autouse=True)
 def _reset_warning_flag() -> Iterator[None]:
     lock_config._object_storage_warning_emitted = False
-    Register.clear_instance_cache()
     yield
     lock_config._object_storage_warning_emitted = False
-    Register.clear_instance_cache()
 
 
 @pytest.fixture
 def set_url() -> Iterator[Callable[[str], None]]:
     config = luigi.configuration.get_config()
     config.add_section('gokart_lock')
+    # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
 
     def _set(url: str) -> None:
         config.set('gokart_lock', 'url', url)

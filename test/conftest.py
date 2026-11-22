@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from luigi.task_register import Register
 
 
 @pytest.fixture(autouse=True)
@@ -19,13 +20,12 @@ def _isolated_working_directory(tmp_path: Path) -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
-def _clear_s3_config_cache() -> Iterator[None]:
-    # A client cached on an S3Config by one test would otherwise make a later test skip the boto3 import, which depends on the test order.
-    from gokart.s3_config import S3Config
-
-    S3Config.clear_instance_cache()
+def _clear_luigi_instance_cache() -> Iterator[None]:
+    # luigi shares one instance cache across all Tasks and Configs, so an instance (and e.g. a client cached on an S3Config or GCSConfig)
+    # created by one test would otherwise leak into later tests and make them depend on the test order.
+    Register.clear_instance_cache()
     yield
-    S3Config.clear_instance_cache()
+    Register.clear_instance_cache()
 
 
 @pytest.fixture(scope='session')
@@ -45,16 +45,11 @@ def _gcs_emulator_host() -> Iterator[str]:
 
 
 @pytest.fixture
-def gcs_bucket(_gcs_emulator_host: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+def gcs_bucket(_gcs_emulator_host: str, monkeypatch: pytest.MonkeyPatch) -> str:
     """Point google-cloud-storage at an in-process GCS emulator and return the name of an empty bucket."""
     from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 
-    from gokart.gcs_config import GCSConfig
-
     monkeypatch.setenv('STORAGE_EMULATOR_HOST', _gcs_emulator_host)
-    # GCSConfig instances (and the clients cached on them) are shared through luigi's instance cache
-    GCSConfig.clear_instance_cache()
     bucket_name = f'test-{uuid.uuid4().hex}'
     storage.Client().create_bucket(bucket_name)
-    yield bucket_name
-    GCSConfig.clear_instance_cache()
+    return bucket_name
