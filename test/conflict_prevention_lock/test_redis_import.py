@@ -2,10 +2,14 @@ import subprocess
 import sys
 import textwrap
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
+from typing import cast
 
 import luigi
+import luigi.configuration
 import pytest
+from luigi.task_register import Register
 
 import gokart
 from gokart.conflict_prevention_lock.redis_import import import_redis
@@ -81,3 +85,30 @@ def test_task_without_both_redis_host_and_port_does_not_need_redis() -> None:
 def test_build_without_redis(tmp_path: Path) -> None:
     task = _LockConfiguredTask(random_id=uuid.uuid4().hex, workspace_directory=str(tmp_path))
     assert gokart.build(task, reset_register=False) == 'done'
+
+
+@pytest.fixture
+def redis_lock_url() -> Iterator[None]:
+    config = luigi.configuration.get_config()
+    existed = config.has_section('gokart_lock')
+    if not existed:
+        config.add_section('gokart_lock')
+    previous = cast(str | None, config.get('gokart_lock', 'url', fallback=None))
+    config.set('gokart_lock', 'url', 'redis://localhost:6379')
+    # gokart_lock() is a cached luigi.Config instance, so it would not see the new url
+    Register.clear_instance_cache()
+    yield
+    if not existed:
+        config.remove_section('gokart_lock')
+    elif previous is None:
+        config.remove_option('gokart_lock', 'url')
+    else:
+        config.set('gokart_lock', 'url', previous)
+    Register.clear_instance_cache()
+
+
+@pytest.mark.usefixtures('without_redis', 'redis_lock_url')
+@pytest.mark.parametrize('should_lock_run', [False, True])
+def test_task_with_redis_lock_url_raises_install_hint_at_construction(should_lock_run: bool) -> None:
+    with pytest.raises(ImportError, match=r'pip install gokart\[redis\]'):
+        _LockConfiguredTask(random_id=uuid.uuid4().hex, should_lock_run=should_lock_run)

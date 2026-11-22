@@ -570,7 +570,7 @@ class Worker:
                     # terminate() only sends SIGTERM. Releasing the run lock while the process is still writing output would let another worker run the task concurrently.
                     task.join(timeout=_RUN_LOCK_EXTEND_SECONDS)
                     if task.is_alive():
-                        logger.warning(f'Task process of {task_id} did not exit. Its run lock is left to expire after redis_timeout.')
+                        logger.warning(f'Task process of {task_id} did not exit. Its run lock is left to expire after the lock timeout.')
                         self._run_lock_heartbeat.remove(self._run_locks.pop(task_id))
         for task_id in list(self._run_locks):
             self._release_run_lock(task_id)
