@@ -63,6 +63,7 @@ from luigi.task import DynamicRequirements, Task, flatten  # pyright: ignore[rep
 from luigi.task_register import TaskClassException, load_task  # pyright: ignore[reportUnknownVariableType]
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
+from gokart.conflict_prevention_lock.lock_config import LOCK_EXTEND_SECONDS
 from gokart.conflict_prevention_lock.run_lock import RunLock, RunLockHeartbeat, make_run_lock
 from gokart.in_memory.repository import InMemoryTargetError, acquire_repository
 from gokart.in_memory.target import InMemoryTarget
@@ -100,7 +101,7 @@ def _trigger_event(task: Task, event: str, *args: Any) -> None:
     cast(Any, task).trigger_event(event, *args)
 
 
-_RUN_LOCK_EXTEND_SECONDS = 10
+_RUN_LOCK_EXTEND_SECONDS = LOCK_EXTEND_SECONDS
 _RUN_LOCK_MAX_RETRY_INTERVAL_SECONDS = 60.0
 
 
@@ -574,6 +575,8 @@ class Worker:
                         self._run_lock_heartbeat.remove(self._run_locks.pop(task_id))
         for task_id in list(self._run_locks):
             self._release_run_lock(task_id)
+        for waiter in self._run_lock_waiters.values():
+            waiter.lock.release()
         self._run_lock_heartbeat.stop()
         self._task_result_queue.close()
         return False  # Don't suppress exception
@@ -1053,23 +1056,27 @@ class Worker:
             return
 
         task = self._scheduled_tasks[task_id]
-        run_lock = make_run_lock(task)
-        if run_lock is not None:
-            try:
-                acquired = run_lock.try_acquire()
-            except Exception as ex:
-                self._fail_task_before_run(task_id, ex)
-                return
-            if not acquired:
-                logger.info(f'Run lock of {task_id} is held by another worker. Other tasks run first.')
-                self._run_lock_waiters[task_id] = self._next_run_lock_waiter(run_lock, retry_count=0)
-                return
+        run_lock = None
+        try:
+            run_lock = make_run_lock(task)
+            acquired = run_lock is None or run_lock.try_acquire()
+        except Exception as ex:
+            if run_lock is not None:
+                # release() only closes the client here, as nothing is held.
+                run_lock.release()
+            self._fail_task_before_run(task_id, ex)
+            return
+        if run_lock is not None and not acquired:
+            logger.info(f'Run lock of {task_id} is held by another worker. Other tasks run first.')
+            self._run_lock_waiters[task_id] = self._next_run_lock_waiter(run_lock, retry_count=0)
+            return
         self._start_task_process(task_id, run_lock)
 
     def _fail_task_before_run(self, task_id: str, ex: Exception) -> None:
-        # Report the failure like a failed run() so that a Redis outage fails only this task instead of crashing the whole worker loop.
+        # Report the failure like a failed run() so that a Redis outage or a run lock that cannot be created
+        # fails only this task instead of crashing the whole worker loop.
         task = self._scheduled_tasks[task_id]
-        logger.exception(f'Failed to take the run lock of {task_id}.')
+        logger.exception(f'Failed to create or take the run lock of {task_id}.')
         _trigger_event(task, Event.FAILURE, task, ex)
         expl = cast(str, cast(Any, task).on_failure(ex))
         self._email_task_failure(task, expl)
@@ -1127,6 +1134,7 @@ class Worker:
                 acquired = waiter.lock.try_acquire()
             except Exception as ex:
                 del self._run_lock_waiters[task_id]
+                waiter.lock.release()
                 self._fail_task_before_run(task_id, ex)
                 continue
             if acquired:

@@ -20,7 +20,13 @@ from luigi.parameter import ParameterVisibility
 import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
-from gokart.conflict_prevention_lock.lock_config import resolve_redis_lock_settings
+from gokart.conflict_prevention_lock.lock_config import (
+    check_object_storage_lock_settings,
+    resolve_redis_lock_settings,
+    uses_object_storage_lock,
+    warn_once_that_dump_locks_are_not_taken,
+)
+from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
@@ -151,11 +157,18 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         # Resolved once here and passed down, so that make_task_lock_params stays independent of the global config.
         self._lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
+        if self._lock_settings.host is not None and self._lock_settings.port is not None:
+            # Fail at construction rather than at dump() after a whole run() has been spent.
+            import_redis()
         if self.should_lock_run:
-            assert self._lock_settings.host is not None and self._lock_settings.port is not None, (
+            assert self._has_redis_lock() or uses_object_storage_lock(), (
                 'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section. '
                 'If `url` is set, a leftover redis_host or redis_port of the task overrides it; redis_host and redis_port are both required, or remove them.'
             )
+        if uses_object_storage_lock() and not self._has_redis_lock():
+            warn_once_that_dump_locks_are_not_taken()
+            if self.should_lock_run:
+                check_object_storage_lock_settings(self._lock_settings.timeout)
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)
@@ -286,6 +299,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
         )
 
+    def _has_redis_lock(self) -> bool:
+        return self._lock_settings.host is not None and self._lock_settings.port is not None
+
     def _make_task_lock_params(self, file_path: str, unique_id: str | None) -> TaskLockParams:
         settings = self._lock_settings
         return make_task_lock_params(
@@ -397,9 +413,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 raise EmptyDumpError()
 
         if self.should_lock_run and self._lock_at_dump:
+            fallback = 'Falling back to the dump lock.' if self._has_redis_lock() else 'No lock is taken, because the lock url points to object storage.'
             warnings.warn(
                 f'{self.get_task_family()} has should_lock_run=True, but it is not run by the gokart worker, so the run lock is not taken. '
-                'Falling back to the dump lock. Use gokart.build or gokart.run to take the run lock.',
+                f'{fallback} Use gokart.build or gokart.run to take the run lock.',
                 UserWarning,
                 stacklevel=2,
             )
