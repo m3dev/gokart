@@ -776,7 +776,7 @@ class TaskTest(unittest.TestCase):
     def test_should_lock_run_falls_back_to_dump_lock_without_gokart_worker(self):
         task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=fakeredis.FakeRedis):
+        with patch('redis.Redis', side_effect=fakeredis.FakeRedis):
             with self.assertWarnsRegex(UserWarning, 'should_lock_run'):
                 self.assertTrue(luigi.build([task], local_scheduler=True))
 
@@ -785,7 +785,7 @@ class TaskTest(unittest.TestCase):
     def test_should_lock_run_does_not_warn_with_gokart_worker(self):
         task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=fakeredis.FakeRedis):
+        with patch('redis.Redis', side_effect=fakeredis.FakeRedis):
             with warnings.catch_warnings():
                 warnings.filterwarnings('error', message='.*should_lock_run.*')
                 self.assertEqual(gokart.build(task, reset_register=False), 'hello')
