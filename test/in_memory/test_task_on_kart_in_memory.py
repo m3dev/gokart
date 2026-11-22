@@ -10,6 +10,7 @@ import gokart
 from gokart.file_processor import PickleFileProcessor
 from gokart.in_memory import InMemoryTarget, InMemoryTargetError
 from gokart.in_memory.repository import acquire_repository, in_memory_scope
+from gokart.required_task_output import RequiredTaskOutput
 
 
 class _DumpTask(gokart.TaskOnKart[str]):
@@ -197,10 +198,8 @@ class TestRequiredTaskOutputs:
     def test_in_memory_outputs_are_dropped(self, tmp_path: Path) -> None:
         file_task = _MixedOutputTask(workspace_directory=str(tmp_path))
         task = _FileJoinTask(tasks=[_DumpTask(param='a'), file_task], workspace_directory=str(tmp_path))
-        required = task._get_required_task_outputs()
-        assert isinstance(required, dict)
-        [file_output] = required['tasks']
-        assert file_output['file'].output_path == file_task.output()['file'].path()
+        expected = RequiredTaskOutput(task_name=file_task.get_task_family(), output_path=file_task.output()['file'].path())
+        assert task._get_required_task_outputs() == {'tasks': ({'file': expected},)}
 
     def test_only_in_memory_outputs_give_none(self, tmp_path: Path) -> None:
         task = _FileJoinTask(tasks=[_DumpTask(param='a')], workspace_directory=str(tmp_path))
