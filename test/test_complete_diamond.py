@@ -18,27 +18,31 @@ class _Node(TaskOnKart[str]):
         self.dump(self.name)
 
 
-def _build_diamond(workspace: Path, strict_check: bool, modification_time_check: bool, leaf_rerun: bool = False) -> tuple[_Node, _Node]:
-    def node(name: str, children: list[TaskOnKart[Any]], rerun: bool = False) -> _Node:
-        task = _Node(
-            name=name,
-            children=children,
-            workspace_directory=str(workspace),
-            strict_check=strict_check,
-            modification_time_check=modification_time_check,
-            rerun=rerun,
-        )
-        task.dump(name)
-        return task
-
-    leaf = node('leaf', [], rerun=leaf_rerun)
-    top = node('top', [node('left', [leaf]), node('right', [leaf])])
-    return top, leaf
+def _node(
+    workspace: Path, name: str, children: list[TaskOnKart[Any]], strict_check: bool = True, modification_time_check: bool = False, rerun: bool = False
+) -> _Node:
+    task = _Node(
+        name=name,
+        children=children,
+        workspace_directory=str(workspace),
+        strict_check=strict_check,
+        modification_time_check=modification_time_check,
+        rerun=rerun,
+    )
+    task.dump(name)
+    return task
 
 
 @pytest.mark.parametrize('strict_check,modification_time_check', [(True, False), (False, True)])
 def test_shared_dependency_is_checked_once_per_complete(tmp_path: Path, strict_check: bool, modification_time_check: bool) -> None:
-    top, leaf = _build_diamond(tmp_path, strict_check, modification_time_check)
+    leaf = _node(tmp_path, 'leaf', [], strict_check, modification_time_check)
+    top = _node(
+        tmp_path,
+        'top',
+        [_node(tmp_path, 'left', [leaf], strict_check, modification_time_check), _node(tmp_path, 'right', [leaf], strict_check, modification_time_check)],
+        strict_check,
+        modification_time_check,
+    )
     leaf_path = leaf.make_target().path()
     seen: list[str] = []
     original = SingleFileTarget.exists
@@ -55,7 +59,8 @@ def test_shared_dependency_is_checked_once_per_complete(tmp_path: Path, strict_c
 
 
 def test_memo_does_not_leak_between_complete_calls(tmp_path: Path) -> None:
-    top, leaf = _build_diamond(tmp_path, strict_check=True, modification_time_check=False)
+    leaf = _node(tmp_path, 'leaf', [])
+    top = _node(tmp_path, 'top', [_node(tmp_path, 'left', [leaf]), _node(tmp_path, 'right', [leaf])])
     assert top.complete()
 
     leaf.make_target().remove()
@@ -63,8 +68,30 @@ def test_memo_does_not_leak_between_complete_calls(tmp_path: Path) -> None:
     assert not top.complete()
 
 
-def test_rerun_state_of_shared_dependency_is_consumed_once(tmp_path: Path) -> None:
-    top, leaf = _build_diamond(tmp_path, strict_check=True, modification_time_check=False, leaf_rerun=True)
+def test_instances_with_same_task_id_but_different_rerun_are_checked_separately(tmp_path: Path) -> None:
+    leaf = _node(tmp_path, 'leaf', [])
+    rerun_leaf = _node(tmp_path, 'leaf', [], rerun=True)
+    assert leaf.task_id == rerun_leaf.task_id and leaf is not rerun_leaf
+    top = _node(tmp_path, 'top', [_node(tmp_path, 'left', [leaf]), _node(tmp_path, 'right', [rerun_leaf])])
 
     assert not top.complete()
-    assert not leaf._rerun_state
+    assert not rerun_leaf._rerun_state
+
+
+def test_instances_with_same_task_id_but_different_strict_check_are_checked_separately(tmp_path: Path) -> None:
+    missing_input = _node(tmp_path, 'missing', [])
+    missing_input.make_target().remove()
+    lenient = _node(tmp_path, 'leaf', [missing_input], strict_check=False)
+    strict = _node(tmp_path, 'leaf', [missing_input], strict_check=True)
+    assert lenient.task_id == strict.task_id and lenient is not strict
+    top = _node(tmp_path, 'top', [_node(tmp_path, 'left', [lenient]), _node(tmp_path, 'right', [strict])])
+
+    assert not top.complete()
+
+
+def test_instance_level_complete_override_of_requirement_is_respected(tmp_path: Path) -> None:
+    leaf = _node(tmp_path, 'leaf', [])
+    top = _node(tmp_path, 'top', [leaf])
+
+    with patch.object(leaf, 'complete', return_value=False):
+        assert not top.complete()

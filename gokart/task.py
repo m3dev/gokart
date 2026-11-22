@@ -249,16 +249,20 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def complete(self) -> bool:
         return self._complete_memoized({})
 
-    def _complete_memoized(self, memo: dict[str, bool]) -> bool:
+    def _complete_memoized(self, memo: dict[int, tuple[TaskOnKart[Any], bool]]) -> bool:
         # WHY: `memo` is scoped to one top-level `complete()` call. Without it, a diamond dependency
         # re-checks the shared task (and its remote `exists`) once per path. It is passed as an argument
         # rather than stored on the instance so that nothing stale survives across calls or pickling.
-        task_id = self.task_id
-        if task_id not in memo:
-            memo[task_id] = self._complete_uncached(memo)
-        return memo[task_id]
+        # It is keyed by instance, not `task_id`: `rerun` / `strict_check` / `modification_time_check` /
+        # `workspace_directory` are not significant, so distinct instances can share a `task_id` yet
+        # complete differently. The task is stored alongside so that its `id()` cannot be reused.
+        # luigi's instance cache returns one object per identical parameters, so diamonds are still deduplicated.
+        key = id(self)
+        if key not in memo:
+            memo[key] = (self, self._complete_uncached(memo))
+        return memo[key][1]
 
-    def _complete_uncached(self, memo: dict[str, bool]) -> bool:
+    def _complete_uncached(self, memo: dict[int, tuple[TaskOnKart[Any], bool]]) -> bool:
         outputs = flatten(self.output())
         if self._rerun_state:
             for target in outputs:
@@ -284,9 +288,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return self._check_modification_time(inputs, outputs)
 
     @staticmethod
-    def _complete_requirement(task: Any, memo: dict[str, bool]) -> bool:
-        # A subclass overriding `complete()` (or a plain luigi task) must keep its own logic.
-        if getattr(cast(Any, type(task)), 'complete', None) is cast(Any, TaskOnKart).complete:
+    def _complete_requirement(task: luigi.Task, memo: dict[int, tuple[TaskOnKart[Any], bool]]) -> bool:
+        # A requirement that overrides `complete()` (on its class or on the instance, or a plain luigi task) keeps its own logic.
+        # If it delegates to `super().complete()`, that starts a fresh memo, so diamonds below it are re-checked per path.
+        if isinstance(task, TaskOnKart) and getattr(task.complete, '__func__', None) is TaskOnKart[Any].complete:
             return task._complete_memoized(memo)
         return task.complete()
 
