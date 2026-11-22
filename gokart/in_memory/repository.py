@@ -24,6 +24,14 @@ def _shallow_copy_data_frame(value: Any) -> Any:
 class InMemoryCacheRepository:
     def __init__(self) -> None:
         self._cache: dict[str, InMemoryData] = {}
+        self._registered_keys: set[str] = set()
+
+    def register(self, key: str) -> None:
+        """Record that a task scheduled by the gokart.build owning this repository outputs `key`."""
+        self._registered_keys.add(key)
+
+    def is_registered(self, key: str) -> bool:
+        return key in self._registered_keys
 
     def get_value(self, key: str) -> Any:
         return _shallow_copy_data_frame(self._get_data(key).value)
@@ -67,14 +75,13 @@ class InMemoryTargetError(Exception):
 @dataclass
 class _BuildScope:
     repository: InMemoryCacheRepository | None = None
-    outer_repository: InMemoryCacheRepository | None = None
-    outer_owner: int | None = None
 
 
-# WHY: a module variable instead of a ContextVar, so that threads started in a task's run() see the same repository.
-# Only the thread that runs the gokart.build owning it may replace it (see acquire_repository).
-_current_repository: InMemoryCacheRepository | None = None
-_current_owner: int | None = None
+# WHY: module variables instead of a ContextVar, so that threads started in a task's run() see the repositories.
+# They hold the repositories of the running gokart.build calls, innermost last. Only one thread may own them at a time
+# (see acquire_repository), so with nested builds they all belong to the thread running the outermost one.
+_active_repositories: list[InMemoryCacheRepository] = []
+_active_owner: int | None = None
 _lock = threading.Lock()
 
 
@@ -90,17 +97,42 @@ _build_scopes = _BuildScopes()
 
 def get_current_repository() -> InMemoryCacheRepository | None:
     """Return the repository of the innermost gokart.build in this thread, or, in a thread without a build (e.g. one started in run()),
-    the repository of the build that owns it."""
+    the repository of the innermost running build."""
     stack = _build_scopes.stack
     if stack:
         return stack[-1].repository
-    return _current_repository
+    with _lock:
+        return _active_repositories[-1] if _active_repositories else None
+
+
+def find_repository(key: str, *, write: bool) -> InMemoryCacheRepository | None:
+    """Return the repository to access `key` in.
+
+    A thread running gokart.build uses its innermost build. A thread without a build (e.g. one started in run()) cannot tell which
+    build started it, which matters when run() calls gokart.build: it reads from the innermost repository that has the key and writes to
+    the innermost one whose build outputs the key, so that the outer and the inner builds do not see each other's outputs.
+    """
+    stack = _build_scopes.stack
+    if stack:
+        return stack[-1].repository
+    with _lock:
+        repositories = list(reversed(_active_repositories))
+    if not repositories:
+        return None
+    if not write:
+        for repository in repositories:
+            if repository.has(key):
+                return repository
+    for repository in repositories:
+        if repository.is_registered(key):
+            return repository
+    return repositories[0]
 
 
 @contextmanager
 def in_memory_scope() -> Generator[None]:
     """Mark the current thread as running a gokart.build. The repository is created by acquire_repository() and dropped on exit."""
-    global _current_repository, _current_owner
+    global _active_owner
     scope = _BuildScope()
     stack = _build_scopes.stack
     stack.append(scope)
@@ -110,16 +142,18 @@ def in_memory_scope() -> Generator[None]:
         stack.pop()
         if scope.repository is not None:
             with _lock:
-                _current_repository, _current_owner = scope.outer_repository, scope.outer_owner
+                _active_repositories.remove(scope.repository)
+                if not _active_repositories:
+                    _active_owner = None
 
 
 def acquire_repository() -> InMemoryCacheRepository:
     """Return the repository of the innermost gokart.build in the current thread, creating it on first use.
 
     The repository is created only when the build has an in-memory output, so that builds without one never touch the shared
-    repository and can run in other threads.
+    repositories and can run in other threads.
     """
-    global _current_repository, _current_owner
+    global _active_owner
     stack = _build_scopes.stack
     if not stack:
         raise InMemoryTargetError('InMemoryTarget can only be used inside gokart.build.')
@@ -127,12 +161,12 @@ def acquire_repository() -> InMemoryCacheRepository:
     if scope.repository is not None:
         return scope.repository
     with _lock:
-        if _current_repository is not None and _current_owner != threading.get_ident():
+        if _active_owner is not None and _active_owner != threading.get_ident():
             raise InMemoryTargetError(
                 'Another thread is running gokart.build with in-memory outputs. '
                 'Running gokart.build with in-memory outputs in multiple threads at the same time is not supported.'
             )
         scope.repository = InMemoryCacheRepository()
-        scope.outer_repository, scope.outer_owner = _current_repository, _current_owner
-        _current_repository, _current_owner = scope.repository, threading.get_ident()
+        _active_repositories.append(scope.repository)
+        _active_owner = threading.get_ident()
     return scope.repository
