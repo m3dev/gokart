@@ -138,3 +138,26 @@ root = "."
 [tool.pytest.ini_options]
 testpaths = ["test"]
 addopts = "-n auto -v"
+
+[tool.tox]
+env_list = ["py311", "py312", "py313", "py314", "ruff", "pyright"]
+
+[tool.tox.env_run_base]
+runner = "uv-venv-lock-runner"
+dependency_groups = ["test"]
+commands = [
+  ["{env_python}", "-m", "pytest", "--cov=gokart", "--cov-report=xml", "-vv", { replace = "posargs", extend = true }],
+  ["{env_python}", "-m", "coverage", "report", "--fail-under=80", "--show-missing"],
+]
+
+[tool.tox.env.ruff]
+dependency_groups = ["lint"]
+commands = [
+  ["ruff", "check", { replace = "posargs", extend = true }],
+  ["ruff", "format", "--check", { replace = "posargs", extend = true }],
+]
+
+[tool.tox.env.pyright]
+# test is needed to resolve imports in test/.
+dependency_groups = ["lint", "test"]
+commands = [["pyright", { replace = "posargs", extend = true }]]
