@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import luigi
 import luigi.format
@@ -15,23 +15,21 @@ from gokart.object_storage import ObjectStorage
 _CsvEncoding = Literal['utf8', 'utf8-lossy']
 _ParquetCompression = Literal['lz4', 'uncompressed', 'snappy', 'gzip', 'brotli', 'zstd']
 
-try:
-    import polars as pl
 
-    _has_polars = True
-except ImportError:
-    _has_polars = False
-
-if TYPE_CHECKING:
-    import polars as pl
+def _check_polars_installed() -> None:
+    # WHY: polars is imported only when a polars processor is used, so that import gokart does not pay for it. Checking here
+    # in __init__ still reports a missing polars when the target is created, not when a task dumps its output after run().
+    try:
+        import polars  # noqa: F401  # pyright: ignore[reportUnusedImport]
+    except ImportError as e:
+        raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars") from e
 
 
 class CsvFileProcessorPolars(FileProcessor):
     """CSV file processor for polars DataFrames."""
 
     def __init__(self, sep: str = ',', encoding: str = 'utf-8', lazy: bool = False) -> None:
-        if not _has_polars:
-            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
+        _check_polars_installed()
         self._sep = sep
         self._encoding = encoding
         self._lazy = lazy
@@ -41,6 +39,8 @@ class CsvFileProcessorPolars(FileProcessor):
         return TextFormat(encoding=self._encoding)
 
     def load(self, file: Any):
+        import polars as pl
+
         try:
             # scan_csv/read_csv only support 'utf8' and 'utf8-lossy'
             encoding: _CsvEncoding = 'utf8' if self._encoding in ('utf-8', 'utf8') else 'utf8-lossy'
@@ -55,6 +55,8 @@ class CsvFileProcessorPolars(FileProcessor):
             raise
 
     def dump(self, obj: Any, file: Any):
+        import polars as pl
+
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
@@ -66,8 +68,7 @@ class JsonFileProcessorPolars(FileProcessor):
     """JSON file processor for polars DataFrames."""
 
     def __init__(self, orient: str | None = None, lazy: bool = False):
-        if not _has_polars:
-            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
+        _check_polars_installed()
         self._orient = orient
         self._lazy = lazy
 
@@ -75,6 +76,8 @@ class JsonFileProcessorPolars(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import polars as pl
+
         try:
             if self._orient == 'records':
                 if self._lazy:
@@ -91,6 +94,8 @@ class JsonFileProcessorPolars(FileProcessor):
             raise
 
     def dump(self, obj: Any, file: Any):
+        import polars as pl
+
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
@@ -105,14 +110,15 @@ class NdjsonFileProcessorPolars(FileProcessor):
     """Newline-delimited JSON file processor for polars DataFrames."""
 
     def __init__(self, lazy: bool = False):
-        if not _has_polars:
-            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
+        _check_polars_installed()
         self._lazy = lazy
 
     def format(self):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import polars as pl
+
         data = file.read()
         # polars cannot infer a schema from an empty NDJSON file, and scan_ndjson only raises that error at collect(),
         # so emptiness has to be checked up front instead of catching the exception.
@@ -122,6 +128,8 @@ class NdjsonFileProcessorPolars(FileProcessor):
         return pl.scan_ndjson(source) if self._lazy else pl.read_ndjson(source)
 
     def dump(self, obj: Any, file: Any):
+        import polars as pl
+
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
@@ -133,8 +141,7 @@ class ParquetFileProcessorPolars(FileProcessor):
     """Parquet file processor for polars DataFrames."""
 
     def __init__(self, engine: str = 'pyarrow', compression: _ParquetCompression | None = None, lazy: bool = False) -> None:
-        if not _has_polars:
-            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
+        _check_polars_installed()
         self._engine = engine  # Ignored for polars
         self._compression: _ParquetCompression | None = compression
         self._lazy = lazy
@@ -144,6 +151,8 @@ class ParquetFileProcessorPolars(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import polars as pl
+
         # polars.read_parquet can handle file paths or file-like objects
         if ObjectStorage.is_buffered_reader(file):
             if self._lazy:
@@ -157,6 +166,8 @@ class ParquetFileProcessorPolars(FileProcessor):
             return pl.read_parquet(data)
 
     def dump(self, obj: Any, file: Any):
+        import polars as pl
+
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
@@ -169,8 +180,7 @@ class FeatherFileProcessorPolars(FileProcessor):
     """Feather file processor for polars DataFrames."""
 
     def __init__(self, store_index_in_feather: bool, lazy: bool = False):
-        if not _has_polars:
-            raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars")
+        _check_polars_installed()
         super().__init__()
         self._store_index_in_feather = store_index_in_feather  # Ignored for polars
         self._lazy = lazy
@@ -179,6 +189,8 @@ class FeatherFileProcessorPolars(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import polars as pl
+
         # polars uses read_ipc for feather format
         if ObjectStorage.is_buffered_reader(file):
             if self._lazy:
@@ -192,6 +204,8 @@ class FeatherFileProcessorPolars(FileProcessor):
             return pl.read_ipc(data)
 
     def dump(self, obj: Any, file: Any):
+        import polars as pl
+
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
