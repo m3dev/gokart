@@ -2,12 +2,8 @@ from __future__ import annotations
 
 from types import ModuleType
 
-_MISSING_REDIS_EXTRA_MESSAGE = 'Redis lock support requires additional dependencies. Install them with: pip install gokart[redis]'
+from gokart._optional_dependency import import_optional_dependency
 
 
 def import_redis() -> ModuleType:
-    try:
-        import redis
-    except ImportError:
-        raise ImportError(_MISSING_REDIS_EXTRA_MESSAGE) from None
-    return redis
+    return import_optional_dependency('redis', extra='redis', feature='Redis lock')

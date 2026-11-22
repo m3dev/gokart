@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import pickle
 import tempfile
 import unittest
 import warnings
@@ -603,6 +604,41 @@ class TaskTest(unittest.TestCase):
         task = _DummyTask(fail_on_empty_dump=True)
         self.assertRaises(EmptyDumpError, lambda: task.dump(pd.DataFrame()))
 
+    def test_fail_on_empty_dump_with_polars(self):
+        try:
+            import polars as pl
+        except ImportError:
+            self.skipTest('polars not installed')
+
+        for empty in [pl.DataFrame(), pl.DataFrame({'a': []})]:
+            with self.subTest(empty=empty):
+                task = _DummyTask(fail_on_empty_dump=False)
+                target = Mock(spec=TargetOnKart)
+                target.path.return_value = 'dummy.pkl'
+                task.output = Mock(return_value=target)
+                task.dump(empty)
+                target.dump.assert_called_once()
+
+                with self.assertRaises(EmptyDumpError):
+                    _DummyTask(fail_on_empty_dump=True).dump(empty)
+
+        task = _DummyTask(fail_on_empty_dump=True)
+        target = Mock(spec=TargetOnKart)
+        target.path.return_value = 'dummy.pkl'
+        task.output = Mock(return_value=target)
+        task.dump(pl.DataFrame({'a': [1]}))
+        target.dump.assert_called_once()
+
+    def test_fail_on_empty_dump_does_not_need_polars(self):
+        # polars is an optional dependency, so checking for an empty DataFrame must work when it is not installed.
+        task = _DummyTask(fail_on_empty_dump=True)
+        target = Mock(spec=TargetOnKart)
+        target.path.return_value = 'dummy.pkl'
+        task.output = Mock(return_value=target)
+        with patch.dict('sys.modules', {'polars': None}):
+            task.dump(1)
+        target.dump.assert_called_once()
+
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: Mock) -> None:
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
@@ -735,6 +771,16 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(t1.to_str_params(), _DummyTaskWithParams(param='a').to_str_params())  # same value
         self.assertNotEqual(t1.to_str_params(), _DummyTaskWithParams(param='b').to_str_params())  # different value
         self.assertNotEqual(t1.to_str_params(), t1.to_str_params(only_significant=True))
+
+    def test_pickle_round_trip(self):
+        # WHY: parallel_scheduling sends tasks to a multiprocessing.Pool, which pickles them.
+        task = _DummyTask(param=2)
+        task.to_str_params()
+
+        restored = pickle.loads(pickle.dumps(task))
+
+        self.assertEqual(restored, task)
+        self.assertEqual(restored.to_str_params(), task.to_str_params())
 
     def test_get_task_params_reads_dumped_task_params(self):
         with tempfile.TemporaryDirectory() as tmpdir:

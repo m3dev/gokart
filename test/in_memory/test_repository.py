@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from gokart.in_memory import InMemoryCacheRepository as Repo
-from gokart.in_memory.repository import InMemoryTargetError, acquire_repository, get_current_repository, in_memory_scope
+from gokart.in_memory.repository import InMemoryTargetError, acquire_repository, find_repository, get_current_repository, in_memory_scope
 
 dummy_num = 100
 
@@ -100,6 +100,35 @@ class TestInMemoryScope:
             repo = acquire_repository()
             with ThreadPoolExecutor(max_workers=1) as executor:
                 assert executor.submit(get_current_repository).result() is repo
+
+    def test_thread_outside_any_build_finds_repository_by_key_in_nested_scopes(self) -> None:
+        with in_memory_scope():
+            outer = acquire_repository()
+            outer.register('outer_key')
+            outer.register('shared_key')
+            outer.set_value('outer_key', 'outer')
+            outer.set_value('shared_key', 'outer')
+            with in_memory_scope():
+                inner = acquire_repository()
+                inner.register('inner_key')
+                inner.register('shared_key')
+                with ThreadPoolExecutor(max_workers=1) as executor:
+
+                    def find(key: str, write: bool) -> object:
+                        return executor.submit(find_repository, key, write=write).result()
+
+                    # Reads go to the innermost repository that has the key, writes to the innermost one that registered it.
+                    assert find('outer_key', write=False) is outer
+                    assert find('shared_key', write=False) is outer
+                    assert find('outer_key', write=True) is outer
+                    assert find('inner_key', write=True) is inner
+                    assert find('shared_key', write=True) is inner
+                    assert find('unknown_key', write=False) is inner
+                # The thread running the builds always uses its innermost build.
+                assert find_repository('outer_key', write=False) is inner
+
+    def test_find_repository_outside_any_build(self) -> None:
+        assert find_repository('dummy_key', write=False) is None
 
     def test_scope_in_another_thread_does_not_replace_repository(self) -> None:
         def build_without_in_memory_target() -> None:

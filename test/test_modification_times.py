@@ -144,3 +144,17 @@ def test_mixed_timestamps_during_daylight_saving_fold(local_timezone) -> None:
     assert earlier.last_modification_time().hour == later.last_modification_time().hour == 1
     assert TaskOnKart._check_modification_time([earlier], [_target('remote-after', after_fold)])
     assert not TaskOnKart._check_modification_time([later], [_target('remote-before', before_fold)])
+
+
+def test_in_memory_target_with_same_path_as_file_is_not_common(tmp_path: Path) -> None:
+    # The key of an in-memory output is built like a file path, so it can equal the path of a file it does not share data with.
+    path = str(tmp_path / 'same.pkl')
+    file = make_target(path)
+    memory = make_in_memory_target(path)
+    with in_memory_scope():
+        acquire_repository()
+        with patch('gokart.in_memory.data.datetime') as clock:
+            clock.now.return_value = datetime(2020, 1, 1)
+            memory.dump('output')
+        file.dump('newer input')
+        assert not TaskOnKart._check_modification_time([file], [memory])

@@ -5,9 +5,10 @@ import hashlib
 import inspect
 import os
 import random
+import sys
 import types
 import warnings
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, Sequence
 from datetime import UTC
 from importlib import import_module
 from logging import getLogger
@@ -29,7 +30,7 @@ from gokart.conflict_prevention_lock.lock_config import (
 from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
+from gokart.in_memory.target import make_in_memory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
@@ -47,6 +48,32 @@ K = TypeVar('K')
 # NOTE: inherited from AssertionError for backward compatibility (Formerly, Gokart raises that exception when a task dumps an empty DataFrame).
 class EmptyDumpError(AssertionError):
     """Raised when the task attempts to dump an empty DataFrame even though it is prohibited (``fail_on_empty_dump`` is set to True)"""
+
+
+_DROPPED = object()
+
+
+def _is_empty_data_frame(obj: Any) -> bool:
+    if isinstance(obj, pd.DataFrame):
+        return obj.empty
+    # WHY: polars is an optional dependency, and a polars DataFrame can only exist once polars has been imported,
+    # so looking it up in sys.modules is enough and needs no ImportError handling.
+    pl = sys.modules.get('polars')
+    return pl is not None and isinstance(obj, pl.DataFrame) and obj.is_empty()
+
+
+def _drop_marked(items: Any) -> Any:
+    """Drop the _DROPPED items and the containers they leave empty, keeping the rest of the structure as is."""
+    # WHY: a container that was empty from the start is kept, so that the labels of tasks without in-memory inputs do not change.
+    if isinstance(items, dict):
+        pruned_dict = {key: value for key, value in ((key, _drop_marked(value)) for key, value in cast(dict[str, Any], items).items()) if value is not _DROPPED}
+        return _DROPPED if items and not pruned_dict else pruned_dict
+    if isinstance(items, list | tuple):
+        pruned = [value for value in map(_drop_marked, cast(list[Any] | tuple[Any, ...], items)) if value is not _DROPPED]
+        if items and not pruned:
+            return _DROPPED
+        return tuple(pruned) if isinstance(items, tuple) else pruned
+    return items
 
 
 def _event_handler(event: str) -> Callable[[_F], _F]:
@@ -153,7 +180,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # Cache to_str_params to avoid slow task creation in a deep task tree.
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
-        self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
+        self._cache_to_str_params()
 
         # Resolved once here and passed down, so that make_task_lock_params stays independent of the global config.
         self._lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
@@ -169,6 +196,19 @@ class TaskOnKart(luigi.Task, Generic[T]):
             warn_once_that_dump_locks_are_not_taken()
             if self.should_lock_run:
                 check_object_storage_lock_settings(self._lock_settings.timeout)
+
+    def _cache_to_str_params(self) -> None:
+        self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
+
+    # The cached to_str_params cannot be pickled, but parallel_scheduling pickles tasks to check complete() in a multiprocessing.Pool.
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        state.pop('to_str_params', None)
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        vars(self).update(state)
+        self._cache_to_str_params()
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)
@@ -232,13 +272,17 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return self._check_modification_time(inputs, outputs)
 
     @staticmethod
-    def _check_modification_time(inputs: list[TargetOnKart], outputs: list[TargetOnKart]) -> bool:
-        common_path = set(t.path() for t in inputs) & set(t.path() for t in outputs)
-        input_tasks = [t for t in inputs if t.path() not in common_path]
-        output_tasks = [t for t in outputs if t.path() not in common_path]
+    def _check_modification_time(inputs: Sequence[luigi.Target], outputs: Sequence[luigi.Target]) -> bool:
+        # WHY: an in-memory key is built like a file path, so the path alone cannot tell a file from an in-memory output.
+        def identity(target: luigi.Target) -> tuple[bool, str]:
+            return gokart.target.is_persistent_target(target), gokart.target.target_path(target)
 
-        input_times = [target.last_modification_time() for target in input_tasks]
-        output_times = [target.last_modification_time() for target in output_tasks]
+        common_targets = set(map(identity, inputs)) & set(map(identity, outputs))
+        input_tasks = [t for t in inputs if identity(t) not in common_targets]
+        output_tasks = [t for t in outputs if identity(t) not in common_targets]
+
+        input_times = [gokart.target.target_last_modification_time(target) for target in input_tasks]
+        output_times = [gokart.target.target_last_modification_time(target) for target in output_tasks]
         timestamps = input_times + output_times
         if any(t.utcoffset() is None for t in timestamps) and any(t.utcoffset() is not None for t in timestamps):
             # Naive timestamps from local and custom targets represent system-local time.
@@ -409,7 +453,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def dump(self, obj: Any, target: None | str | TargetOnKart = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump:
-            if isinstance(obj, pd.DataFrame) and obj.empty:
+            if _is_empty_data_frame(obj):
                 raise EmptyDumpError()
 
         if self.should_lock_run and self._lock_at_dump:
@@ -426,7 +470,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # and computing them (output() rebuilds, serialize) is costly.
         task_params: dict[str, str] | None = None
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None
-        if not isinstance(output_target, InMemoryTarget) and needs_task_state_labels(output_target.path()):
+        if output_target.is_persistent() and needs_task_state_labels(output_target.path()):
             task_params = cast(dict[str, str], super().to_str_params(only_significant=True, only_public=True))
             required_task_outputs = self._get_required_task_outputs()
 
@@ -438,16 +482,20 @@ class TaskOnKart(luigi.Task, Generic[T]):
             required_task_outputs=required_task_outputs,
         )
 
-    def _get_required_task_outputs(self) -> FlattenableItems[RequiredTaskOutput]:
-        return cast(
-            FlattenableItems[RequiredTaskOutput],
+    def _get_required_task_outputs(self) -> FlattenableItems[RequiredTaskOutput] | None:
+        # WHY: the key of an in-memory output looks like a file path (it may start with gs://), but nothing is stored there.
+        required_task_outputs = _drop_marked(
             map_flattenable_items(
                 lambda task: map_flattenable_items(
-                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()), task.output()
+                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=gokart.target.target_path(output))
+                    if gokart.target.is_persistent_target(output)
+                    else _DROPPED,
+                    task.output(),
                 ),
                 self.requires(),
-            ),
+            )
         )
+        return None if required_task_outputs is _DROPPED else required_task_outputs
 
     @staticmethod
     def get_code(target_class: Any) -> set[str]:
@@ -528,7 +576,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _has_only_in_memory_outputs(self) -> bool:
         if self._has_only_in_memory_outputs_cache is None:
             outputs = flatten(self.output())
-            self._has_only_in_memory_outputs_cache = bool(outputs) and all(isinstance(target, InMemoryTarget) for target in outputs)
+            self._has_only_in_memory_outputs_cache = bool(outputs) and not any(map(gokart.target.is_persistent_target, outputs))
         return self._has_only_in_memory_outputs_cache
 
     def _should_dump_supplementary_log_files(self) -> bool:
@@ -548,7 +596,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @_event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
-        self.task_log['file_path'] = [target.path() for target in flatten(self.output())]
+        self.task_log['file_path'] = [gokart.target.target_path(target) for target in flatten(self.output())]
         if self._should_dump_supplementary_log_files():
             self.dump(self.task_log, self._get_task_log_target())
 

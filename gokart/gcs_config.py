@@ -4,9 +4,12 @@ import json
 import os
 import warnings
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import luigi
+
+from gokart._optional_dependency import import_optional_dependency
+from gokart.process_cache import cached_per_process
 
 if TYPE_CHECKING:
     import luigi.contrib.gcs
@@ -14,15 +17,12 @@ if TYPE_CHECKING:
     from google.oauth2.service_account import Credentials
 
 
-_MISSING_GCS_EXTRA_MESSAGE = 'GCS support requires additional dependencies. Install them with: pip install gokart[gcs]'
-
-
 def import_storage() -> ModuleType:
-    try:
-        from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
-    except ImportError:
-        raise ImportError(_MISSING_GCS_EXTRA_MESSAGE) from None
-    return storage
+    return _import_gcs_dependency('google.cloud.storage')
+
+
+def _import_gcs_dependency(module_name: str) -> ModuleType:
+    return import_optional_dependency(module_name, extra='gcs', feature='GCS')
 
 
 class GCSConfig(luigi.Config):
@@ -31,11 +31,8 @@ class GCSConfig(luigi.Config):
     _storage_client: tuple[int, storage.Client] | None = None
 
     def get_storage_client(self) -> storage.Client:
-        # requests.Session inside the client is not fork-safe, so each process (e.g. worker_processes > 1) builds its own.
-        # No lock on purpose: threads racing on the first call may each build a client, which is harmless since the last write wins.
-        pid = os.getpid()
-        if self._storage_client is None or self._storage_client[0] != pid:
-            self._storage_client = (pid, self._create_storage_client())
+        # requests.Session inside the client is not fork-safe
+        self._storage_client = cached_per_process(self._storage_client, self._create_storage_client)
         return self._storage_client[1]
 
     def create_storage_client(self) -> storage.Client:
@@ -59,25 +56,19 @@ class GCSConfig(luigi.Config):
         return self._client
 
     def _get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
-        try:
-            import googleapiclient  # noqa: F401  # pyright: ignore[reportUnusedImport]
-        except ImportError:
-            raise ImportError(_MISSING_GCS_EXTRA_MESSAGE) from None
+        _import_gcs_dependency('googleapiclient')
         import luigi.contrib.gcs
 
         return luigi.contrib.gcs.GCSClient(oauth_credentials=self._load_oauth_credentials())
 
     def _load_oauth_credentials(self) -> Credentials | None:
-        try:
-            from google.oauth2.service_account import Credentials
-        except ImportError:
-            raise ImportError(_MISSING_GCS_EXTRA_MESSAGE) from None
+        service_account = _import_gcs_dependency('google.oauth2.service_account')
 
         json_str = os.environ.get(self.gcs_credential_name)
         if not json_str:
             return None
 
         if os.path.isfile(json_str):
-            return cast(Any, Credentials).from_service_account_file(json_str)
+            return service_account.Credentials.from_service_account_file(json_str)
 
-        return cast(Any, Credentials).from_service_account_info(json.loads(json_str))
+        return service_account.Credentials.from_service_account_info(json.loads(json_str))
