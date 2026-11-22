@@ -19,9 +19,6 @@ class _DummyTask(TaskOnKart[Any]):
 
 
 class ListTaskInstanceParameterTest(unittest.TestCase):
-    def setUp(self):
-        _DummyTask.clear_instance_cache()
-
     def test_serialize_and_parse(self):
         original = [_DummyTask(param=3), _DummyTask(param=3)]
         s = gokart.ListTaskInstanceParameter().serialize(original)

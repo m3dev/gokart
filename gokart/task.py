@@ -247,6 +247,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 kwargs[key] = class_variables[key].parse(value)
 
     def complete(self) -> bool:
+        return self._complete_uncached({})
+
+    def _complete_uncached(self, memo: dict[int, tuple[TaskOnKart[Any], bool]]) -> bool:
         outputs = flatten(self.output())
         if self._rerun_state:
             for target in outputs:
@@ -263,13 +266,40 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         raw_inputs = self.input()
         inputs = flatten(raw_inputs)
-        if not all(task.complete() for task in flatten(self.requires())) or not all(i.exists() for i in inputs):
+        # WHY: a plain loop rather than `all(<genexpr>)` keeps this at two Python frames per dependency level
+        # (`_complete_uncached` -> `_complete_requirement`), so the recursion depth `complete()` can handle on a
+        # long chain of requirements does not shrink.
+        for requirement in flatten(self.requires()):
+            if not self._complete_requirement(requirement, memo):
+                return False
+        if not all(i.exists() for i in inputs):
             return False
 
         if not self.modification_time_check or not raw_inputs:
             return True
 
         return self._check_modification_time(inputs, outputs)
+
+    @staticmethod
+    def _complete_requirement(task: luigi.Task, memo: dict[int, tuple[TaskOnKart[Any], bool]]) -> bool:
+        # WHY: `memo` is scoped to one top-level `complete()` call. Without it, a diamond dependency
+        # re-checks the shared task (and its remote `exists`) once per path. It is passed as an argument
+        # rather than stored on the instance so that nothing stale survives across calls or pickling.
+        # It is keyed by instance, not `task_id`: `rerun` / `strict_check` / `modification_time_check` /
+        # `workspace_directory` are not significant, so distinct instances can share a `task_id` yet
+        # complete differently. The task is stored alongside so that its `id()` cannot be reused.
+        # luigi's instance cache returns one object per identical parameters, so diamonds are still deduplicated.
+        #
+        # A requirement that overrides `complete()` (on its class or on the instance, or a plain luigi task) keeps its own logic.
+        # If it delegates to `super().complete()`, that starts a fresh memo, so diamonds below it are re-checked per path,
+        # and each such level is one frame deeper than master, which lowers the longest chain `complete()` can handle.
+        if isinstance(task, TaskOnKart) and getattr(task.complete, '__func__', None) is _TASK_ON_KART_COMPLETE:
+            requirement = cast(TaskOnKart[Any], task)
+            key = id(requirement)
+            if key not in memo:
+                memo[key] = (requirement, requirement._complete_uncached(memo))
+            return memo[key][1]
+        return task.complete()
 
     @staticmethod
     def _check_modification_time(inputs: Sequence[luigi.Target], outputs: Sequence[luigi.Target]) -> bool:
@@ -731,3 +761,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if isinstance(param_obj, ListTaskInstanceParameter):
             return f'[{", ".join(f"{v.get_task_family()}({v.make_unique_id()})" for v in param_value)}]'
         return str(cast(Any, param_obj).serialize(param_value))
+
+
+# WHY: captured once so that `_complete_requirement` can tell the original `complete` from a wrapper installed on the class later.
+_TASK_ON_KART_COMPLETE: Any = cast(Any, TaskOnKart).complete

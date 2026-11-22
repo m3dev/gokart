@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import luigi
 import luigi.configuration
-import luigi.task_register
 import pytest
 
 import gokart
@@ -33,14 +32,6 @@ def _save_text(obj: Any, path: str) -> None:
 def _load_text(path: str) -> Any:
     with open(path) as f:
         return f.read()
-
-
-@pytest.fixture(autouse=True)
-def _clear_task_instance_cache() -> Iterator[None]:
-    # luigi returns a cached instance for equal parameters, which would skip __init__ and its checks
-    luigi.task_register.Register.clear_instance_cache()
-    yield
-    luigi.task_register.Register.clear_instance_cache()
 
 
 @pytest.fixture

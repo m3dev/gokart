@@ -35,9 +35,6 @@ class _DummyListTask(TaskOnKart[Any]):
 
 
 class TaskInstanceParameterTest(unittest.TestCase):
-    def setUp(self):
-        _DummyTask.clear_instance_cache()
-
     def test_serialize_and_parse(self):
         original = _DummyTask(param=2)
         s = gokart.TaskInstanceParameter().serialize(original)
@@ -71,9 +68,6 @@ class TaskInstanceParameterTest(unittest.TestCase):
 
 
 class ListTaskInstanceParameterTest(unittest.TestCase):
-    def setUp(self):
-        _DummyTask.clear_instance_cache()
-
     def test_invalid_class(self):
         self.assertRaises(TypeError, lambda: gokart.ListTaskInstanceParameter(expected_elements_type=1))  # pyright: ignore[reportArgumentType]  # not type instance
 
