@@ -59,7 +59,6 @@ class TestS3ExtrasNotInstalled:
         from gokart.s3_config import S3Config
 
         config = S3Config()
-        config._client = None
 
         block_modules('boto3')
         with pytest.raises(ImportError, match=r'pip install gokart\[s3\]'):
@@ -112,7 +111,6 @@ class TestGCSExtrasNotInstalled:
         from gokart.gcs_config import GCSConfig
 
         config = GCSConfig()
-        config._client = None
 
         block_modules('googleapiclient')
         with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
@@ -130,13 +128,9 @@ class TestGCSExtrasNotInstalled:
     def test_gcs_config_get_storage_client_raises_without_gcs_lib(self, block_modules: BlockModules):
         from gokart.gcs_config import GCSConfig
 
-        GCSConfig.clear_instance_cache()
-        try:
-            block_modules('google.cloud.storage')
-            with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                GCSConfig().get_storage_client()
-        finally:
-            GCSConfig.clear_instance_cache()
+        block_modules('google.cloud.storage')
+        with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
+            GCSConfig().get_storage_client()
 
     def test_object_storage_exists_raises_for_gcs_without_extras(self, block_modules: BlockModules):
         from gokart.object_storage import ObjectStorage
@@ -182,11 +176,7 @@ def _get_s3_target() -> object:
 def _get_gcs_storage_client() -> object:
     from gokart.gcs_config import GCSConfig
 
-    GCSConfig.clear_instance_cache()
-    try:
-        return GCSConfig().get_storage_client()
-    finally:
-        GCSConfig.clear_instance_cache()
+    return GCSConfig().get_storage_client()
 
 
 def _get_gcs_client() -> object:
@@ -228,7 +218,7 @@ class TestExtrasInstalledButBroken:
         assert exc_info.value is error
 
 
-class TestIsBufferedReaderWithoutS3Loaded:
+class TestIsBufferedReader:
     def test_local_file_does_not_import_boto3(self, monkeypatch: pytest.MonkeyPatch):
         # A local load never touches S3, so it must not pay for importing boto3, nor fail when boto3 is broken.
         from gokart.object_storage import ObjectStorage
@@ -239,26 +229,53 @@ class TestIsBufferedReaderWithoutS3Loaded:
         assert 'boto3' not in sys.modules
         assert 'luigi.contrib.s3' not in sys.modules
 
+    def test_returns_false_for_s3_reader(self) -> None:
+        import luigi.contrib.s3
 
-def test_is_buffered_reader_returns_false_for_s3_reader() -> None:
-    import luigi.contrib.s3
+        from gokart.object_storage import ObjectStorage
 
-    from gokart.object_storage import ObjectStorage
+        class _S3Object:
+            def get(self) -> dict[str, object]:
+                return {'Body': object()}
 
-    class _S3Object:
-        def get(self) -> dict[str, object]:
-            return {'Body': object()}
+        assert ObjectStorage.is_buffered_reader(luigi.contrib.s3.ReadableS3File(_S3Object())) is False
 
-    assert ObjectStorage.is_buffered_reader(luigi.contrib.s3.ReadableS3File(_S3Object())) is False
+    def test_while_luigi_contrib_s3_is_being_imported(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Another thread may be importing luigi.contrib.s3: it is in sys.modules before ReadableS3File is defined, and no S3 reader exists yet.
+        from gokart.object_storage import ObjectStorage
+
+        monkeypatch.setitem(sys.modules, 'luigi.contrib.s3', ModuleType('luigi.contrib.s3'))
+        assert ObjectStorage.is_buffered_reader(object()) is True
 
 
 class TestExtrasParentPackageNotInstalled:
-    def test_gcs_raises_install_hint_without_google_cloud(self, block_modules: BlockModules, monkeypatch: pytest.MonkeyPatch):
-        # google.cloud is a namespace package shared with other google-cloud-* distributions, so it can be missing as a whole.
-        monkeypatch.delitem(sys.modules, 'google.cloud.storage', raising=False)
-        block_modules('google.cloud')
+    # google and google.cloud are namespace packages shared with other distributions, so either can be missing as a whole.
+    @pytest.mark.parametrize(
+        ('call', 'missing'),
+        [
+            pytest.param(_get_gcs_storage_client, 'google.cloud', id='storage-without-google-cloud'),
+            pytest.param(_get_gcs_storage_client, 'google', id='storage-without-google'),
+            pytest.param(_load_gcs_credentials, 'google', id='credentials-without-google'),
+        ],
+    )
+    def test_gcs_raises_install_hint_without_parent_package(
+        self, break_module: BreakModule, monkeypatch: pytest.MonkeyPatch, call: Callable[[], object], missing: str
+    ):
+        for name in [name for name in sys.modules if name == missing or name.startswith(f'{missing}.')]:
+            monkeypatch.delitem(sys.modules, name)
+        # This is what the import system raises for a package that is not installed.
+        break_module(missing, ModuleNotFoundError(f'No module named {missing!r}', name=missing))
         with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-            _get_gcs_storage_client()
+            call()
+
+    def test_gcs_client_keeps_original_error_when_googleapiclient_lacks_google(self, break_module: BreakModule):
+        # googleapiclient has no parent package; when it is installed but its dependency google-auth (the google package) is not, the
+        # install is broken, and the original error names what is missing.
+        error = ModuleNotFoundError("No module named 'google'", name='google')
+        break_module('googleapiclient', error)
+        with pytest.raises(ModuleNotFoundError) as exc_info:
+            _get_gcs_client()
+        assert exc_info.value is error
 
 
 class TestExtrasInstalled:

@@ -25,11 +25,19 @@ def test_returns_module(fake_extra: Path) -> None:
     assert import_optional_dependency('_gokart_fake_extra.sub', extra='fake', feature='Fake').__name__ == '_gokart_fake_extra.sub'
 
 
-@pytest.mark.parametrize('missing', ['_gokart_fake_extra.sub', '_gokart_fake_extra'])
-def test_raises_install_hint_when_module_or_its_parent_is_missing(monkeypatch: pytest.MonkeyPatch, missing: str) -> None:
-    monkeypatch.setitem(sys.modules, missing, None)
-    with pytest.raises(ImportError, match=r'^Fake support requires additional dependencies\. Install them with: pip install gokart\[fake\]$'):
-        import_optional_dependency('_gokart_fake_extra.sub', extra='fake', feature='Fake')
+@pytest.mark.parametrize(
+    ('module_name', 'missing'),
+    [
+        pytest.param('_gokart_not_installed', '_gokart_not_installed', id='module'),
+        pytest.param('_gokart_not_installed.sub', '_gokart_not_installed', id='parent-package'),
+    ],
+)
+def test_raises_install_hint_when_module_or_its_parent_is_missing(module_name: str, missing: str) -> None:
+    with pytest.raises(ImportError, match=r'^Fake support requires additional dependencies\. Install them with: pip install gokart\[fake\]$') as exc_info:
+        import_optional_dependency(module_name, extra='fake', feature='Fake')
+    # Keeping the cause helps when the hint is not the whole story.
+    assert isinstance(exc_info.value.__cause__, ModuleNotFoundError)
+    assert exc_info.value.__cause__.name == missing
 
 
 @pytest.mark.parametrize(

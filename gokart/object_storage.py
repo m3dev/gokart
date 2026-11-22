@@ -83,5 +83,6 @@ class ObjectStorage:
     def is_buffered_reader(file: object) -> bool:
         # A ReadableS3File can only exist once luigi.contrib.s3 has been imported, so there is no need to import boto3 here: that would
         # slow down the first local load, and a broken boto3 would break loading local files that never touch S3.
-        s3 = sys.modules.get('luigi.contrib.s3')
-        return s3 is None or not isinstance(file, s3.ReadableS3File)
+        # getattr: while another thread is importing luigi.contrib.s3, it is in sys.modules before ReadableS3File is defined.
+        readable_s3_file = getattr(sys.modules.get('luigi.contrib.s3'), 'ReadableS3File', None)
+        return readable_s3_file is None or not isinstance(file, readable_s3_file)

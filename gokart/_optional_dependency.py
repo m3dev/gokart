@@ -15,10 +15,9 @@ def import_optional_dependency(module_name: str, *, extra: str, feature: str) ->
     except ModuleNotFoundError as e:
         if not _is_missing_module(e, module_name):
             raise
-        raise ImportError(f'{feature} support requires additional dependencies. Install them with: pip install gokart[{extra}]') from None
+        raise ImportError(f'{feature} support requires additional dependencies. Install them with: pip install gokart[{extra}]') from e
 
 
 def _is_missing_module(error: ModuleNotFoundError, module_name: str) -> bool:
     # A missing parent package (e.g. google.cloud for google.cloud.storage) also means that the module is not installed.
-    parts = module_name.split('.')
-    return error.name in {'.'.join(parts[:i]) for i in range(1, len(parts) + 1)}
+    return error.name is not None and f'{module_name}.'.startswith(f'{error.name}.')
