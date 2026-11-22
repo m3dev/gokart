@@ -67,8 +67,17 @@ Notes:
 - Use the Standard storage class for the bucket, because other classes charge for early deletion.
 - GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
 - A failure to release the lock (for example a missing ``storage.objects.delete`` permission) is only logged as a warning, and the lock expires after `timeout`.
-- ``s3://`` is not supported yet.
 - S3 needs ``botocore>=1.35.69`` for conditional writes, and ``pip install gokart[s3]``. Conditional deletes are available on general purpose buckets since 2025-09.
+- To use an S3-compatible store such as MinIO or R2, set ``endpoint_url`` of the ``[S3Config]`` section. It is shared by the S3 targets and the S3 run lock.
+
+  .. code:: ini
+
+      [gokart_lock]
+      url=s3://my-bucket/gokart-locks
+
+      [S3Config]
+      endpoint_url=http://localhost:9000
+
 - Plain S3-compatible stores vary: MinIO, R2 and Ceph support conditional writes, but Backblaze B2 does not. gokart raises an error when the store rejects the conditional headers, but it cannot detect a store that silently ignores them, so check your store before relying on the lock.
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.

@@ -15,6 +15,10 @@ class S3Config(luigi.Config):
         default='AWS_SECRET_ACCESS_KEY', description='AWS secret access key environment variable.'
     )
 
+    endpoint_url: luigi.OptionalParameter = luigi.OptionalParameter(
+        default=None, description='Endpoint URL of an S3-compatible store (e.g. MinIO, R2), used by S3 targets and the S3 run lock. AWS S3 is used when None.'
+    )
+
     _client: luigi.contrib.s3.S3Client | None = None
 
     def get_s3_client(self) -> luigi.contrib.s3.S3Client:
@@ -30,8 +34,13 @@ class S3Config(luigi.Config):
         import luigi.contrib.s3
 
         return luigi.contrib.s3.S3Client(
-            aws_access_key_id=os.environ.get(self.aws_access_key_id_name), aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name)
+            aws_access_key_id=os.environ.get(self.aws_access_key_id_name),
+            aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name),
+            **self._endpoint_kwargs(),
         )
+
+    def _endpoint_kwargs(self) -> dict[str, str]:
+        return {'endpoint_url': self.endpoint_url} if self.endpoint_url else {}
 
     def create_boto_client(self) -> Any:
         """Build a boto3 S3 client that is not shared with anyone else, e.g. for a background thread."""
@@ -41,5 +50,8 @@ class S3Config(luigi.Config):
             raise ImportError('S3 support requires additional dependencies. Install them with: pip install gokart[s3]') from None
 
         return cast(Any, boto3).client(
-            's3', aws_access_key_id=os.environ.get(self.aws_access_key_id_name), aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name)
+            's3',
+            aws_access_key_id=os.environ.get(self.aws_access_key_id_name),
+            aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name),
+            **self._endpoint_kwargs(),
         )

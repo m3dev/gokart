@@ -39,8 +39,9 @@ def set_url() -> Iterator[Callable[[str], None]]:
     config.remove_section('gokart_lock')
 
 
-def test_warns_that_no_lock_is_taken_with_an_object_storage_url(set_url: Callable[[str], None]):
-    set_url('gs://my-bucket/locks')
+@pytest.mark.parametrize('url', ['gs://my-bucket/locks', 's3://my-bucket/locks'])
+def test_warns_that_no_lock_is_taken_with_an_object_storage_url(set_url: Callable[[str], None], url: str):
+    set_url(url)
     with pytest.warns(UserWarning, match=r'no lock is taken when targets are dumped, loaded or removed'):
         _Task()
 
