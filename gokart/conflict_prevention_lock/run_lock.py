@@ -4,10 +4,7 @@ import threading
 from logging import getLogger
 from typing import Any, Protocol
 
-import redis
-from redis.exceptions import LockError, RedisError
-from redis.lock import Lock
-
+from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params_for_run
 
 logger = getLogger(__name__)
@@ -30,8 +27,9 @@ class RedisRunLock:
     def __init__(self, task_lock_params: TaskLockParams) -> None:
         self._task_lock_params = task_lock_params
         # A dedicated client keeps the worker's heartbeat thread off the shared connection pool that forked task processes use for dump/load locks.
+        redis = import_redis()
         self._client = redis.Redis(host=task_lock_params.redis_host or 'localhost', port=task_lock_params.redis_port or 6379)
-        self._lock = Lock(redis=self._client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
+        self._lock = redis.lock.Lock(redis=self._client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
 
     def try_acquire(self) -> bool:
         return bool(self._lock.acquire(blocking=False))
@@ -40,6 +38,8 @@ class RedisRunLock:
         self._lock.extend(additional_time=self._task_lock_params.redis_timeout or 0, replace_ttl=True)
 
     def release(self) -> None:
+        from redis.exceptions import LockError, RedisError
+
         try:
             self._lock.release()
         except LockError:

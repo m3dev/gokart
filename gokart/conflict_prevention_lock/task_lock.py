@@ -3,11 +3,14 @@ from __future__ import annotations
 import functools
 import os
 from logging import getLogger
-from typing import Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
-import redis
 from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
-from redis.lock import Lock
+
+from gokart.conflict_prevention_lock.redis_import import import_redis
+
+if TYPE_CHECKING:
+    from redis.lock import Lock
 
 logger = getLogger(__name__)
 
@@ -42,7 +45,7 @@ class RedisClient:
         if not hasattr(self, '_redis_client'):
             host = host or 'localhost'
             port = port or 6379
-            self._redis_client = redis.Redis(host=host, port=port)
+            self._redis_client = import_redis().Redis(host=host, port=port)
 
     def get_redis_client(self):
         return self._redis_client
@@ -54,6 +57,8 @@ def _extend_lock(task_lock: Lock, redis_timeout: int) -> None:
 
 def set_task_lock(task_lock_params: TaskLockParams) -> Lock:
     redis_client = RedisClient(host=task_lock_params.redis_host, port=task_lock_params.redis_port).get_redis_client()
+    from redis.lock import Lock
+
     blocking = not task_lock_params.raise_task_lock_exception_on_collision
     task_lock = Lock(redis=redis_client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
     if not task_lock.acquire(blocking=blocking):

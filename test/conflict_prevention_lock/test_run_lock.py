@@ -19,7 +19,7 @@ class _LockedTask(gokart.TaskOnKart[Any]):
 @pytest.fixture
 def server():
     server = fakeredis.FakeServer()
-    with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+    with patch('redis.Redis') as redis_mock:
         redis_mock.side_effect = lambda host, port: fakeredis.FakeRedis(server=server, host=host, port=port)
         yield server
 
@@ -47,7 +47,7 @@ def _patch_redis_recording_close(server: fakeredis.FakeServer, close_mocks: list
         close_mocks.append(close_mock)
         return client
 
-    return patch('gokart.conflict_prevention_lock.task_lock.redis.Redis', side_effect=_make_client)
+    return patch('redis.Redis', side_effect=_make_client)
 
 
 class TestRedisRunLock:
