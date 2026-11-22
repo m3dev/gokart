@@ -877,6 +877,7 @@ dependencies = [
 [package.optional-dependencies]
 all = [
     { name = "boto3" },
+    { name = "botocore" },
     { name = "google-api-python-client" },
     { name = "google-cloud-storage" },
     { name = "redis" },
@@ -893,6 +894,7 @@ redis = [
 ]
 s3 = [
     { name = "boto3" },
+    { name = "botocore" },
 ]
 
 [package.dev-dependencies]
@@ -926,6 +928,8 @@ requires-dist = [
     { name = "apscheduler" },
     { name = "boto3", marker = "extra == 'all'" },
     { name = "boto3", marker = "extra == 's3'" },
+    { name = "botocore", marker = "extra == 'all'", specifier = ">=1.35.69" },
+    { name = "botocore", marker = "extra == 's3'", specifier = ">=1.35.69" },
     { name = "dill" },
     { name = "google-api-python-client", marker = "extra == 'all'" },
     { name = "google-api-python-client", marker = "extra == 'gcs'" },
