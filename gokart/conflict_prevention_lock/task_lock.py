@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
 
-from gokart.conflict_prevention_lock.lock_config import resolve_redis_lock_settings
+from gokart.conflict_prevention_lock.lock_config import redis_connection_kwargs, resolve_redis_lock_settings
 from gokart.conflict_prevention_lock.redis_import import import_redis
 
 if TYPE_CHECKING:
@@ -24,6 +24,8 @@ class TaskLockParams(NamedTuple):
     should_task_lock: bool
     raise_task_lock_exception_on_collision: bool
     lock_extend_seconds: int
+    redis_db: int = 0
+    redis_ssl: bool = False
 
 
 class TaskLockException(Exception):
@@ -42,11 +44,9 @@ class RedisClient:
             cls._instances[cls][key] = super().__new__(cls)
         return cls._instances[cls][key]
 
-    def __init__(self, host: str | None, port: int | None) -> None:
+    def __init__(self, host: str | None, port: int | None, db: int = 0, ssl: bool = False) -> None:
         if not hasattr(self, '_redis_client'):
-            host = host or 'localhost'
-            port = port or 6379
-            self._redis_client = import_redis().Redis(host=host, port=port)
+            self._redis_client = import_redis().Redis(**redis_connection_kwargs(host, port, db, ssl))
 
     def get_redis_client(self):
         return self._redis_client
@@ -57,7 +57,9 @@ def _extend_lock(task_lock: Lock, redis_timeout: int) -> None:
 
 
 def set_task_lock(task_lock_params: TaskLockParams) -> Lock:
-    redis_client = RedisClient(host=task_lock_params.redis_host, port=task_lock_params.redis_port).get_redis_client()
+    redis_client = RedisClient(
+        host=task_lock_params.redis_host, port=task_lock_params.redis_port, db=task_lock_params.redis_db, ssl=task_lock_params.redis_ssl
+    ).get_redis_client()
     from redis.lock import Lock
 
     blocking = not task_lock_params.raise_task_lock_exception_on_collision
@@ -98,7 +100,8 @@ def make_task_lock_params(
     lock_extend_seconds: int = 10,
 ) -> TaskLockParams:
     redis_key = make_task_lock_key(file_path, unique_id)
-    redis_host, redis_port, redis_timeout = resolve_redis_lock_settings(redis_host, redis_port, redis_timeout, warn=False)
+    settings = resolve_redis_lock_settings(redis_host, redis_port, redis_timeout, warn=False)
+    redis_host, redis_port, redis_timeout = settings.host, settings.port, settings.timeout
     should_task_lock = redis_host is not None and redis_port is not None
     assert redis_timeout > lock_extend_seconds, f'`redis_timeout` must be set greater than lock_extend_seconds:{lock_extend_seconds}, not {redis_timeout}.'
     task_lock_params = TaskLockParams(
@@ -109,6 +112,8 @@ def make_task_lock_params(
         redis_timeout=redis_timeout,
         raise_task_lock_exception_on_collision=raise_task_lock_exception_on_collision,
         lock_extend_seconds=lock_extend_seconds,
+        redis_db=settings.db,
+        redis_ssl=settings.ssl,
     )
     return task_lock_params
 
@@ -118,14 +123,16 @@ def make_task_lock_params_for_run(task_self: Any, lock_extend_seconds: int = 10)
     unique_id = task_self.make_unique_id() + '-run'
     task_lock_key = make_task_lock_key(file_path=task_path_name, unique_id=unique_id)
 
-    redis_host, redis_port, redis_timeout = resolve_redis_lock_settings(task_self.redis_host, task_self.redis_port, task_self.redis_timeout, warn=False)
-    should_task_lock = redis_host is not None and redis_port is not None
+    settings = resolve_redis_lock_settings(task_self.redis_host, task_self.redis_port, task_self.redis_timeout, warn=False)
+    should_task_lock = settings.host is not None and settings.port is not None
     return TaskLockParams(
-        redis_host=redis_host,
-        redis_port=redis_port,
+        redis_host=settings.host,
+        redis_port=settings.port,
         redis_key=task_lock_key,
         should_task_lock=should_task_lock,
-        redis_timeout=redis_timeout,
+        redis_timeout=settings.timeout,
         raise_task_lock_exception_on_collision=True,
         lock_extend_seconds=lock_extend_seconds,
+        redis_db=settings.db,
+        redis_ssl=settings.ssl,
     )

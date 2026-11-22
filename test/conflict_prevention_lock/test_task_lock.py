@@ -26,6 +26,26 @@ class TestRedisClient(unittest.TestCase):
             self.assertEqual(redis_client_0_0.get_redis_client(), redis_client_0_1.get_redis_client())
 
 
+class TestRedisClientOptions:
+    def test_db_ssl_and_password_reach_redis(self, monkeypatch):
+        import luigi.configuration
+
+        monkeypatch.setenv('REDIS_PASSWORD_FOR_TEST', 'secret-value')
+        config = luigi.configuration.get_config()
+        config.add_section('gokart_lock')
+        config.set('gokart_lock', 'password_env', 'REDIS_PASSWORD_FOR_TEST')
+        try:
+            with patch('redis.Redis') as mock:
+                RedisClient(host='opt-host', port=1, db=2, ssl=True)
+        finally:
+            config.remove_section('gokart_lock')
+        mock.assert_called_once_with(host='opt-host', port=1, db=2, ssl=True, password='secret-value')
+
+    def test_clients_with_different_db_are_distinct(self):
+        with patch('redis.Redis', side_effect=lambda **kwargs: object()):
+            assert RedisClient(host='db-host', port=1, db=0) is not RedisClient(host='db-host', port=1, db=1)
+
+
 class TestMakeRedisKey(unittest.TestCase):
     def test_make_redis_key(self):
         result = make_task_lock_key(file_path='gs://test_ll/dir/fname.pkl', unique_id='12345')

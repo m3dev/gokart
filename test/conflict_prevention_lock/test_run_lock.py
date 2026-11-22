@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import fakeredis
 import luigi
 import pytest
+from luigi.task_register import Register
 from redis.lock import Lock
 
 import gokart
@@ -37,6 +38,23 @@ class TestMakeRunLock:
 
     def test_returns_redis_lock_when_should_lock_run_is_true(self, server: fakeredis.FakeServer):
         assert isinstance(make_run_lock(_make_task()), RedisRunLock)
+
+
+class TestRedisRunLockOptions:
+    def test_db_and_tls_from_the_url_reach_redis(self):
+        import luigi.configuration
+
+        config = luigi.configuration.get_config()
+        config.add_section('gokart_lock')
+        config.set('gokart_lock', 'url', 'rediss://lock-host:6380/4')
+        Register.clear_instance_cache()
+        try:
+            with patch('redis.Redis') as redis_mock:
+                make_run_lock(_LockedTask(should_lock_run=True))
+        finally:
+            config.remove_section('gokart_lock')
+            Register.clear_instance_cache()
+        redis_mock.assert_called_once_with(host='lock-host', port=6380, db=4, ssl=True)
 
 
 def _patch_redis_recording_close(server: fakeredis.FakeServer, close_mocks: list[MagicMock]):

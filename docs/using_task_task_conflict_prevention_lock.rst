@@ -35,7 +35,15 @@ How to use
         url=redis://localhost:6379
         timeout=180
 
-    Only ``redis://host[:port]`` is supported for now; the port defaults to 6379.
+    The URL has the form ``redis://host[:port][/db]``. The port defaults to 6379 and the db number to 0. Use ``rediss://`` to connect over TLS.
+    Do not put a password in the URL: set ``password_env`` to the name of an environment variable that holds it, and gokart reads the password from there (an unset or empty variable is an error).
+
+    .. code::
+
+        [gokart_lock]
+        url=rediss://redis.example.com:6380/2
+        password_env=REDIS_PASSWORD
+
     ``timeout`` is the number of seconds after which a lock is released without extension (180 by default).
 
     The deprecated ``redis_host``, ``redis_port`` and ``redis_timeout`` parameters of gokart.TaskOnKart (e.g. ``--redis-host=localhost --redis-port=6379``) still work.
