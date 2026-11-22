@@ -23,8 +23,16 @@ from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import make_file_processor
 from gokart.in_memory import make_in_memory_target
 from gokart.required_task_output import RequiredTaskOutput
-from gokart.target import LargeDataFrameProcessor, SingleFileTarget, is_persistent_target, make_model_target, make_target
-from test.util import _get_temporary_directory, _PlainLuigiTarget
+from gokart.target import (
+    LargeDataFrameProcessor,
+    SingleFileTarget,
+    is_persistent_target,
+    make_model_target,
+    make_target,
+    target_last_modification_time,
+    target_path,
+)
+from test.util import _get_temporary_directory
 
 
 class LocalTargetTest(unittest.TestCase):
@@ -550,7 +558,40 @@ class TestIsPersistentTarget:
 
     def test_plain_luigi_target_is_persistent(self) -> None:
         # output() may return targets that are not TargetOnKart despite its annotation; they have no is_persistent().
-        assert is_persistent_target(_PlainLuigiTarget())
+        assert is_persistent_target(luigi.LocalTarget('plain'))
+
+
+class TestTargetPath:
+    def test_target_on_kart(self, tmp_path) -> None:
+        target = make_target(str(tmp_path / 'file.pkl'))
+        assert target_path(target) == target.path()
+
+    def test_plain_luigi_target(self, tmp_path) -> None:
+        # luigi.LocalTarget has path as an attribute, while TargetOnKart has path() as a method.
+        assert target_path(luigi.LocalTarget(str(tmp_path / 'plain.txt'))) == str(tmp_path / 'plain.txt')
+
+    def test_custom_luigi_target_with_path_method(self) -> None:
+        class _CustomTarget(luigi.Target):
+            def exists(self) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+                return True
+
+            def path(self) -> str:
+                return 'custom'
+
+        assert target_path(_CustomTarget()) == 'custom'
+
+
+class TestTargetLastModificationTime:
+    def test_target_on_kart(self, tmp_path) -> None:
+        target = make_target(str(tmp_path / 'file.pkl'))
+        target.dump('x')
+        assert target_last_modification_time(target) == target.last_modification_time()
+
+    def test_plain_luigi_target(self, tmp_path) -> None:
+        path = tmp_path / 'plain.txt'
+        path.write_text('plain')
+        os.utime(path, (1_000, 1_000))
+        assert target_last_modification_time(luigi.LocalTarget(str(path))) == datetime.fromtimestamp(1_000)
 
 
 if __name__ == '__main__':
