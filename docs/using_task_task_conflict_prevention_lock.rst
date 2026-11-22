@@ -10,7 +10,7 @@ The redis lock introduced in this page is a feature to prevent such cache collis
 Requires
 --------
 
-You need to install `redis <https://redis.io/topics/quickstart>`_ for using this advanced feature.
+You need to install the ``redis`` client with ``pip install gokart[redis]``, and set up a `redis <https://redis.io/topics/quickstart>`_ server, for using this advanced feature.
 
 
 How to use

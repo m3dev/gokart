@@ -870,7 +870,6 @@ dependencies = [
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pandas" },
     { name = "pyarrow" },
-    { name = "redis" },
     { name = "slack-sdk" },
     { name = "tenacity" },
 ]
@@ -880,6 +879,7 @@ all = [
     { name = "boto3" },
     { name = "google-api-python-client" },
     { name = "google-cloud-storage" },
+    { name = "redis" },
 ]
 gcs = [
     { name = "google-api-python-client" },
@@ -887,6 +887,9 @@ gcs = [
 ]
 polars = [
     { name = "polars" },
+]
+redis = [
+    { name = "redis" },
 ]
 s3 = [
     { name = "boto3" },
@@ -933,11 +936,12 @@ requires-dist = [
     { name = "pandas", specifier = ">=3" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=0.19.0" },
     { name = "pyarrow" },
-    { name = "redis" },
+    { name = "redis", marker = "extra == 'all'" },
+    { name = "redis", marker = "extra == 'redis'" },
     { name = "slack-sdk" },
     { name = "tenacity" },
 ]
-provides-extras = ["all", "gcs", "polars", "s3"]
+provides-extras = ["all", "gcs", "polars", "redis", "s3"]
 
 [package.metadata.requires-dev]
 lint = [
