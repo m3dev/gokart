@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import logging
 import os
+import tempfile
 import unittest
 from copy import copy
 from typing import Any, assert_type
@@ -96,6 +97,14 @@ class RunTest(unittest.TestCase):
     def test_build_with_parallel_scheduling(self):
         output = gokart.build(_ParallelRunner(), reset_register=False, parallel_scheduling=True)
         self.assertEqual(output, 'done')
+
+    def test_build_with_parallel_scheduling_reruns_dependency(self):
+        # WHY: complete() of a rerun task changes its state. With parallel_scheduling it runs on a pickled copy,
+        #      and the dependency used to be removed again at run time of the downstream task, which failed until retries got it through.
+        with tempfile.TemporaryDirectory() as tmpdir, self.assertNoLogs('gokart.worker', level=logging.ERROR):
+            task = _LoadRequires(task=_DummyTask(param='new', rerun=True, workspace_directory=tmpdir), workspace_directory=tmpdir)
+            output = gokart.build(task, reset_register=False, parallel_scheduling=True)
+        self.assertEqual(output, 'new')
 
     def test_read_config(self):
         class _DummyTask(gokart.TaskOnKart[Any]):

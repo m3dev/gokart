@@ -146,23 +146,42 @@ class _UnpicklableTask(gokart.TaskOnKart[str]):
         self.dump('test')
 
 
+class _UnunpicklableTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+    random_id: luigi.StrParameter = luigi.StrParameter()
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        raise RuntimeError('cannot unpickle')
+
+    def run(self):
+        self.dump('test')
+
+
+def _add_with_multiprocess(task: gokart.TaskOnKart[str]) -> bool:
+    worker = Worker(scheduler=scheduler.Scheduler())
+    results: list[bool] = []
+    with worker:
+        # WHY: A regression hangs add() forever. Run it in a daemon thread so the test fails instead of stalling CI (no pytest-timeout here).
+        thread = threading.Thread(target=lambda: results.append(worker.add(task, multiprocess=True)), daemon=True)
+        thread.start()
+        thread.join(timeout=60)
+    assert not thread.is_alive(), f'Worker.add hung on {task}'
+    assert results, 'Worker.add raised an exception. See the thread exception warning.'
+    return results[0]
+
+
 class TestWorkerAddWithMultiprocess:
     def test_succeeds_for_picklable_task(self) -> None:
-        worker = Worker(scheduler=scheduler.Scheduler())
-        with worker:
-            assert worker.add(_DummyTask(random_id=uuid.uuid4().hex), multiprocess=True)
+        assert _add_with_multiprocess(_DummyTask(random_id=uuid.uuid4().hex))
 
     def test_fails_without_hanging_when_task_cannot_be_pickled(self, caplog: pytest.LogCaptureFixture) -> None:
-        worker = Worker(scheduler=scheduler.Scheduler())
-        results: list[bool] = []
-        with worker:
-            # WHY: A regression hangs add() forever. Run it in a daemon thread so the test fails instead of stalling CI (no pytest-timeout here).
-            thread = threading.Thread(target=lambda: results.append(worker.add(_UnpicklableTask(random_id=uuid.uuid4().hex), multiprocess=True)), daemon=True)
-            thread.start()
-            thread.join(timeout=60)
-        assert not thread.is_alive(), 'Worker.add hung on a task that cannot be pickled'
-        assert results == [False]
-        assert 'could not be passed to or from a parallel scheduling process' in caplog.text
+        assert not _add_with_multiprocess(_UnpicklableTask(random_id=uuid.uuid4().hex))
+        assert 'could not be passed to a parallel scheduling process' in caplog.text
+
+    def test_fails_without_hanging_when_task_cannot_be_unpickled(self, caplog: pytest.LogCaptureFixture) -> None:
+        assert not _add_with_multiprocess(_UnunpicklableTask(random_id=uuid.uuid4().hex))
+        assert 'could not be passed to a parallel scheduling process' in caplog.text
+        assert 'cannot unpickle' in caplog.text
 
 
 class _RunLockTask(gokart.TaskOnKart[str]):

@@ -41,6 +41,7 @@ import json
 import logging
 import multiprocessing
 import os
+import pickle
 import queue as Queue
 import random
 import signal
@@ -51,6 +52,7 @@ import threading
 import time
 import traceback
 from collections.abc import Callable, Generator
+from multiprocessing.reduction import ForkingPickler
 from typing import Any, Literal, NamedTuple, TypeVar, cast
 
 import luigi
@@ -435,6 +437,34 @@ class gokart_worker(luigi.Config):
     )
 
 
+def _check_complete(task: Task, out_queue: Any, completion_cache: Any) -> None:
+    """Same as luigi.worker.check_complete, but puts the task_id instead of the task.
+
+    WHY: With parallel_scheduling, complete() runs on an unpickled copy of the task. Worker.add looks the task_id up so that
+         it keeps scheduling its own task objects, the same ones that the requires() of other tasks return.
+         Otherwise the state that complete() changes (e.g. TaskOnKart's rerun) differs between those objects.
+    """
+    is_complete: bool | luigi.worker.TracebackWrapper
+    try:
+        is_complete = cast(Any, luigi.worker).check_complete_cached(task, completion_cache)
+    except Exception:
+        is_complete = luigi.worker.TracebackWrapper(traceback.format_exc())
+    out_queue.put((task.task_id, is_complete))
+
+
+def _check_complete_pickled(task_id: str, pickled_task: bytes, out_queue: Any, completion_cache: Any) -> None:
+    try:
+        task = cast(Task, pickle.loads(pickled_task))
+    except Exception:
+        out_queue.put((task_id, luigi.worker.TracebackWrapper(_cannot_pass_to_pool_message(task_id) + traceback.format_exc())))
+        return
+    _check_complete(task, out_queue, completion_cache)
+
+
+def _cannot_pass_to_pool_message(task_id: str) -> str:
+    return f'{task_id} could not be passed to a parallel scheduling process to check complete() (e.g. it cannot be pickled):\n'
+
+
 class Worker:
     """
     Worker object communicates with a scheduler.
@@ -728,13 +758,9 @@ class Worker:
         try:
             seen = {task.task_id: task}
             while queue_size:
-                current = queue.get()
+                task_id, is_complete = queue.get()
                 queue_size -= 1
-                item, is_complete = current
-                if isinstance(item, str):
-                    # A task whose complete() check could not go through the pool comes back as its task_id. See _check_complete_async.
-                    item = seen[item]
-                for next in self._add(item, is_complete):
+                for next in self._add(seen[task_id], is_complete):
                     if next.task_id not in seen:
                         self._validate_task(next)
                         seen[next.task_id] = next
@@ -755,21 +781,18 @@ class Worker:
         return self.add_succeeded
 
     def _check_complete_async(self, pool: Any, queue: Any, task: Task, multiprocess: bool) -> None:
-        args = [task, queue, self._task_completion_cache]
         if not multiprocess:
-            # luigi.worker.SingleProcessPool.apply_async does not take error_callback, and it does not pickle the task.
-            pool.apply_async(cast(Any, luigi.worker).check_complete, args)
+            pool.apply_async(_check_complete, [task, queue, self._task_completion_cache])
             return
 
-        task_id = task.task_id
-
-        def put_error(exception: BaseException) -> None:
-            # WHY: When the task cannot go through the pool (e.g. it cannot be pickled), nothing is put on the queue
-            #      and add() would wait for it forever. Put the task_id instead of the task, which may not be picklable.
-            message = f'{task_id} could not be passed to or from a parallel scheduling process to check complete() (e.g. it cannot be pickled):\n'
-            queue.put((task_id, luigi.worker.TracebackWrapper(message + ''.join(traceback.format_exception(exception)))))
-
-        pool.apply_async(cast(Any, luigi.worker).check_complete, args, error_callback=put_error)
+        # WHY: Pickle here rather than leave it to multiprocessing.Pool. A task that Pool fails to pickle or unpickle
+        #      never puts a result on the queue, and add() would wait for it forever.
+        try:
+            pickled_task = bytes(ForkingPickler.dumps(task))
+        except Exception:
+            queue.put((task.task_id, luigi.worker.TracebackWrapper(_cannot_pass_to_pool_message(task.task_id) + traceback.format_exc())))
+            return
+        pool.apply_async(_check_complete_pickled, [task.task_id, pickled_task, queue, self._task_completion_cache])
 
     def _add_task_batcher(self, task: Task) -> None:
         family = task.task_family
