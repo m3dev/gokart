@@ -19,6 +19,7 @@ import gokart
 import gokart.tree.task_info
 from gokart import worker
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
+from gokart.in_memory.repository import in_memory_scope
 from gokart.target import TargetOnKart
 from gokart.task import TaskOnKart
 
@@ -201,7 +202,8 @@ def build(
     """
     if reset_register:
         _reset_register()
-    with LoggerConfig(level=log_level):
+    # WHY: in-memory outputs live only for this build, so a second build never sees the previous build's results.
+    with in_memory_scope(), LoggerConfig(level=log_level):
         log_handler_before_run = logging.StreamHandler()
         logger.addHandler(log_handler_before_run)
         process_task_info(task, task_dump_config)
