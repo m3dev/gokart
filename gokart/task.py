@@ -29,7 +29,7 @@ from gokart.conflict_prevention_lock.lock_config import (
 from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
+from gokart.in_memory.target import make_in_memory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
@@ -265,7 +265,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _check_modification_time(inputs: list[TargetOnKart], outputs: list[TargetOnKart]) -> bool:
         # WHY: an in-memory key is built like a file path, so the path alone cannot tell a file from an in-memory output.
         def identity(target: TargetOnKart) -> tuple[bool, str]:
-            return isinstance(target, InMemoryTarget), target.path()
+            return target.is_persistent(), target.path()
 
         common_targets = set(map(identity, inputs)) & set(map(identity, outputs))
         input_tasks = [t for t in inputs if identity(t) not in common_targets]
@@ -460,7 +460,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # and computing them (output() rebuilds, serialize) is costly.
         task_params: dict[str, str] | None = None
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None
-        if not isinstance(output_target, InMemoryTarget) and needs_task_state_labels(output_target.path()):
+        if output_target.is_persistent() and needs_task_state_labels(output_target.path()):
             task_params = cast(dict[str, str], super().to_str_params(only_significant=True, only_public=True))
             required_task_outputs = self._get_required_task_outputs()
 
@@ -477,9 +477,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
         required_task_outputs = _drop_marked(
             map_flattenable_items(
                 lambda task: map_flattenable_items(
-                    lambda output: _DROPPED
-                    if isinstance(output, InMemoryTarget)
-                    else RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path()),
+                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path())
+                    if gokart.target.is_persistent_target(output)
+                    else _DROPPED,
                     task.output(),
                 ),
                 self.requires(),
@@ -566,7 +566,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _has_only_in_memory_outputs(self) -> bool:
         if self._has_only_in_memory_outputs_cache is None:
             outputs = flatten(self.output())
-            self._has_only_in_memory_outputs_cache = bool(outputs) and all(isinstance(target, InMemoryTarget) for target in outputs)
+            self._has_only_in_memory_outputs_cache = bool(outputs) and not any(map(gokart.target.is_persistent_target, outputs))
         return self._has_only_in_memory_outputs_cache
 
     def _should_dump_supplementary_log_files(self) -> bool:

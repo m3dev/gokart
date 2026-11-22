@@ -66,6 +66,26 @@ class _MixedOutputTask(gokart.TaskOnKart[str]):
         self.dump('file', 'file')
 
 
+class _PlainLuigiTarget(luigi.Target):
+    def __init__(self, path: str) -> None:
+        self._path = path
+
+    def exists(self) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return False
+
+    def path(self) -> str:
+        return self._path
+
+
+class _LuigiTargetTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+    path: luigi.Parameter[str] = luigi.Parameter()
+
+    def output(self):  # pyright: ignore[reportIncompatibleMethodOverride]
+        # output() may return a plain luigi target at runtime despite its annotation.
+        return _PlainLuigiTarget(self.path)
+
+
 class _FileJoinTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     tasks: gokart.ListTaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.ListTaskInstanceParameter()
@@ -152,6 +172,10 @@ class TestSupplementaryLogFiles:
         workspace = str(tmp_path / 'resources')
         gokart.build(_MixedOutputTask(workspace_directory=workspace), reset_register=False, return_value=False)
         assert list(Path(workspace).rglob('log/task_log/*.pkl'))
+
+    def test_plain_luigi_target_is_not_in_memory(self, tmp_path: Path) -> None:
+        task = _LuigiTargetTask(path=str(tmp_path / 'luigi.txt'))
+        assert not task._has_only_in_memory_outputs()
 
 
 class TestGCSWorkspace:

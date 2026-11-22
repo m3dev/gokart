@@ -54,6 +54,9 @@ class InMemoryTarget(TargetOnKart):
             raise ValueError(f'No object(s) which id is {self._data_key} are stored before.')
         return repository.get_last_modification_time(self._data_key)
 
+    def is_persistent(self) -> bool:
+        return False
+
     def _path(self) -> str:
         # TODO: this module name `_path` migit not be appropriate
         return self._data_key
