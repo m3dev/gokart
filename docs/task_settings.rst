@@ -110,6 +110,16 @@ If you want to change the parameter of TaskA and rerun TaskB and TaskC, recommen
 If the hash value of TaskA will change, the dependent tasks (in this case, TaskB and TaskC) will rerun.
 
 
+Check modification times
+------------------------
+
+Set ``modification_time_check=True`` to rerun a task when an input is newer than an output.
+When naive and timezone-aware timestamps are mixed, comparisons convert them to UTC instants.
+Naive timestamps are interpreted in the system's local timezone, allowing local, in-memory, S3 and GCS targets to be mixed.
+Custom targets whose timestamps represent another timezone should return timezone-aware ``datetime`` objects.
+Mixed comparisons require timestamps that the Python runtime can convert with ``datetime.astimezone()``; unconvertible calendar-boundary values are unsupported.
+
+
 Fix random seed
 ---------------
 
