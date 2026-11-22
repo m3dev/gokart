@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, cast
 import luigi
 
 from gokart.conflict_prevention_lock.lock_config import LOCK_REQUEST_RETRY_DEADLINE_SECONDS, LOCK_REQUEST_TIMEOUT_SECONDS
+from gokart.process_cache import cached_per_process
 
 if TYPE_CHECKING:
     import luigi.contrib.s3
@@ -28,11 +29,8 @@ class S3Config(luigi.Config):
     _client: tuple[int, luigi.contrib.s3.S3Client] | None = None
 
     def get_s3_client(self) -> luigi.contrib.s3.S3Client:
-        # boto3 sessions and clients are not fork-safe, so each process (e.g. worker_processes > 1) builds its own.
-        # No lock on purpose: threads racing on the first call may each build a client, which is harmless since the last write wins.
-        pid = os.getpid()
-        if self._client is None or self._client[0] != pid:
-            self._client = (pid, self._get_s3_client())
+        # boto3 sessions and clients are not fork-safe
+        self._client = cached_per_process(self._client, self._get_s3_client)
         return self._client[1]
 
     def _get_s3_client(self) -> luigi.contrib.s3.S3Client:
