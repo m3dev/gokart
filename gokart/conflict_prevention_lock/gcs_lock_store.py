@@ -2,12 +2,8 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from gokart.conflict_prevention_lock.lock_config import LOCK_REQUEST_RETRY_DEADLINE_SECONDS, LOCK_REQUEST_TIMEOUT_SECONDS
 from gokart.conflict_prevention_lock.object_storage_lock import StoredLock
-
-# The heartbeat extends every held lock one after another in a single thread, so one stuck request must not delay the others for long.
-# Both stay well below the lock timeout.
-_REQUEST_TIMEOUT_SECONDS = 10
-_RETRY_DEADLINE_SECONDS = 30
 
 
 class GCSLockStore:
@@ -25,7 +21,7 @@ class GCSLockStore:
     def _request_options() -> dict[str, Any]:
         from google.cloud.storage.retry import DEFAULT_RETRY  # pyright: ignore[reportMissingTypeStubs]
 
-        return {'timeout': _REQUEST_TIMEOUT_SECONDS, 'retry': cast(Any, DEFAULT_RETRY).with_deadline(_RETRY_DEADLINE_SECONDS)}
+        return {'timeout': LOCK_REQUEST_TIMEOUT_SECONDS, 'retry': cast(Any, DEFAULT_RETRY).with_deadline(LOCK_REQUEST_RETRY_DEADLINE_SECONDS)}
 
     def _name(self, key: str) -> str:
         return f'{self._prefix}/{key}.lock' if self._prefix else f'{key}.lock'

@@ -14,6 +14,9 @@ REDIS_PASSWORD_ENV = 'GOKART_REDIS_PASSWORD'
 DEFAULT_SKEW_MARGIN_SECONDS = 30.0
 # Interval at which the lock holder extends its locks.
 LOCK_EXTEND_SECONDS = 10
+# The heartbeat extends every held lock one after another, so one slow request must not delay the others for long.
+LOCK_REQUEST_TIMEOUT_SECONDS = 10
+LOCK_REQUEST_RETRY_DEADLINE_SECONDS = 30
 
 
 class gokart_lock(luigi.Config):
@@ -127,9 +130,12 @@ def warn_once_that_dump_locks_are_not_taken() -> None:
 
 def check_object_storage_lock_settings(timeout: int) -> None:
     """Reject settings under which a live lock would be taken over between two heartbeats."""
-    if timeout <= LOCK_EXTEND_SECONDS:
+    # A heartbeat can take up to one request timeout plus the retry deadline before the next extend is attempted.
+    minimum = LOCK_EXTEND_SECONDS + LOCK_REQUEST_TIMEOUT_SECONDS + LOCK_REQUEST_RETRY_DEADLINE_SECONDS
+    if timeout <= minimum:
         raise ValueError(
-            f'The lock timeout (`[gokart_lock] timeout`) must be greater than the heartbeat interval of {LOCK_EXTEND_SECONDS} seconds, not {timeout}.'
+            f'The lock timeout (`[gokart_lock] timeout`) must be greater than the heartbeat interval of {LOCK_EXTEND_SECONDS} seconds '
+            f'plus the request timeout and retry deadline, {minimum} seconds in total, not {timeout}.'
         )
     skew_margin = gokart_lock().skew_margin
     if skew_margin < 0:

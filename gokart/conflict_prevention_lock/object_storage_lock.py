@@ -145,7 +145,7 @@ class ObjectStorageRunLock:
                 if self._version is None:
                     return
                 version, self._version = self._version, None
-                if not self._store.delete_if_match(self._key, version):
+                if not self._store.delete_if_match(self._key, version) and not self._delete_own_newer_generation():
                     logger.warning(f'Task RUN lock of {self._key} had already been taken over or removed before release.')
             except Exception:
                 # Raising here would crash the worker loop; the lock expires after the lock timeout anyway.
@@ -155,6 +155,11 @@ class ObjectStorageRunLock:
                     self._store.close()
                 except Exception:
                     logger.debug('Failed to close the lock store.', exc_info=True)
+
+    def _delete_own_newer_generation(self) -> bool:
+        # A heartbeat whose write committed but raised leaves the held version stale while the object is still ours.
+        current = self._store.stat(self._key)
+        return current is not None and self._owner_of(current) == self._owner and self._store.delete_if_match(self._key, current.version)
 
     def _held(self, version: str) -> bool:
         self._version = version

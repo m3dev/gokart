@@ -20,6 +20,7 @@ class FakeStore:
         self.lose_next_create_response = False
         self.lose_next_replace_response = False
         self.delete_error: Exception | None = None
+        self.raise_after_next_replace_commit: Exception | None = None
         self.before_replace: Callable[[], None] | None = None
         self.closed = False
 
@@ -50,6 +51,9 @@ class FakeStore:
             return None
         generation = self._next_generation()
         self.objects[key] = (generation, body, self.now)
+        if self.raise_after_next_replace_commit is not None:
+            error, self.raise_after_next_replace_commit = self.raise_after_next_replace_commit, None
+            raise error
         if self.lose_next_replace_response:
             self.lose_next_replace_response = False
             return None
@@ -125,6 +129,16 @@ class TestAcquireAndRelease:
         lock = _lock(store, clocks)
         assert lock.try_acquire()
         lock.extend()
+
+    def test_release_deletes_our_own_object_when_a_committed_heartbeat_raised_before_the_task_finished(self, store: FakeStore, clocks: Clocks):
+        lock = _lock(store, clocks)
+        assert lock.try_acquire()
+        store.raise_after_next_replace_commit = TimeoutError('retry deadline exceeded')
+        with pytest.raises(TimeoutError):
+            lock.extend()
+        # the held generation is now stale, but the object is still ours
+        lock.release()
+        assert 'task_run' not in store.objects
 
     def test_release_swallows_store_errors_and_expires_by_timeout(self, store: FakeStore, clocks: Clocks, caplog: pytest.LogCaptureFixture):
         lock = _lock(store, clocks)

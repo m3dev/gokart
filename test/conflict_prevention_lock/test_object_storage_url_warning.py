@@ -45,6 +45,14 @@ def test_warns_that_no_lock_is_taken_with_an_object_storage_url(set_url: Callabl
         _Task()
 
 
+def test_no_warning_for_a_task_whose_dump_locks_are_taken_on_redis(set_url: Callable[[str], None]):
+    set_url('gs://my-bucket/locks')
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        _Task(redis_host='redis.internal', redis_port=6379)
+    assert not [w for w in caught if 'no lock is taken' in str(w.message)]
+
+
 def test_warns_only_once_per_process(set_url: Callable[[str], None]):
     set_url('gs://my-bucket/locks')
     with warnings.catch_warnings(record=True) as caught:

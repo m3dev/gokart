@@ -50,9 +50,20 @@ Notes:
 
 - Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. This includes the load of the inputs and of the result. A task that holds the run lock does not need them under the gokart worker. gokart emits one ``UserWarning`` per process, when the first task is created, to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
 - The service account needs ``storage.objects.get``, ``storage.objects.create`` and ``storage.objects.delete`` on the bucket. Overwriting an existing object (every heartbeat) also requires ``delete``, so ``roles/storage.objectCreator`` is not enough; ``roles/storage.objectUser`` works.
-- Objects left behind by dead workers are not removed automatically. Add a bucket lifecycle rule (for example, delete after 1 day) as a safety net. Lifecycle works in whole days, so it does not replace `timeout`.
-- With object versioning, every heartbeat (every 10 seconds) leaves a noncurrent version, so add a lifecycle rule for noncurrent versions or use a bucket without versioning. Soft delete also keeps deleted lock objects for its retention period.
-- `timeout` must be greater than the heartbeat interval of 10 seconds, and `skew_margin` must not be negative; otherwise a task with ``should_lock_run=True`` fails at construction.
+- Objects are left behind whenever ``release()`` never runs, for example after SIGKILL or an OOM kill of the worker. Add a lifecycle rule as a safety net, **scoped to the lock prefix**. A bucket-wide age rule would also delete your pipeline outputs when the bucket is shared with them.
+
+  .. code:: json
+
+      {
+        "rule": [
+          {"action": {"type": "Delete"}, "condition": {"age": 1, "matchesPrefix": ["gokart-locks/"]}},
+          {"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 1, "matchesPrefix": ["gokart-locks/"]}}
+        ]
+      }
+
+  One day is safe because ``age`` counts from the creation of the current generation, and every heartbeat writes a new generation, so a live lock never reaches it. The second rule only matters with object versioning (see below). Lifecycle works in whole days, so it does not replace `timeout`.
+- With object versioning, every heartbeat (every 10 seconds) leaves a noncurrent version, so keep the ``daysSinceNoncurrentTime`` rule above or use a bucket without versioning. Soft delete also keeps deleted lock objects for its retention period.
+- `timeout` must be greater than 50 seconds (the 10-second heartbeat interval plus the 10-second request timeout and the 30-second retry deadline of a lock request), and `skew_margin` must not be negative; otherwise a task with ``should_lock_run=True`` fails at construction. The 180 seconds by default is fine.
 - Use the Standard storage class for the bucket, because other classes charge for early deletion.
 - GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
 - A failure to release the lock (for example a missing ``storage.objects.delete`` permission) is only logged as a warning, and the lock expires after `timeout`.

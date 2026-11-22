@@ -311,11 +311,16 @@ class TestGcsBackendUrl:
         with pytest.warns(FutureWarning), pytest.raises(ValueError, match='redis_host and redis_port'):
             resolve_redis_lock_settings('redis.internal', None, None)
 
-    @pytest.mark.parametrize('timeout', ['10', '5'])
-    def test_should_lock_run_rejects_a_timeout_that_does_not_exceed_the_heartbeat_interval(self, lock_config: Any, timeout: str):
+    @pytest.mark.parametrize('timeout', ['50', '15', '10', '5'])
+    def test_should_lock_run_rejects_a_timeout_that_a_slow_heartbeat_could_exceed(self, lock_config: Any, timeout: str):
+        # heartbeat interval 10 s + request timeout 10 s + retry deadline 30 s
         lock_config(url='gs://my-bucket/locks', timeout=timeout)
         with pytest.raises(ValueError, match='heartbeat interval'):
             _Task(should_lock_run=True)
+
+    def test_should_lock_run_accepts_a_timeout_above_the_worst_case_heartbeat_duration(self, lock_config: Any):
+        lock_config(url='gs://my-bucket/locks', timeout='51')
+        _Task(should_lock_run=True)
 
     def test_should_lock_run_rejects_a_negative_skew_margin(self, lock_config: Any):
         lock_config(url='gs://my-bucket/locks', skew_margin='-1')

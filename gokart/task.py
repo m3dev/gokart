@@ -165,9 +165,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section. '
                 'If `url` is set, a leftover redis_host or redis_port of the task overrides it; redis_host and redis_port are both required, or remove them.'
             )
-        if uses_object_storage_lock():
+        if uses_object_storage_lock() and not self._has_redis_lock():
             warn_once_that_dump_locks_are_not_taken()
-            if self.should_lock_run and not self._has_redis_lock():
+            if self.should_lock_run:
                 check_object_storage_lock_settings(self._lock_settings.timeout)
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
