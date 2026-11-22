@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 import fakeredis
 import luigi
 import pytest
-from luigi.task_register import Register
 from redis.lock import Lock
 
 import gokart
@@ -66,7 +65,7 @@ class TestRedisRunLockOptions:
         if not existed:
             config.add_section('gokart_lock')
         previous = dict(config.items('gokart_lock'))
-        Register.clear_instance_cache()
+        # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
 
         def _set(url: str) -> None:
             config.set('gokart_lock', 'url', url)
@@ -81,7 +80,6 @@ class TestRedisRunLockOptions:
                 config.set('gokart_lock', name, value)
         else:
             config.remove_section('gokart_lock')
-        Register.clear_instance_cache()
 
     def test_db_tls_and_password_from_the_url_reach_redis(self, recorded_kwargs: list[dict[str, Any]], gokart_lock_url: Any, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
@@ -245,10 +243,9 @@ class TestMakeRunLockWithGcsUrl:
         config = luigi.configuration.get_config()
         config.add_section('gokart_lock')
         config.set('gokart_lock', 'url', f'gs://{gcs_bucket}/locks')
-        Register.clear_instance_cache()
+        # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
         yield
         config.remove_section('gokart_lock')
-        Register.clear_instance_cache()
 
     def test_gs_url_returns_an_object_storage_lock(self, gs_url: None):
         lock = make_run_lock(_LockedTask(should_lock_run=True))
@@ -294,13 +291,12 @@ class TestMakeRunLockWithS3Url:
         config = luigi.configuration.get_config()
         config.add_section('gokart_lock')
         config.set('gokart_lock', 'url', 's3://lock-bucket/locks')
-        Register.clear_instance_cache()
+        # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
         with mock_aws():
             client = boto3.client('s3', region_name='us-east-1')
             client.create_bucket(Bucket='lock-bucket')
             yield client
         config.remove_section('gokart_lock')
-        Register.clear_instance_cache()
 
     def test_s3_url_returns_an_object_storage_lock_backed_by_s3(self, s3_url: Any):
         task = _LockedTask(should_lock_run=True)

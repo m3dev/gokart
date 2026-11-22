@@ -88,12 +88,6 @@ class _DummyTaskWithPrivateParameter(gokart.TaskOnKart[Any]):
 
 
 class TaskTest(unittest.TestCase):
-    def setUp(self):
-        _DummyTask.clear_instance_cache()
-        _DummyTaskA.clear_instance_cache()
-        _DummyTaskB.clear_instance_cache()
-        _DummyTaskC.clear_instance_cache()
-
     def test_complete_without_dependency(self):
         task = _DummyTask()
         self.assertTrue(task.complete(), msg='_DummyTask does not have any output files, so this always must be completed.')
