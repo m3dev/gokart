@@ -15,7 +15,7 @@ When `gokart.TaskOnKart.should_lock_run` is set to True, the gokart worker takes
 If the same task is run()-ing by another worker, the task waits without failing, and other tasks that can be executed at that time are given priority.
 After the other worker releases the lock, the task is retried. If the other worker has already finished the task, it is skipped because its output exists.
 
-The lock is stored in Redis, so `redis_host` and `redis_port` must also be set.
+The lock is stored in Redis, so `redis_host` and `redis_port` must also be set, and the Redis client must be installed with ``pip install gokart[redis]``.
 The lock is extended while the task is running, and expires after `redis_timeout` seconds if the worker dies.
 
 .. code:: python
