@@ -228,13 +228,16 @@ class TestExtrasInstalledButBroken:
         assert exc_info.value is error
 
 
-class TestIsBufferedReaderWithBrokenBoto3:
-    def test_local_file_does_not_need_boto3(self, break_module: BreakModule):
-        # A local load never touches S3, so a broken boto3 must not break it.
+class TestIsBufferedReaderWithoutS3Loaded:
+    def test_local_file_does_not_import_boto3(self, monkeypatch: pytest.MonkeyPatch):
+        # A local load never touches S3, so it must not pay for importing boto3, nor fail when boto3 is broken.
         from gokart.object_storage import ObjectStorage
 
-        break_module('boto3', ImportError('broken dependency'))
+        for name in [name for name in sys.modules if name.split('.')[0] in {'boto3', 'botocore'} or name == 'luigi.contrib.s3']:
+            monkeypatch.delitem(sys.modules, name)
         assert ObjectStorage.is_buffered_reader(object()) is True
+        assert 'boto3' not in sys.modules
+        assert 'luigi.contrib.s3' not in sys.modules
 
 
 def test_is_buffered_reader_returns_false_for_s3_reader() -> None:

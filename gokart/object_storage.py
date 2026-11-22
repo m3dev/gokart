@@ -7,7 +7,6 @@ from typing import Any, cast
 import luigi
 from luigi.format import Format
 
-from gokart._optional_dependency import import_optional_dependency
 from gokart.zip_client import ZipClient
 
 object_storage_path_prefix = ['s3://', 'gs://']
@@ -24,11 +23,11 @@ class ObjectStorage:
     @staticmethod
     def get_object_storage_target(path: str, format: Format) -> luigi.target.FileSystemTarget:
         if path.startswith('s3://'):
-            import_optional_dependency('boto3', extra='s3', feature='S3')
+            from gokart.s3_config import S3Config, import_s3_dependency
+
+            import_s3_dependency('boto3')
 
             import luigi.contrib.s3
-
-            from gokart.s3_config import S3Config
 
             return luigi.contrib.s3.S3Target(path, client=S3Config().get_s3_client(), format=format)
         elif path.startswith('gs://'):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
 import luigi
@@ -15,6 +16,10 @@ if TYPE_CHECKING:
 
 _MIN_BOTOCORE_FOR_CONDITIONAL_WRITES = (1, 35, 69)
 _LOCK_CONNECT_TIMEOUT_SECONDS = 5
+
+
+def import_s3_dependency(module_name: str) -> ModuleType:
+    return import_optional_dependency(module_name, extra='s3', feature='S3')
 
 
 class S3Config(luigi.Config):
@@ -38,7 +43,7 @@ class S3Config(luigi.Config):
         return self._new_luigi_client()
 
     def _new_luigi_client(self, **extra: Any) -> luigi.contrib.s3.S3Client:
-        import_optional_dependency('boto3', extra='s3', feature='S3')
+        import_s3_dependency('boto3')
         import luigi.contrib.s3
 
         return luigi.contrib.s3.S3Client(
@@ -74,7 +79,7 @@ class S3Config(luigi.Config):
 
 
 def _check_botocore_supports_conditional_writes() -> None:
-    botocore = import_optional_dependency('botocore', extra='s3', feature='S3')
+    botocore = import_s3_dependency('botocore')
 
     version = tuple(int(part) for part in botocore.__version__.split('.')[:3] if part.isdigit())
     # Older botocore rejects IfMatch / IfNoneMatch on put_object and delete_object with ParamValidationError.
