@@ -1,3 +1,4 @@
+import functools
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -95,3 +96,40 @@ def test_instance_level_complete_override_of_requirement_is_respected(tmp_path: 
 
     with patch.object(leaf, 'complete', return_value=False):
         assert not top.complete()
+
+
+def test_class_level_complete_wrapper_is_applied_to_requirements(tmp_path: Path) -> None:
+    leaf = _node(tmp_path, 'leaf', [])
+    top = _node(tmp_path, 'top', [leaf])
+    original = TaskOnKart.complete
+    seen: list[str] = []
+
+    @functools.wraps(original)
+    def traced(self: _Node) -> bool:
+        seen.append(self.name)
+        return original(self)
+
+    with patch.object(TaskOnKart, 'complete', traced):
+        assert top.complete()
+
+    assert seen == ['top', 'leaf']
+
+
+class _Chain(TaskOnKart[int]):
+    task_namespace = __name__
+    index: luigi.IntParameter = luigi.IntParameter()
+
+    def requires(self):
+        return _Chain(index=self.index - 1, workspace_directory=self.workspace_directory, strict_check=True) if self.index else []
+
+    def run(self):
+        self.dump(self.index)
+
+
+def test_complete_handles_a_long_strict_check_chain(tmp_path: Path) -> None:
+    # Each level costs two Python frames, so a chain this long must stay within the default recursion limit.
+    length = 300
+    for index in range(length):
+        _Chain(index=index, workspace_directory=str(tmp_path), strict_check=True).dump(index)
+
+    assert _Chain(index=length - 1, workspace_directory=str(tmp_path), strict_check=True).complete()
