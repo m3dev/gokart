@@ -150,10 +150,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
         self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
 
         # Resolved once here and passed down, so that make_task_lock_params stays independent of the global config.
-        self.lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
+        self._lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
         if self.should_lock_run:
-            assert self.lock_settings.host is not None and self.lock_settings.port is not None, (
-                'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section.'
+            assert self._lock_settings.host is not None and self._lock_settings.port is not None, (
+                'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section. '
+                'If `url` is set, a leftover redis_host or redis_port of the task overrides it; redis_host and redis_port are both required, or remove them.'
             )
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
@@ -286,7 +287,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
     def _make_task_lock_params(self, file_path: str, unique_id: str | None) -> TaskLockParams:
-        settings = self.lock_settings
+        settings = self._lock_settings
         return make_task_lock_params(
             file_path=file_path,
             unique_id=unique_id,

@@ -61,14 +61,25 @@ class TestRedisRunLockOptions:
         import luigi.configuration
 
         config = luigi.configuration.get_config()
-        config.add_section('gokart_lock')
+        existed = config.has_section('gokart_lock')
+        if not existed:
+            config.add_section('gokart_lock')
+        previous = dict(config.items('gokart_lock'))
         Register.clear_instance_cache()
 
         def _set(url: str) -> None:
             config.set('gokart_lock', 'url', url)
 
         yield _set
-        config.remove_section('gokart_lock')
+        # restore, so that a section from the developer's luigi.cfg survives the test
+        if existed:
+            for name in dict(config.items('gokart_lock')):
+                if name not in previous:
+                    config.remove_option('gokart_lock', name)
+            for name, value in previous.items():
+                config.set('gokart_lock', name, value)
+        else:
+            config.remove_section('gokart_lock')
         Register.clear_instance_cache()
 
     def test_db_tls_and_password_from_the_url_reach_redis(self, recorded_kwargs: list[dict[str, Any]], gokart_lock_url: Any, monkeypatch: pytest.MonkeyPatch):

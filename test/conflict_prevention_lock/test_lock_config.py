@@ -144,6 +144,18 @@ class TestResolveRedisLockSettings:
         assert (settings.host, settings.port) == (host, port)
         assert settings.timeout == 60
 
+    @pytest.mark.parametrize(('host', 'port'), [('task-host', None), (None, 1234)])
+    def test_a_partial_task_endpoint_warns_that_the_configured_url_is_ignored(self, lock_config: Any, host: str | None, port: int | None):
+        lock_config(url='redis://lock-host:6380')
+        with pytest.warns(FutureWarning, match='`url` of the .gokart_lock. section is ignored'):
+            resolve_redis_lock_settings(host, port, None)
+
+    def test_a_partial_task_endpoint_without_a_url_does_not_warn_about_the_url(self, lock_config: Any):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            resolve_redis_lock_settings('task-host', None, None)
+        assert not [w for w in caught if 'is ignored' in str(w.message)]
+
     def test_no_warning_without_explicit_task_values(self, lock_config: Any):
         lock_config(url='redis://lock-host:6380')
         with warnings.catch_warnings():
@@ -215,6 +227,11 @@ class TestTaskIntegration:
         with pytest.raises(AssertionError, match='gokart_lock'):
             _Task(should_lock_run=True)
 
+    def test_should_lock_run_with_a_partial_task_endpoint_names_the_cause_even_if_a_url_is_set(self, lock_config: Any):
+        lock_config(url='redis://lock-host:6380')
+        with pytest.warns(FutureWarning), pytest.raises(AssertionError, match='redis_host and redis_port'):
+            _Task(should_lock_run=True, redis_port=6379)
+
     def test_task_level_redis_settings_warn_exactly_once(self):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
@@ -235,6 +252,9 @@ class TestRedisConnectionKwargs:
 
     def test_db_and_ssl_are_passed_when_set(self):
         assert redis_connection_kwargs('h', 1, 2, True) == {'host': 'h', 'port': 1, 'db': 2, 'ssl': True}
+
+    def test_port_zero_is_kept(self):
+        assert redis_connection_kwargs('h', 0, 0, False)['port'] == 0
 
     def test_defaults_for_missing_host_and_port(self):
         assert redis_connection_kwargs(None, None, 0, False) == {'host': 'localhost', 'port': 6379}

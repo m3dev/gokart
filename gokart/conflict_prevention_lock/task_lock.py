@@ -136,7 +136,7 @@ def make_task_lock_params_for_run(task_self: Any, lock_extend_seconds: int = 10)
     unique_id = task_self.make_unique_id() + '-run'
     task_lock_key = make_task_lock_key(file_path=task_path_name, unique_id=unique_id)
 
-    settings: RedisLockSettings = task_self.lock_settings
+    settings: RedisLockSettings = task_self._lock_settings
     should_task_lock = settings.host is not None and settings.port is not None
     return TaskLockParams(
         redis_host=settings.host,

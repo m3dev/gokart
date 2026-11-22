@@ -54,6 +54,8 @@ How to use
     When they are set, they take precedence over ``[gokart_lock]`` and emit a ``FutureWarning``. They will be removed in the next major release.
     ``redis_host`` and ``redis_port`` replace the whole endpoint (both are required, and the db number, TLS and password of ``url`` are not used), while ``redis_timeout`` falls back to ``timeout``.
     The replacement of ``--redis-host`` / ``--redis-port`` on the command line is ``--gokart-lock-url=redis://localhost:6379``.
+    If only one of ``redis_host`` and ``redis_port`` is set, a ``FutureWarning`` says that ``url`` is ignored and no Redis lock is taken.
+    Custom targets that call ``make_task_lock_params(redis_host=self.redis_host, ...)`` themselves do not see ``[gokart_lock]``; create them with ``self.make_target`` / ``self.make_model_target`` instead.
     ``TaskOnKart.redis_timeout`` is ``None`` unless it is set explicitly (it used to default to 180), so code that reads it should use ``timeout`` of ``[gokart_lock]`` instead.
 
 3. Done

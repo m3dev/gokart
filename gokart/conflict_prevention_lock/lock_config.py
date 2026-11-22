@@ -69,7 +69,7 @@ def parse_lock_url(url: str) -> RedisUrl:
 
 def redis_connection_kwargs(host: str | None, port: int | None, db: int, ssl: bool, use_password: bool = False) -> dict[str, Any]:
     """Keyword arguments for ``redis.Redis``; options at their default are left out."""
-    kwargs: dict[str, Any] = {'host': host or 'localhost', 'port': port or DEFAULT_REDIS_PORT}
+    kwargs: dict[str, Any] = {'host': host or 'localhost', 'port': DEFAULT_REDIS_PORT if port is None else port}
     if db:
         kwargs['db'] = db
     if ssl:
@@ -98,6 +98,14 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
         )
     timeout = redis_timeout if redis_timeout is not None else config.timeout
     if redis_host is not None or redis_port is not None:
+        if (redis_host is None or redis_port is None) and config.url:
+            # A leftover half of the old setting would otherwise switch the lock off without any hint.
+            warnings.warn(
+                'Only one of redis_host and redis_port of TaskOnKart is set, so `url` of the [gokart_lock] section is ignored and no Redis lock is taken. '
+                'Set both, or remove them to use `url`.',
+                FutureWarning,
+                stacklevel=2,
+            )
         return RedisLockSettings(host=redis_host, port=redis_port, timeout=timeout)
     if config.url:
         redis_url = parse_lock_url(config.url)
