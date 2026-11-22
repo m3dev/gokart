@@ -31,6 +31,29 @@ The lock is extended while the task is running, and expires after `timeout` seco
 
 `redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `FutureWarning`.
 
+Object storage (GCS) backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If your pipeline already stores its outputs on GCS, the run lock can live there too, so you do not have to operate Redis just for it.
+
+.. code:: ini
+
+    [gokart_lock]
+    url=gs://my-bucket/gokart-locks
+    timeout=180
+    skew_margin=30
+
+The lock is one object per task, ``<prefix>/<lock_key>.lock``, written with GCS request preconditions (``ifGenerationMatch``).
+A waiter treats the lock as expired when the server-side last write time + `timeout` + `skew_margin` seconds has passed, or when it has seen the same version unchanged for `timeout` seconds on its own monotonic clock.
+Only one waiter wins a takeover. `skew_margin` (30 seconds by default) absorbs clock skew between workers.
+
+Notes:
+
+- Only the run lock moves to GCS. The dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) stay on Redis and are inactive when the url is ``gs://``.
+- Objects left behind by dead workers are not removed automatically. Add a bucket lifecycle rule (for example, delete after 1 day) as a safety net. Lifecycle works in whole days, so it does not replace `timeout`.
+- Use the Standard storage class for the bucket, because other classes charge for early deletion.
+- GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
+- ``s3://`` is not supported yet.
+
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
 If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock and emits a `UserWarning`.
 This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.

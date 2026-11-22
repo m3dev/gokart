@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import threading
 from logging import getLogger
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
-from gokart.conflict_prevention_lock.lock_config import redis_connection_kwargs
+from gokart.conflict_prevention_lock.gcs_lock_store import GCSLockStore
+from gokart.conflict_prevention_lock.lock_config import gokart_lock, lock_url_scheme, parse_gcs_lock_url, redis_connection_kwargs
+from gokart.conflict_prevention_lock.object_storage_lock import ObjectStorageRunLock
 from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params_for_run
 
@@ -63,7 +65,21 @@ class RedisRunLock:
 def make_run_lock(task: Any) -> RunLock | None:
     if not getattr(task, 'should_lock_run', False):
         return None
-    return RedisRunLock(make_task_lock_params_for_run(task_self=task))
+    params = make_task_lock_params_for_run(task_self=task)
+    config = gokart_lock()
+    # Task-level redis_* settings are deprecated but still take precedence over [gokart_lock].
+    if not params.should_task_lock and lock_url_scheme(config.url) == 'gs':
+        return _make_gcs_run_lock(cast(str, config.url), params, config.skew_margin)
+    return RedisRunLock(params)
+
+
+def _make_gcs_run_lock(url: str, params: TaskLockParams, skew_margin: float) -> ObjectStorageRunLock:
+    from gokart.gcs_config import GCSConfig
+
+    bucket, prefix = parse_gcs_lock_url(url)
+    # A dedicated client keeps the heartbeat thread off the client that forked task processes use.
+    store = GCSLockStore(GCSConfig().create_storage_client(), bucket, prefix)
+    return ObjectStorageRunLock(store, params.redis_key, ttl=params.redis_timeout or 0, skew_margin=skew_margin)
 
 
 class RunLockHeartbeat:

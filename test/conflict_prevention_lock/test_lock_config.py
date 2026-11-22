@@ -11,7 +11,7 @@ import luigi.task_register
 import pytest
 
 import gokart
-from gokart.conflict_prevention_lock.lock_config import parse_lock_url, redis_connection_kwargs, resolve_redis_lock_settings
+from gokart.conflict_prevention_lock.lock_config import parse_gcs_lock_url, parse_lock_url, redis_connection_kwargs, resolve_redis_lock_settings
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
 from gokart.target import make_target
 
@@ -273,3 +273,42 @@ class TestRedisConnectionKwargs:
         if value is not None:
             monkeypatch.setenv('GOKART_REDIS_PASSWORD', value)
         assert 'password' not in redis_connection_kwargs('h', 1, 0, False, use_password=True)
+
+
+class TestParseGcsLockUrl:
+    def test_bucket_and_prefix(self):
+        assert parse_gcs_lock_url('gs://my-bucket/gokart-locks') == ('my-bucket', 'gokart-locks')
+
+    def test_nested_prefix_and_trailing_slash(self):
+        assert parse_gcs_lock_url('gs://my-bucket/a/b/') == ('my-bucket', 'a/b')
+
+    def test_prefix_is_optional(self):
+        assert parse_gcs_lock_url('gs://my-bucket') == ('my-bucket', '')
+
+    @pytest.mark.parametrize('url', ['gs://', 'redis://host', 'gs://bucket/prefix?x=1'])
+    def test_invalid_url_is_rejected(self, url: str):
+        with pytest.raises(ValueError, match='Unsupported lock backend URL'):
+            parse_gcs_lock_url(url)
+
+
+class TestGcsBackendUrl:
+    def test_gs_url_leaves_the_redis_settings_empty(self, lock_config: Any):
+        lock_config(url='gs://my-bucket/locks', timeout='60')
+        settings = resolve_redis_lock_settings(None, None, None)
+        assert (settings.host, settings.port, settings.timeout) == (None, None, 60)
+
+    def test_should_lock_run_accepts_a_gs_url(self, lock_config: Any):
+        lock_config(url='gs://my-bucket/locks')
+        _Task(should_lock_run=True)
+
+    def test_s3_url_is_not_supported_yet(self, lock_config: Any):
+        lock_config(url='s3://my-bucket/locks')
+        with pytest.raises(ValueError, match='Unsupported lock backend URL'):
+            resolve_redis_lock_settings(None, None, None)
+
+    def test_skew_margin_is_configurable(self, lock_config: Any):
+        from gokart.conflict_prevention_lock.lock_config import gokart_lock
+
+        assert gokart_lock().skew_margin == 30.0
+        lock_config(skew_margin='5')
+        assert gokart_lock().skew_margin == 5.0

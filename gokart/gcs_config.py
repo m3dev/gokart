@@ -38,6 +38,10 @@ class GCSConfig(luigi.Config):
             self._storage_client = (pid, self._create_storage_client())
         return self._storage_client[1]
 
+    def create_storage_client(self) -> storage.Client:
+        """Build a client that is not shared with anyone else, e.g. for a background thread."""
+        return self._create_storage_client()
+
     def _create_storage_client(self) -> storage.Client:
         storage = import_storage()
         credentials = self._load_oauth_credentials()

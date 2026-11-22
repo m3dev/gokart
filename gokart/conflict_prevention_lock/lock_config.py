@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 import warnings
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 from urllib.parse import urlsplit
 
 import luigi
@@ -11,6 +11,7 @@ import luigi
 DEFAULT_REDIS_PORT = 6379
 DEFAULT_LOCK_TIMEOUT = 180
 REDIS_PASSWORD_ENV = 'GOKART_REDIS_PASSWORD'
+DEFAULT_SKEW_MARGIN_SECONDS = 30.0
 
 
 class gokart_lock(luigi.Config):
@@ -25,6 +26,10 @@ class gokart_lock(luigi.Config):
         default=None, description='URL of the lock backend, e.g. redis://localhost:6379. Task lock is deactivated, when None.'
     )
     timeout: luigi.IntParameter = luigi.IntParameter(default=DEFAULT_LOCK_TIMEOUT, description='A lock is released after `timeout` seconds without extension.')
+    skew_margin: luigi.FloatParameter = luigi.FloatParameter(
+        default=DEFAULT_SKEW_MARGIN_SECONDS,
+        description='Object storage backends only: extra seconds to wait after the server-side expiry of a lock, to tolerate clock skew between workers.',
+    )
 
 
 class RedisLockSettings(NamedTuple):
@@ -81,6 +86,18 @@ def redis_connection_kwargs(host: str | None, port: int | None, db: int, ssl: bo
     return kwargs
 
 
+def parse_gcs_lock_url(url: str) -> tuple[str, str]:
+    """Split a ``gs://bucket[/prefix]`` URL into (bucket, prefix)."""
+    parts = urlsplit(url)
+    if parts.scheme != 'gs' or not parts.netloc or parts.query or parts.fragment:
+        raise ValueError(f'Unsupported lock backend URL: {url!r}. Expected gs://bucket[/prefix].')
+    return parts.netloc, parts.path.strip('/')
+
+
+def lock_url_scheme(url: str | None) -> str | None:
+    return urlsplit(url).scheme if url else None
+
+
 def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, redis_timeout: int | None, warn: bool = True) -> RedisLockSettings:
     """Merge the deprecated task-level ``redis_*`` parameters with ``[gokart_lock]``.
 
@@ -88,6 +105,11 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
     so that an endpoint is never assembled from two sources. Only the timeout falls back to the config field by field.
     """
     config = gokart_lock()
+    scheme = lock_url_scheme(config.url)
+    if scheme == 'gs':
+        parse_gcs_lock_url(cast(str, config.url))
+    elif scheme not in ('redis', 'rediss', None):
+        raise ValueError(f'Unsupported lock backend URL: {config.url!r}. Only redis[s]://host[:port][/db] and gs://bucket[/prefix] are supported.')
     explicit = [name for name, value in (('redis_host', redis_host), ('redis_port', redis_port), ('redis_timeout', redis_timeout)) if value is not None]
     if explicit and warn:
         # FutureWarning, because DeprecationWarning is hidden by default outside __main__ and the setting usually comes from a config file.
@@ -107,7 +129,8 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
                 stacklevel=2,
             )
         return RedisLockSettings(host=redis_host, port=redis_port, timeout=timeout)
-    if config.url:
-        redis_url = parse_lock_url(config.url)
+    # Only the run lock moves to object storage; dump / load / remove locks stay on Redis.
+    if scheme in ('redis', 'rediss'):
+        redis_url = parse_lock_url(cast(str, config.url))
         return RedisLockSettings(host=redis_url.host, port=redis_url.port, timeout=timeout, db=redis_url.db, ssl=redis_url.ssl, use_password=True)
     return RedisLockSettings(host=None, port=None, timeout=timeout)

@@ -20,7 +20,7 @@ from luigi.parameter import ParameterVisibility
 import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
-from gokart.conflict_prevention_lock.lock_config import resolve_redis_lock_settings
+from gokart.conflict_prevention_lock.lock_config import gokart_lock, lock_url_scheme, resolve_redis_lock_settings
 from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
@@ -156,7 +156,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
             # Fail at construction rather than at dump() after a whole run() has been spent.
             import_redis()
         if self.should_lock_run:
-            assert self._lock_settings.host is not None and self._lock_settings.port is not None, (
+            has_redis = self._lock_settings.host is not None and self._lock_settings.port is not None
+            assert has_redis or lock_url_scheme(gokart_lock().url) == 'gs', (
                 'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section. '
                 'If `url` is set, a leftover redis_host or redis_port of the task overrides it; redis_host and redis_port are both required, or remove them.'
             )
