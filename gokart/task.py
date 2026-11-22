@@ -291,7 +291,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # luigi's instance cache returns one object per identical parameters, so diamonds are still deduplicated.
         #
         # A requirement that overrides `complete()` (on its class or on the instance, or a plain luigi task) keeps its own logic.
-        # If it delegates to `super().complete()`, that starts a fresh memo, so diamonds below it are re-checked per path.
+        # If it delegates to `super().complete()`, that starts a fresh memo, so diamonds below it are re-checked per path,
+        # and each such level is one frame deeper than master, which lowers the longest chain `complete()` can handle.
         if isinstance(task, TaskOnKart) and getattr(task.complete, '__func__', None) is _TASK_ON_KART_COMPLETE:
             requirement = cast(TaskOnKart[Any], task)
             key = id(requirement)
