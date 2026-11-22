@@ -11,6 +11,7 @@ Requires
 --------
 
 You need to install the ``redis`` client with ``pip install gokart[redis]``, and set up a `redis <https://redis.io/topics/quickstart>`_ server, for using this advanced feature.
+When both ``redis_host`` and ``redis_port`` are set, a task raises ``ImportError`` at construction if the ``redis`` client is not installed, even if the task never takes a lock.
 
 
 How to use

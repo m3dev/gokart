@@ -1055,7 +1055,7 @@ class Worker:
         task = self._scheduled_tasks[task_id]
         try:
             run_lock = make_run_lock(task)
-            acquired = run_lock.try_acquire() if run_lock is not None else True
+            acquired = run_lock is None or run_lock.try_acquire()
         except Exception as ex:
             self._fail_task_before_run(task_id, ex)
             return
@@ -1066,9 +1066,10 @@ class Worker:
         self._start_task_process(task_id, run_lock)
 
     def _fail_task_before_run(self, task_id: str, ex: Exception) -> None:
-        # Report the failure like a failed run() so that a Redis outage or a run lock that cannot be created fails only this task instead of crashing the whole worker loop.
+        # Report the failure like a failed run() so that a Redis outage or a run lock that cannot be created
+        # fails only this task instead of crashing the whole worker loop.
         task = self._scheduled_tasks[task_id]
-        logger.exception(f'Failed to take the run lock of {task_id}.')
+        logger.exception(f'Failed to create or take the run lock of {task_id}.')
         _trigger_event(task, Event.FAILURE, task, ex)
         expl = cast(str, cast(Any, task).on_failure(ex))
         self._email_task_failure(task, expl)
