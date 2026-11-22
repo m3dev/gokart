@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import random
 import time
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 from gokart.conflict_prevention_lock.object_storage_lock import ConditionalConflictError, StoredLock, lock_object_name
 
@@ -19,6 +20,9 @@ _CONFLICT_RETRY_DELAY_RANGE_SECONDS = (0.05, 0.25)
 
 def _sleep_before_conflict_retry() -> None:
     time.sleep(random.uniform(*_CONFLICT_RETRY_DELAY_RANGE_SECONDS))
+
+
+T = TypeVar('T')
 
 
 class UnsupportedConditionalWritesError(Exception):
@@ -60,54 +64,60 @@ class S3LockStore:
         return StoredLock(version=str(response['ETag']), updated_at=response['LastModified'].timestamp(), body=response['Body'].read())
 
     def create_if_absent(self, key: str, body: bytes) -> str | None:
-        return self._put(key, body, treat_conflict_as_failure=True, IfNoneMatch='*')
+        return self._put(key, body, retry_conflict=False, IfNoneMatch='*')
 
     def replace_if_match(self, key: str, body: bytes, version: str) -> str | None:
-        return self._put(key, body, treat_conflict_as_failure=False, IfMatch=version)
+        return self._put(key, body, retry_conflict=True, IfMatch=version)
 
     def delete_if_match(self, key: str, version: str) -> bool:
         from botocore.exceptions import ClientError
 
-        for attempt in range(2):
-            try:
-                self._client.delete_object(Bucket=self._bucket, Key=self._name(key), IfMatch=version)
-            except ClientError as e:
-                code = _error_code(e)
-                if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
-                    return False
-                if code in _CONFLICT_CODES:
-                    if attempt == 0:
-                        _sleep_before_conflict_retry()
-                        continue
-                    raise ConditionalConflictError(f'{self._name(key)} kept conflicting with another conditional request.') from e
-                self._raise_if_unsupported(code, e)
-                raise
-            return True
-        raise AssertionError('unreachable')
+        try:
+            self._retry_once_on_conflict(key, lambda: self._client.delete_object(Bucket=self._bucket, Key=self._name(key), IfMatch=version))
+        except ClientError as e:
+            code = _error_code(e)
+            if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
+                return False
+            self._raise_if_unsupported(code, e)
+            raise
+        return True
 
-    def _put(self, key: str, body: bytes, treat_conflict_as_failure: bool, **condition: str) -> str | None:
+    def _put(self, key: str, body: bytes, retry_conflict: bool, **condition: str) -> str | None:
         from botocore.exceptions import ClientError
 
-        for attempt in range(2):
-            try:
-                response = self._client.put_object(Bucket=self._bucket, Key=self._name(key), Body=body, ContentType='application/json', **condition)
-            except ClientError as e:
-                code = _error_code(e)
-                if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
-                    return None
-                if code in _CONFLICT_CODES:
-                    # Creating: whoever is writing the same key at the same time holds the lock. Replacing: retry once with the same ETag, where a real loss
-                    # shows up as 412; if it conflicts again, the heartbeat keeps its version and tries again on the next tick, and a takeover stays parked.
-                    if treat_conflict_as_failure:
-                        return None
-                    if attempt == 0:
-                        _sleep_before_conflict_retry()
-                        continue
-                    raise ConditionalConflictError(f'{self._name(key)} kept conflicting with another conditional request.') from e
-                self._raise_if_unsupported(code, e)
+        def request() -> Any:
+            return self._client.put_object(Bucket=self._bucket, Key=self._name(key), Body=body, ContentType='application/json', **condition)
+
+        try:
+            response = self._retry_once_on_conflict(key, request) if retry_conflict else request()
+        except ClientError as e:
+            code = _error_code(e)
+            # Creating: whoever is writing the same key at the same time holds the lock.
+            if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES or code in _CONFLICT_CODES:
+                return None
+            self._raise_if_unsupported(code, e)
+            raise
+        return str(response['ETag'])
+
+    def _retry_once_on_conflict(self, key: str, request: Callable[[], T]) -> T:
+        """Retry once with the same ETag, where a real loss shows up as 412.
+
+        If it conflicts again, the heartbeat keeps its version and tries again on the next tick, and a takeover stays parked.
+        """
+        from botocore.exceptions import ClientError
+
+        try:
+            return request()
+        except ClientError as e:
+            if _error_code(e) not in _CONFLICT_CODES:
                 raise
-            return str(response['ETag'])
-        raise AssertionError('unreachable')
+        _sleep_before_conflict_retry()
+        try:
+            return request()
+        except ClientError as e:
+            if _error_code(e) in _CONFLICT_CODES:
+                raise ConditionalConflictError(f'{self._name(key)} kept conflicting with another conditional request.') from e
+            raise
 
     @staticmethod
     def _raise_if_unsupported(code: str, error: Exception) -> None:

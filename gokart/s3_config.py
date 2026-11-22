@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 
 _MIN_BOTOCORE_FOR_CONDITIONAL_WRITES = (1, 35, 69)
+_LOCK_CONNECT_TIMEOUT_SECONDS = 5
 
 
 class S3Config(luigi.Config):
@@ -61,12 +62,13 @@ class S3Config(luigi.Config):
         from botocore.config import Config
 
         # The heartbeat thread extends every held lock one after another, so one hung request must not outlast the lock timeout: botocore's
-        # defaults (60 s timeouts, 5 attempts) would allow about 300 s. Two attempts of at most 15 s stay within the 30 s retry deadline of the GCS store.
+        # defaults (60 s timeouts, 5 attempts) would allow about 300 s. The attempts fit into the 30 s retry deadline of the GCS store.
+        attempt_seconds = _LOCK_CONNECT_TIMEOUT_SECONDS + LOCK_REQUEST_TIMEOUT_SECONDS
         client = self._new_luigi_client(
             config=Config(
-                connect_timeout=5,
+                connect_timeout=_LOCK_CONNECT_TIMEOUT_SECONDS,
                 read_timeout=LOCK_REQUEST_TIMEOUT_SECONDS,
-                retries={'mode': 'standard', 'total_max_attempts': LOCK_REQUEST_RETRY_DEADLINE_SECONDS // (5 + LOCK_REQUEST_TIMEOUT_SECONDS)},
+                retries={'mode': 'standard', 'total_max_attempts': max(1, LOCK_REQUEST_RETRY_DEADLINE_SECONDS // attempt_seconds)},
             )
         )
         return cast(Any, client).s3.meta.client

@@ -79,6 +79,7 @@ Notes:
 - Use the Standard storage class for the bucket, because other classes charge for early deletion.
 - GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
 - A failure to release the lock (for example a missing ``storage.objects.delete`` permission) is only logged as a warning, and the lock expires after `timeout`.
+- With ``aws_role_arn`` in the luigi ``[s3]`` section, the credentials come from a single ``sts:AssumeRole`` call that luigi does not refresh, and every lock does its own AssumeRole when it is created. A task with ``should_lock_run=True`` that outlives the session (one hour by default) gets ``ExpiredToken`` on its heartbeats, and its lock is taken over after `timeout`. The S3 targets have the same luigi limitation. Use credentials that refresh themselves (for example an instance or workload role) for long-running tasks, or extend the role session duration.
 - S3 needs ``botocore>=1.35.69`` for conditional writes, and ``pip install gokart[s3]``. Conditional deletes are available on general purpose buckets since 2025-09.
 - To use an S3-compatible store such as MinIO or R2, set ``endpoint_url`` of the ``[S3Config]`` section. It is shared by the S3 targets and the S3 run lock.
 

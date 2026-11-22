@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from typing import Any
+from unittest.mock import MagicMock
 
 import boto3
 import pytest
@@ -132,7 +133,8 @@ class TestConditionalRequestConflict:
     @pytest.fixture(autouse=True)
     def sleeps(self, monkeypatch: pytest.MonkeyPatch) -> list[float]:
         recorded: list[float] = []
-        monkeypatch.setattr('gokart.conflict_prevention_lock.s3_lock_store.time.sleep', recorded.append)
+        # Patch the helper, not time.sleep, which is shared with moto, botocore and threads.
+        monkeypatch.setattr('gokart.conflict_prevention_lock.s3_lock_store._sleep_before_conflict_retry', lambda: recorded.append(0.1))
         return recorded
 
     def test_409_on_create_means_someone_else_is_creating(self, store: S3LockStore, client: Any):
@@ -146,12 +148,12 @@ class TestConditionalRequestConflict:
         new_version = store.replace_if_match('k', b'second', version)
         assert new_version is not None and calls[0] == 2
 
-    def test_the_retry_waits_a_short_jittered_time(self, store: S3LockStore, client: Any, sleeps: list[float]):
+    def test_the_retry_waits_before_trying_again(self, store: S3LockStore, client: Any, sleeps: list[float]):
         version = store.create_if_absent('k', b'first')
         assert version is not None
         _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=1)
         store.replace_if_match('k', b'second', version)
-        assert len(sleeps) == 1 and 0 < sleeps[0] <= 0.25
+        assert len(sleeps) == 1
 
     def test_a_409_that_persists_on_replace_raises_a_conflict_so_that_the_heartbeat_retries_later(self, store: S3LockStore, client: Any):
         version = store.create_if_absent('k', b'first')
@@ -186,9 +188,22 @@ class TestConditionalRequestConflict:
         assert store.stat('task_run') is not None
 
 
+class TestConflictRetryDelay:
+    def test_the_jittered_delay_is_short(self, monkeypatch: pytest.MonkeyPatch):
+        from gokart.conflict_prevention_lock import s3_lock_store
+
+        slept: list[float] = []
+        monkeypatch.setattr(s3_lock_store.time, 'sleep', slept.append)
+        s3_lock_store._sleep_before_conflict_retry()
+        assert len(slept) == 1 and 0 < slept[0] <= 0.25
+
+
 class TestClose:
     def test_close_closes_the_dedicated_client(self, client: Any):
+        spy = MagicMock(wraps=client.close)
+        client.close = spy
         S3LockStore(client, 'lock-bucket', 'locks').close()
+        spy.assert_called_once_with()
 
 
 class TestWithRunLock:
