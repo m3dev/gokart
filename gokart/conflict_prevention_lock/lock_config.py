@@ -98,6 +98,10 @@ def lock_url_scheme(url: str | None) -> str | None:
     return urlsplit(url).scheme if url else None
 
 
+def uses_object_storage_lock() -> bool:
+    return lock_url_scheme(gokart_lock().url) == 'gs'
+
+
 def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, redis_timeout: int | None, warn: bool = True) -> RedisLockSettings:
     """Merge the deprecated task-level ``redis_*`` parameters with ``[gokart_lock]``.
 

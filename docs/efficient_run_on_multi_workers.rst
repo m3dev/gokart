@@ -48,7 +48,7 @@ Only one waiter wins a takeover. `skew_margin` (30 seconds by default) absorbs c
 
 Notes:
 
-- Only the run lock moves to GCS. The dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) stay on Redis and are inactive when the url is ``gs://``.
+- Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. A task that holds the run lock does not need them under the gokart worker. For any other dump / load / remove, gokart emits a ``UserWarning`` to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
 - Objects left behind by dead workers are not removed automatically. Add a bucket lifecycle rule (for example, delete after 1 day) as a safety net. Lifecycle works in whole days, so it does not replace `timeout`.
 - Use the Standard storage class for the bucket, because other classes charge for early deletion.
 - GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
