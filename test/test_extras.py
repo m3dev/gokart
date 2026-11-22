@@ -1,12 +1,23 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 from unittest.mock import patch
 
 import luigi.format
+import luigi.task_register
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _clear_cached_clients() -> Iterator[None]:
+    # S3Config / GCSConfig instances (and the clients cached on them) are shared through luigi's instance cache.
+    # A client created by an earlier test would skip the import these tests block, so reset the whole cache
+    # (it is global to every luigi Task and Config) to start from fresh instances.
+    luigi.task_register.Register.clear_instance_cache()
+    yield
+    luigi.task_register.Register.clear_instance_cache()
 
 
 def _make_import_raiser(blocked_modules: set[str]) -> Callable[..., Any]:
@@ -27,7 +38,6 @@ class TestS3ExtrasNotInstalled:
         from gokart.s3_config import S3Config
 
         config = S3Config()
-        config._client = None
 
         with patch('builtins.__import__', side_effect=_make_import_raiser({'boto3'})):
             with pytest.raises(ImportError, match=r'pip install gokart\[s3\]'):
@@ -79,7 +89,6 @@ class TestGCSExtrasNotInstalled:
         from gokart.gcs_config import GCSConfig
 
         config = GCSConfig()
-        config._client = None
 
         with patch('builtins.__import__', side_effect=_make_import_raiser({'googleapiclient'})):
             saved = sys.modules.pop('googleapiclient', None)
@@ -111,13 +120,9 @@ class TestGCSExtrasNotInstalled:
     def test_gcs_config_get_storage_client_raises_without_gcs_lib(self):
         from gokart.gcs_config import GCSConfig
 
-        GCSConfig.clear_instance_cache()
-        try:
-            with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud'})):
-                with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-                    GCSConfig().get_storage_client()
-        finally:
-            GCSConfig.clear_instance_cache()
+        with patch('builtins.__import__', side_effect=_make_import_raiser({'google.cloud'})):
+            with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
+                GCSConfig().get_storage_client()
 
     def test_object_storage_exists_raises_for_gcs_without_extras(self):
         from gokart.object_storage import ObjectStorage
