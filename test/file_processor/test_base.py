@@ -8,12 +8,10 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-import tracemalloc
 import unittest
 from collections.abc import Callable
 from io import BytesIO
 from typing import Any
-from unittest.mock import patch
 
 import boto3
 import numpy as np
@@ -21,7 +19,6 @@ from luigi import LocalTarget
 from moto import mock_aws
 
 from gokart.file_processor import PickleFileProcessor
-from gokart.file_processor.base import _ChunkedLargeFileReader
 from gokart.object_storage import ObjectStorage
 
 
@@ -45,53 +42,6 @@ def _dump_and_load(obj: Any) -> Any:
     return processor.load(buffer)
 
 
-class _ShortReadStream:
-    """Returns at most `max_per_read` bytes per read, as unbuffered/raw streams legitimately do."""
-
-    def __init__(self, data: bytes, max_per_read: int) -> None:
-        self._stream = BytesIO(data)
-        self._max_per_read = max_per_read
-
-    def read(self, n: int) -> bytes:
-        return self._stream.read(min(n, self._max_per_read))
-
-
-class TestChunkedLargeFileReader(unittest.TestCase):
-    def _reader(self, data: bytes, max_per_read: int) -> _ChunkedLargeFileReader:
-        return _ChunkedLargeFileReader(_ShortReadStream(data, max_per_read))
-
-    def test_read_large_with_short_reads_returns_all_bytes(self):
-        data = bytes(range(8))
-        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', 3):
-            self.assertEqual(self._reader(data, max_per_read=2).read(len(data)), data)
-
-    def test_read_large_with_full_reads_returns_all_bytes(self):
-        data = bytes(range(8))
-        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', 3):
-            self.assertEqual(self._reader(data, max_per_read=100).read(len(data)), data)
-
-    def test_read_large_stops_at_eof_and_returns_available_bytes(self):
-        data = bytes(range(5))
-        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', 3):
-            self.assertEqual(self._reader(data, max_per_read=2).read(8), data)
-
-    def test_read_large_peak_memory_stays_within_buffer_plus_result(self):
-        # The result copy is unavoidable, but the last chunk and a sliced copy of the buffer must not stay alive on top of it.
-        n = 4 * 1024 * 1024
-        data = bytes(n)
-        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', n // 2):
-            reader = _ChunkedLargeFileReader(BytesIO(data))
-            tracemalloc.start()
-            try:
-                tracemalloc.reset_peak()
-                result = reader.read(n)
-                _, peak = tracemalloc.get_traced_memory()
-            finally:
-                tracemalloc.stop()
-        self.assertEqual(len(result), n)
-        self.assertLess(peak, 2.5 * n)
-
-
 class TestPickleFileProcessor(unittest.TestCase):
     def test_dump_and_load_normal_obj(self):
         var = 'abc'
@@ -106,6 +56,21 @@ class TestPickleFileProcessor(unittest.TestCase):
                 loaded = processor.load(f)
 
         self.assertEqual(loaded, var)
+
+    def test_dump_and_load_payload_larger_than_unpickler_prefetch_with_local_file(self):
+        # The C unpickler prefetches 128 KiB via peek() and reads larger unframed payloads straight into the result with readinto(), so this crosses both paths.
+        var = {'array': np.arange(1 << 20), 'bytes': os.urandom(3 << 20)}
+        processor = PickleFileProcessor()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            local_target = LocalTarget(path=f'{temp_dir}/temp.pkl', format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(var, f)
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+        np.testing.assert_array_equal(loaded['array'], var['array'])
+        self.assertEqual(loaded['bytes'], var['bytes'])
 
     def test_dump_and_load_class(self):
         import functools

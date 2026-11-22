@@ -21,7 +21,6 @@ from moto import mock_aws
 
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import make_file_processor
-from gokart.file_processor.base import _ChunkedLargeFileReader
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import LargeDataFrameProcessor, SingleFileTarget, make_model_target, make_target
 from test.util import _get_temporary_directory
@@ -40,9 +39,7 @@ class LocalTargetTest(unittest.TestCase):
 
         target = make_target(file_path=file_path, unique_id=None)
         target.dump(obj)
-        with patch('gokart.file_processor.base._ChunkedLargeFileReader', wraps=_ChunkedLargeFileReader) as monkey:
-            loaded = target.load()
-            monkey.assert_called()
+        loaded = target.load()
 
         self.assertEqual(loaded, obj)
 
