@@ -5,6 +5,7 @@ import hashlib
 import inspect
 import os
 import random
+import sys
 import types
 import warnings
 from collections.abc import Callable, Generator, Iterable
@@ -50,6 +51,15 @@ class EmptyDumpError(AssertionError):
 
 
 _DROPPED = object()
+
+
+def _is_empty_data_frame(obj: Any) -> bool:
+    if isinstance(obj, pd.DataFrame):
+        return obj.empty
+    # WHY: polars is an optional dependency, and a polars DataFrame can only exist once polars has been imported,
+    # so looking it up in sys.modules is enough and needs no ImportError handling.
+    pl = sys.modules.get('polars')
+    return pl is not None and isinstance(obj, pl.DataFrame) and obj.is_empty()
 
 
 def _drop_marked(items: Any) -> Any:
@@ -443,7 +453,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def dump(self, obj: Any, target: None | str | TargetOnKart = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
         if self.fail_on_empty_dump:
-            if isinstance(obj, pd.DataFrame) and obj.empty:
+            if _is_empty_data_frame(obj):
                 raise EmptyDumpError()
 
         if self.should_lock_run and self._lock_at_dump:
