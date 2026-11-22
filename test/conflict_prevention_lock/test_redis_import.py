@@ -94,6 +94,7 @@ def redis_lock_url() -> Iterator[None]:
         config.add_section('gokart_lock')
     previous = cast(str | None, config.get('gokart_lock', 'url', fallback=None))
     config.set('gokart_lock', 'url', 'redis://localhost:6379')
+    # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
     yield
     if not existed:
         config.remove_section('gokart_lock')

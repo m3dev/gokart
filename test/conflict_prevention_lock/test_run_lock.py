@@ -65,6 +65,7 @@ class TestRedisRunLockOptions:
         if not existed:
             config.add_section('gokart_lock')
         previous = dict(config.items('gokart_lock'))
+        # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
 
         def _set(url: str) -> None:
             config.set('gokart_lock', 'url', url)
@@ -242,6 +243,7 @@ class TestMakeRunLockWithGcsUrl:
         config = luigi.configuration.get_config()
         config.add_section('gokart_lock')
         config.set('gokart_lock', 'url', f'gs://{gcs_bucket}/locks')
+        # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
         yield
         config.remove_section('gokart_lock')
 
@@ -289,6 +291,7 @@ class TestMakeRunLockWithS3Url:
         config = luigi.configuration.get_config()
         config.add_section('gokart_lock')
         config.set('gokart_lock', 'url', 's3://lock-bucket/locks')
+        # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
         with mock_aws():
             client = boto3.client('s3', region_name='us-east-1')
             client.create_bucket(Bucket='lock-bucket')

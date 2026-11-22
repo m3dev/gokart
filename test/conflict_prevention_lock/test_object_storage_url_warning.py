@@ -28,6 +28,7 @@ def _reset_warning_flag() -> Iterator[None]:
 def set_url() -> Iterator[Callable[[str], None]]:
     config = luigi.configuration.get_config()
     config.add_section('gokart_lock')
+    # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
 
     def _set(url: str) -> None:
         config.set('gokart_lock', 'url', url)
