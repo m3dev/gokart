@@ -127,9 +127,10 @@ Reduce repeated `exists()` calls with `cache_task_completion`
 Before a task is run, the gokart worker checks the completion of the task when it is added, of every dependency just before the task runs, and of the task itself again (see above).
 With remote storage such as GCS or S3, each check is an API call, so a build with many tasks and dependencies makes many duplicated `exists()` calls.
 
-Setting `cache_task_completion` of the `[gokart_worker]` config to true makes the worker remember the tasks that were found complete, and reuse the result instead of calling `exists()` again.
+Setting `cache_task_completion` of the `[gokart_worker]` config to true makes the worker remember the tasks that were found complete when they were added, and reuse the result instead of calling `exists()` again.
+The worker also records every task it has finished running, and when `check_complete_on_run` is false (the default) such a task is treated as complete without calling `exists()`. If its `run()` ends without dumping an output, the tasks that depend on it fail with a `FileNotFoundError` in `load()` instead of `Unfulfilled dependency at run time`.
 For example, for a task with 10 dependencies that are already complete, the number of `exists()` calls drops from 22 to 12.
-The check at run() time controlled by `task_completion_check_at_run` is separate; the cache only affects the other checks.
+The check at run() time controlled by `task_completion_check_at_run` also uses the cache, but only `True` is cached and the task was incomplete when it was added, so it still detects a task that was finished elsewhere.
 
 .. code:: ini
 
