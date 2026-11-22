@@ -12,6 +12,7 @@ from moto import mock_aws
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 from gokart.in_memory import make_in_memory_target
+from gokart.in_memory.repository import acquire_repository, in_memory_scope
 from gokart.target import TargetOnKart, make_target
 from gokart.task import TaskOnKart
 
@@ -99,15 +100,15 @@ def test_in_memory_and_aware_timestamps(local_timezone) -> None:
     lock = TaskLockParams(None, None, None, 'timestamp-test', False, False, 0)
     memory = make_in_memory_target('timestamp-test', lock)
     remote = _target('remote', instant)
-    try:
+    # in-memory targets are stored only inside gokart.build; the scope stands in for it and drops the store on exit
+    with in_memory_scope():
+        acquire_repository()
         with patch('gokart.in_memory.data.datetime') as clock:
             clock.now.return_value = datetime.fromtimestamp(instant.timestamp())
             memory.dump('input')
         assert memory.last_modification_time().tzinfo is None
         assert TaskOnKart._check_modification_time([memory], [remote])
         assert TaskOnKart._check_modification_time([remote], [memory])
-    finally:
-        memory.remove()
 
 
 @pytest.mark.parametrize(('has_input', 'has_output'), [(False, False), (True, False), (False, True)])
