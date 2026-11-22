@@ -237,31 +237,41 @@ _LARGE_DATA_FRAME_CHUNK_PATTERN = re.compile(r'data_(\d+)\.pkl')
 class LargeDataFrameProcessor:
     def __init__(self, max_byte: int):
         self.max_byte = int(max_byte)
+        if self.max_byte <= 0:
+            raise ValueError(f'max_byte must be positive, got {max_byte}')
 
     def save(self, df: pd.DataFrame, file_path: str) -> None:
         dir_path = os.path.dirname(file_path)
         os.makedirs(dir_path, exist_ok=True)
 
+        # load concatenates every data_*.pkl, so chunks left by an earlier, larger save would be mixed into this one.
+        for _, stale_path in self._chunk_paths(dir_path):
+            os.remove(stale_path)
+
         if df.empty:
             df.to_pickle(os.path.join(dir_path, 'data_0.pkl'))
             return
 
-        split_size = df.values.nbytes // self.max_byte + 1
+        # array_split yields empty chunks when split_size exceeds the row count, and idx[0] fails on them.
+        split_size = min(df.values.nbytes // self.max_byte + 1, df.shape[0])
         logger.info(f'saving a large pdDataFrame with split_size={split_size}')
         for i, idx in enumerate(cast(Any, np).array_split(range(df.shape[0]), split_size)):
             df.iloc[idx[0] : idx[-1] + 1].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
 
     @staticmethod
-    def load(file_path: str) -> pd.DataFrame:
-        dir_path = os.path.dirname(file_path)
+    def _chunk_paths(dir_path: str) -> list[tuple[int, str]]:
         # glob returns files in arbitrary order, and lexicographic order puts data_10 before data_2, so sort by chunk index.
         chunks: list[tuple[int, str]] = []
         for fp in glob(os.path.join(dir_path, 'data_*.pkl')):
             m = _LARGE_DATA_FRAME_CHUNK_PATTERN.fullmatch(os.path.basename(fp))
             if m is not None:
                 chunks.append((int(m.group(1)), fp))
+        return sorted(chunks)
 
-        return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in sorted(chunks)]))
+    @staticmethod
+    def load(file_path: str) -> pd.DataFrame:
+        dir_path = os.path.dirname(file_path)
+        return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in LargeDataFrameProcessor._chunk_paths(dir_path)]))
 
 
 def _make_file_system_target(file_path: str, processor: FileProcessor | None = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:
