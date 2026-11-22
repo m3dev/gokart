@@ -1,3 +1,4 @@
+import os
 import unittest
 from collections.abc import Callable, Iterator
 from unittest.mock import patch
@@ -13,7 +14,17 @@ class TestS3Config(unittest.TestCase):
         client_a = S3Config().get_s3_client()
         client_b = S3Config().get_s3_client()
 
-        self.assertEqual(client_a, client_b)
+        self.assertIs(client_a, client_b)
+
+    def test_recreates_client_after_fork(self):
+        config = S3Config()
+        client = config.get_s3_client()
+
+        # boto3 sessions and clients are not fork-safe, so a forked worker must not reuse the parent's client
+        with patch('os.getpid', return_value=os.getpid() + 1):
+            child_client = config.get_s3_client()
+            self.assertIsNot(child_client, client)
+            self.assertIs(config.get_s3_client(), child_client)
 
 
 @pytest.fixture
