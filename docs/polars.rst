@@ -218,6 +218,10 @@ Some pandas-specific features are not available with Polars:
 - ``store_index_in_feather`` parameter in ``FeatherFileProcessor`` is ignored for Polars
 - ``engine`` parameter in ``ParquetFileProcessor`` is ignored for Polars (uses Polars' default)
 
+**Empty DataFrames**
+
+:attr:`~gokart.task.TaskOnKart.fail_on_empty_dump` also raises :class:`~gokart.errors.EmptyDumpError` for an empty ``polars.DataFrame`` (no rows). A ``polars.LazyFrame`` is not checked, because that would require collecting it.
+
 **Error Handling**
 
 If you specify ``dataframe_type='polars'`` but Polars is not installed, you'll get an ``ImportError`` with installation instructions:
