@@ -31,8 +31,46 @@ The lock is extended while the task is running, and expires after `timeout` seco
 
 `redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `FutureWarning`.
 
+Object storage (GCS) backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If your pipeline already stores its outputs on GCS, the run lock can live there too, so you do not have to operate Redis just for it.
+
+.. code:: ini
+
+    [gokart_lock]
+    url=gs://my-bucket/gokart-locks
+    timeout=180
+    skew_margin=30
+
+The lock is one object per task, ``<prefix>/<lock_key>.lock``, written with GCS request preconditions (``ifGenerationMatch``).
+A waiter treats the lock as expired when the server-side last write time + `timeout` + `skew_margin` seconds has passed, or when it has seen the same version unchanged for `timeout` seconds on its own monotonic clock.
+Only one waiter wins a takeover. `skew_margin` (30 seconds by default) absorbs clock skew between workers.
+
+Notes:
+
+- Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. This includes the load of the inputs and of the result. A task that holds the run lock does not need them under the gokart worker. gokart emits one ``UserWarning`` per process, when the first task is created, to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
+- The service account needs ``storage.objects.get``, ``storage.objects.create`` and ``storage.objects.delete`` on the bucket. Overwriting an existing object (every heartbeat) also requires ``delete``, so ``roles/storage.objectCreator`` is not enough; ``roles/storage.objectUser`` works.
+- Objects are left behind whenever ``release()`` never runs, for example after SIGKILL or an OOM kill of the worker. Add a lifecycle rule as a safety net, **scoped to the lock prefix**. A bucket-wide age rule would also delete your pipeline outputs when the bucket is shared with them.
+
+  .. code:: json
+
+      {
+        "rule": [
+          {"action": {"type": "Delete"}, "condition": {"age": 1, "matchesPrefix": ["gokart-locks/"]}},
+          {"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 1, "matchesPrefix": ["gokart-locks/"]}}
+        ]
+      }
+
+  One day is safe because ``age`` counts from the creation of the current generation, and every heartbeat writes a new generation, so a live lock never reaches it. The second rule only matters with object versioning (see below). Lifecycle works in whole days, so it does not replace `timeout`.
+- With object versioning, every heartbeat (every 10 seconds) leaves a noncurrent version, so keep the ``daysSinceNoncurrentTime`` rule above or use a bucket without versioning. Soft delete also keeps deleted lock objects for its retention period.
+- `timeout` must be greater than 50 seconds (the 10-second heartbeat interval plus the 10-second request timeout and the 30-second retry deadline of a lock request), and `skew_margin` must not be negative; otherwise a task with ``should_lock_run=True`` fails at construction. The 180 seconds by default is fine.
+- Use the Standard storage class for the bucket, because other classes charge for early deletion.
+- GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
+- A failure to release the lock (for example a missing ``storage.objects.delete`` permission) is only logged as a warning, and the lock expires after `timeout`.
+- ``s3://`` is not supported yet.
+
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
-If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock and emits a `UserWarning`.
+If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock (or takes no lock at all when the url is an object storage URL) and emits a `UserWarning`.
 This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.
 To get rid of the warning, run the task with `gokart.build` or `gokart.run`.
 
