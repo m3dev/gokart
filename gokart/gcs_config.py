@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import luigi
 
+from gokart.process_cache import cached_per_process
+
 if TYPE_CHECKING:
     import luigi.contrib.gcs
     from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
@@ -31,11 +33,8 @@ class GCSConfig(luigi.Config):
     _storage_client: tuple[int, storage.Client] | None = None
 
     def get_storage_client(self) -> storage.Client:
-        # requests.Session inside the client is not fork-safe, so each process (e.g. worker_processes > 1) builds its own.
-        # No lock on purpose: threads racing on the first call may each build a client, which is harmless since the last write wins.
-        pid = os.getpid()
-        if self._storage_client is None or self._storage_client[0] != pid:
-            self._storage_client = (pid, self._create_storage_client())
+        # requests.Session inside the client is not fork-safe
+        self._storage_client = cached_per_process(self._storage_client, self._create_storage_client)
         return self._storage_client[1]
 
     def create_storage_client(self) -> storage.Client:

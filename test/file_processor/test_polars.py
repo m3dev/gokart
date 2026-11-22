@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 import tempfile
-from typing import TYPE_CHECKING
+import textwrap
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
@@ -601,3 +605,33 @@ class TestLazyFrameSupport:
 
             assert isinstance(loaded, pl.DataFrame)
             assert loaded.equals(df)
+
+
+def test_import_gokart_does_not_import_polars() -> None:
+    code = textwrap.dedent(
+        """
+        import sys
+        import gokart
+        import gokart.file_processor
+        assert 'polars' not in sys.modules, 'import gokart imported polars'
+        """
+    )
+    subprocess.run([sys.executable, '-c', code], check=True)
+
+
+_POLARS_PROCESSOR_FACTORIES = [
+    pytest.param(lambda: CsvFileProcessor(dataframe_type='polars'), id='csv'),
+    pytest.param(lambda: JsonFileProcessor(dataframe_type='polars'), id='json'),
+    pytest.param(lambda: NdjsonFileProcessor(dataframe_type='polars-lazy'), id='ndjson-lazy'),
+    pytest.param(lambda: NdjsonFileProcessor(dataframe_type='polars'), id='ndjson'),
+    pytest.param(lambda: ParquetFileProcessor(dataframe_type='polars'), id='parquet'),
+    pytest.param(lambda: FeatherFileProcessor(store_index_in_feather=False, dataframe_type='polars-lazy'), id='feather-lazy'),
+]
+
+
+@pytest.mark.parametrize('make_processor', _POLARS_PROCESSOR_FACTORIES)
+def test_polars_processor_raises_install_hint_without_polars(monkeypatch: pytest.MonkeyPatch, make_processor: Callable[[], Any]) -> None:
+    # The error is raised when the processor is created, not when a task dumps its output after run().
+    monkeypatch.setitem(sys.modules, 'polars', None)
+    with pytest.raises(ImportError, match=r'pip install polars'):
+        make_processor()
