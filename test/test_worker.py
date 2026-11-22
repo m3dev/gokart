@@ -390,6 +390,23 @@ class TestWorkerRunLock:
         assert len(failures) == 1
         assert isinstance(failures[0], ImportError)
 
+    def test_lock_that_failed_to_acquire_is_released_to_close_its_client(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        run_lock = Mock()
+        run_lock.try_acquire.side_effect = ConnectionError('unavailable')
+        monkeypatch.setattr('gokart.worker.make_run_lock', lambda task: run_lock)
+        with Worker(scheduler=scheduler.Scheduler(), config=_fast_retry_config()) as worker:
+            assert worker.add(_make_run_lock_task())
+            assert not worker.run()
+
+        run_lock.release.assert_called_once_with()
+
+    def test_parked_lock_is_released_when_the_worker_exits(self) -> None:
+        run_lock = Mock()
+        with Worker(scheduler=scheduler.Scheduler(), config=_fast_retry_config()) as worker:
+            worker._run_lock_waiters['parked'] = worker._next_run_lock_waiter(run_lock, retry_count=0)
+
+        run_lock.release.assert_called_once_with()
+
     def test_retry_backoff_does_not_overflow_after_many_retries(self) -> None:
         with Worker(scheduler=scheduler.Scheduler()) as worker:
             waiter = worker._next_run_lock_waiter(Mock(), retry_count=2000)

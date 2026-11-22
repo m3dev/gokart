@@ -54,50 +54,6 @@ class BinaryFileProcessor(FileProcessor):
         file.write(obj)
 
 
-class _ChunkedLargeFileReader:
-    # Overridable so that tests can exercise the chunked path without allocating gigabytes.
-    _LARGE_READ_THRESHOLD = 1 << 31
-    _MAX_READ_SIZE = (1 << 31) - 1
-
-    def __init__(self, file: Any) -> None:
-        self._file = file
-
-    def __getattr__(self, item: str):
-        return getattr(self._file, item)
-
-    def read(self, n: int) -> bytes:
-        if n >= self._LARGE_READ_THRESHOLD:
-            logger.info(f'reading a large file with total_bytes={n}.')
-            buffer = bytearray(n)
-            idx = 0
-            while idx < n:
-                batch_size = min(n - idx, self._MAX_READ_SIZE)
-                logger.debug(f'reading bytes [{idx}, {idx + batch_size})...')
-                chunk = self._file.read(batch_size)
-                # A short read is legitimate for unbuffered/raw streams, so advance by what was actually read.
-                if not chunk:
-                    logger.warning(f'reached EOF at {idx} bytes before reading total_bytes={n}.')
-                    break
-                buffer[idx : idx + len(chunk)] = chunk
-                idx += len(chunk)
-                # Drop it now: the last chunk would otherwise stay alive on top of the buffer and the result copy.
-                del chunk
-            logger.info('done.')
-            # Truncating in place avoids the extra copy that bytes(buffer[:idx]) makes.
-            del buffer[idx:]
-            return bytes(buffer)
-        return cast(bytes, self._file.read(n))
-
-    def readline(self) -> bytes:
-        return cast(bytes, self._file.readline())
-
-    def seek(self, offset: int) -> None:
-        self._file.seek(offset)
-
-    def seekable(self) -> bool:
-        return cast(bool, self._file.seekable())
-
-
 class PickleFileProcessor(FileProcessor):
     class _Pickler(pickle.Pickler):
         """The C pickler, which dumps much faster than dill's pure-Python pickler.
@@ -126,11 +82,11 @@ class PickleFileProcessor(FileProcessor):
             # Therefore, we need to wrap with BytesIO which makes file seekable and readlinesable.
             # For example, ReadableS3File is not a seekable file.
             return load_dill_with_pandas_backward_compatibility(BytesIO(file.read()))
-        return load_dill_with_pandas_backward_compatibility(_ChunkedLargeFileReader(file))
+        return load_dill_with_pandas_backward_compatibility(file)
 
     def dump(self, obj: Any, file: Any):
         dumped = self._fast_dumps(obj)
-        self._write(dumped if dumped is not None else cast(Any, dill).dumps(obj, protocol=4), file)
+        file.write(dumped if dumped is not None else cast(Any, dill).dumps(obj, protocol=4))
 
     def _fast_dumps(self, obj: Any) -> bytes | None:
         buffer = BytesIO()
@@ -140,18 +96,6 @@ class PickleFileProcessor(FileProcessor):
             logger.debug(f'falling back to dill: {e!r}')
             return None
         return buffer.getvalue()
-
-    @staticmethod
-    def _write(buffer: bytes | bytearray, file: Any):
-        n = len(buffer)
-        idx = 0
-        while idx < n:
-            logger.info(f'writing a file with total_bytes={n}...')
-            batch_size = min(n - idx, (1 << 31) - 1)
-            logger.info(f'writing bytes [{idx}, {idx + batch_size})')
-            file.write(buffer[idx : idx + batch_size])
-            idx += batch_size
-        logger.info('done')
 
 
 class TextFileProcessor(FileProcessor):

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
 
-from gokart.conflict_prevention_lock.lock_config import RedisLockSettings, redis_connection_kwargs
+from gokart.conflict_prevention_lock.lock_config import LOCK_EXTEND_SECONDS, RedisLockSettings, redis_connection_kwargs
 from gokart.conflict_prevention_lock.redis_import import import_redis
 
 if TYPE_CHECKING:
@@ -102,7 +102,7 @@ def make_task_lock_params(
     redis_port: int | None = None,
     redis_timeout: int | None = None,
     raise_task_lock_exception_on_collision: bool = False,
-    lock_extend_seconds: int = 10,
+    lock_extend_seconds: int = LOCK_EXTEND_SECONDS,
     redis_db: int = 0,
     redis_ssl: bool = False,
     redis_use_password: bool = False,
@@ -131,7 +131,7 @@ def make_task_lock_params(
     )
 
 
-def make_task_lock_params_for_run(task_self: Any, lock_extend_seconds: int = 10) -> TaskLockParams:
+def make_task_lock_params_for_run(task_self: Any, lock_extend_seconds: int = LOCK_EXTEND_SECONDS) -> TaskLockParams:
     task_path_name = os.path.join(task_self.__module__.replace('.', '/'), f'{type(task_self).__name__}')
     unique_id = task_self.make_unique_id() + '-run'
     task_lock_key = make_task_lock_key(file_path=task_path_name, unique_id=unique_id)

@@ -31,8 +31,71 @@ The lock is extended while the task is running, and expires after `timeout` seco
 
 `redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `FutureWarning`.
 
+Object storage (GCS / S3) backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If your pipeline already stores its outputs on GCS or S3, the run lock can live there too, so you do not have to operate Redis just for it.
+
+.. code:: ini
+
+    [gokart_lock]
+    url=gs://my-bucket/gokart-locks
+    timeout=180
+    skew_margin=30
+
+Use ``s3://my-bucket/gokart-locks`` for S3. Do not put a comment after the value: luigi's config parser keeps it as part of the url, and gokart rejects a url that contains whitespace.
+
+The lock is one object per task, ``<prefix>/<lock_key>.lock``, written with conditional requests: ``ifGenerationMatch`` on GCS, ``If-None-Match: *`` / ``If-Match: <ETag>`` on S3.
+A waiter treats the lock as expired when the server-side last write time + `timeout` + `skew_margin` seconds has passed, or when it has seen the same version unchanged for `timeout` seconds on its own monotonic clock.
+Only one waiter wins a takeover. `skew_margin` (30 seconds by default) absorbs clock skew between workers.
+
+Notes:
+
+- Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. This includes the load of the inputs and of the result. A task that holds the run lock does not need them under the gokart worker. gokart emits one ``UserWarning`` per process, when the first task is created, to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
+- The service account needs ``storage.objects.get``, ``storage.objects.create`` and ``storage.objects.delete`` on the bucket. Overwriting an existing object (every heartbeat) also requires ``delete``, so ``roles/storage.objectCreator`` is not enough; ``roles/storage.objectUser`` works.
+- On S3, the credentials need ``s3:GetObject``, ``s3:PutObject``, ``s3:DeleteObject`` and ``s3:ListBucket`` on the bucket. Without ``s3:ListBucket``, S3 answers a read of a missing key with 403 instead of 404, so every task with ``should_lock_run=True`` fails before it runs. A conditional delete with an ETag also needs ``s3:GetObject``.
+- Objects are left behind whenever ``release()`` never runs, for example after SIGKILL or an OOM kill of the worker. Add a lifecycle rule as a safety net, **scoped to the lock prefix**. A bucket-wide age rule would also delete your pipeline outputs when the bucket is shared with them. For GCS:
+
+  .. code:: json
+
+      {
+        "rule": [
+          {"action": {"type": "Delete"}, "condition": {"age": 1, "matchesPrefix": ["gokart-locks/"]}},
+          {"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 1, "matchesPrefix": ["gokart-locks/"]}}
+        ]
+      }
+
+  For S3:
+
+  .. code:: json
+
+      {"Rules": [{"ID": "gokart-locks", "Status": "Enabled",
+        "Filter": {"Prefix": "gokart-locks/"},
+        "Expiration": {"Days": 1},
+        "NoncurrentVersionExpiration": {"NoncurrentDays": 1}}]}
+
+  One day is safe because the age of an object counts from the write of its current generation, and every heartbeat writes a new one, so a live lock never reaches it. The noncurrent-version rule only matters with object versioning (see below). Lifecycle works in whole days, so it does not replace `timeout`.
+- With object versioning, every heartbeat (every 10 seconds) leaves a noncurrent version, so keep a lifecycle rule for noncurrent versions (the second rule above on GCS, ``NoncurrentVersionExpiration`` on S3, about 360 versions per hour per running task) or use a bucket without versioning. Soft delete also keeps deleted lock objects for its retention period.
+- `timeout` must be greater than 50 seconds (the 10-second heartbeat interval plus the 10-second request timeout and the 30-second retry deadline of a lock request), and `skew_margin` must not be negative; otherwise a task with ``should_lock_run=True`` fails at construction. The 180 seconds by default is fine.
+- Use the Standard storage class for the bucket, because other classes charge for early deletion.
+- GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
+- A failure to release the lock (for example a missing ``storage.objects.delete`` permission) is only logged as a warning, and the lock expires after `timeout`.
+- With ``aws_role_arn`` in the luigi ``[s3]`` section, the credentials come from a single ``sts:AssumeRole`` call that luigi does not refresh, and every lock does its own AssumeRole when it is created. A task with ``should_lock_run=True`` that outlives the session (one hour by default) gets ``ExpiredToken`` on its heartbeats, and its lock is taken over after `timeout`. The S3 targets have the same luigi limitation. Use credentials that refresh themselves (for example an instance or workload role) for long-running tasks, or extend the role session duration.
+- S3 needs ``botocore>=1.35.69`` for conditional writes, and ``pip install gokart[s3]``. Conditional deletes are available on general purpose buckets since 2025-09.
+- To use an S3-compatible store such as MinIO or R2, set ``endpoint_url`` of the ``[S3Config]`` section. It is shared by the S3 targets and the S3 run lock.
+
+  .. code:: ini
+
+      [gokart_lock]
+      url=s3://my-bucket/gokart-locks
+
+      [S3Config]
+      endpoint_url=http://localhost:9000
+
+- The S3 targets and the S3 run lock read the same options: ``endpoint_url`` of ``[S3Config]``, and the ``[s3]`` section of luigi (``endpoint_url``, ``region_name``, ``aws_session_token``, ``aws_role_arn`` / ``aws_role_session_name``, ...). If both set ``endpoint_url``, the one in ``[S3Config]`` wins.
+- Plain S3-compatible stores vary, and conditional PUT and conditional DELETE are separate features. Cloudflare R2 documents conditional headers for PutObject, CopyObject and multipart uploads, but not for DeleteObject. MinIO is not verified either. gokart raises an error when the store rejects the conditional headers, but it cannot detect a store that silently ignores them. On such a store the lock does not exclude anything, and the same task can run concurrently on several workers: a holder whose lock was taken over after it expired would delete the new holder's lock with an unconditional delete, letting a third worker in. Check your store before relying on the lock.
+
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
-If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock and emits a `UserWarning`.
+If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock (or takes no lock at all when the url is an object storage URL) and emits a `UserWarning`.
 This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.
 To get rid of the warning, run the task with `gokart.build` or `gokart.run`.
 
