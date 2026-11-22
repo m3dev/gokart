@@ -13,11 +13,7 @@ Polars support is optional. Install it with:
 
     pip install gokart[polars]
 
-Or install Polars separately:
-
-.. code:: bash
-
-    pip install polars
+The extra only installs Polars itself (``polars>=0.19.0``), so a Polars installed in any other way works as well.
 
 
 Basic Usage
