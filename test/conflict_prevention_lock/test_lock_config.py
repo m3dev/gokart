@@ -306,6 +306,22 @@ class TestGcsBackendUrl:
         with pytest.raises(ValueError, match='Unsupported lock backend URL'):
             resolve_redis_lock_settings(None, None, None)
 
+    def test_a_task_level_host_without_a_port_is_rejected_instead_of_silently_using_object_storage(self, lock_config: Any):
+        lock_config(url='gs://my-bucket/locks')
+        with pytest.warns(FutureWarning), pytest.raises(ValueError, match='redis_host and redis_port'):
+            resolve_redis_lock_settings('redis.internal', None, None)
+
+    @pytest.mark.parametrize('timeout', ['10', '5'])
+    def test_should_lock_run_rejects_a_timeout_that_does_not_exceed_the_heartbeat_interval(self, lock_config: Any, timeout: str):
+        lock_config(url='gs://my-bucket/locks', timeout=timeout)
+        with pytest.raises(ValueError, match='heartbeat interval'):
+            _Task(should_lock_run=True)
+
+    def test_should_lock_run_rejects_a_negative_skew_margin(self, lock_config: Any):
+        lock_config(url='gs://my-bucket/locks', skew_margin='-1')
+        with pytest.raises(ValueError, match='skew_margin'):
+            _Task(should_lock_run=True)
+
     def test_skew_margin_is_configurable(self, lock_config: Any):
         from gokart.conflict_prevention_lock.lock_config import gokart_lock
 

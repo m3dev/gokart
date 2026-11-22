@@ -10,6 +10,7 @@ from luigi.task_register import Register
 from redis.lock import Lock
 
 import gokart
+from gokart.conflict_prevention_lock.object_storage_lock import ObjectStorageRunLock
 from gokart.conflict_prevention_lock.run_lock import RedisRunLock, RunLockHeartbeat, make_run_lock
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params_for_run
 
@@ -234,3 +235,47 @@ class TestRunLockHeartbeatStop:
             assert 'did not stop' in caplog.text
         finally:
             lock.unblock.set()
+
+
+class TestMakeRunLockWithGcsUrl:
+    @pytest.fixture
+    def gs_url(self, gcs_bucket: str) -> Iterator[None]:
+        import luigi.configuration
+
+        config = luigi.configuration.get_config()
+        config.add_section('gokart_lock')
+        config.set('gokart_lock', 'url', f'gs://{gcs_bucket}/locks')
+        Register.clear_instance_cache()
+        yield
+        config.remove_section('gokart_lock')
+        Register.clear_instance_cache()
+
+    def test_gs_url_returns_an_object_storage_lock(self, gs_url: None):
+        lock = make_run_lock(_LockedTask(should_lock_run=True))
+        assert isinstance(lock, ObjectStorageRunLock)
+        assert lock.try_acquire()
+        lock.release()
+
+    def test_each_lock_gets_its_own_client(self, gs_url: None):
+        from gokart.gcs_config import GCSConfig
+
+        with patch.object(GCSConfig, 'create_storage_client', autospec=True, side_effect=GCSConfig.create_storage_client) as create:
+            task = _LockedTask(should_lock_run=True)
+            first = make_run_lock(task)
+            second = make_run_lock(task)
+            assert first is not None and second is not None
+            first.try_acquire()
+            second.try_acquire()
+        assert create.call_count == 2
+        first.release()
+        second.release()
+
+    def test_the_client_is_not_built_until_the_lock_is_used(self, gs_url: None):
+        from gokart.gcs_config import GCSConfig
+
+        with patch.object(GCSConfig, 'create_storage_client', autospec=True) as create:
+            make_run_lock(_LockedTask(should_lock_run=True))
+        create.assert_not_called()
+
+    def test_explicit_task_level_redis_settings_still_win(self, gs_url: None, server: fakeredis.FakeServer):
+        assert isinstance(make_run_lock(_make_task()), RedisRunLock)

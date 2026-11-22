@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 import uuid
 from collections.abc import Callable
 from logging import getLogger
 from typing import NamedTuple, Protocol, cast
 
-logger = getLogger(__name__)
+from gokart.conflict_prevention_lock.lock_config import DEFAULT_SKEW_MARGIN_SECONDS
 
-DEFAULT_SKEW_MARGIN_SECONDS = 30.0
+logger = getLogger(__name__)
 
 
 class StoredLock(NamedTuple):
@@ -32,6 +33,37 @@ class ObjectLockStore(Protocol):
     def replace_if_match(self, key: str, body: bytes, version: str) -> str | None: ...
 
     def delete_if_match(self, key: str, version: str) -> bool: ...
+
+    def close(self) -> None: ...
+
+
+class LazyObjectLockStore:
+    """Builds the store on first use, so that a missing extra or missing credentials fail the task that takes the lock, not the whole worker."""
+
+    def __init__(self, factory: Callable[[], ObjectLockStore]) -> None:
+        self._factory = factory
+        self._store: ObjectLockStore | None = None
+
+    def _get(self) -> ObjectLockStore:
+        if self._store is None:
+            self._store = self._factory()
+        return self._store
+
+    def stat(self, key: str) -> StoredLock | None:
+        return self._get().stat(key)
+
+    def create_if_absent(self, key: str, body: bytes) -> str | None:
+        return self._get().create_if_absent(key, body)
+
+    def replace_if_match(self, key: str, body: bytes, version: str) -> str | None:
+        return self._get().replace_if_match(key, body, version)
+
+    def delete_if_match(self, key: str, version: str) -> bool:
+        return self._get().delete_if_match(key, version)
+
+    def close(self) -> None:
+        if self._store is not None:
+            self._store.close()
 
 
 class ObjectStorageRunLock:
@@ -60,6 +92,9 @@ class ObjectStorageRunLock:
         self._owner = uuid.uuid4().hex
         self._version: str | None = None
         self._observed: tuple[str, float] | None = None
+        self._lost = False
+        # The heartbeat calls extend() from its own thread, so release() could otherwise delete a generation that a concurrent extend() has just replaced.
+        self._mutex = threading.Lock()
 
     def try_acquire(self) -> bool:
         # Check with a read first: GCS allows about one write per second to the same object, and waiters poll.
@@ -71,30 +106,55 @@ class ObjectStorageRunLock:
             current = self._store.stat(self._key)
             if current is None:
                 return False
-            # A create whose response was lost makes the retry fail with 412 for our own write.
-            if self._owner_of(current) == self._owner:
-                return self._held(current.version)
+        # A write whose response was lost makes the retry fail with 412 for our own write, on create and on takeover alike.
+        if self._owner_of(current) == self._owner:
+            return self._held(current.version)
         if not self._is_expired(current):
             return False
         version = self._store.replace_if_match(self._key, self._make_body(), current.version)
-        return version is not None and self._held(version)
+        if version is not None:
+            return self._held(version)
+        current = self._store.stat(self._key)
+        if current is not None and self._owner_of(current) == self._owner:
+            return self._held(current.version)
+        return False
 
     def extend(self) -> None:
-        if self._version is None:
-            raise LockLostError(f'Run lock {self._key} is not held.')
-        # The nonce changes the body on every write; S3 ETags are an MD5 of the body, so waiters would otherwise see a stale lock.
-        version = self._store.replace_if_match(self._key, self._make_body(), self._version)
-        if version is None:
-            self._version = None
-            raise LockLostError(f'Run lock {self._key} was taken over by another worker or removed.')
-        self._version = version
+        with self._mutex:
+            if self._lost:
+                # Already reported once; the heartbeat keeps calling until the task ends.
+                return
+            if self._version is None:
+                raise LockLostError(f'Run lock {self._key} is not held.')
+            # The nonce changes the body on every write; S3 ETags are an MD5 of the body, so waiters would otherwise see a stale lock.
+            version = self._store.replace_if_match(self._key, self._make_body(), self._version)
+            if version is None:
+                # The write may have committed with its response lost; only we write our owner token, so adopting that version is safe.
+                current = self._store.stat(self._key)
+                if current is not None and self._owner_of(current) == self._owner:
+                    self._version = current.version
+                    return
+                self._version = None
+                self._lost = True
+                raise LockLostError(f'Run lock {self._key} was taken over by another worker or removed.')
+            self._version = version
 
     def release(self) -> None:
-        if self._version is None:
-            return
-        version, self._version = self._version, None
-        if not self._store.delete_if_match(self._key, version):
-            logger.warning(f'Task RUN lock of {self._key} had already been taken over or removed before release.')
+        with self._mutex:
+            try:
+                if self._version is None:
+                    return
+                version, self._version = self._version, None
+                if not self._store.delete_if_match(self._key, version):
+                    logger.warning(f'Task RUN lock of {self._key} had already been taken over or removed before release.')
+            except Exception:
+                # Raising here would crash the worker loop; the lock expires after the lock timeout anyway.
+                logger.warning(f'Failed to release task RUN lock of {self._key}. It expires after the lock timeout.', exc_info=True)
+            finally:
+                try:
+                    self._store.close()
+                except Exception:
+                    logger.debug('Failed to close the lock store.', exc_info=True)
 
     def _held(self, version: str) -> bool:
         self._version = version

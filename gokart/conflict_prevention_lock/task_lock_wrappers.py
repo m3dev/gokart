@@ -6,7 +6,6 @@ from collections.abc import Callable
 from logging import getLogger
 from typing import Any, ParamSpec, TypeVar, cast
 
-from gokart.conflict_prevention_lock.lock_config import uses_object_storage_lock
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, set_lock_scheduler, set_task_lock
 
 logger = getLogger(__name__)
@@ -16,17 +15,6 @@ P = ParamSpec('P')
 R = TypeVar('R')
 
 
-def _warn_if_lock_is_not_taken_on_object_storage() -> None:
-    # Only the run lock lives on object storage, so a url that points there leaves dump / load / remove without a lock.
-    if uses_object_storage_lock():
-        warnings.warn(
-            'The [gokart_lock] url points to object storage, so the dump / load / remove locks are not taken: they need Redis. '
-            'Only the run lock of tasks with should_lock_run=True (taken by the gokart worker) is active.',
-            UserWarning,
-            stacklevel=4,
-        )
-
-
 def wrap_dump_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams, exist_check: Callable[..., bool]) -> Callable[P, R | None]:
     """Redis lock wrapper function for TargetOnKart.dump().
     When TargetOnKart.dump() is called, dump() will be wrapped with redis lock and cache existance check.
@@ -34,7 +22,6 @@ def wrap_dump_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams, 
     """
 
     if not task_lock_params.should_task_lock:
-        _warn_if_lock_is_not_taken_on_object_storage()
         return func
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
@@ -61,7 +48,6 @@ def wrap_load_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams) 
     """
 
     if not task_lock_params.should_task_lock:
-        _warn_if_lock_is_not_taken_on_object_storage()
         return func
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
@@ -84,7 +70,6 @@ def wrap_remove_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams
     https://github.com/m3dev/gokart/issues/265
     """
     if not task_lock_params.should_task_lock:
-        _warn_if_lock_is_not_taken_on_object_storage()
         return func
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:

@@ -12,6 +12,8 @@ DEFAULT_REDIS_PORT = 6379
 DEFAULT_LOCK_TIMEOUT = 180
 REDIS_PASSWORD_ENV = 'GOKART_REDIS_PASSWORD'
 DEFAULT_SKEW_MARGIN_SECONDS = 30.0
+# Interval at which the lock holder extends its locks.
+LOCK_EXTEND_SECONDS = 10
 
 
 class gokart_lock(luigi.Config):
@@ -102,6 +104,38 @@ def uses_object_storage_lock() -> bool:
     return lock_url_scheme(gokart_lock().url) == 'gs'
 
 
+_object_storage_warning_emitted = False
+
+
+def warn_once_that_dump_locks_are_not_taken() -> None:
+    """Warn, once per process, that an object storage url leaves the dump / load / remove locks untaken.
+
+    The default "once per location" filter would repeat it for every call site inside gokart and for every forked task process,
+    so the flag is kept here and the warning is emitted from the parent process when the first task is constructed.
+    """
+    global _object_storage_warning_emitted
+    if _object_storage_warning_emitted:
+        return
+    _object_storage_warning_emitted = True
+    warnings.warn(
+        'The [gokart_lock] url points to object storage, so no lock is taken when targets are dumped, loaded or removed: those locks need Redis. '
+        'Only the run lock of tasks with should_lock_run=True (taken by the gokart worker) is active.',
+        UserWarning,
+        stacklevel=3,
+    )
+
+
+def check_object_storage_lock_settings(timeout: int) -> None:
+    """Reject settings under which a live lock would be taken over between two heartbeats."""
+    if timeout <= LOCK_EXTEND_SECONDS:
+        raise ValueError(
+            f'The lock timeout (`[gokart_lock] timeout`) must be greater than the heartbeat interval of {LOCK_EXTEND_SECONDS} seconds, not {timeout}.'
+        )
+    skew_margin = gokart_lock().skew_margin
+    if skew_margin < 0:
+        raise ValueError(f'`[gokart_lock] skew_margin` must not be negative, not {skew_margin}.')
+
+
 def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, redis_timeout: int | None, warn: bool = True) -> RedisLockSettings:
     """Merge the deprecated task-level ``redis_*`` parameters with ``[gokart_lock]``.
 
@@ -124,6 +158,9 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
         )
     timeout = redis_timeout if redis_timeout is not None else config.timeout
     if redis_host is not None or redis_port is not None:
+        if scheme == 'gs' and (redis_host is None or redis_port is None):
+            # Without a port the task would silently fall through to the object storage lock, contradicting "task-level redis_* take precedence".
+            raise ValueError('redis_host and redis_port of TaskOnKart must be set together.')
         if (redis_host is None or redis_port is None) and config.url:
             # A leftover half of the old setting would otherwise switch the lock off without any hint.
             warnings.warn(

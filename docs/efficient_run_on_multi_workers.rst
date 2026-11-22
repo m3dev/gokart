@@ -48,14 +48,18 @@ Only one waiter wins a takeover. `skew_margin` (30 seconds by default) absorbs c
 
 Notes:
 
-- Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. A task that holds the run lock does not need them under the gokart worker. For any other dump / load / remove, gokart emits a ``UserWarning`` to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
+- Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. This includes the load of the inputs and of the result. A task that holds the run lock does not need them under the gokart worker. gokart emits one ``UserWarning`` per process, when the first task is created, to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
+- The service account needs ``storage.objects.get``, ``storage.objects.create`` and ``storage.objects.delete`` on the bucket. Overwriting an existing object (every heartbeat) also requires ``delete``, so ``roles/storage.objectCreator`` is not enough; ``roles/storage.objectUser`` works.
 - Objects left behind by dead workers are not removed automatically. Add a bucket lifecycle rule (for example, delete after 1 day) as a safety net. Lifecycle works in whole days, so it does not replace `timeout`.
+- With object versioning, every heartbeat (every 10 seconds) leaves a noncurrent version, so add a lifecycle rule for noncurrent versions or use a bucket without versioning. Soft delete also keeps deleted lock objects for its retention period.
+- `timeout` must be greater than the heartbeat interval of 10 seconds, and `skew_margin` must not be negative; otherwise a task with ``should_lock_run=True`` fails at construction.
 - Use the Standard storage class for the bucket, because other classes charge for early deletion.
 - GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
+- A failure to release the lock (for example a missing ``storage.objects.delete`` permission) is only logged as a warning, and the lock expires after `timeout`.
 - ``s3://`` is not supported yet.
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
-If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock and emits a `UserWarning`.
+If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock (or takes no lock at all when the url is an object storage URL) and emits a `UserWarning`.
 This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.
 To get rid of the warning, run the task with `gokart.build` or `gokart.run`.
 
