@@ -7,6 +7,7 @@ import sys
 import tempfile
 import textwrap
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -633,5 +634,28 @@ _POLARS_PROCESSOR_FACTORIES = [
 def test_polars_processor_raises_install_hint_without_polars(monkeypatch: pytest.MonkeyPatch, make_processor: Callable[[], Any]) -> None:
     # The error is raised when the processor is created, not when a task dumps its output after run().
     monkeypatch.setitem(sys.modules, 'polars', None)
-    with pytest.raises(ImportError, match=r'pip install polars'):
+    with pytest.raises(ImportError, match=r'pip install gokart\[polars\]'):
         make_processor()
+
+
+@pytest.mark.parametrize(
+    ('polars_init', 'expected_error', 'expected_message'),
+    [
+        pytest.param('import _gokart_missing_polars_dependency', ModuleNotFoundError, '_gokart_missing_polars_dependency', id='missing-dependency'),
+        pytest.param('import polars._gokart_missing_submodule', ModuleNotFoundError, r'polars\._gokart_missing_submodule', id='missing-submodule'),
+        pytest.param("raise ImportError('broken polars dependency')", ImportError, 'broken polars dependency', id='import-error'),
+    ],
+)
+def test_polars_processor_keeps_original_error_when_installed_polars_fails_to_import(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, polars_init: str, expected_error: type[ImportError], expected_message: str
+) -> None:
+    # The install hint would be wrong here and would hide the real cause.
+    package = tmp_path / 'polars'
+    package.mkdir()
+    (package / '__init__.py').write_text(polars_init)
+    monkeypatch.delitem(sys.modules, 'polars', raising=False)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with pytest.raises(expected_error, match=expected_message) as exc_info:
+        CsvFileProcessor(dataframe_type='polars')
+    assert 'pip install' not in str(exc_info.value)

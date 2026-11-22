@@ -9,6 +9,7 @@ import luigi
 import luigi.format
 from luigi.format import TextFormat
 
+from gokart._optional_dependency import import_optional_dependency
 from gokart.file_processor.base import FileProcessor
 from gokart.object_storage import ObjectStorage
 
@@ -19,10 +20,7 @@ _ParquetCompression = Literal['lz4', 'uncompressed', 'snappy', 'gzip', 'brotli',
 def _check_polars_installed() -> None:
     # WHY: polars is imported only when a polars processor is used, so that import gokart does not pay for it. Checking here
     # in __init__ still reports a missing polars when the target is created, not when a task dumps its output after run().
-    try:
-        import polars  # noqa: F401  # pyright: ignore[reportUnusedImport]
-    except ImportError as e:
-        raise ImportError("polars is required for polars-based dataframe types ('polars' or 'polars-lazy'). Install with: pip install polars") from e
+    import_optional_dependency('polars', extra='polars', feature='Polars')
 
 
 class CsvFileProcessorPolars(FileProcessor):
