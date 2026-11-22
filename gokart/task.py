@@ -168,7 +168,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if uses_object_storage_lock():
             warn_once_that_dump_locks_are_not_taken()
             if self.should_lock_run and not self._has_redis_lock():
-                check_object_storage_lock_settings(self.lock_settings.timeout)
+                check_object_storage_lock_settings(self._lock_settings.timeout)
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)
@@ -300,7 +300,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
 
     def _has_redis_lock(self) -> bool:
-        return self.lock_settings.host is not None and self.lock_settings.port is not None
+        return self._lock_settings.host is not None and self._lock_settings.port is not None
 
     def _make_task_lock_params(self, file_path: str, unique_id: str | None) -> TaskLockParams:
         settings = self._lock_settings
