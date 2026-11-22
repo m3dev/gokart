@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import luigi
 
@@ -31,4 +31,15 @@ class S3Config(luigi.Config):
 
         return luigi.contrib.s3.S3Client(
             aws_access_key_id=os.environ.get(self.aws_access_key_id_name), aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name)
+        )
+
+    def create_boto_client(self) -> Any:
+        """Build a boto3 S3 client that is not shared with anyone else, e.g. for a background thread."""
+        try:
+            import boto3
+        except ImportError:
+            raise ImportError('S3 support requires additional dependencies. Install them with: pip install gokart[s3]') from None
+
+        return cast(Any, boto3).client(
+            's3', aws_access_key_id=os.environ.get(self.aws_access_key_id_name), aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name)
         )

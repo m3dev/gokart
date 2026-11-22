@@ -31,18 +31,18 @@ The lock is extended while the task is running, and expires after `timeout` seco
 
 `redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `FutureWarning`.
 
-Object storage (GCS) backend
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-If your pipeline already stores its outputs on GCS, the run lock can live there too, so you do not have to operate Redis just for it.
+Object storage (GCS / S3) backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If your pipeline already stores its outputs on GCS or S3, the run lock can live there too, so you do not have to operate Redis just for it.
 
 .. code:: ini
 
     [gokart_lock]
-    url=gs://my-bucket/gokart-locks
+    url=gs://my-bucket/gokart-locks  ; or s3://my-bucket/gokart-locks
     timeout=180
     skew_margin=30
 
-The lock is one object per task, ``<prefix>/<lock_key>.lock``, written with GCS request preconditions (``ifGenerationMatch``).
+The lock is one object per task, ``<prefix>/<lock_key>.lock``, written with conditional requests: ``ifGenerationMatch`` on GCS, ``If-None-Match: *`` / ``If-Match: <ETag>`` on S3.
 A waiter treats the lock as expired when the server-side last write time + `timeout` + `skew_margin` seconds has passed, or when it has seen the same version unchanged for `timeout` seconds on its own monotonic clock.
 Only one waiter wins a takeover. `skew_margin` (30 seconds by default) absorbs clock skew between workers.
 
@@ -68,6 +68,8 @@ Notes:
 - GCS allows about one write per second to the same object. The 10-second heartbeat is well within that.
 - A failure to release the lock (for example a missing ``storage.objects.delete`` permission) is only logged as a warning, and the lock expires after `timeout`.
 - ``s3://`` is not supported yet.
+- S3 needs ``botocore>=1.35.69`` for conditional writes, and ``pip install gokart[s3]``. Conditional deletes are available on general purpose buckets since 2025-09.
+- Plain S3-compatible stores vary: MinIO, R2 and Ceph support conditional writes, but Backblaze B2 does not. gokart raises an error when the store rejects the conditional headers, but it cannot detect a store that silently ignores them, so check your store before relying on the lock.
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
 If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock (or takes no lock at all when the url is an object storage URL) and emits a `UserWarning`.
