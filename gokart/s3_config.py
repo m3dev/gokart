@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import luigi
 
+from gokart.conflict_prevention_lock.lock_config import LOCK_REQUEST_RETRY_DEADLINE_SECONDS, LOCK_REQUEST_TIMEOUT_SECONDS
+
 if TYPE_CHECKING:
     import luigi.contrib.s3
 
@@ -32,7 +34,7 @@ class S3Config(luigi.Config):
     def _get_s3_client(self) -> luigi.contrib.s3.S3Client:
         return self._new_luigi_client()
 
-    def _new_luigi_client(self) -> luigi.contrib.s3.S3Client:
+    def _new_luigi_client(self, **extra: Any) -> luigi.contrib.s3.S3Client:
         try:
             import boto3  # noqa: F401  # pyright: ignore[reportUnusedImport]
         except ImportError:
@@ -43,6 +45,7 @@ class S3Config(luigi.Config):
             aws_access_key_id=os.environ.get(self.aws_access_key_id_name),
             aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name),
             **self._endpoint_kwargs(),
+            **extra,
         )
 
     def _endpoint_kwargs(self) -> dict[str, str]:
@@ -54,8 +57,18 @@ class S3Config(luigi.Config):
         It is derived from a new luigi ``S3Client``, so it honours the same options as the S3 targets: the ``[s3]`` section of luigi
         (``endpoint_url``, ``region_name``, ``aws_session_token``, ``aws_role_arn`` / ``aws_role_session_name``, ...) as well as this section.
         """
-        client = self._new_luigi_client()
         _check_botocore_supports_conditional_writes()
+        from botocore.config import Config
+
+        # The heartbeat thread extends every held lock one after another, so one hung request must not outlast the lock timeout: botocore's
+        # defaults (60 s timeouts, 5 attempts) would allow about 300 s. Two attempts of at most 15 s stay within the 30 s retry deadline of the GCS store.
+        client = self._new_luigi_client(
+            config=Config(
+                connect_timeout=5,
+                read_timeout=LOCK_REQUEST_TIMEOUT_SECONDS,
+                retries={'mode': 'standard', 'total_max_attempts': LOCK_REQUEST_RETRY_DEADLINE_SECONDS // (5 + LOCK_REQUEST_TIMEOUT_SECONDS)},
+            )
+        )
         return cast(Any, client).s3.meta.client
 
 

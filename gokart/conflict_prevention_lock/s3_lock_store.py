@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import random
+import time
 from typing import Any, cast
 
-from gokart.conflict_prevention_lock.object_storage_lock import StoredLock, lock_object_name
+from gokart.conflict_prevention_lock.object_storage_lock import ConditionalConflictError, StoredLock, lock_object_name
 
 # 412: our precondition failed. 409 is different: another conditional write or delete to the same key was in flight, which AWS documents as retryable,
 # so it must not be read as "someone else holds the lock" when we replace or delete.
@@ -11,6 +13,12 @@ _CONFLICT_CODES = frozenset({'ConditionalRequestConflict'})
 _MISSING_CODES = frozenset({'NoSuchKey', '404', 'NotFound'})
 # S3-compatible stores that do not know the conditional headers answer like this instead of ignoring them.
 _UNSUPPORTED_CODES = frozenset({'NotImplemented', 'InvalidArgument', 'MalformedHeader'})
+# The retry after a 409 is delayed a little, so that it more likely lands after the competing request has finished.
+_CONFLICT_RETRY_DELAY_RANGE_SECONDS = (0.05, 0.25)
+
+
+def _sleep_before_conflict_retry() -> None:
+    time.sleep(random.uniform(*_CONFLICT_RETRY_DELAY_RANGE_SECONDS))
 
 
 class UnsupportedConditionalWritesError(Exception):
@@ -67,8 +75,11 @@ class S3LockStore:
                 code = _error_code(e)
                 if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
                     return False
-                if code in _CONFLICT_CODES and attempt == 0:
-                    continue
+                if code in _CONFLICT_CODES:
+                    if attempt == 0:
+                        _sleep_before_conflict_retry()
+                        continue
+                    raise ConditionalConflictError(f'{self._name(key)} kept conflicting with another conditional request.') from e
                 self._raise_if_unsupported(code, e)
                 raise
             return True
@@ -86,11 +97,13 @@ class S3LockStore:
                     return None
                 if code in _CONFLICT_CODES:
                     # Creating: whoever is writing the same key at the same time holds the lock. Replacing: retry once with the same ETag, where a real loss
-                    # shows up as 412; if it conflicts again the error propagates, so the heartbeat keeps its version and tries again on the next tick.
+                    # shows up as 412; if it conflicts again, the heartbeat keeps its version and tries again on the next tick, and a takeover stays parked.
                     if treat_conflict_as_failure:
                         return None
                     if attempt == 0:
+                        _sleep_before_conflict_retry()
                         continue
+                    raise ConditionalConflictError(f'{self._name(key)} kept conflicting with another conditional request.') from e
                 self._raise_if_unsupported(code, e)
                 raise
             return str(response['ETag'])

@@ -8,7 +8,7 @@ import pytest
 from botocore.exceptions import ClientError
 from moto import mock_aws
 
-from gokart.conflict_prevention_lock.object_storage_lock import ObjectStorageRunLock
+from gokart.conflict_prevention_lock.object_storage_lock import ConditionalConflictError, ObjectStorageRunLock
 from gokart.conflict_prevention_lock.s3_lock_store import S3LockStore, UnsupportedConditionalWritesError
 
 
@@ -129,6 +129,12 @@ class TestUnsupportedStores:
 class TestConditionalRequestConflict:
     """S3 answers 409 when another conditional write or delete to the same key is in flight; moto never does, so it is injected."""
 
+    @pytest.fixture(autouse=True)
+    def sleeps(self, monkeypatch: pytest.MonkeyPatch) -> list[float]:
+        recorded: list[float] = []
+        monkeypatch.setattr('gokart.conflict_prevention_lock.s3_lock_store.time.sleep', recorded.append)
+        return recorded
+
     def test_409_on_create_means_someone_else_is_creating(self, store: S3LockStore, client: Any):
         _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=1)
         assert store.create_if_absent('k', b'body') is None
@@ -140,12 +146,27 @@ class TestConditionalRequestConflict:
         new_version = store.replace_if_match('k', b'second', version)
         assert new_version is not None and calls[0] == 2
 
-    def test_a_409_that_persists_on_replace_propagates_so_that_the_heartbeat_retries_later(self, store: S3LockStore, client: Any):
+    def test_the_retry_waits_a_short_jittered_time(self, store: S3LockStore, client: Any, sleeps: list[float]):
+        version = store.create_if_absent('k', b'first')
+        assert version is not None
+        _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=1)
+        store.replace_if_match('k', b'second', version)
+        assert len(sleeps) == 1 and 0 < sleeps[0] <= 0.25
+
+    def test_a_409_that_persists_on_replace_raises_a_conflict_so_that_the_heartbeat_retries_later(self, store: S3LockStore, client: Any):
         version = store.create_if_absent('k', b'first')
         assert version is not None
         _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=2)
-        with pytest.raises(ClientError):
+        with pytest.raises(ConditionalConflictError):
             store.replace_if_match('k', b'second', version)
+
+    def test_a_waiter_that_hits_a_persistent_409_on_takeover_stays_parked(self, store: S3LockStore, client: Any):
+        holder_clock = [1_000.0]
+        holder = ObjectStorageRunLock(store, 'task_run', ttl=60, clock=lambda: holder_clock[0])
+        assert holder.try_acquire()
+        waiter = ObjectStorageRunLock(store, 'task_run', ttl=60, clock=lambda: 10_000_000_000.0)
+        _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=2)
+        assert not waiter.try_acquire()
 
     def test_409_on_delete_is_retried_once(self, store: S3LockStore, client: Any):
         version = store.create_if_absent('k', b'first')
@@ -159,7 +180,7 @@ class TestConditionalRequestConflict:
         lock = ObjectStorageRunLock(store, 'task_run', ttl=60)
         assert lock.try_acquire()
         _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=2)
-        with pytest.raises(ClientError):
+        with pytest.raises(ConditionalConflictError):
             lock.extend()
         lock.extend()
         assert store.stat('task_run') is not None

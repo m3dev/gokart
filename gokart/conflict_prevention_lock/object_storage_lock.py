@@ -29,6 +29,13 @@ class LockLostError(Exception):
     """Raised when the lock was taken over by someone else or removed before it could be extended."""
 
 
+class ConditionalConflictError(Exception):
+    """Another conditional write to the same object was in flight and kept conflicting after a retry.
+
+    This is neither "we lost the lock" nor a precondition failure, so a heartbeat keeps its version and tries again, and a waiter stays parked.
+    """
+
+
 class ObjectLockStore(Protocol):
     """Conditional writes of an object store, one object per lock. ``None`` / ``False`` means the precondition failed (412)."""
 
@@ -117,7 +124,11 @@ class ObjectStorageRunLock:
             return self._held(current.version)
         if not self._is_expired(current):
             return False
-        version = self._store.replace_if_match(self._key, self._make_body(), current.version)
+        try:
+            version = self._store.replace_if_match(self._key, self._make_body(), current.version)
+        except ConditionalConflictError:
+            # Another waiter is taking over at the same moment; stay parked instead of failing the task.
+            return False
         if version is not None:
             return self._held(version)
         current = self._store.stat(self._key)

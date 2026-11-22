@@ -46,6 +46,11 @@ class TestS3ConfigEndpointUrl:
     def test_boto_client_without_endpoint_url_uses_aws(self):
         assert S3Config().create_boto_client().meta.endpoint_url.endswith('amazonaws.com')
 
+    def test_boto_client_limits_how_long_one_request_can_block_the_heartbeat(self):
+        config = S3Config().create_boto_client().meta.config
+        assert (config.connect_timeout, config.read_timeout) == (5, 10)
+        assert config.retries['total_max_attempts'] == 2
+
     def test_each_boto_client_is_dedicated(self):
         config = S3Config()
         assert config.create_boto_client() is not config.create_boto_client()

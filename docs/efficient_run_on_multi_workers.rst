@@ -53,7 +53,7 @@ Notes:
 - Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. This includes the load of the inputs and of the result. A task that holds the run lock does not need them under the gokart worker. gokart emits one ``UserWarning`` per process, when the first task is created, to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
 - The service account needs ``storage.objects.get``, ``storage.objects.create`` and ``storage.objects.delete`` on the bucket. Overwriting an existing object (every heartbeat) also requires ``delete``, so ``roles/storage.objectCreator`` is not enough; ``roles/storage.objectUser`` works.
 - On S3, the credentials need ``s3:GetObject``, ``s3:PutObject``, ``s3:DeleteObject`` and ``s3:ListBucket`` on the bucket. Without ``s3:ListBucket``, S3 answers a read of a missing key with 403 instead of 404, so every task with ``should_lock_run=True`` fails before it runs. A conditional delete with an ETag also needs ``s3:GetObject``.
-- Objects are left behind whenever ``release()`` never runs, for example after SIGKILL or an OOM kill of the worker. Add a lifecycle rule as a safety net, **scoped to the lock prefix**. A bucket-wide age rule would also delete your pipeline outputs when the bucket is shared with them.
+- Objects are left behind whenever ``release()`` never runs, for example after SIGKILL or an OOM kill of the worker. Add a lifecycle rule as a safety net, **scoped to the lock prefix**. A bucket-wide age rule would also delete your pipeline outputs when the bucket is shared with them. For GCS:
 
   .. code:: json
 
@@ -64,7 +64,16 @@ Notes:
         ]
       }
 
-  One day is safe because ``age`` counts from the creation of the current generation, and every heartbeat writes a new generation, so a live lock never reaches it. The second rule only matters with object versioning (see below). Lifecycle works in whole days, so it does not replace `timeout`.
+  For S3:
+
+  .. code:: json
+
+      {"Rules": [{"ID": "gokart-locks", "Status": "Enabled",
+        "Filter": {"Prefix": "gokart-locks/"},
+        "Expiration": {"Days": 1},
+        "NoncurrentVersionExpiration": {"NoncurrentDays": 1}}]}
+
+  One day is safe because the age of an object counts from the write of its current generation, and every heartbeat writes a new one, so a live lock never reaches it. The noncurrent-version rule only matters with object versioning (see below). Lifecycle works in whole days, so it does not replace `timeout`.
 - With object versioning, every heartbeat (every 10 seconds) leaves a noncurrent version, so keep a lifecycle rule for noncurrent versions (the second rule above on GCS, ``NoncurrentVersionExpiration`` on S3, about 360 versions per hour per running task) or use a bucket without versioning. Soft delete also keeps deleted lock objects for its retention period.
 - `timeout` must be greater than 50 seconds (the 10-second heartbeat interval plus the 10-second request timeout and the 30-second retry deadline of a lock request), and `skew_margin` must not be negative; otherwise a task with ``should_lock_run=True`` fails at construction. The 180 seconds by default is fine.
 - Use the Standard storage class for the bucket, because other classes charge for early deletion.
