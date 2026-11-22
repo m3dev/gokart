@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import uuid
 from collections.abc import Iterator
@@ -315,6 +316,18 @@ class TestWorkerRunLock:
         with Worker(scheduler=scheduler.Scheduler(), config=_fast_retry_config()) as worker:
             assert worker.add(task)
             redis_server.connected = False
+            assert not worker.run()
+
+        mock_run.assert_not_called()
+
+    def test_task_fails_without_crashing_worker_when_run_lock_cannot_be_created(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        task = _make_run_lock_task()
+        mock_run = Mock()
+        monkeypatch.setattr(task, '_run', mock_run)
+        with Worker(scheduler=scheduler.Scheduler(), config=_fast_retry_config()) as worker:
+            assert worker.add(task)
+            # a None entry in sys.modules makes `import redis` raise ImportError when the worker creates the run lock
+            monkeypatch.setitem(sys.modules, 'redis', None)
             assert not worker.run()
 
         mock_run.assert_not_called()

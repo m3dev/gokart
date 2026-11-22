@@ -20,6 +20,7 @@ from luigi.parameter import ParameterVisibility
 import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
+from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
@@ -140,6 +141,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         self._rerun_state = self.rerun
         self._lock_at_dump = True
         self._has_only_in_memory_outputs_cache: bool | None = None
+
+        if self.redis_host is not None and self.redis_port is not None:
+            # Fail at construction rather than at dump() after a whole run() has been spent.
+            import_redis()
 
         # Cache to_str_params to avoid slow task creation in a deep task tree.
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.

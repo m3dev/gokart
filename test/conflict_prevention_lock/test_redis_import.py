@@ -1,9 +1,13 @@
 import subprocess
 import sys
 import textwrap
+import uuid
+from pathlib import Path
 
+import luigi
 import pytest
 
+import gokart
 from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.run_lock import RedisRunLock
 from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams
@@ -48,3 +52,32 @@ def test_gokart_is_importable_without_redis() -> None:
         """
     )
     subprocess.run([sys.executable, '-c', code], check=True)
+
+
+class _LockConfiguredTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+    random_id: luigi.StrParameter = luigi.StrParameter()
+
+    def run(self):
+        self.dump('done')
+
+
+@pytest.mark.usefixtures('without_redis')
+@pytest.mark.parametrize('should_lock_run', [False, True])
+def test_task_with_redis_host_and_port_raises_install_hint_at_construction(should_lock_run: bool) -> None:
+    # Failing here, before run(), keeps a missing extra from wasting a whole run() that would only fail at dump().
+    with pytest.raises(ImportError, match=r'pip install gokart\[redis\]'):
+        _LockConfiguredTask(random_id=uuid.uuid4().hex, redis_host='localhost', redis_port=6379, should_lock_run=should_lock_run)
+
+
+@pytest.mark.usefixtures('without_redis')
+def test_task_without_both_redis_host_and_port_does_not_need_redis() -> None:
+    # Locks are taken only when both are set, so redis is not needed otherwise.
+    _LockConfiguredTask(random_id=uuid.uuid4().hex, redis_host='localhost')
+    _LockConfiguredTask(random_id=uuid.uuid4().hex, redis_port=6379)
+
+
+@pytest.mark.usefixtures('without_redis')
+def test_build_without_redis(tmp_path: Path) -> None:
+    task = _LockConfiguredTask(random_id=uuid.uuid4().hex, workspace_directory=str(tmp_path))
+    assert gokart.build(task, reset_register=False) == 'done'
