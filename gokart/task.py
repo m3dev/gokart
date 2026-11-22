@@ -247,6 +247,18 @@ class TaskOnKart(luigi.Task, Generic[T]):
                 kwargs[key] = class_variables[key].parse(value)
 
     def complete(self) -> bool:
+        return self._complete_memoized({})
+
+    def _complete_memoized(self, memo: dict[str, bool]) -> bool:
+        # WHY: `memo` is scoped to one top-level `complete()` call. Without it, a diamond dependency
+        # re-checks the shared task (and its remote `exists`) once per path. It is passed as an argument
+        # rather than stored on the instance so that nothing stale survives across calls or pickling.
+        task_id = self.task_id
+        if task_id not in memo:
+            memo[task_id] = self._complete_uncached(memo)
+        return memo[task_id]
+
+    def _complete_uncached(self, memo: dict[str, bool]) -> bool:
         outputs = flatten(self.output())
         if self._rerun_state:
             for target in outputs:
@@ -263,13 +275,20 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         raw_inputs = self.input()
         inputs = flatten(raw_inputs)
-        if not all(task.complete() for task in flatten(self.requires())) or not all(i.exists() for i in inputs):
+        if not all(self._complete_requirement(task, memo) for task in flatten(self.requires())) or not all(i.exists() for i in inputs):
             return False
 
         if not self.modification_time_check or not raw_inputs:
             return True
 
         return self._check_modification_time(inputs, outputs)
+
+    @staticmethod
+    def _complete_requirement(task: Any, memo: dict[str, bool]) -> bool:
+        # A subclass overriding `complete()` (or a plain luigi task) must keep its own logic.
+        if getattr(cast(Any, type(task)), 'complete', None) is cast(Any, TaskOnKart).complete:
+            return task._complete_memoized(memo)
+        return task.complete()
 
     @staticmethod
     def _check_modification_time(inputs: Sequence[luigi.Target], outputs: Sequence[luigi.Target]) -> bool:
