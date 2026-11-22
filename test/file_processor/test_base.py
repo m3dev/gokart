@@ -59,7 +59,7 @@ class TestPickleFileProcessor(unittest.TestCase):
 
     def test_dump_and_load_payload_larger_than_unpickler_prefetch_with_local_file(self):
         # The C unpickler prefetches 128 KiB via peek() and reads larger unframed payloads straight into the result with readinto(), so this crosses both paths.
-        var = {'array': np.arange(1 << 20), 'bytes': os.urandom(3 << 20)}
+        var = {'array': np.arange(1 << 15), 'bytes': os.urandom(1 << 18)}
         processor = PickleFileProcessor()
 
         with tempfile.TemporaryDirectory() as temp_dir:
