@@ -25,26 +25,21 @@ How to use
 
         $ redis-server
 
-2. Set redis server hostname and port number as parameters of gokart.TaskOnKart().
+2. Set the redis server URL in the ``[gokart_lock]`` section of your config file.
 
-    You can set it by adding ``--redis-host=[your-redis-localhost] --redis-port=[redis-port-number]`` options to gokart python script.
-
-    e.g. 
-
-    .. code:: bash
-
-        python main.py sample.SomeTask --local-scheduler --redis-host=localhost --redis-port=6379
-    
-
-    Alternatively, you may set parameters at config file.
-    
     e.g.
 
     .. code::
 
-        [TaskOnKart]
-        redis_host=localhost
-        redis_port=6379
+        [gokart_lock]
+        url=redis://localhost:6379
+        timeout=180
+
+    Only ``redis://host[:port]`` is supported for now; the port defaults to 6379.
+    ``timeout`` is the number of seconds after which a lock is released without extension (180 by default).
+
+    The deprecated ``redis_host``, ``redis_port`` and ``redis_timeout`` parameters of gokart.TaskOnKart (e.g. ``--redis-host=localhost --redis-port=6379``) still work.
+    When they are set, they take precedence over ``[gokart_lock]`` and emit a ``DeprecationWarning``. They will be removed in the next major release.
 
 3. Done
     

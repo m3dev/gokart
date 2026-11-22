@@ -20,6 +20,7 @@ from luigi.parameter import ParameterVisibility
 import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
+from gokart.conflict_prevention_lock.lock_config import resolve_redis_lock_settings
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
@@ -96,14 +97,16 @@ class TaskOnKart(luigi.Task, Generic[T]):
         default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.', significant=False
     )  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
-    redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(default=None, description='Task lock check is deactivated, when None.', significant=False)
+    redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(
+        default=None, description='Deprecated: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.', significant=False
+    )
     redis_port: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
         default=None,
-        description='Task lock check is deactivated, when None.',
+        description='Deprecated: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
         significant=False,
     )
-    redis_timeout: luigi.IntParameter = luigi.IntParameter(
-        default=180, description='Redis lock will be released after `redis_timeout` seconds', significant=False
+    redis_timeout: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
+        default=None, description='Deprecated: use `timeout` of the [gokart_lock] section (180 seconds by default).', significant=False
     )
 
     fail_on_empty_dump: luigi.Parameter[bool] = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
@@ -146,9 +149,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
 
+        settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
         if self.should_lock_run:
-            assert self.redis_host is not None, 'redis_host must be set when should_lock_run is True.'
-            assert self.redis_port is not None, 'redis_port must be set when should_lock_run is True.'
+            assert settings.host is not None and settings.port is not None, (
+                'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section.'
+            )
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)

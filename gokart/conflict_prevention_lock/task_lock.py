@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
 
+from gokart.conflict_prevention_lock.lock_config import resolve_redis_lock_settings
 from gokart.conflict_prevention_lock.redis_import import import_redis
 
 if TYPE_CHECKING:
@@ -97,9 +98,9 @@ def make_task_lock_params(
     lock_extend_seconds: int = 10,
 ) -> TaskLockParams:
     redis_key = make_task_lock_key(file_path, unique_id)
+    redis_host, redis_port, redis_timeout = resolve_redis_lock_settings(redis_host, redis_port, redis_timeout, warn=False)
     should_task_lock = redis_host is not None and redis_port is not None
-    if redis_timeout is not None:
-        assert redis_timeout > lock_extend_seconds, f'`redis_timeout` must be set greater than lock_extend_seconds:{lock_extend_seconds}, not {redis_timeout}.'
+    assert redis_timeout > lock_extend_seconds, f'`redis_timeout` must be set greater than lock_extend_seconds:{lock_extend_seconds}, not {redis_timeout}.'
     task_lock_params = TaskLockParams(
         redis_host=redis_host,
         redis_port=redis_port,
@@ -117,13 +118,14 @@ def make_task_lock_params_for_run(task_self: Any, lock_extend_seconds: int = 10)
     unique_id = task_self.make_unique_id() + '-run'
     task_lock_key = make_task_lock_key(file_path=task_path_name, unique_id=unique_id)
 
-    should_task_lock = task_self.redis_host is not None and task_self.redis_port is not None
+    redis_host, redis_port, redis_timeout = resolve_redis_lock_settings(task_self.redis_host, task_self.redis_port, task_self.redis_timeout, warn=False)
+    should_task_lock = redis_host is not None and redis_port is not None
     return TaskLockParams(
-        redis_host=task_self.redis_host,
-        redis_port=task_self.redis_port,
+        redis_host=redis_host,
+        redis_port=redis_port,
         redis_key=task_lock_key,
         should_task_lock=should_task_lock,
-        redis_timeout=task_self.redis_timeout,
+        redis_timeout=redis_timeout,
         raise_task_lock_exception_on_collision=True,
         lock_extend_seconds=lock_extend_seconds,
     )
