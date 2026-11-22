@@ -265,7 +265,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _check_modification_time(inputs: list[TargetOnKart], outputs: list[TargetOnKart]) -> bool:
         # WHY: an in-memory key is built like a file path, so the path alone cannot tell a file from an in-memory output.
         def identity(target: TargetOnKart) -> tuple[bool, str]:
-            return target.is_persistent(), target.path()
+            return gokart.target.is_persistent_target(target), target.path()
 
         common_targets = set(map(identity, inputs)) & set(map(identity, outputs))
         input_tasks = [t for t in inputs if identity(t) not in common_targets]

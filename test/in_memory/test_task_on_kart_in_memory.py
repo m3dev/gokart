@@ -11,6 +11,7 @@ from gokart.file_processor import PickleFileProcessor
 from gokart.in_memory import InMemoryTarget, InMemoryTargetError
 from gokart.in_memory.repository import acquire_repository, in_memory_scope
 from gokart.required_task_output import RequiredTaskOutput
+from test.util import _PlainLuigiTarget
 
 
 class _DumpTask(gokart.TaskOnKart[str]):
@@ -66,24 +67,22 @@ class _MixedOutputTask(gokart.TaskOnKart[str]):
         self.dump('file', 'file')
 
 
-class _PlainLuigiTarget(luigi.Target):
-    def __init__(self, path: str) -> None:
-        self._path = path
-
-    def exists(self) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return False
-
-    def path(self) -> str:
-        return self._path
-
-
 class _LuigiTargetTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
     path: luigi.Parameter[str] = luigi.Parameter()
 
     def output(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         # output() may return a plain luigi target at runtime despite its annotation.
-        return _PlainLuigiTarget(self.path)
+        return _PlainLuigiTarget(self.path, exists=True)
+
+
+class _ModificationTimeCheckTask(_LuigiTargetTask):
+    """Outputs the same plain luigi target as its input, so the target is common to both and its timestamp is not read."""
+
+    task_namespace = __name__
+
+    def requires(self):
+        return _LuigiTargetTask(path=self.path)
 
 
 class _FileJoinTask(gokart.TaskOnKart[str]):
@@ -176,6 +175,11 @@ class TestSupplementaryLogFiles:
     def test_plain_luigi_target_is_not_in_memory(self, tmp_path: Path) -> None:
         task = _LuigiTargetTask(path=str(tmp_path / 'luigi.txt'))
         assert not task._has_only_in_memory_outputs()
+
+
+class TestModificationTimeCheck:
+    def test_plain_luigi_target_common_to_input_and_output(self, tmp_path: Path) -> None:
+        assert _ModificationTimeCheckTask(path=str(tmp_path / 'luigi.txt'), modification_time_check=True).complete()
 
 
 class TestGCSWorkspace:

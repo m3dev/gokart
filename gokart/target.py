@@ -66,9 +66,9 @@ class TargetOnKart(luigi.Target):
         return self._path()
 
     def is_persistent(self) -> bool:
-        """Whether the output is stored at path(). False for in-memory outputs (``TaskOnKart.make_target(..., persist=False)``),
-        whose path() is only a key built like a file path.
+        """Whether the output is stored at path().
 
+        False for in-memory outputs (``TaskOnKart.make_target(..., persist=False)``), whose path() is only a key built like a file path.
         Overriding it does not make a target in-memory: only InMemoryTarget is kept in the store of gokart.build.
         """
         return True

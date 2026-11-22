@@ -24,7 +24,7 @@ from gokart.file_processor import make_file_processor
 from gokart.in_memory import make_in_memory_target
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import LargeDataFrameProcessor, SingleFileTarget, is_persistent_target, make_model_target, make_target
-from test.util import _get_temporary_directory
+from test.util import _get_temporary_directory, _PlainLuigiTarget
 
 
 class LocalTargetTest(unittest.TestCase):
@@ -541,14 +541,6 @@ class TestIsPersistent:
 
     def test_in_memory_target(self) -> None:
         assert not make_in_memory_target('gs://bucket/memory.pkl').is_persistent()
-
-
-class _PlainLuigiTarget(luigi.Target):
-    def exists(self) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return False
-
-    def path(self) -> str:
-        return 'plain'
 
 
 class TestIsPersistentTarget:
