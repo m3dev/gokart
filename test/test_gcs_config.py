@@ -33,13 +33,6 @@ class TestGCSConfig(unittest.TestCase):
 
 
 class TestGetStorageClient:
-    @pytest.fixture(autouse=True)
-    def _fresh_config(self):
-        # luigi reuses GCSConfig instances with the same parameters, which would carry a client cached by another test
-        GCSConfig.clear_instance_cache()
-        yield
-        GCSConfig.clear_instance_cache()
-
     def test_returns_storage_client_for_emulator(self, gcs_bucket):
         client = GCSConfig().get_storage_client()
 
@@ -82,9 +75,5 @@ class TestGetStorageClient:
 
 class TestGetGCSClientDeprecation:
     def test_warns_and_points_to_get_storage_client(self):
-        GCSConfig.clear_instance_cache()
-        try:
-            with patch('luigi.contrib.gcs.GCSClient'), pytest.warns(DeprecationWarning, match='get_storage_client'):
-                GCSConfig().get_gcs_client()
-        finally:
-            GCSConfig.clear_instance_cache()
+        with patch('luigi.contrib.gcs.GCSClient'), pytest.warns(DeprecationWarning, match='get_storage_client'):
+            GCSConfig().get_gcs_client()

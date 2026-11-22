@@ -7,7 +7,6 @@ from typing import Any
 import luigi
 import luigi.configuration
 import pytest
-from luigi.task_register import Register
 
 import gokart
 from gokart.conflict_prevention_lock import lock_config
@@ -21,10 +20,8 @@ class _Task(gokart.TaskOnKart[Any]):
 @pytest.fixture(autouse=True)
 def _reset_warning_flag() -> Iterator[None]:
     lock_config._object_storage_warning_emitted = False
-    Register.clear_instance_cache()
     yield
     lock_config._object_storage_warning_emitted = False
-    Register.clear_instance_cache()
 
 
 @pytest.fixture

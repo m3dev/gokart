@@ -9,7 +9,6 @@ from typing import cast
 import luigi
 import luigi.configuration
 import pytest
-from luigi.task_register import Register
 
 import gokart
 from gokart.conflict_prevention_lock.redis_import import import_redis
@@ -95,8 +94,6 @@ def redis_lock_url() -> Iterator[None]:
         config.add_section('gokart_lock')
     previous = cast(str | None, config.get('gokart_lock', 'url', fallback=None))
     config.set('gokart_lock', 'url', 'redis://localhost:6379')
-    # gokart_lock() is a cached luigi.Config instance, so it would not see the new url
-    Register.clear_instance_cache()
     yield
     if not existed:
         config.remove_section('gokart_lock')
@@ -104,7 +101,6 @@ def redis_lock_url() -> Iterator[None]:
         config.remove_option('gokart_lock', 'url')
     else:
         config.set('gokart_lock', 'url', previous)
-    Register.clear_instance_cache()
 
 
 @pytest.mark.usefixtures('without_redis', 'redis_lock_url')
