@@ -8,6 +8,7 @@ import random
 import types
 import warnings
 from collections.abc import Callable, Generator, Iterable
+from datetime import UTC
 from importlib import import_module
 from logging import getLogger
 from typing import Any, Generic, Self, TypeVar, cast, overload
@@ -216,8 +217,16 @@ class TaskOnKart(luigi.Task, Generic[T]):
         input_tasks = [t for t in inputs if t.path() not in common_path]
         output_tasks = [t for t in outputs if t.path() not in common_path]
 
-        input_modification_time = max([target.last_modification_time() for target in input_tasks]) if input_tasks else None
-        output_modification_time = min([target.last_modification_time() for target in output_tasks]) if output_tasks else None
+        input_times = [target.last_modification_time() for target in input_tasks]
+        output_times = [target.last_modification_time() for target in output_tasks]
+        timestamps = input_times + output_times
+        if any(t.utcoffset() is None for t in timestamps) and any(t.utcoffset() is not None for t in timestamps):
+            # Naive timestamps from local and custom targets represent system-local time.
+            input_times = [t.astimezone(UTC) for t in input_times]
+            output_times = [t.astimezone(UTC) for t in output_times]
+
+        input_modification_time = max(input_times, default=None)
+        output_modification_time = min(output_times, default=None)
 
         if input_modification_time is None or output_modification_time is None:
             return True
