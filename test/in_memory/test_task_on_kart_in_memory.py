@@ -11,7 +11,6 @@ from gokart.file_processor import PickleFileProcessor
 from gokart.in_memory import InMemoryTarget, InMemoryTargetError
 from gokart.in_memory.repository import acquire_repository, in_memory_scope
 from gokart.required_task_output import RequiredTaskOutput
-from test.util import _PlainLuigiTarget
 
 
 class _DumpTask(gokart.TaskOnKart[str]):
@@ -73,7 +72,7 @@ class _LuigiTargetTask(gokart.TaskOnKart[str]):
 
     def output(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         # output() may return a plain luigi target at runtime despite its annotation.
-        return _PlainLuigiTarget(self.path, exists=True)
+        return luigi.LocalTarget(self.path)
 
 
 class _ModificationTimeCheckTask(_LuigiTargetTask):
@@ -179,7 +178,9 @@ class TestSupplementaryLogFiles:
 
 class TestModificationTimeCheck:
     def test_plain_luigi_target_common_to_input_and_output(self, tmp_path: Path) -> None:
-        assert _ModificationTimeCheckTask(path=str(tmp_path / 'luigi.txt'), modification_time_check=True).complete()
+        path = tmp_path / 'luigi.txt'
+        path.write_text('plain')
+        assert _ModificationTimeCheckTask(path=str(path), modification_time_check=True).complete()
 
 
 class TestGCSWorkspace:

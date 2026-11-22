@@ -287,6 +287,20 @@ def is_persistent_target(target: luigi.Target) -> bool:
     return not isinstance(target, TargetOnKart) or target.is_persistent()
 
 
+def target_path(target: luigi.Target) -> str:
+    """TargetOnKart.path() that also accepts plain luigi targets such as luigi.LocalTarget, whose path is an attribute."""
+    if isinstance(target, TargetOnKart):
+        return target.path()
+    return cast(str, cast(Any, target).path)
+
+
+def target_last_modification_time(target: luigi.Target) -> datetime:
+    """TargetOnKart.last_modification_time() that also accepts plain luigi targets, read from their path like SingleFileTarget does."""
+    if isinstance(target, TargetOnKart):
+        return target.last_modification_time()
+    return _get_last_modification_time(target_path(target))
+
+
 def _make_file_system_target(file_path: str, processor: FileProcessor | None = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:
     processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
     if ObjectStorage.if_object_storage_path(file_path):

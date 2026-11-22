@@ -265,14 +265,14 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _check_modification_time(inputs: list[TargetOnKart], outputs: list[TargetOnKart]) -> bool:
         # WHY: an in-memory key is built like a file path, so the path alone cannot tell a file from an in-memory output.
         def identity(target: TargetOnKart) -> tuple[bool, str]:
-            return gokart.target.is_persistent_target(target), target.path()
+            return gokart.target.is_persistent_target(target), gokart.target.target_path(target)
 
         common_targets = set(map(identity, inputs)) & set(map(identity, outputs))
         input_tasks = [t for t in inputs if identity(t) not in common_targets]
         output_tasks = [t for t in outputs if identity(t) not in common_targets]
 
-        input_times = [target.last_modification_time() for target in input_tasks]
-        output_times = [target.last_modification_time() for target in output_tasks]
+        input_times = [gokart.target.target_last_modification_time(target) for target in input_tasks]
+        output_times = [gokart.target.target_last_modification_time(target) for target in output_tasks]
         timestamps = input_times + output_times
         if any(t.utcoffset() is None for t in timestamps) and any(t.utcoffset() is not None for t in timestamps):
             # Naive timestamps from local and custom targets represent system-local time.
@@ -477,7 +477,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         required_task_outputs = _drop_marked(
             map_flattenable_items(
                 lambda task: map_flattenable_items(
-                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=output.path())
+                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=gokart.target.target_path(output))
                     if gokart.target.is_persistent_target(output)
                     else _DROPPED,
                     task.output(),
@@ -586,7 +586,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     @_event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
-        self.task_log['file_path'] = [target.path() for target in flatten(self.output())]
+        self.task_log['file_path'] = [gokart.target.target_path(target) for target in flatten(self.output())]
         if self._should_dump_supplementary_log_files():
             self.dump(self.task_log, self._get_task_log_target())
 
