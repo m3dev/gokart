@@ -65,6 +65,14 @@ class TargetOnKart(luigi.Target):
     def path(self) -> str:
         return self._path()
 
+    def is_persistent(self) -> bool:
+        """Whether the output is stored at path().
+
+        False for in-memory outputs (``TaskOnKart.make_target(..., persist=False)``), whose path() is only a key built like a file path.
+        Overriding it does not make a target in-memory: only InMemoryTarget is kept in the store of gokart.build.
+        """
+        return True
+
     @abstractmethod
     def _exists(self) -> bool:
         pass
@@ -272,6 +280,11 @@ class LargeDataFrameProcessor:
     def load(file_path: str) -> pd.DataFrame:
         dir_path = os.path.dirname(file_path)
         return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in LargeDataFrameProcessor._chunk_paths(dir_path)]))
+
+
+def is_persistent_target(target: luigi.Target) -> bool:
+    """TargetOnKart.is_persistent() that also accepts plain luigi targets, which output() may return despite its annotation."""
+    return not isinstance(target, TargetOnKart) or target.is_persistent()
 
 
 def _make_file_system_target(file_path: str, processor: FileProcessor | None = None, store_index_in_feather: bool = True) -> luigi.target.FileSystemTarget:

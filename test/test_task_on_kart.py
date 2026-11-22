@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import pickle
 import tempfile
 import unittest
 import warnings
@@ -741,6 +742,16 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(t1.to_str_params(), _DummyTaskWithParams(param='a').to_str_params())  # same value
         self.assertNotEqual(t1.to_str_params(), _DummyTaskWithParams(param='b').to_str_params())  # different value
         self.assertNotEqual(t1.to_str_params(), t1.to_str_params(only_significant=True))
+
+    def test_pickle_round_trip(self):
+        # WHY: parallel_scheduling sends tasks to a multiprocessing.Pool, which pickles them.
+        task = _DummyTask(param=2)
+        task.to_str_params()
+
+        restored = pickle.loads(pickle.dumps(task))
+
+        self.assertEqual(restored, task)
+        self.assertEqual(restored.to_str_params(), task.to_str_params())
 
     def test_get_task_params_reads_dumped_task_params(self):
         with tempfile.TemporaryDirectory() as tmpdir:

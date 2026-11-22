@@ -1,3 +1,4 @@
+import json
 import random
 from pathlib import Path
 
@@ -9,6 +10,8 @@ import gokart
 from gokart.file_processor import PickleFileProcessor
 from gokart.in_memory import InMemoryTarget, InMemoryTargetError
 from gokart.in_memory.repository import acquire_repository, in_memory_scope
+from gokart.required_task_output import RequiredTaskOutput
+from test.util import _PlainLuigiTarget
 
 
 class _DumpTask(gokart.TaskOnKart[str]):
@@ -62,6 +65,38 @@ class _MixedOutputTask(gokart.TaskOnKart[str]):
     def run(self):
         self.dump('memory', 'memory')
         self.dump('file', 'file')
+
+
+class _LuigiTargetTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+    path: luigi.Parameter[str] = luigi.Parameter()
+
+    def output(self):  # pyright: ignore[reportIncompatibleMethodOverride]
+        # output() may return a plain luigi target at runtime despite its annotation.
+        return _PlainLuigiTarget(self.path, exists=True)
+
+
+class _ModificationTimeCheckTask(_LuigiTargetTask):
+    """Outputs the same plain luigi target as its input, so the target is common to both and its timestamp is not read."""
+
+    task_namespace = __name__
+
+    def requires(self):
+        return _LuigiTargetTask(path=self.path)
+
+
+class _FileJoinTask(gokart.TaskOnKart[str]):
+    task_namespace = __name__
+    tasks: gokart.ListTaskInstanceParameter[gokart.TaskOnKart[str]] = gokart.ListTaskInstanceParameter()
+
+    def output(self):
+        return self.make_target('file_join.pkl')
+
+    def run(self):
+        self.dump('file join')
+
+    def requires(self):
+        return {'tasks': self.tasks}
 
 
 class TestMakeInMemoryTarget:
@@ -137,6 +172,15 @@ class TestSupplementaryLogFiles:
         gokart.build(_MixedOutputTask(workspace_directory=workspace), reset_register=False, return_value=False)
         assert list(Path(workspace).rglob('log/task_log/*.pkl'))
 
+    def test_plain_luigi_target_is_not_in_memory(self, tmp_path: Path) -> None:
+        task = _LuigiTargetTask(path=str(tmp_path / 'luigi.txt'))
+        assert not task._has_only_in_memory_outputs()
+
+
+class TestModificationTimeCheck:
+    def test_plain_luigi_target_common_to_input_and_output(self, tmp_path: Path) -> None:
+        assert _ModificationTimeCheckTask(path=str(tmp_path / 'luigi.txt'), modification_time_check=True).complete()
+
 
 class TestGCSWorkspace:
     def test_build_writes_nothing_to_gcs(self, gcs_bucket: str) -> None:
@@ -154,3 +198,42 @@ class TestGCSWorkspace:
         names = [blob.name for blob in storage.Client().list_blobs(gcs_bucket)]
         assert any(name.startswith('resources/file_') for name in names)
         assert not any(name.startswith('resources/memory_') for name in names)
+
+    def test_in_memory_input_is_not_labeled_as_gcs_object(self, gcs_bucket: str) -> None:
+        # The key of an in-memory output starts with gs:// like a file path, but no object exists there.
+        workspace = f'gs://{gcs_bucket}/resources'
+        file_task = _MixedOutputTask(workspace_directory=workspace)
+        task = _FileJoinTask(tasks=[_DumpTask(param='a', workspace_directory=workspace), file_task], workspace_directory=workspace)
+        gokart.build(task, reset_register=False, return_value=False)
+        [blob] = [blob for blob in storage.Client().list_blobs(gcs_bucket) if blob.name.startswith('resources/file_join_')]
+        file_output_path = file_task.output()['file'].path()
+        assert json.loads(blob.metadata['__required_task_outputs']) == {
+            'tasks': [{'file': {'__gokart_task_name': f'{__name__}._MixedOutputTask', '__gokart_output_path': file_output_path}}]
+        }
+
+
+class TestDeleteLocalUnnecessaryOutputs:
+    def test_file_at_in_memory_key_is_deleted(self, tmp_path: Path) -> None:
+        # e.g. a file left by the task before it switched to persist=False; the in-memory output does not use it.
+        task = _DumpTask(param='a', workspace_directory=str(tmp_path))
+        stale_file = Path(task.output().path())
+        stale_file.write_bytes(b'stale')
+        gokart.delete_local_unnecessary_outputs(task)
+        assert not stale_file.exists()
+
+
+class TestRequiredTaskOutputs:
+    def test_in_memory_outputs_are_dropped(self, tmp_path: Path) -> None:
+        file_task = _MixedOutputTask(workspace_directory=str(tmp_path))
+        task = _FileJoinTask(tasks=[_DumpTask(param='a'), file_task], workspace_directory=str(tmp_path))
+        expected = RequiredTaskOutput(task_name=file_task.get_task_family(), output_path=file_task.output()['file'].path())
+        assert task._get_required_task_outputs() == {'tasks': ({'file': expected},)}
+
+    def test_only_in_memory_outputs_give_none(self, tmp_path: Path) -> None:
+        task = _FileJoinTask(tasks=[_DumpTask(param='a')], workspace_directory=str(tmp_path))
+        assert task._get_required_task_outputs() is None
+
+    def test_empty_requirements_without_in_memory_outputs_are_kept(self, tmp_path: Path) -> None:
+        # The label of a task without in-memory inputs must stay as it was before in-memory outputs were dropped.
+        task = _FileJoinTask(tasks=[], workspace_directory=str(tmp_path))
+        assert task._get_required_task_outputs() == {'tasks': ()}

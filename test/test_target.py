@@ -21,9 +21,10 @@ from moto import mock_aws
 
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import make_file_processor
+from gokart.in_memory import make_in_memory_target
 from gokart.required_task_output import RequiredTaskOutput
-from gokart.target import LargeDataFrameProcessor, SingleFileTarget, make_model_target, make_target
-from test.util import _get_temporary_directory
+from gokart.target import LargeDataFrameProcessor, SingleFileTarget, is_persistent_target, make_model_target, make_target
+from test.util import _get_temporary_directory, _PlainLuigiTarget
 
 
 class LocalTargetTest(unittest.TestCase):
@@ -528,6 +529,28 @@ class TestGCSTarget:
 
         with pytest.raises(FileNotFoundError):
             target.last_modification_time()
+
+
+class TestIsPersistent:
+    def test_file_target(self, tmp_path) -> None:
+        assert make_target(str(tmp_path / 'file.pkl')).is_persistent()
+
+    def test_model_target(self, tmp_path) -> None:
+        target = make_model_target(str(tmp_path / 'model.zip'), temporary_directory=str(tmp_path / 'tmp'), save_function=None, load_function=None)
+        assert target.is_persistent()
+
+    def test_in_memory_target(self) -> None:
+        assert not make_in_memory_target('gs://bucket/memory.pkl').is_persistent()
+
+
+class TestIsPersistentTarget:
+    def test_target_on_kart(self, tmp_path) -> None:
+        assert is_persistent_target(make_target(str(tmp_path / 'file.pkl')))
+        assert not is_persistent_target(make_in_memory_target('memory.pkl'))
+
+    def test_plain_luigi_target_is_persistent(self) -> None:
+        # output() may return targets that are not TargetOnKart despite its annotation; they have no is_persistent().
+        assert is_persistent_target(_PlainLuigiTarget())
 
 
 if __name__ == '__main__':

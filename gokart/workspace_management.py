@@ -7,13 +7,15 @@ from logging import getLogger
 from typing import Any
 
 import gokart
+from gokart.target import is_persistent_target
 from gokart.utils import flatten
 
 logger = getLogger(__name__)
 
 
 def _get_all_output_file_paths(task: gokart.TaskOnKart[Any]) -> list[str]:
-    output_paths = [t.path() for t in flatten(task.output())]
+    # WHY: an in-memory key looks like a file path, but the in-memory output does not use the file there.
+    output_paths = [t.path() for t in flatten(task.output()) if is_persistent_target(t)]
     children = flatten(task.requires())
     output_paths.extend(itertools.chain.from_iterable([_get_all_output_file_paths(child) for child in children]))
     return output_paths

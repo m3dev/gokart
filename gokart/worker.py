@@ -41,6 +41,7 @@ import json
 import logging
 import multiprocessing
 import os
+import pickle
 import queue as Queue
 import random
 import signal
@@ -51,6 +52,7 @@ import threading
 import time
 import traceback
 from collections.abc import Callable, Generator
+from multiprocessing.reduction import ForkingPickler
 from typing import Any, Literal, NamedTuple, TypeVar, cast
 
 import luigi
@@ -65,7 +67,7 @@ from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
 from gokart.conflict_prevention_lock.lock_config import LOCK_EXTEND_SECONDS
 from gokart.conflict_prevention_lock.run_lock import RunLock, RunLockHeartbeat, make_run_lock
-from gokart.in_memory.repository import InMemoryTargetError, acquire_repository
+from gokart.in_memory.repository import InMemoryCacheRepository, InMemoryTargetError, acquire_repository
 from gokart.in_memory.target import InMemoryTarget
 from gokart.parameter import ExplicitBoolParameter
 
@@ -436,6 +438,34 @@ class gokart_worker(luigi.Config):
     )
 
 
+def _check_complete(task: Task, out_queue: Any, completion_cache: Any) -> None:
+    """Same as luigi.worker.check_complete, but puts the task_id instead of the task.
+
+    WHY: With parallel_scheduling, complete() runs on an unpickled copy of the task. Worker.add looks the task_id up so that
+         it keeps scheduling its own task objects, the same ones that the requires() of other tasks return.
+         Otherwise the state that complete() changes (e.g. TaskOnKart's rerun) differs between those objects.
+    """
+    is_complete: bool | luigi.worker.TracebackWrapper
+    try:
+        is_complete = cast(Any, luigi.worker).check_complete_cached(task, completion_cache)
+    except Exception:
+        is_complete = luigi.worker.TracebackWrapper(traceback.format_exc())
+    out_queue.put((task.task_id, is_complete))
+
+
+def _check_complete_pickled(task_id: str, pickled_task: bytes, out_queue: Any, completion_cache: Any) -> None:
+    try:
+        task = cast(Task, pickle.loads(pickled_task))
+    except Exception:
+        out_queue.put((task_id, luigi.worker.TracebackWrapper(_cannot_pass_to_pool_message(task_id) + traceback.format_exc())))
+        return
+    _check_complete(task, out_queue, completion_cache)
+
+
+def _cannot_pass_to_pool_message(task_id: str) -> str:
+    return f'{task_id} could not be passed to a parallel scheduling process to check complete() (e.g. it cannot be pickled):\n'
+
+
 class Worker:
     """
     Worker object communicates with a scheduler.
@@ -724,21 +754,20 @@ class Worker:
             queue = luigi.worker.DequeQueue()
             pool = luigi.worker.SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(cast(Any, luigi.worker).check_complete, [task, queue, self._task_completion_cache])
+        self._check_complete_async(pool, queue, task, multiprocess)
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
         try:
-            seen = {task.task_id}
+            seen = {task.task_id: task}
             while queue_size:
-                current = queue.get()
+                task_id, is_complete = queue.get()
                 queue_size -= 1
-                item, is_complete = current
-                for next in self._add(item, is_complete):
+                for next in self._add(seen[task_id], is_complete):
                     if next.task_id not in seen:
                         self._validate_task(next)
-                        seen.add(next.task_id)
-                        pool.apply_async(cast(Any, luigi.worker).check_complete, [next, queue, self._task_completion_cache])
+                        seen[next.task_id] = next
+                        self._check_complete_async(pool, queue, next, multiprocess)
                         queue_size += 1
         except (KeyboardInterrupt, luigi.worker.TaskException):
             raise
@@ -753,6 +782,20 @@ class Worker:
             pool.close()
             pool.join()
         return self.add_succeeded
+
+    def _check_complete_async(self, pool: Any, queue: Any, task: Task, multiprocess: bool) -> None:
+        if not multiprocess:
+            pool.apply_async(_check_complete, [task, queue, self._task_completion_cache])
+            return
+
+        # WHY: Pickle here rather than leave it to multiprocessing.Pool. A task that Pool fails to pickle or unpickle
+        #      never puts a result on the queue, and add() would wait for it forever.
+        try:
+            pickled_task = bytes(ForkingPickler.dumps(task))
+        except Exception:
+            queue.put((task.task_id, luigi.worker.TracebackWrapper(_cannot_pass_to_pool_message(task.task_id) + traceback.format_exc())))
+            return
+        pool.apply_async(_check_complete_pickled, [task.task_id, pickled_task, queue, self._task_completion_cache])
 
     def _add_task_batcher(self, task: Task) -> None:
         family = task.task_family
@@ -777,7 +820,7 @@ class Worker:
             return []
         return [target for target in outputs if isinstance(target, InMemoryTarget)]
 
-    def _check_in_memory_target_support(self, task: Task) -> None:
+    def _check_in_memory_target_support(self, task: Task) -> InMemoryCacheRepository:
         if self.worker_processes > 1:
             reason = f'workers={self.worker_processes} runs tasks in separate processes'
         elif self._config.force_multiprocessing:
@@ -789,10 +832,9 @@ class Worker:
         else:
             try:
                 # WHY: the repository is created only for builds with in-memory outputs, so builds without them can run in other threads.
-                acquire_repository()
+                return acquire_repository()
             except InMemoryTargetError as e:
                 raise InMemoryTargetError(f'{task} has an InMemoryTarget output: {e}') from e
-            return
         # WHY: the in-memory store lives in this process, so data written in a child process would be silently lost.
         raise InMemoryTargetError(f'{task} has an InMemoryTarget output, but {reason}. InMemoryTarget supports only a single process.')
 
@@ -838,10 +880,11 @@ class Worker:
     def _add(self, task: Task, is_complete: bool) -> Generator[Task, None, None]:
         in_memory_targets = self._get_in_memory_targets(task)
         if in_memory_targets:
-            self._check_in_memory_target_support(task)
+            repository = self._check_in_memory_target_support(task)
             self._in_memory_targets[task.task_id] = in_memory_targets
             for target in in_memory_targets:
                 self._in_memory_key_holders[target.path()].add(task.task_id)
+                repository.register(target.path())
         if self._needs_in_memory_outputs_until_build_ends(task):
             self._release_in_memory_outputs_early = False
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
