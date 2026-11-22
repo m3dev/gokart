@@ -13,6 +13,12 @@ from gokart.conflict_prevention_lock.lock_config import DEFAULT_SKEW_MARGIN_SECO
 logger = getLogger(__name__)
 
 
+def lock_object_name(prefix: str, key: str) -> str:
+    """Name of the object that holds a lock, shared by all object stores so that a lifecycle rule on ``<prefix>/`` matches them alike."""
+    prefix = prefix.strip('/')
+    return f'{prefix}/{key}.lock' if prefix else f'{key}.lock'
+
+
 class StoredLock(NamedTuple):
     version: str  # GCS generation / S3 ETag: changes on every write
     updated_at: float  # server-side last write time (epoch seconds)

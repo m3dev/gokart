@@ -95,17 +95,10 @@ def redis_connection_kwargs(host: str | None, port: int | None, db: int, ssl: bo
 def parse_object_storage_lock_url(url: str, scheme: str) -> tuple[str, str]:
     """Split a ``<scheme>://bucket[/prefix]`` URL into (bucket, prefix)."""
     parts = urlsplit(url)
-    if parts.scheme != scheme or not parts.netloc or parts.query or parts.fragment:
-        raise ValueError(f'Unsupported lock backend URL: {url!r}. Expected {scheme}://bucket[/prefix].')
+    # luigi's config parser keeps an inline `; comment` as part of the value, which would silently become part of the prefix.
+    if parts.scheme != scheme or not parts.netloc or parts.query or parts.fragment or any(c.isspace() for c in url):
+        raise ValueError(f'Unsupported lock backend URL: {url!r}. Expected {scheme}://bucket[/prefix] without whitespace.')
     return parts.netloc, parts.path.strip('/')
-
-
-def parse_gcs_lock_url(url: str) -> tuple[str, str]:
-    return parse_object_storage_lock_url(url, 'gs')
-
-
-def parse_s3_lock_url(url: str) -> tuple[str, str]:
-    return parse_object_storage_lock_url(url, 's3')
 
 
 def lock_url_scheme(url: str | None) -> str | None:

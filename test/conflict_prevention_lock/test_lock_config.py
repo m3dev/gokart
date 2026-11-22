@@ -12,9 +12,8 @@ import pytest
 
 import gokart
 from gokart.conflict_prevention_lock.lock_config import (
-    parse_gcs_lock_url,
     parse_lock_url,
-    parse_s3_lock_url,
+    parse_object_storage_lock_url,
     redis_connection_kwargs,
     resolve_redis_lock_settings,
 )
@@ -283,18 +282,26 @@ class TestRedisConnectionKwargs:
 
 class TestParseGcsLockUrl:
     def test_bucket_and_prefix(self):
-        assert parse_gcs_lock_url('gs://my-bucket/gokart-locks') == ('my-bucket', 'gokart-locks')
+        assert parse_object_storage_lock_url('gs://my-bucket/gokart-locks', 'gs') == ('my-bucket', 'gokart-locks')
 
     def test_nested_prefix_and_trailing_slash(self):
-        assert parse_gcs_lock_url('gs://my-bucket/a/b/') == ('my-bucket', 'a/b')
+        assert parse_object_storage_lock_url('gs://my-bucket/a/b/', 'gs') == ('my-bucket', 'a/b')
 
     def test_prefix_is_optional(self):
-        assert parse_gcs_lock_url('gs://my-bucket') == ('my-bucket', '')
+        assert parse_object_storage_lock_url('gs://my-bucket', 'gs') == ('my-bucket', '')
 
     @pytest.mark.parametrize('url', ['gs://', 'redis://host', 'gs://bucket/prefix?x=1'])
     def test_invalid_url_is_rejected(self, url: str):
         with pytest.raises(ValueError, match='Unsupported lock backend URL'):
-            parse_gcs_lock_url(url)
+            parse_object_storage_lock_url(url, 'gs')
+
+
+class TestObjectStorageUrlWhitespace:
+    @pytest.mark.parametrize('url', ['gs://my-bucket/gokart-locks  ; or s3://my-bucket/gokart-locks', 's3://my-bucket/a b'])
+    def test_whitespace_such_as_an_inline_comment_is_rejected(self, url: str):
+        # luigi's config parser does not strip inline comments, so they would silently become part of the prefix
+        with pytest.raises(ValueError, match='Unsupported lock backend URL'):
+            parse_object_storage_lock_url(url, url.split(':')[0])
 
 
 class TestGcsBackendUrl:
@@ -352,9 +359,9 @@ class TestGcsBackendUrl:
 
 class TestParseS3LockUrl:
     def test_bucket_and_prefix(self):
-        assert parse_s3_lock_url('s3://my-bucket/gokart-locks/') == ('my-bucket', 'gokart-locks')
+        assert parse_object_storage_lock_url('s3://my-bucket/gokart-locks/', 's3') == ('my-bucket', 'gokart-locks')
 
     @pytest.mark.parametrize('url', ['s3://', 'gs://bucket/prefix', 's3://bucket/prefix?x=1'])
     def test_invalid_url_is_rejected(self, url: str):
         with pytest.raises(ValueError, match='Unsupported lock backend URL'):
-            parse_s3_lock_url(url)
+            parse_object_storage_lock_url(url, 's3')

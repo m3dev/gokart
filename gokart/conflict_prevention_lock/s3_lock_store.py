@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from gokart.conflict_prevention_lock.object_storage_lock import StoredLock
+from gokart.conflict_prevention_lock.object_storage_lock import StoredLock, lock_object_name
 
-# 412: our precondition failed, 409: another conditional write to the same key is in flight. Both mean someone else holds the lock.
-_PRECONDITION_FAILED_CODES = frozenset({'PreconditionFailed', 'ConditionalRequestConflict'})
+# 412: our precondition failed. 409 is different: another conditional write or delete to the same key was in flight, which AWS documents as retryable,
+# so it must not be read as "someone else holds the lock" when we replace or delete.
+_PRECONDITION_FAILED_CODES = frozenset({'PreconditionFailed'})
+_CONFLICT_CODES = frozenset({'ConditionalRequestConflict'})
 _MISSING_CODES = frozenset({'NoSuchKey', '404', 'NotFound'})
 # S3-compatible stores that do not know the conditional headers answer like this instead of ignoring them.
 _UNSUPPORTED_CODES = frozenset({'NotImplemented', 'InvalidArgument', 'MalformedHeader'})
@@ -23,19 +25,20 @@ def _error_code(error: Exception) -> str:
 class S3LockStore:
     """Conditional writes on S3: ``If-None-Match: *`` creates, ``If-Match: <ETag>`` replaces / deletes.
 
-    The ETag is the MD5 of the body, so the lock body must change on every write (see ``ObjectStorageRunLock``).
+    The ETag may be derived from the body (an MD5 for single-part objects without SSE-KMS / SSE-C), so the lock body must change
+    on every write, which ``ObjectStorageRunLock`` guarantees with a nonce.
     """
 
     def __init__(self, client: Any, bucket_name: str, prefix: str) -> None:
         self._client: Any = client
         self._bucket = bucket_name
-        self._prefix = prefix.strip('/')
+        self._prefix = prefix
 
     def close(self) -> None:
         self._client.close()
 
     def _name(self, key: str) -> str:
-        return f'{self._prefix}/{key}.lock' if self._prefix else f'{key}.lock'
+        return lock_object_name(self._prefix, key)
 
     def stat(self, key: str) -> StoredLock | None:
         from botocore.exceptions import ClientError
@@ -49,35 +52,53 @@ class S3LockStore:
         return StoredLock(version=str(response['ETag']), updated_at=response['LastModified'].timestamp(), body=response['Body'].read())
 
     def create_if_absent(self, key: str, body: bytes) -> str | None:
-        return self._put(key, body, IfNoneMatch='*')
+        return self._put(key, body, treat_conflict_as_failure=True, IfNoneMatch='*')
 
     def replace_if_match(self, key: str, body: bytes, version: str) -> str | None:
-        return self._put(key, body, IfMatch=version)
+        return self._put(key, body, treat_conflict_as_failure=False, IfMatch=version)
 
     def delete_if_match(self, key: str, version: str) -> bool:
         from botocore.exceptions import ClientError
 
-        try:
-            self._client.delete_object(Bucket=self._bucket, Key=self._name(key), IfMatch=version)
-        except ClientError as e:
-            code = _error_code(e)
-            if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
-                return False
-            raise
-        return True
+        for attempt in range(2):
+            try:
+                self._client.delete_object(Bucket=self._bucket, Key=self._name(key), IfMatch=version)
+            except ClientError as e:
+                code = _error_code(e)
+                if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
+                    return False
+                if code in _CONFLICT_CODES and attempt == 0:
+                    continue
+                self._raise_if_unsupported(code, e)
+                raise
+            return True
+        raise AssertionError('unreachable')
 
-    def _put(self, key: str, body: bytes, **condition: str) -> str | None:
+    def _put(self, key: str, body: bytes, treat_conflict_as_failure: bool, **condition: str) -> str | None:
         from botocore.exceptions import ClientError
 
-        try:
-            response = self._client.put_object(Bucket=self._bucket, Key=self._name(key), Body=body, ContentType='application/json', **condition)
-        except ClientError as e:
-            code = _error_code(e)
-            if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
-                return None
-            if code in _UNSUPPORTED_CODES:
-                raise UnsupportedConditionalWritesError(
-                    f'The object store rejected a conditional write ({code}). The S3 run lock needs conditional writes (If-Match / If-None-Match).'
-                ) from e
-            raise
-        return str(response['ETag'])
+        for attempt in range(2):
+            try:
+                response = self._client.put_object(Bucket=self._bucket, Key=self._name(key), Body=body, ContentType='application/json', **condition)
+            except ClientError as e:
+                code = _error_code(e)
+                if code in _PRECONDITION_FAILED_CODES or code in _MISSING_CODES:
+                    return None
+                if code in _CONFLICT_CODES:
+                    # Creating: whoever is writing the same key at the same time holds the lock. Replacing: retry once with the same ETag, where a real loss
+                    # shows up as 412; if it conflicts again the error propagates, so the heartbeat keeps its version and tries again on the next tick.
+                    if treat_conflict_as_failure:
+                        return None
+                    if attempt == 0:
+                        continue
+                self._raise_if_unsupported(code, e)
+                raise
+            return str(response['ETag'])
+        raise AssertionError('unreachable')
+
+    @staticmethod
+    def _raise_if_unsupported(code: str, error: Exception) -> None:
+        if code in _UNSUPPORTED_CODES:
+            raise UnsupportedConditionalWritesError(
+                f'The object store rejected a conditional request ({code}). The S3 run lock needs conditional writes and deletes (If-Match / If-None-Match).'
+            ) from error

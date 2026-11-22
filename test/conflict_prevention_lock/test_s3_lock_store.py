@@ -95,16 +95,79 @@ class TestStat:
         assert store.stat('k') is None
 
 
-class TestUnsupportedStores:
-    def test_store_rejecting_conditional_headers_is_reported_clearly(self, store: S3LockStore, client: Any):
-        def reject(**_: Any) -> None:
-            raise ClientError(
-                {'Error': {'Code': 'NotImplemented', 'Message': 'A header you provided implies functionality that is not implemented'}}, 'PutObject'
-            )
+def _fail_first_calls(client: Any, method: str, code: str, times: int) -> list[int]:
+    """Make the first `times` calls of `method` fail with `code`, then delegate to the real client."""
+    original = getattr(client, method)
+    calls = [0]
 
-        client.put_object = reject
+    def wrapper(**kwargs: Any) -> Any:
+        calls[0] += 1
+        if calls[0] <= times:
+            raise ClientError({'Error': {'Code': code, 'Message': code}}, method)
+        return original(**kwargs)
+
+    setattr(client, method, wrapper)
+    return calls
+
+
+class TestUnsupportedStores:
+    @pytest.mark.parametrize('code', ['NotImplemented', 'InvalidArgument', 'MalformedHeader'])
+    def test_store_rejecting_conditional_headers_on_put_is_reported_clearly(self, store: S3LockStore, client: Any, code: str):
+        _fail_first_calls(client, 'put_object', code, times=1)
         with pytest.raises(UnsupportedConditionalWritesError, match='conditional'):
             store.create_if_absent('k', b'body')
+
+    @pytest.mark.parametrize('code', ['NotImplemented', 'InvalidArgument', 'MalformedHeader'])
+    def test_store_rejecting_conditional_headers_on_delete_is_reported_clearly(self, store: S3LockStore, client: Any, code: str):
+        version = store.create_if_absent('k', b'body')
+        assert version is not None
+        _fail_first_calls(client, 'delete_object', code, times=1)
+        with pytest.raises(UnsupportedConditionalWritesError, match='conditional'):
+            store.delete_if_match('k', version)
+
+
+class TestConditionalRequestConflict:
+    """S3 answers 409 when another conditional write or delete to the same key is in flight; moto never does, so it is injected."""
+
+    def test_409_on_create_means_someone_else_is_creating(self, store: S3LockStore, client: Any):
+        _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=1)
+        assert store.create_if_absent('k', b'body') is None
+
+    def test_409_on_replace_is_retried_once_with_the_same_etag(self, store: S3LockStore, client: Any):
+        version = store.create_if_absent('k', b'first')
+        assert version is not None
+        calls = _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=1)
+        new_version = store.replace_if_match('k', b'second', version)
+        assert new_version is not None and calls[0] == 2
+
+    def test_a_409_that_persists_on_replace_propagates_so_that_the_heartbeat_retries_later(self, store: S3LockStore, client: Any):
+        version = store.create_if_absent('k', b'first')
+        assert version is not None
+        _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=2)
+        with pytest.raises(ClientError):
+            store.replace_if_match('k', b'second', version)
+
+    def test_409_on_delete_is_retried_once(self, store: S3LockStore, client: Any):
+        version = store.create_if_absent('k', b'first')
+        assert version is not None
+        calls = _fail_first_calls(client, 'delete_object', 'ConditionalRequestConflict', times=1)
+        assert store.delete_if_match('k', version)
+        assert calls[0] == 2
+        assert store.stat('k') is None
+
+    def test_a_lock_survives_a_409_on_heartbeat(self, store: S3LockStore, client: Any):
+        lock = ObjectStorageRunLock(store, 'task_run', ttl=60)
+        assert lock.try_acquire()
+        _fail_first_calls(client, 'put_object', 'ConditionalRequestConflict', times=2)
+        with pytest.raises(ClientError):
+            lock.extend()
+        lock.extend()
+        assert store.stat('task_run') is not None
+
+
+class TestClose:
+    def test_close_closes_the_dedicated_client(self, client: Any):
+        S3LockStore(client, 'lock-bucket', 'locks').close()
 
 
 class TestWithRunLock:

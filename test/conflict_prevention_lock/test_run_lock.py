@@ -279,3 +279,57 @@ class TestMakeRunLockWithGcsUrl:
 
     def test_explicit_task_level_redis_settings_still_win(self, gs_url: None, server: fakeredis.FakeServer):
         assert isinstance(make_run_lock(_make_task()), RedisRunLock)
+
+
+class TestMakeRunLockWithS3Url:
+    @pytest.fixture
+    def s3_url(self, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
+        import boto3
+        import luigi.configuration
+        from moto import mock_aws
+
+        monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'testing')
+        monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'testing')
+        monkeypatch.setenv('AWS_DEFAULT_REGION', 'us-east-1')
+        config = luigi.configuration.get_config()
+        config.add_section('gokart_lock')
+        config.set('gokart_lock', 'url', 's3://lock-bucket/locks')
+        Register.clear_instance_cache()
+        with mock_aws():
+            client = boto3.client('s3', region_name='us-east-1')
+            client.create_bucket(Bucket='lock-bucket')
+            yield client
+        config.remove_section('gokart_lock')
+        Register.clear_instance_cache()
+
+    def test_s3_url_returns_an_object_storage_lock_backed_by_s3(self, s3_url: Any):
+        task = _LockedTask(should_lock_run=True)
+        lock = make_run_lock(task)
+        assert isinstance(lock, ObjectStorageRunLock)
+        assert lock.try_acquire()
+        key = make_task_lock_params_for_run(task_self=task).redis_key
+        assert s3_url.get_object(Bucket='lock-bucket', Key=f'locks/{key}.lock')['Body'].read()
+        lock.release()
+        assert 'Contents' not in s3_url.list_objects_v2(Bucket='lock-bucket')
+
+    def test_each_lock_gets_its_own_client(self, s3_url: Any):
+        from gokart.s3_config import S3Config
+
+        with patch.object(S3Config, 'create_boto_client', autospec=True, side_effect=S3Config.create_boto_client) as create:
+            task = _LockedTask(should_lock_run=True)
+            first = make_run_lock(task)
+            second = make_run_lock(task)
+            assert first is not None and second is not None
+            first.try_acquire()
+            second.try_acquire()
+        assert create.call_count == 2
+        first.release()
+
+    def test_a_missing_boto3_fails_the_lock_not_make_run_lock(self, s3_url: Any):
+        from gokart.s3_config import S3Config
+
+        with patch.object(S3Config, 'create_boto_client', side_effect=ImportError('S3 support requires additional dependencies')):
+            lock = make_run_lock(_LockedTask(should_lock_run=True))
+            assert lock is not None
+            with pytest.raises(ImportError):
+                lock.try_acquire()
