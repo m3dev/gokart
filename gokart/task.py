@@ -18,9 +18,9 @@ from luigi.parameter import ParameterVisibility
 
 import gokart
 import gokart.target
+from gokart._gcs import needs_task_state_labels
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
-from gokart.gcs_obj_metadata_client import GCSObjectMetadataClient
 from gokart.pandas_type_config import PandasTypeConfigMap
 from gokart.parameter import ExplicitBoolParameter, ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.required_task_output import RequiredTaskOutput
@@ -383,7 +383,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # WHY: labels are only attached on gs:// non-log paths, and computing them (output() rebuilds, serialize) is costly.
         task_params: dict[str, str] | None = None
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None
-        if GCSObjectMetadataClient.needs_task_state_labels(output_target.path()):
+        if needs_task_state_labels(output_target.path()):
             task_params = cast(dict[str, str], super().to_str_params(only_significant=True, only_public=True))
             required_task_outputs = self._get_required_task_outputs()
 

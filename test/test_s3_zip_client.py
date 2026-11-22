@@ -38,6 +38,17 @@ class TestS3ZipClient(unittest.TestCase):
         zip_client.make_archive()
 
     @mock_aws
+    def test_make_archive_accepts_and_ignores_metadata(self):
+        conn = boto3.resource('s3', region_name='us-east-1')
+        conn.create_bucket(Bucket='test')
+        os.makedirs(self.temporary_directory, exist_ok=True)
+
+        zip_client = S3ZipClient(file_path='s3://test/test.zip', temporary_directory=self.temporary_directory)
+        zip_client.make_archive(metadata={'owner': 'me'})
+
+        self.assertTrue(zip_client.exists())
+
+    @mock_aws
     def test_unpack_archive(self):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')

@@ -17,10 +17,10 @@ class GCSZipClient(ZipClient):
     def exists(self) -> bool:
         return self._client.exists(self._file_path)
 
-    def make_archive(self) -> None:
+    def make_archive(self, metadata: dict[str, str] | None = None) -> None:
         extension = os.path.splitext(self._file_path)[1]
         shutil.make_archive(base_name=self._temporary_directory, format=extension[1:], root_dir=self._temporary_directory)
-        self._client.put(self._temporary_file_path(), self._file_path)
+        self._client.put(self._temporary_file_path(), self._file_path, metadata=metadata)
 
     def unpack_archive(self) -> None:
         os.makedirs(self._temporary_directory, exist_ok=True)
