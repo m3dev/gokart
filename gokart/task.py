@@ -170,7 +170,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # Cache to_str_params to avoid slow task creation in a deep task tree.
         # For example, gokart.build(RecursiveTask(dep=RecursiveTask(dep=RecursiveTask(dep=HelloWorldTask())))) results in O(n^2) calls to to_str_params.
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
-        self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
+        self._cache_to_str_params()
 
         # Resolved once here and passed down, so that make_task_lock_params stays independent of the global config.
         self._lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
@@ -186,6 +186,19 @@ class TaskOnKart(luigi.Task, Generic[T]):
             warn_once_that_dump_locks_are_not_taken()
             if self.should_lock_run:
                 check_object_storage_lock_settings(self._lock_settings.timeout)
+
+    def _cache_to_str_params(self) -> None:
+        self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
+
+    # The cached to_str_params cannot be pickled, but parallel_scheduling pickles tasks to check complete() in a multiprocessing.Pool.
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        state.pop('to_str_params', None)
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        vars(self).update(state)
+        self._cache_to_str_params()
 
     # luigi's FlattenableItems is invariant (built on dict/list), so narrowing the
     # element type in these overrides (Target -> TargetOnKart, Task -> TaskOnKart)
