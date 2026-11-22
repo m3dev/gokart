@@ -5,12 +5,13 @@ import luigi
 import pytest
 
 import gokart
+from gokart.target import TargetOnKart
 
 
 class _UpstreamTask(gokart.TaskOnKart[str]):
     task_namespace = __name__
 
-    def output(self):
+    def output(self) -> TargetOnKart:
         return self.make_target('upstream.pkl')
 
     def run(self):
@@ -24,6 +25,9 @@ class _DownstreamTask(gokart.TaskOnKart[str]):
     def requires(self):
         return _UpstreamTask(workspace_directory=self.upstream_workspace_directory or self.workspace_directory)
 
+    def output(self) -> TargetOnKart:
+        return self.make_target('downstream.pkl')
+
     def run(self):
         self.dump('downstream')
 
@@ -31,7 +35,7 @@ class _DownstreamTask(gokart.TaskOnKart[str]):
 def _build_and_add_stale_file(workspace: str) -> tuple[_DownstreamTask, list[str], Path]:
     task = _DownstreamTask(workspace_directory=workspace)
     gokart.build(task, reset_register=False, return_value=False)
-    outputs = [task.requires().output().path(), task.output().path()]
+    outputs = [_UpstreamTask(workspace_directory=workspace).output().path(), task.output().path()]
     stale_file = Path(workspace) / 'stale.pkl'
     stale_file.write_text('stale')
     return task, outputs, stale_file
@@ -66,7 +70,7 @@ class TestDeleteLocalUnnecessaryOutputs:
         monkeypatch.chdir(tmp_path)
         task = _DownstreamTask(workspace_directory='resources', upstream_workspace_directory='./resources/')
         gokart.build(task, reset_register=False, return_value=False)
-        upstream_output = task.requires().output().path()
+        upstream_output = _UpstreamTask(workspace_directory='./resources/').output().path()
 
         gokart.delete_local_unnecessary_outputs(task)
 
