@@ -13,11 +13,7 @@ Polars support is optional. Install it with:
 
     pip install gokart[polars]
 
-Or install Polars separately:
-
-.. code:: bash
-
-    pip install polars
+The extra only installs Polars itself (``polars>=0.19.0``), so a Polars installed in any other way works as well.
 
 
 Basic Usage
@@ -224,11 +220,13 @@ Some pandas-specific features are not available with Polars:
 
 **Error Handling**
 
-If you specify ``dataframe_type='polars'`` but Polars is not installed, you'll get an ``ImportError`` with installation instructions:
+If you specify ``dataframe_type='polars'`` or ``'polars-lazy'`` but Polars is not installed, you'll get an ``ImportError`` with installation instructions when the file processor is created:
 
 .. code:: text
 
-    ImportError: polars is required for dataframe_type='polars'. Install with: pip install polars
+    ImportError: Polars support requires additional dependencies. Install them with: pip install gokart[polars]
+
+If Polars is installed but fails to import (for example, one of its own dependencies is broken), the original error is raised as it is.
 
 
 Migration Strategy
