@@ -25,8 +25,10 @@ def delete_local_unnecessary_outputs(task: gokart.TaskOnKart[Any]) -> None:
     task.make_unique_id()  # this is required to make unique ids.
     all_files = {str(path) for path in pathlib.Path(task.workspace_directory).rglob('*.*')}
     log_files = {str(path) for path in pathlib.Path(os.path.join(task.workspace_directory, 'log')).rglob('*.*')}
-    necessary_files = set(_get_all_output_file_paths(task))
-    unnecessary_files = all_files - necessary_files - log_files
+    # WHY: rglob drops a leading './' (the default workspace_directory is './resources/') and tasks may write the same path
+    # differently, so comparing the raw strings would delete outputs that are still needed.
+    necessary_files = {os.path.realpath(path) for path in _get_all_output_file_paths(task)}
+    unnecessary_files = {path for path in all_files - log_files if os.path.realpath(path) not in necessary_files}
     if len(unnecessary_files) == 0:
         logger.info('all files are necessary for this task.')
     else:
