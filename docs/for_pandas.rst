@@ -1,7 +1,9 @@
 For Pandas
 ==========
 
-Gokart has several features for Pandas.
+Gokart has several features for Pandas. They need the ``pandas`` extra: ``pip install gokart[pandas]``.
+
+pandas is imported only when these features are used, so ``import gokart`` does not import pandas.
 
 
 Pandas Type Config

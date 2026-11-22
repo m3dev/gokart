@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import Callable
 from typing import Any, Literal
 
 # Export common processors and types from base
@@ -206,26 +207,27 @@ class FeatherFileProcessor(FileProcessor):
 
 def make_file_processor(file_path: str, store_index_in_feather: bool = True, *, dataframe_type: DataFrameType = 'pandas') -> FileProcessor:
     """Create a file processor based on file extension with default parameters."""
-    extension2processor: dict[str, FileProcessor] = {
-        '.txt': TextFileProcessor(),
-        '.ini': TextFileProcessor(),
-        '.csv': CsvFileProcessor(sep=',', dataframe_type=dataframe_type),
-        '.tsv': CsvFileProcessor(sep='\t', dataframe_type=dataframe_type),
-        '.pkl': PickleFileProcessor(),
-        '.gz': GzipFileProcessor(),
-        '.json': JsonFileProcessor(dataframe_type=dataframe_type),
-        '.ndjson': NdjsonFileProcessor(dataframe_type=dataframe_type),
-        '.xml': XmlFileProcessor(),
-        '.npz': NpzFileProcessor(),
-        '.parquet': ParquetFileProcessor(compression='gzip', dataframe_type=dataframe_type),
-        '.feather': FeatherFileProcessor(store_index_in_feather=store_index_in_feather, dataframe_type=dataframe_type),
-        '.png': BinaryFileProcessor(),
-        '.jpg': BinaryFileProcessor(),
+    # WHY: factories, so that only the processor for the extension is created: creating the DataFrame processors requires pandas or polars.
+    extension2processor: dict[str, Callable[[], FileProcessor]] = {
+        '.txt': TextFileProcessor,
+        '.ini': TextFileProcessor,
+        '.csv': lambda: CsvFileProcessor(sep=',', dataframe_type=dataframe_type),
+        '.tsv': lambda: CsvFileProcessor(sep='\t', dataframe_type=dataframe_type),
+        '.pkl': PickleFileProcessor,
+        '.gz': GzipFileProcessor,
+        '.json': lambda: JsonFileProcessor(dataframe_type=dataframe_type),
+        '.ndjson': lambda: NdjsonFileProcessor(dataframe_type=dataframe_type),
+        '.xml': XmlFileProcessor,
+        '.npz': NpzFileProcessor,
+        '.parquet': lambda: ParquetFileProcessor(compression='gzip', dataframe_type=dataframe_type),
+        '.feather': lambda: FeatherFileProcessor(store_index_in_feather=store_index_in_feather, dataframe_type=dataframe_type),
+        '.png': BinaryFileProcessor,
+        '.jpg': BinaryFileProcessor,
     }
 
     extension = os.path.splitext(file_path)[1]
     assert extension in extension2processor, f'{extension} is not supported. The supported extensions are {list(extension2processor.keys())}.'
-    return extension2processor[extension]
+    return extension2processor[extension]()
 
 
 __all__ = [

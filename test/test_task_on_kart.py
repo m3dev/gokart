@@ -802,6 +802,13 @@ class TaskTest(unittest.TestCase):
 
         self.assertIn(f'pandas=={pd.__version__}', module_versions)
 
+    def test_get_module_versions_records_pandas_without_importing_it(self):
+        # pandas is imported lazily, so it may not be imported yet when the module versions are dumped at the start of a task.
+        with patch.dict('sys.modules', {'pandas': None}):
+            module_versions = _DummyTask()._get_module_versions().split('\n')
+
+        self.assertIn(f'pandas=={pd.__version__}', module_versions)
+
     def test_should_lock_run_does_not_override_run(self):
         class _DummyTaskWithLock(gokart.TaskOnKart[str]):
             def run(self):

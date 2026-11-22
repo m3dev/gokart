@@ -7,17 +7,21 @@ from typing import Any, Literal, cast
 
 import luigi
 import luigi.format
-import pandas as pd
 from luigi.format import TextFormat
 
+from gokart._pandas import import_pandas
 from gokart.file_processor.base import FileProcessor
 from gokart.object_storage import ObjectStorage
+
+# WHY: pandas is imported only when a pandas processor is used, so that import gokart does not need pandas. Each __init__ checks that
+# pandas can be imported, so a missing pandas is reported when the target is created, not when a task dumps its output after run().
 
 
 class CsvFileProcessorPandas(FileProcessor):
     """CSV file processor for pandas DataFrames."""
 
     def __init__(self, sep: str = ',', encoding: str = 'utf-8') -> None:
+        import_pandas()
         self._sep = sep
         self._encoding = encoding
         super().__init__()
@@ -26,12 +30,16 @@ class CsvFileProcessorPandas(FileProcessor):
         return TextFormat(encoding=self._encoding)
 
     def load(self, file: Any):
+        import pandas as pd
+
         try:
             return pd.read_csv(file, sep=self._sep, encoding=self._encoding)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
     def dump(self, obj: Any, file: Any):
+        import pandas as pd
+
         if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series, but {type(obj)} is passed.')
         obj.to_csv(file, mode='wt', index=False, sep=self._sep, header=True, encoding=self._encoding)
@@ -45,18 +53,23 @@ class JsonFileProcessorPandas(FileProcessor):
     """JSON file processor for pandas DataFrames."""
 
     def __init__(self, orient: _JsonOrient | None = None):
+        import_pandas()
         self._orient: _JsonOrient | None = orient
 
     def format(self):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import pandas as pd
+
         try:
             return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
     def dump(self, obj: Any, file: Any):
+        import pandas as pd
+
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(cast(dict[Any, Any], obj))
         if not isinstance(obj, pd.DataFrame | pd.Series):
@@ -68,16 +81,23 @@ class JsonFileProcessorPandas(FileProcessor):
 class NdjsonFileProcessorPandas(FileProcessor):
     """Newline-delimited JSON file processor for pandas DataFrames."""
 
+    def __init__(self) -> None:
+        import_pandas()
+
     def format(self):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import pandas as pd
+
         try:
             return pd.read_json(file, orient='records', lines=True)
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
     def dump(self, obj: Any, file: Any):
+        import pandas as pd
+
         if isinstance(obj, dict):
             obj = pd.DataFrame.from_dict(cast(dict[Any, Any], obj))
         if not isinstance(obj, pd.DataFrame | pd.Series):
@@ -89,6 +109,7 @@ class ParquetFileProcessorPandas(FileProcessor):
     """Parquet file processor for pandas DataFrames."""
 
     def __init__(self, engine: Literal['auto', 'pyarrow', 'fastparquet'] = 'pyarrow', compression: _ParquetCompression | None = None) -> None:
+        import_pandas()
         self._engine: Literal['auto', 'pyarrow', 'fastparquet'] = engine
         self._compression: _ParquetCompression | None = compression
         super().__init__()
@@ -97,6 +118,8 @@ class ParquetFileProcessorPandas(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import pandas as pd
+
         # FIXME(mamo3gr): enable streaming (chunked) read with S3.
         # pandas.read_parquet accepts file-like object
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
@@ -107,6 +130,8 @@ class ParquetFileProcessorPandas(FileProcessor):
             return pd.read_parquet(BytesIO(file.read()))
 
     def dump(self, obj: Any, file: Any):
+        import pandas as pd
+
         if not isinstance(obj, pd.DataFrame):
             raise TypeError(f'requires pd.DataFrame, but {type(obj)} is passed.')
         # MEMO: to_parquet only supports a filepath as string (not a file handle)
@@ -117,6 +142,7 @@ class FeatherFileProcessorPandas(FileProcessor):
     """Feather file processor for pandas DataFrames."""
 
     def __init__(self, store_index_in_feather: bool):
+        import_pandas()
         super().__init__()
         self._store_index_in_feather = store_index_in_feather
         self.INDEX_COLUMN_PREFIX = '__feather_gokart_index__'
@@ -125,6 +151,8 @@ class FeatherFileProcessorPandas(FileProcessor):
         return luigi.format.Nop
 
     def load(self, file: Any):
+        import pandas as pd
+
         # FIXME(mamo3gr): enable streaming (chunked) read with S3.
         # pandas.read_feather accepts file-like object
         # but file (luigi.contrib.s3.ReadableS3File) should have 'tell' method,
@@ -147,6 +175,8 @@ class FeatherFileProcessorPandas(FileProcessor):
         return loaded_df
 
     def dump(self, obj: Any, file: Any):
+        import pandas as pd
+
         if not isinstance(obj, pd.DataFrame):
             raise TypeError(f'requires pd.DataFrame, but {type(obj)} is passed.')
 

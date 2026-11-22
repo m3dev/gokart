@@ -11,12 +11,12 @@ from contextlib import contextmanager
 from datetime import datetime
 from glob import glob
 from logging import getLogger
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import luigi
-import pandas as pd
 
 from gokart._gcs import GCSTarget, build_task_state_labels, needs_task_state_labels
+from gokart._pandas import import_pandas
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 from gokart.file_processor import FileProcessor, make_file_processor
@@ -24,6 +24,9 @@ from gokart.object_storage import ObjectStorage
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.utils import FlattenableItems
 from gokart.zip_client_util import make_zip_client
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logger = getLogger(__name__)
 
@@ -243,6 +246,8 @@ _LARGE_DATA_FRAME_CHUNK_PATTERN = re.compile(r'data_(\d+)\.pkl')
 
 class LargeDataFrameProcessor:
     def __init__(self, max_byte: int):
+        # WHY: checked here, so that a missing pandas is reported when the target is created, not when a task dumps its output after run().
+        import_pandas()
         self.max_byte = int(max_byte)
         if self.max_byte <= 0:
             raise ValueError(f'max_byte must be positive, got {max_byte}')
@@ -287,6 +292,7 @@ class LargeDataFrameProcessor:
 
     @staticmethod
     def load(file_path: str) -> pd.DataFrame:
+        pd = import_pandas()
         dir_path = os.path.dirname(file_path)
         return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in LargeDataFrameProcessor._chunk_paths(dir_path)]))
 

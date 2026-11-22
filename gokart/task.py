@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import importlib.metadata
 import inspect
 import os
 import random
@@ -15,12 +16,12 @@ from logging import getLogger
 from typing import Any, Generic, Self, TypeVar, cast, overload
 
 import luigi
-import pandas as pd
 from luigi.parameter import ParameterVisibility
 
 import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
+from gokart._pandas import is_pandas_data_frame
 from gokart.conflict_prevention_lock.lock_config import (
     check_object_storage_lock_settings,
     resolve_redis_lock_settings,
@@ -54,7 +55,7 @@ _DROPPED = object()
 
 
 def _is_empty_data_frame(obj: Any) -> bool:
-    if isinstance(obj, pd.DataFrame):
+    if is_pandas_data_frame(obj):
         return obj.empty
     # WHY: polars is an optional dependency, and a polars DataFrame can only exist once polars has been imported,
     # so looking it up in sys.modules is enough and needs no ImportError handling.
@@ -682,7 +683,16 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def _get_module_versions(self) -> str:
         module_versions: list[str] = []
         top_level_module_names = {v.__name__.split('.')[0] for v in globals().values() if isinstance(v, types.ModuleType)}
+        # WHY: pandas was always recorded while this module imported it. It is imported lazily now, so its version is read from the
+        # package metadata, which records it whenever pandas is installed, without importing it.
+        top_level_module_names.add('pandas')
         for x in sorted(name for name in top_level_module_names if '_' not in name):
+            if x == 'pandas':
+                try:
+                    module_versions.append(f'pandas=={importlib.metadata.version("pandas")}')
+                except importlib.metadata.PackageNotFoundError:
+                    pass
+                continue
             module = import_module(x)
             if '__version__' in dir(module):
                 if isinstance(module.__version__, str):

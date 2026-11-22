@@ -11,14 +11,17 @@ Within the activated Python environment, use the following command to install go
 
     pip install gokart
 
-If you use S3 or GCS as a data store, or the Redis lock, install the corresponding extras:
+If you use pandas, S3 or GCS as a data store, or the Redis lock, install the corresponding extras:
 
 .. code:: sh
 
+    pip install gokart[pandas]  # pandas support
     pip install gokart[s3]   # S3 support
     pip install gokart[gcs]  # GCS support
     pip install gokart[redis]  # Redis lock support
-    pip install gokart[all]  # S3, GCS and Redis
+    pip install gokart[all]  # pandas, S3, GCS and Redis
+
+pandas is still installed by ``pip install gokart``, but it will become optional in a future major release (`#674 <https://github.com/m3dev/gokart/issues/674>`_). If you use pandas with gokart, depend on ``gokart[pandas]``.
 
 
 Quickstart

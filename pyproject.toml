@@ -36,7 +36,9 @@ dynamic = ["version"]
 s3 = ["boto3", "botocore>=1.35.69"]
 gcs = ["google-cloud-storage>=2", "google-api-python-client"]
 redis = ["redis"]
-all = ["gokart[s3]", "gokart[gcs]", "gokart[redis]"]
+# pandas is still a required dependency; the extra is added first so that users can depend on gokart[pandas] before it becomes optional (#674).
+pandas = ["pandas>=3", "pyarrow"]
+all = ["gokart[s3]", "gokart[gcs]", "gokart[redis]", "gokart[pandas]"]
 polars = ["polars>=0.19.0"]
 
 [project.urls]
@@ -100,11 +102,19 @@ extend-select = [
   "B", # bugbear
   "I", # isort
   "UP", # pyupgrade, upgrade syntax for newer versions of the language.
+  "TID253", # banned-module-level-imports, configured below.
 ]
 
 # B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.
 # B008 Do not perform function calls in argument defaults.  The call is performed only once at function definition time. All calls to your function will reuse the result of that definition-time function call.  If this is intended, assign the function call to a module-level variable and use that variable as a default value.
 ignore = ["B006", "B008"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# pandas and polars are optional: import them where they are used (or under TYPE_CHECKING), so that import gokart does not need or load them.
+banned-module-level-imports = ["pandas", "polars"]
+
+[tool.ruff.lint.per-file-ignores]
+"test/**" = ["TID253"]
 
 [tool.ruff.format]
 quote-style = "single"
