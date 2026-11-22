@@ -19,7 +19,7 @@ from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParam
 
 @pytest.fixture
 def without_redis(monkeypatch: pytest.MonkeyPatch) -> None:
-    # a None entry in sys.modules makes `import redis` raise ImportError
+    # a None entry in sys.modules makes `import redis` raise ModuleNotFoundError with name='redis', as when redis is not installed
     monkeypatch.setitem(sys.modules, 'redis', None)
 
 
@@ -31,6 +31,29 @@ def test_import_redis_returns_module() -> None:
 def test_import_redis_raises_install_hint() -> None:
     with pytest.raises(ImportError, match=r'pip install gokart\[redis\]'):
         import_redis()
+
+
+@pytest.mark.parametrize(
+    ('redis_init', 'expected_error', 'expected_message'),
+    [
+        pytest.param('import _gokart_missing_redis_dependency', ModuleNotFoundError, '_gokart_missing_redis_dependency', id='missing-dependency'),
+        pytest.param('import redis._gokart_missing_submodule', ModuleNotFoundError, r'redis\._gokart_missing_submodule', id='missing-submodule'),
+        pytest.param("raise ImportError('broken redis dependency')", ImportError, 'broken redis dependency', id='import-error'),
+    ],
+)
+def test_import_redis_keeps_original_error_when_installed_redis_fails_to_import(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, redis_init: str, expected_error: type[ImportError], expected_message: str
+) -> None:
+    # The install hint would be wrong here and would hide the real cause.
+    package = tmp_path / 'redis'
+    package.mkdir()
+    (package / '__init__.py').write_text(redis_init)
+    monkeypatch.delitem(sys.modules, 'redis', raising=False)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with pytest.raises(expected_error, match=expected_message) as exc_info:
+        import_redis()
+    assert 'gokart[redis]' not in str(exc_info.value)
 
 
 @pytest.mark.usefixtures('without_redis')
