@@ -21,6 +21,7 @@ import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
 from gokart.conflict_prevention_lock.lock_config import resolve_redis_lock_settings
+from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
@@ -151,6 +152,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         # Resolved once here and passed down, so that make_task_lock_params stays independent of the global config.
         self._lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
+        if self._lock_settings.host is not None and self._lock_settings.port is not None:
+            # Fail at construction rather than at dump() after a whole run() has been spent.
+            import_redis()
         if self.should_lock_run:
             assert self._lock_settings.host is not None and self._lock_settings.port is not None, (
                 'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section. '

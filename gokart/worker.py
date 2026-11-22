@@ -1053,23 +1053,23 @@ class Worker:
             return
 
         task = self._scheduled_tasks[task_id]
-        run_lock = make_run_lock(task)
-        if run_lock is not None:
-            try:
-                acquired = run_lock.try_acquire()
-            except Exception as ex:
-                self._fail_task_before_run(task_id, ex)
-                return
-            if not acquired:
-                logger.info(f'Run lock of {task_id} is held by another worker. Other tasks run first.')
-                self._run_lock_waiters[task_id] = self._next_run_lock_waiter(run_lock, retry_count=0)
-                return
+        try:
+            run_lock = make_run_lock(task)
+            acquired = run_lock is None or run_lock.try_acquire()
+        except Exception as ex:
+            self._fail_task_before_run(task_id, ex)
+            return
+        if run_lock is not None and not acquired:
+            logger.info(f'Run lock of {task_id} is held by another worker. Other tasks run first.')
+            self._run_lock_waiters[task_id] = self._next_run_lock_waiter(run_lock, retry_count=0)
+            return
         self._start_task_process(task_id, run_lock)
 
     def _fail_task_before_run(self, task_id: str, ex: Exception) -> None:
-        # Report the failure like a failed run() so that a Redis outage fails only this task instead of crashing the whole worker loop.
+        # Report the failure like a failed run() so that a Redis outage or a run lock that cannot be created
+        # fails only this task instead of crashing the whole worker loop.
         task = self._scheduled_tasks[task_id]
-        logger.exception(f'Failed to take the run lock of {task_id}.')
+        logger.exception(f'Failed to create or take the run lock of {task_id}.')
         _trigger_event(task, Event.FAILURE, task, ex)
         expl = cast(str, cast(Any, task).on_failure(ex))
         self._email_task_failure(task, expl)

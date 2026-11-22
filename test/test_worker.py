@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import uuid
 from collections.abc import Iterator
@@ -318,6 +319,26 @@ class TestWorkerRunLock:
             assert not worker.run()
 
         mock_run.assert_not_called()
+
+    def test_task_fails_without_crashing_worker_when_run_lock_cannot_be_created(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        task = _make_run_lock_task()
+        mock_run = Mock()
+        monkeypatch.setattr(task, '_run', mock_run)
+        with Worker(scheduler=scheduler.Scheduler(), config=_fast_retry_config()) as worker:
+            assert worker.add(task)
+            # Hide redis only after construction: TaskOnKart imports it at construction when redis_host and redis_port are set,
+            # so this is how an error that only occurs when the worker creates the run lock reaches _run_task.
+            # A None entry in sys.modules makes `import redis` raise ImportError.
+            monkeypatch.setitem(sys.modules, 'redis', None)
+            assert not worker.run()
+
+        mock_run.assert_not_called()
+        # The host is unreachable, so without this check a connection error would also make the task fail.
+        failures = [record.exc_info[1] for record in caplog.records if record.exc_info and 'run lock' in record.getMessage()]
+        assert len(failures) == 1
+        assert isinstance(failures[0], ImportError)
 
     def test_retry_backoff_does_not_overflow_after_many_retries(self) -> None:
         with Worker(scheduler=scheduler.Scheduler()) as worker:
