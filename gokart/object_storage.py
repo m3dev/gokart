@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from typing import Any, cast
 
 import luigi
 from luigi.format import Format
 
+from gokart._optional_dependency import import_optional_dependency
 from gokart.zip_client import ZipClient
 
 object_storage_path_prefix = ['s3://', 'gs://']
@@ -22,10 +24,7 @@ class ObjectStorage:
     @staticmethod
     def get_object_storage_target(path: str, format: Format) -> luigi.target.FileSystemTarget:
         if path.startswith('s3://'):
-            try:
-                import boto3  # noqa: F401  # pyright: ignore[reportUnusedImport]
-            except ImportError:
-                raise ImportError('S3 support requires additional dependencies. Install them with: pip install gokart[s3]') from None
+            import_optional_dependency('boto3', extra='s3', feature='S3')
 
             import luigi.contrib.s3
 
@@ -83,10 +82,7 @@ class ObjectStorage:
 
     @staticmethod
     def is_buffered_reader(file: object) -> bool:
-        try:
-            import boto3  # noqa: F401  # pyright: ignore[reportUnusedImport]
-        except ImportError:
-            return True
-        import luigi.contrib.s3
-
-        return not isinstance(file, luigi.contrib.s3.ReadableS3File)
+        # A ReadableS3File can only exist once luigi.contrib.s3 has been imported, so there is no need to import boto3 here: that would
+        # slow down the first local load, and a broken boto3 would break loading local files that never touch S3.
+        s3 = sys.modules.get('luigi.contrib.s3')
+        return s3 is None or not isinstance(file, s3.ReadableS3File)
