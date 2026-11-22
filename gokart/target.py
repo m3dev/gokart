@@ -265,8 +265,8 @@ class LargeDataFrameProcessor:
             return
 
         # df.values would copy the whole frame just to read its size, and counts only pointers for object columns.
-        # deep=True is an upper bound for object columns (per-object header, shared objects counted once per cell),
-        # so chunks of object columns can end up well below max_byte. Erring on the small side is intended.
+        # deep=True overestimates plain str objects (per-object header, shared objects counted once per cell) but does
+        # not look inside containers, so chunks of object columns can be smaller or larger than max_byte.
         # Capping at the row count avoids empty chunks.
         n_rows = df.shape[0]
         total_bytes = int(df.memory_usage(index=False, deep=True).sum())
