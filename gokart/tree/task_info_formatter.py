@@ -5,6 +5,7 @@ import warnings
 from dataclasses import dataclass
 from typing import Any, NamedTuple, cast
 
+from gokart.target import target_path
 from gokart.task import TaskOnKart
 from gokart.utils import FlattenableItems, flatten
 
@@ -74,7 +75,7 @@ def make_task_info_tree(task: TaskOnKart[Any], ignore_task_names: list[str] | No
         warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete() method')
         is_task_complete = task.complete()
 
-    output_paths: list[str] = [t.path() for t in flatten(task.output())]
+    output_paths: list[str] = [target_path(t) for t in flatten(task.output())]
     params = task.get_info(only_significant=True)
     processing_time = task.get_processing_time()
     if isinstance(processing_time, float):
