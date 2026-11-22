@@ -85,7 +85,7 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
         chunk_count = len(processor._chunk_paths(self.temporary_directory))
         old_estimate_chunk_count = df.values.nbytes // 10000 + 1
         self.assertEqual(old_estimate_chunk_count, 1)
-        # (100 * (1000 + 49) + 100 * 8) // 10000 + 1
+        # ~(100 * (1000 + per-str header of ~40-50 B) + 100 * 8) // 10000 + 1; the header size varies by Python version
         self.assertEqual(chunk_count, 11)
         pd.testing.assert_frame_equal(processor.load(file_path), df)
 
