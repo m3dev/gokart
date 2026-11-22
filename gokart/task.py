@@ -21,7 +21,7 @@ import gokart
 import gokart.target
 from gokart._gcs import needs_task_state_labels
 from gokart.conflict_prevention_lock.lock_config import resolve_redis_lock_settings
-from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
+from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.in_memory.target import InMemoryTarget, make_in_memory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
@@ -149,9 +149,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self.to_str_params = functools.lru_cache(maxsize=None)(self.to_str_params)
 
-        settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
+        # Resolved once here and passed down, so that make_task_lock_params stays independent of the global config.
+        self.lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
         if self.should_lock_run:
-            assert settings.host is not None and settings.port is not None, (
+            assert self.lock_settings.host is not None and self.lock_settings.port is not None, (
                 'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section.'
             )
 
@@ -278,17 +279,24 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if processor is None and relative_file_path is not None:
             processor = self._create_processor_for_dataframe_type(file_path)
 
-        task_lock_params = make_task_lock_params(
-            file_path=file_path,
-            unique_id=unique_id,
-            redis_host=self.redis_host,
-            redis_port=self.redis_port,
-            redis_timeout=self.redis_timeout,
-            raise_task_lock_exception_on_collision=False,
-        )
+        task_lock_params = self._make_task_lock_params(file_path, unique_id)
 
         return gokart.target.make_target(
             file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
+        )
+
+    def _make_task_lock_params(self, file_path: str, unique_id: str | None) -> TaskLockParams:
+        settings = self.lock_settings
+        return make_task_lock_params(
+            file_path=file_path,
+            unique_id=unique_id,
+            redis_host=settings.host,
+            redis_port=settings.port,
+            redis_timeout=settings.timeout,
+            raise_task_lock_exception_on_collision=False,
+            redis_db=settings.db,
+            redis_ssl=settings.ssl,
+            redis_use_password=settings.use_password,
         )
 
     def _create_processor_for_dataframe_type(self, file_path: str) -> FileProcessor:
@@ -301,14 +309,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        task_lock_params = make_task_lock_params(
-            file_path=file_path,
-            unique_id=unique_id,
-            redis_host=self.redis_host,
-            redis_port=self.redis_port,
-            redis_timeout=self.redis_timeout,
-            raise_task_lock_exception_on_collision=False,
-        )
+        task_lock_params = self._make_task_lock_params(file_path, unique_id)
 
         return gokart.target.make_model_target(
             file_path=file_path,
@@ -333,14 +334,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
-        task_lock_params = make_task_lock_params(
-            file_path=file_path,
-            unique_id=unique_id,
-            redis_host=self.redis_host,
-            redis_port=self.redis_port,
-            redis_timeout=self.redis_timeout,
-            raise_task_lock_exception_on_collision=False,
-        )
+        task_lock_params = self._make_task_lock_params(file_path, unique_id)
 
         return gokart.target.make_model_target(
             file_path=file_path,

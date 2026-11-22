@@ -28,18 +28,16 @@ class TestRedisClient(unittest.TestCase):
 
 class TestRedisClientOptions:
     def test_db_ssl_and_password_reach_redis(self, monkeypatch):
-        import luigi.configuration
-
-        monkeypatch.setenv('REDIS_PASSWORD_FOR_TEST', 'secret-value')
-        config = luigi.configuration.get_config()
-        config.add_section('gokart_lock')
-        config.set('gokart_lock', 'password_env', 'REDIS_PASSWORD_FOR_TEST')
-        try:
-            with patch('redis.Redis') as mock:
-                RedisClient(host='opt-host', port=1, db=2, ssl=True)
-        finally:
-            config.remove_section('gokart_lock')
+        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
+        with patch('redis.Redis') as mock:
+            RedisClient(host='opt-host', port=1, db=2, ssl=True, use_password=True)
         mock.assert_called_once_with(host='opt-host', port=1, db=2, ssl=True, password='secret-value')
+
+    def test_password_is_not_sent_without_use_password(self, monkeypatch):
+        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
+        with patch('redis.Redis') as mock:
+            RedisClient(host='legacy-host', port=1)
+        mock.assert_called_once_with(host='legacy-host', port=1)
 
     def test_clients_with_different_db_are_distinct(self):
         with patch('redis.Redis', side_effect=lambda **kwargs: object()):

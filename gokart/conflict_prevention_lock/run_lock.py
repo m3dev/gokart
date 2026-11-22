@@ -30,7 +30,13 @@ class RedisRunLock:
         # A dedicated client keeps the worker's heartbeat thread off the shared connection pool that forked task processes use for dump/load locks.
         redis = import_redis()
         self._client = redis.Redis(
-            **redis_connection_kwargs(task_lock_params.redis_host, task_lock_params.redis_port, task_lock_params.redis_db, task_lock_params.redis_ssl)
+            **redis_connection_kwargs(
+                task_lock_params.redis_host,
+                task_lock_params.redis_port,
+                task_lock_params.redis_db,
+                task_lock_params.redis_ssl,
+                task_lock_params.redis_use_password,
+            )
         )
         self._lock = redis.lock.Lock(redis=self._client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
 
@@ -48,8 +54,8 @@ class RedisRunLock:
         except LockError:
             logger.warning(f'Task RUN lock of {self._task_lock_params.redis_key} had already expired before release.')
         except RedisError:
-            # Raising here would crash the worker loop; the lock expires after redis_timeout anyway.
-            logger.warning(f'Failed to release task RUN lock of {self._task_lock_params.redis_key}. It expires after redis_timeout.', exc_info=True)
+            # Raising here would crash the worker loop; the lock expires after the lock timeout anyway.
+            logger.warning(f'Failed to release task RUN lock of {self._task_lock_params.redis_key}. It expires after the lock timeout.', exc_info=True)
         finally:
             self._client.close()
 

@@ -29,7 +29,7 @@ The lock is extended while the task is running, and expires after `timeout` seco
     url=redis://localhost:6379
     timeout=180
 
-`redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `DeprecationWarning`.
+`redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `FutureWarning`.
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
 If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock and emits a `UserWarning`.
