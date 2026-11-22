@@ -68,19 +68,25 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
         processor.save(df, file_path)
         chunk_sizes = [len(pd.read_pickle(p)) for _, p in processor._chunk_paths(self.temporary_directory)]
 
+        # 1003 * 8 // 800 + 1 chunks
+        self.assertEqual(len(chunk_sizes), 11)
         # same boundaries as np.array_split: the first n % k chunks get one extra row
         self.assertEqual(chunk_sizes, [np.size(c) for c in np.array_split(np.arange(1003), len(chunk_sizes))])
         pd.testing.assert_frame_equal(processor.load(file_path), df)
 
     def test_save_counts_object_column_payload_when_deciding_split_size(self):
         file_path = os.path.join(self.temporary_directory, 'test_mixed.zip')
-        # values.nbytes counts 8 bytes per object pointer, so it underestimated the strings themselves
-        df = pd.DataFrame(dict(text=['x' * 1000] * 100, number=np.arange(100, dtype=np.float64)))
+        # dtype=object explicitly: pandas 3 would turn the strings into StringDtype.
+        # values.nbytes counts 8 bytes per object pointer, so it underestimated the strings themselves.
+        df = pd.DataFrame(dict(text=pd.Series(['x' * 1000] * 100, dtype=object), number=np.arange(100, dtype=np.float64)))
         processor = LargeDataFrameProcessor(max_byte=10000)
         processor.save(df, file_path)
 
-        expected = min(int(df.memory_usage(index=False, deep=True).sum()) // 10000 + 1, len(df))
-        self.assertEqual(len(processor._chunk_paths(self.temporary_directory)), expected)
+        chunk_count = len(processor._chunk_paths(self.temporary_directory))
+        old_estimate_chunk_count = df.values.nbytes // 10000 + 1
+        self.assertEqual(old_estimate_chunk_count, 1)
+        # (100 * (1000 + 49) + 100 * 8) // 10000 + 1
+        self.assertEqual(chunk_count, 11)
         pd.testing.assert_frame_equal(processor.load(file_path), df)
 
     def test_invalid_max_byte_raises_value_error(self):
