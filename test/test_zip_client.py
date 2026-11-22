@@ -26,3 +26,13 @@ class TestLocalZipClient:
         zip_client.remove()
 
         assert not os.path.exists(file_path)
+
+    def test_make_archive_accepts_and_ignores_metadata(self, tmp_path):
+        # labels only exist on GCS, but ModelTarget passes them to whichever zip client it gets
+        temporary_directory = tmp_path / 'tmp'
+        temporary_directory.mkdir()
+        file_path = str(tmp_path / 'archive.zip')
+
+        LocalZipClient(file_path=file_path, temporary_directory=str(temporary_directory)).make_archive(metadata={'owner': 'me'})
+
+        assert os.path.exists(file_path)

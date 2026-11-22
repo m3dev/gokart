@@ -160,7 +160,7 @@ class _RunLockTask(gokart.TaskOnKart[str]):
 @pytest.fixture
 def redis_server() -> Iterator[fakeredis.FakeServer]:
     server = fakeredis.FakeServer()
-    with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+    with patch('redis.Redis') as redis_mock:
         redis_mock.side_effect = lambda host, port: fakeredis.FakeRedis(server=server, host=host, port=port)
         yield server
 

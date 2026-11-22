@@ -59,7 +59,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
             redis_port=12345,
         )
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             mock_func = MagicMock()
             wrap_dump_with_lock(func=mock_func, task_lock_params=task_lock_params, exist_check=lambda: False)(123, b='abc')
@@ -77,7 +77,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
             redis_port=12345,
         )
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             mock_func = MagicMock()
             wrap_dump_with_lock(func=mock_func, task_lock_params=task_lock_params, exist_check=lambda: True)(123, b='abc')
@@ -95,7 +95,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
         )
 
         probe = _LockExtensionProbe()
-        with probe.patch_extend(), patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with probe.patch_extend(), patch('redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             wrap_dump_with_lock(func=probe.long_func, task_lock_params=task_lock_params, exist_check=lambda: False)(123, b='abc')
 
@@ -109,7 +109,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
 
         server = fakeredis.FakeServer()
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             mock_func = MagicMock()
             wrap_dump_with_lock(func=mock_func, task_lock_params=task_lock_params, exist_check=lambda: False)(123, b='abc')
@@ -133,7 +133,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
 
         server = fakeredis.FakeServer()
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             try:
                 wrap_dump_with_lock(func=_sample_func_with_error, task_lock_params=task_lock_params, exist_check=lambda: False)(123, b='abc')
@@ -169,7 +169,7 @@ class TestWrapLoadWithLock(unittest.TestCase):
             redis_port=12345,
         )
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             mock_func = MagicMock()
             resulted = wrap_load_with_lock(func=mock_func, task_lock_params=task_lock_params)(123, b='abc')
@@ -198,7 +198,7 @@ class TestWrapLoadWithLock(unittest.TestCase):
             self.assertFalse(fake_redis.exists(task_lock_params.redis_key))
             return dict(a=a, b=b)
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             resulted = wrap_load_with_lock(func=func_checking_lock, task_lock_params=task_lock_params)(123, b='abc')
             expected = dict(a=123, b='abc')
@@ -214,7 +214,7 @@ class TestWrapLoadWithLock(unittest.TestCase):
 
         server = fakeredis.FakeServer()
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             mock_func = MagicMock()
             resulted = wrap_load_with_lock(func=mock_func, task_lock_params=task_lock_params)(123, b='abc')
@@ -239,7 +239,7 @@ class TestWrapLoadWithLock(unittest.TestCase):
 
         server = fakeredis.FakeServer()
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             try:
                 wrap_load_with_lock(func=_sample_func_with_error, task_lock_params=task_lock_params)(123, b='abc')
@@ -274,7 +274,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
             redis_port=12345,
         )
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             mock_func = MagicMock()
             resulted = wrap_remove_with_lock(func=mock_func, task_lock_params=task_lock_params)(123, b='abc')
@@ -296,7 +296,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
         )
 
         probe = _LockExtensionProbe()
-        with probe.patch_extend(), patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with probe.patch_extend(), patch('redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             resulted = wrap_remove_with_lock(func=probe.long_func, task_lock_params=task_lock_params)(123, b='abc')
             expected = dict(a=123, b='abc')
@@ -312,7 +312,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
 
         server = fakeredis.FakeServer()
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             mock_func = MagicMock()
             resulted = wrap_remove_with_lock(func=mock_func, task_lock_params=task_lock_params)(123, b='abc')
@@ -336,7 +336,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
 
         server = fakeredis.FakeServer()
 
-        with patch('gokart.conflict_prevention_lock.task_lock.redis.Redis') as redis_mock:
+        with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             try:
                 wrap_remove_with_lock(func=_sample_func_with_error, task_lock_params=task_lock_params)(123, b='abc')

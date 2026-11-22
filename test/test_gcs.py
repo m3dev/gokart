@@ -48,6 +48,16 @@ class TestGCSClient:
 
         assert list(tmp_path.iterdir()) == []
 
+    def test_put_attaches_metadata(self, gcs_bucket, tmp_path):
+        local = tmp_path / 'data.bin'
+        local.write_bytes(b'hello')
+
+        GCSClient().put(str(local), f'gs://{gcs_bucket}/data.bin', metadata={'owner': 'me'})
+
+        blob = storage.Client().bucket(gcs_bucket).get_blob('data.bin')
+        assert blob is not None
+        assert blob.metadata == {'owner': 'me'}
+
     def test_download_returns_file_removed_on_close(self, gcs_bucket):
         _upload(gcs_bucket, 'data.bin', b'hello')
 
