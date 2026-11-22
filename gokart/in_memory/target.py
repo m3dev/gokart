@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
-from gokart.in_memory.repository import InMemoryCacheRepository, InMemoryTargetError, get_current_repository
+from gokart.in_memory.repository import InMemoryCacheRepository, InMemoryTargetError, find_repository
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import TargetOnKart, TaskLockParams, _make_file_path  # pyright: ignore[reportPrivateUsage]
 from gokart.utils import FlattenableItems
@@ -18,15 +18,15 @@ class InMemoryTarget(TargetOnKart):
         self._data_key = data_key
         self._task_lock_params = task_lock_param
 
-    def _repository(self) -> InMemoryCacheRepository:
-        repository = get_current_repository()
+    def _repository(self, write: bool = False) -> InMemoryCacheRepository:
+        repository = find_repository(self._data_key, write=write)
         if repository is None:
             raise InMemoryTargetError(f'InMemoryTarget({self._data_key}) can only be used inside gokart.build.')
         return repository
 
     def _exists(self) -> bool:
         # WHY: complete() is also called outside gokart.build (e.g. task tree tools), where nothing is stored yet.
-        repository = get_current_repository()
+        repository = find_repository(self._data_key, write=False)
         return repository is not None and repository.has(self._data_key)
 
     def _get_task_lock_params(self) -> TaskLockParams:
@@ -42,9 +42,10 @@ class InMemoryTarget(TargetOnKart):
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
-        return self._repository().set_value(self._data_key, obj)
+        return self._repository(write=True).set_value(self._data_key, obj)
 
     def _remove(self) -> None:
+        # WHY: remove() calls _exists() first, so look the key up in the same repository, not in the one a dump would go to.
         self._repository().remove(self._data_key)
 
     def _last_modification_time(self) -> datetime:
