@@ -18,6 +18,16 @@ def _isolated_working_directory(tmp_path: Path) -> Iterator[None]:
         os.chdir(original)
 
 
+@pytest.fixture(autouse=True)
+def _clear_s3_config_cache() -> Iterator[None]:
+    # A client cached on an S3Config by one test would otherwise make a later test skip the boto3 import, which depends on the test order.
+    from gokart.s3_config import S3Config
+
+    S3Config.clear_instance_cache()
+    yield
+    S3Config.clear_instance_cache()
+
+
 @pytest.fixture(scope='session')
 def _gcs_emulator_host() -> Iterator[str]:
     from gcp_storage_emulator.server import create_server  # pyright: ignore[reportMissingTypeStubs]

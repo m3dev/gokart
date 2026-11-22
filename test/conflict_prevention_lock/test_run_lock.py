@@ -1,10 +1,12 @@
 import threading
+from collections.abc import Iterator
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import fakeredis
 import luigi
 import pytest
+from luigi.task_register import Register
 from redis.lock import Lock
 
 import gokart
@@ -37,6 +39,60 @@ class TestMakeRunLock:
 
     def test_returns_redis_lock_when_should_lock_run_is_true(self, server: fakeredis.FakeServer):
         assert isinstance(make_run_lock(_make_task()), RedisRunLock)
+
+
+class TestRedisRunLockOptions:
+    @pytest.fixture
+    def recorded_kwargs(self) -> Iterator[list[dict[str, Any]]]:
+        # A MagicMock client must not reach redis.lock.Lock: it registers its Lua scripts on the class with the first client it sees,
+        # which would make later tests release their locks on that mock.
+        recorded: list[dict[str, Any]] = []
+        server = fakeredis.FakeServer()
+
+        def _make_client(**kwargs: Any) -> fakeredis.FakeRedis:
+            recorded.append(kwargs)
+            return fakeredis.FakeRedis(server=server)
+
+        with patch('redis.Redis', side_effect=_make_client):
+            yield recorded
+
+    @pytest.fixture
+    def gokart_lock_url(self) -> Iterator[Any]:
+        import luigi.configuration
+
+        config = luigi.configuration.get_config()
+        existed = config.has_section('gokart_lock')
+        if not existed:
+            config.add_section('gokart_lock')
+        previous = dict(config.items('gokart_lock'))
+        Register.clear_instance_cache()
+
+        def _set(url: str) -> None:
+            config.set('gokart_lock', 'url', url)
+
+        yield _set
+        # restore, so that a section from the developer's luigi.cfg survives the test
+        if existed:
+            for name in dict(config.items('gokart_lock')):
+                if name not in previous:
+                    config.remove_option('gokart_lock', name)
+            for name, value in previous.items():
+                config.set('gokart_lock', name, value)
+        else:
+            config.remove_section('gokart_lock')
+        Register.clear_instance_cache()
+
+    def test_db_tls_and_password_from_the_url_reach_redis(self, recorded_kwargs: list[dict[str, Any]], gokart_lock_url: Any, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
+        gokart_lock_url('rediss://lock-host:6380/4')
+        make_run_lock(_LockedTask(should_lock_run=True))
+        assert recorded_kwargs == [{'host': 'lock-host', 'port': 6380, 'db': 4, 'ssl': True, 'password': 'secret-value'}]
+
+    def test_password_is_not_sent_to_a_task_level_host(self, recorded_kwargs: list[dict[str, Any]], gokart_lock_url: Any, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
+        gokart_lock_url('rediss://lock-host:6380/4')
+        make_run_lock(_make_task())
+        assert recorded_kwargs == [{'host': '0.0.0.0', 'port': 12345}]
 
 
 def _patch_redis_recording_close(server: fakeredis.FakeServer, close_mocks: list[MagicMock]):
