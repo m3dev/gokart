@@ -5,9 +5,16 @@ from logging import getLogger
 from typing import Any, Protocol, cast
 
 from gokart.conflict_prevention_lock.gcs_lock_store import GCSLockStore
-from gokart.conflict_prevention_lock.lock_config import gokart_lock, parse_gcs_lock_url, redis_connection_kwargs, uses_object_storage_lock
-from gokart.conflict_prevention_lock.object_storage_lock import LazyObjectLockStore, ObjectStorageRunLock
+from gokart.conflict_prevention_lock.lock_config import (
+    gokart_lock,
+    lock_url_scheme,
+    parse_object_storage_lock_url,
+    redis_connection_kwargs,
+    uses_object_storage_lock,
+)
+from gokart.conflict_prevention_lock.object_storage_lock import LazyObjectLockStore, ObjectLockStore, ObjectStorageRunLock
 from gokart.conflict_prevention_lock.redis_import import import_redis
+from gokart.conflict_prevention_lock.s3_lock_store import S3LockStore
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params_for_run
 
 logger = getLogger(__name__)
@@ -69,18 +76,22 @@ def make_run_lock(task: Any) -> RunLock | None:
     config = gokart_lock()
     # Task-level redis_* settings are deprecated but still take precedence over [gokart_lock].
     if not params.should_task_lock and uses_object_storage_lock():
-        return _make_object_storage_run_lock(cast(str, config.url), params, config.skew_margin)
+        return _make_object_storage_run_lock(cast(str, config.url), cast(str, lock_url_scheme(config.url)), params, config.skew_margin)
     return RedisRunLock(params)
 
 
-def _make_object_storage_run_lock(url: str, params: TaskLockParams, skew_margin: float) -> ObjectStorageRunLock:
-    bucket, prefix = parse_gcs_lock_url(url)
+def _make_object_storage_run_lock(url: str, scheme: str, params: TaskLockParams, skew_margin: float) -> ObjectStorageRunLock:
+    bucket, prefix = parse_object_storage_lock_url(url, scheme)
 
-    def _create_store() -> GCSLockStore:
-        from gokart.gcs_config import GCSConfig
-
+    def _create_store() -> ObjectLockStore:
         # A dedicated client keeps the heartbeat thread off the client that forked task processes use.
-        return GCSLockStore(GCSConfig().create_storage_client(), bucket, prefix)
+        if scheme == 'gs':
+            from gokart.gcs_config import GCSConfig
+
+            return GCSLockStore(GCSConfig().create_storage_client(), bucket, prefix)
+        from gokart.s3_config import S3Config
+
+        return S3LockStore(S3Config().create_boto_client(), bucket, prefix)
 
     return ObjectStorageRunLock(LazyObjectLockStore(_create_store), params.redis_key, ttl=params.redis_timeout or 0, skew_margin=skew_margin)
 

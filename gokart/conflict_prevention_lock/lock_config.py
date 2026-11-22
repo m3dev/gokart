@@ -17,6 +17,7 @@ LOCK_EXTEND_SECONDS = 10
 # The heartbeat extends every held lock one after another, so one slow request must not delay the others for long.
 LOCK_REQUEST_TIMEOUT_SECONDS = 10
 LOCK_REQUEST_RETRY_DEADLINE_SECONDS = 30
+OBJECT_STORAGE_SCHEMES = ('gs', 's3')
 
 
 class gokart_lock(luigi.Config):
@@ -91,11 +92,12 @@ def redis_connection_kwargs(host: str | None, port: int | None, db: int, ssl: bo
     return kwargs
 
 
-def parse_gcs_lock_url(url: str) -> tuple[str, str]:
-    """Split a ``gs://bucket[/prefix]`` URL into (bucket, prefix)."""
+def parse_object_storage_lock_url(url: str, scheme: str) -> tuple[str, str]:
+    """Split a ``<scheme>://bucket[/prefix]`` URL into (bucket, prefix)."""
     parts = urlsplit(url)
-    if parts.scheme != 'gs' or not parts.netloc or parts.query or parts.fragment:
-        raise ValueError(f'Unsupported lock backend URL: {url!r}. Expected gs://bucket[/prefix].')
+    # luigi's config parser keeps an inline `; comment` as part of the value, which would silently become part of the prefix.
+    if parts.scheme != scheme or not parts.netloc or parts.query or parts.fragment or any(c.isspace() for c in url):
+        raise ValueError(f'Unsupported lock backend URL: {url!r}. Expected {scheme}://bucket[/prefix] without whitespace.')
     return parts.netloc, parts.path.strip('/')
 
 
@@ -104,7 +106,7 @@ def lock_url_scheme(url: str | None) -> str | None:
 
 
 def uses_object_storage_lock() -> bool:
-    return lock_url_scheme(gokart_lock().url) == 'gs'
+    return lock_url_scheme(gokart_lock().url) in OBJECT_STORAGE_SCHEMES
 
 
 _object_storage_warning_emitted = False
@@ -150,10 +152,12 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
     """
     config = gokart_lock()
     scheme = lock_url_scheme(config.url)
-    if scheme == 'gs':
-        parse_gcs_lock_url(cast(str, config.url))
+    if scheme in OBJECT_STORAGE_SCHEMES:
+        parse_object_storage_lock_url(cast(str, config.url), cast(str, scheme))
     elif scheme not in ('redis', 'rediss', None):
-        raise ValueError(f'Unsupported lock backend URL: {config.url!r}. Only redis[s]://host[:port][/db] and gs://bucket[/prefix] are supported.')
+        raise ValueError(
+            f'Unsupported lock backend URL: {config.url!r}. Only redis[s]://host[:port][/db], gs://bucket[/prefix] and s3://bucket[/prefix] are supported.'
+        )
     explicit = [name for name, value in (('redis_host', redis_host), ('redis_port', redis_port), ('redis_timeout', redis_timeout)) if value is not None]
     if explicit and warn:
         # FutureWarning, because DeprecationWarning is hidden by default outside __main__ and the setting usually comes from a config file.
@@ -164,7 +168,7 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
         )
     timeout = redis_timeout if redis_timeout is not None else config.timeout
     if redis_host is not None or redis_port is not None:
-        if scheme == 'gs' and (redis_host is None or redis_port is None):
+        if scheme in OBJECT_STORAGE_SCHEMES and (redis_host is None or redis_port is None):
             # Without a port the task would silently fall through to the object storage lock, contradicting "task-level redis_* take precedence".
             raise ValueError('redis_host and redis_port of TaskOnKart must be set together.')
         if (redis_host is None or redis_port is None) and config.url:

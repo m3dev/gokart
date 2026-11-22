@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from gokart.conflict_prevention_lock.lock_config import LOCK_REQUEST_RETRY_DEADLINE_SECONDS, LOCK_REQUEST_TIMEOUT_SECONDS
-from gokart.conflict_prevention_lock.object_storage_lock import StoredLock
+from gokart.conflict_prevention_lock.object_storage_lock import StoredLock, lock_object_name
 
 
 class GCSLockStore:
@@ -12,7 +12,7 @@ class GCSLockStore:
     def __init__(self, client: Any, bucket_name: str, prefix: str) -> None:
         self._client = client
         self._bucket: Any = client.bucket(bucket_name)
-        self._prefix = prefix.strip('/')
+        self._prefix = prefix
 
     def close(self) -> None:
         self._client.close()
@@ -24,7 +24,7 @@ class GCSLockStore:
         return {'timeout': LOCK_REQUEST_TIMEOUT_SECONDS, 'retry': cast(Any, DEFAULT_RETRY).with_deadline(LOCK_REQUEST_RETRY_DEADLINE_SECONDS)}
 
     def _name(self, key: str) -> str:
-        return f'{self._prefix}/{key}.lock' if self._prefix else f'{key}.lock'
+        return lock_object_name(self._prefix, key)
 
     def stat(self, key: str) -> StoredLock | None:
         from google.api_core import exceptions
