@@ -72,16 +72,20 @@ class _ChunkedLargeFileReader:
             idx = 0
             while idx < n:
                 batch_size = min(n - idx, self._MAX_READ_SIZE)
-                logger.info(f'reading bytes [{idx}, {idx + batch_size})...')
+                logger.debug(f'reading bytes [{idx}, {idx + batch_size})...')
                 chunk = self._file.read(batch_size)
-                # A short read is legitimate for network streams, so advance by what was actually read.
+                # A short read is legitimate for unbuffered/raw streams, so advance by what was actually read.
                 if not chunk:
                     logger.warning(f'reached EOF at {idx} bytes before reading total_bytes={n}.')
                     break
                 buffer[idx : idx + len(chunk)] = chunk
                 idx += len(chunk)
+                # Drop it now: the last chunk would otherwise stay alive on top of the buffer and the result copy.
+                del chunk
             logger.info('done.')
-            return bytes(buffer[:idx])
+            # Truncating in place avoids the extra copy that bytes(buffer[:idx]) makes.
+            del buffer[idx:]
+            return bytes(buffer)
         return cast(bytes, self._file.read(n))
 
     def readline(self) -> bytes:

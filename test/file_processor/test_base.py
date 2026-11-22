@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import tracemalloc
 import unittest
 from collections.abc import Callable
 from io import BytesIO
@@ -45,7 +46,7 @@ def _dump_and_load(obj: Any) -> Any:
 
 
 class _ShortReadStream:
-    """Returns at most `max_per_read` bytes per read, as network streams such as S3 legitimately do."""
+    """Returns at most `max_per_read` bytes per read, as unbuffered/raw streams legitimately do."""
 
     def __init__(self, data: bytes, max_per_read: int) -> None:
         self._stream = BytesIO(data)
@@ -73,6 +74,22 @@ class TestChunkedLargeFileReader(unittest.TestCase):
         data = bytes(range(5))
         with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', 3):
             self.assertEqual(self._reader(data, max_per_read=2).read(8), data)
+
+    def test_read_large_peak_memory_stays_within_buffer_plus_result(self):
+        # The result copy is unavoidable, but the last chunk and a sliced copy of the buffer must not stay alive on top of it.
+        n = 4 * 1024 * 1024
+        data = bytes(n)
+        with patch.object(_ChunkedLargeFileReader, '_LARGE_READ_THRESHOLD', 4), patch.object(_ChunkedLargeFileReader, '_MAX_READ_SIZE', n // 2):
+            reader = _ChunkedLargeFileReader(BytesIO(data))
+            tracemalloc.start()
+            try:
+                tracemalloc.reset_peak()
+                result = reader.read(n)
+                _, peak = tracemalloc.get_traced_memory()
+            finally:
+                tracemalloc.stop()
+        self.assertEqual(len(result), n)
+        self.assertLess(peak, 2.5 * n)
 
 
 class TestPickleFileProcessor(unittest.TestCase):
