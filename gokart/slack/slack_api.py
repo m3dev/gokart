@@ -24,7 +24,7 @@ class FileNotUploadedError(RuntimeError):
 class SlackAPI:
     def __init__(self, token: str, channel: str, to_user: str) -> None:
         warnings.warn(
-            'gokart.slack (Slack notification) is deprecated and will be removed in a future major release. '
+            'gokart.slack (Slack notification) is deprecated and will be removed in gokart 2.0.0. '
             'Use Luigi event handlers (e.g. @luigi.Task.event_handler) to send notifications instead.',
             DeprecationWarning,
             stacklevel=2,

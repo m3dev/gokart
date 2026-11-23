@@ -552,7 +552,7 @@ def _extract_parameter_name(expr: Expression) -> str | None:
 
 def plugin(version: str) -> type[Plugin]:
     warnings.warn(
-        'gokart mypy plugin is deprecated and will be removed in a future release. '
+        'gokart mypy plugin is deprecated and will be removed in gokart 2.0.0. '
         'Annotate parameters with the parameter type instead (e.g. `foo: luigi.IntParameter = luigi.IntParameter()`), '
         'which mypy and pyright check without any plugin. '
         'See https://gokart.readthedocs.io/en/latest/mypy_plugin.html',

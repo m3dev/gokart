@@ -1,8 +1,8 @@
 Slack notification
 =========================
 
-.. deprecated::
-   ``gokart.slack`` (Slack notification) is deprecated and will be removed in a future major release.
+.. warning::
+   ``gokart.slack`` (Slack notification) is deprecated and will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
    A ``DeprecationWarning`` is emitted when the notification is activated.
    Please use Luigi event handlers instead (see `Migration`_ below).
 

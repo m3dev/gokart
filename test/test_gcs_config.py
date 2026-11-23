@@ -75,5 +75,5 @@ class TestGetStorageClient:
 
 class TestGetGCSClientDeprecation:
     def test_warns_and_points_to_get_storage_client(self):
-        with patch('luigi.contrib.gcs.GCSClient'), pytest.warns(DeprecationWarning, match='get_storage_client'):
+        with patch('luigi.contrib.gcs.GCSClient'), pytest.warns(DeprecationWarning, match=r'will be removed in gokart 2\.0\.0\. .*get_storage_client'):
             GCSConfig().get_gcs_client()

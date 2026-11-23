@@ -127,7 +127,7 @@ class TestResolveRedisLockSettings:
 
     def test_explicit_task_values_take_precedence_and_warn(self, lock_config: Any):
         lock_config(url='redis://lock-host:6380', timeout='60')
-        with pytest.warns(FutureWarning, match='gokart_lock'):
+        with pytest.warns(FutureWarning, match=r'will be removed in gokart 2\.0\.0\. Use `url` and `timeout` of the \[gokart_lock\]'):
             settings = resolve_redis_lock_settings('task-host', 1234, 90)
         assert (settings.host, settings.port, settings.timeout) == ('task-host', 1234, 90)
 

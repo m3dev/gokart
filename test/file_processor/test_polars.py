@@ -220,7 +220,7 @@ class TestJsonFileProcessorWithPolars:
 
     def test_records_orient_warns_and_keeps_ndjson_with_polars(self):
         df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-        with pytest.warns(FutureWarning, match='NdjsonFileProcessor'):
+        with pytest.warns(FutureWarning, match=r'will change to a JSON array in gokart 2\.0\.0\. Use NdjsonFileProcessor'):
             processor = JsonFileProcessor(orient='records', dataframe_type='polars')
 
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -133,15 +133,19 @@ class TaskOnKart(luigi.Task, Generic[T]):
     )  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
     redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(
-        default=None, description='Deprecated: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.', significant=False
+        default=None,
+        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
+        significant=False,
     )
     redis_port: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
         default=None,
-        description='Deprecated: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
+        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
         significant=False,
     )
     redis_timeout: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
-        default=None, description='Deprecated: use `timeout` of the [gokart_lock] section (180 seconds by default).', significant=False
+        default=None,
+        description='Deprecated, and will be removed in gokart 2.0.0: use `timeout` of the [gokart_lock] section (180 seconds by default).',
+        significant=False,
     )
 
     fail_on_empty_dump: luigi.Parameter[bool] = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)

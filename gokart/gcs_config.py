@@ -46,7 +46,7 @@ class GCSConfig(luigi.Config):
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
         warnings.warn(
-            'GCSConfig.get_gcs_client() is deprecated and will be removed in a future major release. '
+            'GCSConfig.get_gcs_client() is deprecated and will be removed in gokart 2.0.0. '
             'gokart no longer uses luigi.contrib.gcs; use GCSConfig.get_storage_client(), which returns a google.cloud.storage.Client, instead.',
             DeprecationWarning,
             stacklevel=2,

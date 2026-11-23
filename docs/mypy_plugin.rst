@@ -5,7 +5,7 @@ Mypy plugin provides type checking for gokart tasks using Mypy.
 
 .. warning::
 
-    The mypy plugin is deprecated and will be removed in a future release.
+    The mypy plugin is deprecated and will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
 
     Annotate parameters with the parameter type instead.
     Type checkers that support ``dataclass_transform``, such as mypy and pyright, check this style without any plugin.
