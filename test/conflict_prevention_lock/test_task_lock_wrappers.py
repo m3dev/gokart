@@ -349,5 +349,5 @@ class TestWrapRemoveWithLock(unittest.TestCase):
 class TestWrapRunWithLock(unittest.TestCase):
     def test_is_deprecated(self):
         task_lock_params = make_task_lock_params(file_path='test_dir/test_file.pkl', unique_id='123abc')
-        with self.assertWarnsRegex(DeprecationWarning, r'wrap_run_with_lock is deprecated and will be removed in gokart 2\.0\.0'):
+        with self.assertWarnsRegex(FutureWarning, r'wrap_run_with_lock is deprecated and will be removed in gokart 2\.0\.0'):
             wrap_run_with_lock(run_func=MagicMock(), task_lock_params=task_lock_params)

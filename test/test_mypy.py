@@ -1,15 +1,18 @@
 import tempfile
 import unittest
 
+import pytest
 from mypy import api
 
 from test.config import PYPROJECT_TOML
+
+pytestmark = pytest.mark.filterwarnings('ignore:gokart mypy plugin is deprecated:FutureWarning')
 
 
 class TestMyMypyPlugin(unittest.TestCase):
     def test_plugin_is_deprecated(self):
         with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
-            with self.assertWarnsRegex(DeprecationWarning, r'gokart mypy plugin is deprecated and will be removed in gokart 2\.0\.0'):
+            with self.assertWarnsRegex(FutureWarning, r'gokart mypy plugin is deprecated and will be removed in gokart 2\.0\.0'):
                 api.run(['--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
 
     def test_plugin_no_issue(self):
