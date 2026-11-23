@@ -309,5 +309,66 @@ class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
                 gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
 
 
+class _MissingExternalTask(luigi.ExternalTask):
+    task_namespace = __name__
+    path: luigi.Parameter = luigi.Parameter()
+
+    def output(self) -> Any:
+        return luigi.LocalTarget(self.path)
+
+
+class _DependsOnMissingExternal(gokart.TaskOnKart[int]):
+    task_namespace = __name__
+    path: luigi.Parameter = luigi.Parameter()
+
+    def requires(self) -> Any:
+        return _MissingExternalTask(path=self.path)
+
+    def run(self):
+        self.dump(1)
+
+
+class _NeedsUnavailableResource(gokart.TaskOnKart[int]):
+    task_namespace = __name__
+    # WHY: luigi treats an unconfigured resource as having 1 unit, so asking for 2 is never satisfiable; the odd name keeps a developer's luigi.cfg out of it
+    resources = {'_gokart_test_not_run': 2}
+
+    def run(self):
+        self.dump(1)
+
+
+class TestBuildMissingExternal(unittest.TestCase):
+    def test_build_raises_when_external_dependency_is_missing(self):
+        """MISSING_EXT must not look like a success (the task never ran)."""
+        for return_value in (True, False):
+            with self.subTest(return_value=return_value), tempfile.TemporaryDirectory() as d:
+                task = _DependsOnMissingExternal(path=os.path.join(d, 'missing'))
+                with self.assertRaises(GokartBuildError) as cm:
+                    gokart.build(task, return_value=return_value, reset_register=False, log_level=logging.CRITICAL)
+                self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.MISSING_EXT)
+                self.assertEqual(cm.exception.raised_exceptions, {})
+
+
+class TestBuildNotRun(unittest.TestCase):
+    def test_build_raises_when_task_cannot_run(self):
+        """NOT_RUN: the task needs more of an unconfigured resource (1 unit) than the scheduler has, so it is never run."""
+        with tempfile.TemporaryDirectory() as d:
+            task = _NeedsUnavailableResource(workspace_directory=d)
+            with self.assertRaises(GokartBuildError) as cm:
+                gokart.build(task, return_value=False, reset_register=False, log_level=logging.CRITICAL)
+            self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.NOT_RUN)
+            self.assertEqual(cm.exception.raised_exceptions, {})
+
+
+class TestGokartBuildErrorStatus(unittest.TestCase):
+    def test_status_defaults_to_none(self):
+        self.assertIsNone(GokartBuildError('msg', raised_exceptions={}).status)
+
+    def test_failed_task_has_failed_status(self):
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(_DummyFailedTask(), reset_register=False, log_level=logging.CRITICAL)
+        self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)
+
+
 if __name__ == '__main__':
     unittest.main()
