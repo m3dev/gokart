@@ -118,7 +118,7 @@ class TestGCSClientParallelUpload:
     # the emulator does not implement the XML multipart upload API (501), so the upload is checked at the transfer_manager boundary
 
     def test_large_file_is_uploaded_in_chunks_with_labels(self, gcs_bucket, gcs_config_section, tmp_path):
-        gcs_config_section(parallel_upload_threshold='10', parallel_chunk_size='6291456', parallel_max_workers='3')
+        gcs_config_section(parallel_upload_threshold='10', parallel_chunk_size='6MiB', parallel_max_workers='3')
         local = tmp_path / 'luigi-tmp-123'
         local.write_bytes(b'x' * 10)
 
@@ -183,6 +183,56 @@ class TestGCSClientParallelUpload:
         blob = storage.Client().bucket(gcs_bucket).get_blob('data.bin')
         assert blob is not None
         assert blob.metadata == {'team:name': 'ml'}
+
+    def test_labels_with_upper_case_names_fall_back_to_one_stream(self, gcs_bucket, gcs_config_section, tmp_path):
+        # the XML API lowercases metadata keys
+        gcs_config_section(parallel_upload_threshold='1')
+        local = tmp_path / 'data.bin'
+        local.write_bytes(b'hello')
+
+        with patch.object(transfer_manager, 'upload_chunks_concurrently') as upload:
+            GCSClient().put(str(local), f'gs://{gcs_bucket}/data.bin', metadata={'Owner': 'me'})
+
+        upload.assert_not_called()
+        blob = storage.Client().bucket(gcs_bucket).get_blob('data.bin')
+        assert blob is not None
+        assert blob.metadata == {'Owner': 'me'}
+
+    def test_empty_file_is_uploaded_in_one_stream(self, gcs_bucket, gcs_config_section, tmp_path):
+        # a multipart upload with no parts cannot be completed
+        gcs_config_section(parallel_upload_threshold='0')
+        local = tmp_path / 'data.bin'
+        local.write_bytes(b'')
+
+        with patch.object(transfer_manager, 'upload_chunks_concurrently') as upload:
+            GCSClient().put(str(local), f'gs://{gcs_bucket}/data.bin')
+
+        upload.assert_not_called()
+        assert storage.Client().bucket(gcs_bucket).blob('data.bin').download_as_bytes() == b''
+
+    def test_chunk_size_grows_to_stay_within_the_part_limit(self, gcs_bucket, gcs_config_section, tmp_path):
+        gcs_config_section(parallel_upload_threshold='1', parallel_chunk_size='5MiB')
+        local = tmp_path / 'data.bin'
+        size = 5 * 1024 * 1024 * 10_000 + 1
+        with open(local, 'wb') as f:
+            f.truncate(size)
+
+        with patch.object(transfer_manager, 'upload_chunks_concurrently') as upload:
+            GCSClient().put(str(local), f'gs://{gcs_bucket}/data.bin')
+
+        chunk_size = upload.call_args.kwargs['chunk_size']
+        assert -(-size // chunk_size) <= 10_000
+
+    def test_non_positive_max_workers_is_rejected_before_uploading(self, gcs_bucket, gcs_config_section, tmp_path):
+        gcs_config_section(parallel_upload_threshold='1', parallel_max_workers='0')
+        local = tmp_path / 'data.bin'
+        local.write_bytes(b'hello')
+
+        with patch.object(transfer_manager, 'upload_chunks_concurrently') as upload:
+            with pytest.raises(ValueError, match='parallel_max_workers'):
+                GCSClient().put(str(local), f'gs://{gcs_bucket}/data.bin')
+
+        upload.assert_not_called()
 
     def test_chunk_size_below_the_multipart_minimum_is_rejected_before_uploading(self, gcs_bucket, gcs_config_section, tmp_path):
         gcs_config_section(parallel_upload_threshold='1', parallel_chunk_size='1024')

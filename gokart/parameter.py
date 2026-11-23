@@ -3,6 +3,7 @@ from __future__ import annotations
 import bz2
 import datetime
 import json
+import re
 from collections.abc import Callable, Iterable
 from logging import getLogger
 from typing import Any, Generic, Protocol, TypedDict, TypeVar, Unpack, cast
@@ -181,3 +182,42 @@ class ZonedDateSecondParameter(luigi.Parameter[datetime.datetime]):
         # microsecond is removed because the number of digits of microsecond is not fixed.
         # See also luigi's implementation  https://github.com/spotify/luigi/blob/v3.6.0/luigi/parameter.py#L612
         return x.replace(microsecond=0)
+
+
+_BYTE_SIZE_UNITS: dict[str, int] = {
+    'kb': 1000,
+    'mb': 1000**2,
+    'gb': 1000**3,
+    'kib': 1024,
+    'mib': 1024**2,
+    'gib': 1024**3,
+}
+_BYTE_SIZE_PATTERN = re.compile(r'(?P<number>\d+)\s*(?P<unit>[kmg]i?b)?', re.IGNORECASE | re.ASCII)
+
+
+class ByteSizeParameter(luigi.Parameter[int]):
+    """
+    Parameter whose value is a number of bytes, written as an ``int`` or with a unit.
+
+    Decimal units (``10KB``, ``10MB``, ``10GB``) are powers of 1000 and binary units (``10KiB``, ``10MiB``, ``10GiB``) are powers of 1024.
+    Units are case-insensitive and may be separated from the number by spaces. The number must be a non-negative integer.
+    """
+
+    def parse(self, x: str) -> int:
+        match = _BYTE_SIZE_PATTERN.fullmatch(x.strip())
+        if match is None:
+            # a bare M / K / G is rejected since it is unclear whether it means MB or MiB
+            raise luigi.parameter.ParameterException(
+                f'Invalid byte size {x!r}: use a non-negative integer of bytes, or one with KB / MB / GB (1000) or KiB / MiB / GiB (1024).'
+            )
+        unit = match['unit']
+        return int(match['number']) * (_BYTE_SIZE_UNITS[unit.lower()] if unit else 1)
+
+    def serialize(self, x: int) -> str:
+        return str(x)
+
+
+class OptionalByteSizeParameter(luigi.parameter.OptionalParameterMixin[int], ByteSizeParameter):  # type: ignore[misc]
+    """ByteSizeParameter that also takes ``None``, which an empty string parses to."""
+
+    expected_type = int

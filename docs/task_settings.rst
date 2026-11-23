@@ -57,22 +57,23 @@ To access GCS from your own code with the same credentials, use ``GCSConfig().ge
     blob = client.bucket('YOUR_BUCKET').get_blob('path/to/object.pkl')
 
 Large files can be uploaded and downloaded with several connections at once (google-cloud-storage's `transfer_manager <https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.transfer_manager>`_).
-This is off by default. Set a size threshold in bytes to turn it on:
+This is off by default. Set a size threshold to turn it on.
+Sizes are bytes (``268435456``) or a number with a unit: ``KB`` / ``MB`` / ``GB`` are powers of 1000 and ``KiB`` / ``MiB`` / ``GiB`` are powers of 1024 (``M`` alone is rejected as ambiguous).
 
 .. code:: ini
 
     [GCSConfig]
     ; upload files / download objects of 256 MiB or more in parallel
-    parallel_upload_threshold=268435456
-    parallel_download_threshold=268435456
-    ; bytes per chunk (default 32 MiB; upload chunks must be at least 5 MiB) and concurrent requests (default 8)
-    parallel_chunk_size=33554432
+    parallel_upload_threshold=256MiB
+    parallel_download_threshold=256MiB
+    ; size of each chunk (default 32MiB; upload chunks must be at least 5 MiB) and concurrent requests (default 8)
+    parallel_chunk_size=32MiB
     parallel_max_workers=8
 
 - Parallel uploads use an `XML API multipart upload <https://cloud.google.com/storage/docs/multipart-uploads>`_.
   The uploaded object has a CRC32C checksum but no MD5 hash, and the caller needs the ``storage.multipartUploads.*`` permissions (the predefined Storage Object Creator / User / Admin roles have them).
   If the process is killed during an upload, the incomplete upload stays in the bucket and is billed; an ``AbortIncompleteMultipartUpload`` lifecycle rule on the bucket removes it.
-- Labels are sent as HTTP headers in a parallel upload, so a file whose labels cannot be HTTP headers (e.g. non-ASCII text, or a ``:`` in a label name) is uploaded in one stream instead.
+- Labels are sent as HTTP headers in a parallel upload, so a file whose labels cannot be HTTP headers (e.g. non-ASCII text, a ``:`` in a label name, or an upper case letter in a label name, which the XML API would lowercase) is uploaded in one stream instead.
 - Objects stored with ``Content-Encoding: gzip`` are always downloaded in one stream, since GCS does not serve byte ranges of them while decompressing.
 - The storage client keeps up to 10 connections per host, so a ``parallel_max_workers`` above 10 reopens connections and logs "Connection pool is full" warnings.
 - With ``parallel_download_threshold`` set, every download first reads the object's metadata to get its size, which adds one request per download.

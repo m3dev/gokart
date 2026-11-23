@@ -35,6 +35,8 @@ def path_to_bucket_and_key(path: str) -> tuple[str, str]:
 _MAX_METADATA_SIZE: Final[int] = 8 * 1024
 # XML API multipart upload parts other than the last must be at least 5 MiB: https://cloud.google.com/storage/quotas#requests
 _MIN_MULTIPART_PART_SIZE: Final[int] = 5 * 1024 * 1024
+# an XML API multipart upload takes part numbers 1 to 10,000: https://cloud.google.com/storage/quotas#requests
+_MAX_MULTIPART_PARTS: Final[int] = 10_000
 # RFC 9110 field-name token; anything else (e.g. ':' or a space) is rejected by requests or by GCS as a header name
 _HTTP_TOKEN: Final = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
 # printable ASCII without surrounding whitespace, which HTTP would strip from the value
@@ -165,18 +167,23 @@ class GCSClient:
             # sent in the same request as the content, so labels never need a separate GET and PATCH
             blob.metadata = metadata
         threshold = config.parallel_upload_threshold
-        if threshold is not None and os.path.getsize(filename) >= threshold and _fits_in_http_headers(metadata):
+        size = os.path.getsize(filename)
+        # a multipart upload of an empty file has no parts, which GCS rejects on completion
+        if threshold is not None and size > 0 and size >= threshold and _fits_in_http_headers(metadata):
             if config.parallel_chunk_size < _MIN_MULTIPART_PART_SIZE:
                 # fail before sending anything: GCS only rejects small parts when the whole file has been uploaded
                 raise ValueError(
                     f'GCSConfig.parallel_chunk_size must be at least {_MIN_MULTIPART_PART_SIZE} bytes for a parallel upload: {config.parallel_chunk_size}'
                 )
+            # transfer_manager initiates the upload before starting its pool, and a pool that fails to start leaves the upload behind
+            _check_max_workers(config.parallel_max_workers)
             transfer_manager = _import_transfer_manager()
             transfer_manager.upload_chunks_concurrently(
                 filename,
                 blob,
                 content_type=content_type,
-                chunk_size=config.parallel_chunk_size,
+                # grow the chunks of a huge file instead of failing at part 10,001 after uploading the rest
+                chunk_size=max(config.parallel_chunk_size, -(-size // _MAX_MULTIPART_PARTS)),
                 max_workers=config.parallel_max_workers,
                 # luigi runs tasks in daemonic processes when workers > 1, and those cannot start the default process pool
                 worker_type=transfer_manager.THREAD,
@@ -222,6 +229,7 @@ class GCSClient:
             if blob.size >= threshold and blob.content_encoding != 'gzip':
                 if config.parallel_chunk_size <= 0:
                     raise ValueError(f'GCSConfig.parallel_chunk_size must be positive: {config.parallel_chunk_size}')
+                _check_max_workers(config.parallel_max_workers)
                 transfer_manager = _import_transfer_manager()
                 transfer_manager.download_chunks_concurrently(
                     blob, filename, chunk_size=config.parallel_chunk_size, max_workers=config.parallel_max_workers, worker_type=transfer_manager.THREAD
@@ -237,9 +245,15 @@ def _import_transfer_manager() -> Any:
     return transfer_manager
 
 
+def _check_max_workers(max_workers: int) -> None:
+    if max_workers <= 0:
+        raise ValueError(f'GCSConfig.parallel_max_workers must be positive: {max_workers}')
+
+
 def _fits_in_http_headers(metadata: dict[str, str] | None) -> bool:
     """Whether the labels can be sent as the x-goog-meta-* headers that an XML API multipart upload uses."""
-    return all(_HTTP_TOKEN.fullmatch(name) and _HTTP_HEADER_VALUE.fullmatch(value) for name, value in (metadata or {}).items())
+    # the XML API lowercases metadata keys, so a name with upper case letters would not be stored as given
+    return all(_HTTP_TOKEN.fullmatch(name) and name == name.lower() and _HTTP_HEADER_VALUE.fullmatch(value) for name, value in (metadata or {}).items())
 
 
 class _AtomicGCSFile(luigi.target.AtomicLocalFile):
