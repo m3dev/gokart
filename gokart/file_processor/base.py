@@ -71,6 +71,10 @@ class PickleFileProcessor(FileProcessor):
                 or (isinstance(obj, np.ndarray) and getattr(cast(Any, obj), '__dict__', None))
             ):
                 raise pickle.PicklingError(f'dill pickles {type(cast(Any, obj))!r} differently')
+            if isinstance(obj, np.ndarray) and not obj.flags.writeable:
+                # Protocol 5 stores a read-only buffer as bytes, which loads back read-only (pandas then refuses in-place writes).
+                # The protocol 4 reduction loads a writable copy, as before the switch to protocol 5.
+                return obj.__reduce_ex__(4)
             return NotImplemented
 
     def format(self):
@@ -85,17 +89,29 @@ class PickleFileProcessor(FileProcessor):
         return load_dill_with_pandas_backward_compatibility(file)
 
     def dump(self, obj: Any, file: Any):
-        dumped = self._fast_dumps(obj)
-        file.write(dumped if dumped is not None else cast(Any, dill).dumps(obj, protocol=4))
+        if not file.seekable():
+            # A failed C pickler could not be rolled back, so build the pickle in memory first.
+            buffer = BytesIO()
+            self._dump_to(obj, buffer)
+            file.write(buffer.getbuffer())
+            return
+        # Writing straight to the file keeps the peak memory at about the size of obj, instead of obj plus the whole pickle.
+        self._dump_to(obj, file)
 
-    def _fast_dumps(self, obj: Any) -> bytes | None:
-        buffer = BytesIO()
+    def _dump_to(self, obj: Any, file: Any) -> None:
+        start = file.tell()
         try:
-            self._Pickler(buffer, protocol=4).dump(obj)
+            # protocol 5 writes the buffers of numpy arrays and Arrow-backed columns without copying them first.
+            self._Pickler(file, protocol=5).dump(obj)
+        except OSError:
+            # A write error such as a full disk would hit dill too, only after redoing the whole dump.
+            raise
         except Exception as e:
             logger.debug(f'falling back to dill: {e!r}')
-            return None
-        return buffer.getvalue()
+            # drop what the C pickler wrote before it failed
+            file.seek(start)
+            file.truncate()
+            cast(Any, dill).dump(obj, file, protocol=5)
 
 
 class TextFileProcessor(FileProcessor):
