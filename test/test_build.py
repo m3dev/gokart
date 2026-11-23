@@ -330,7 +330,8 @@ class _DependsOnMissingExternal(gokart.TaskOnKart[int]):
 
 class _NeedsUnavailableResource(gokart.TaskOnKart[int]):
     task_namespace = __name__
-    resources = {'r': 2}
+    # WHY: luigi treats an unconfigured resource as having 1 unit, so asking for 2 is never satisfiable; the odd name keeps a developer's luigi.cfg out of it
+    resources = {'_gokart_test_not_run': 2}
 
     def run(self):
         self.dump(1)
@@ -349,20 +350,14 @@ class TestBuildMissingExternal(unittest.TestCase):
 
 
 class TestBuildNotRun(unittest.TestCase):
-    def setUp(self):
-        config = luigi.configuration.get_config()
-        if not config.has_section('resources'):
-            config.add_section('resources')
-        config.set('resources', 'r', '1')
-        self.addCleanup(config.remove_option, 'resources', 'r')
-
     def test_build_raises_when_task_cannot_run(self):
-        """NOT_RUN: the task needs more of resource 'r' than the scheduler has, so it is never run."""
+        """NOT_RUN: the task needs more of an unconfigured resource (1 unit) than the scheduler has, so it is never run."""
         with tempfile.TemporaryDirectory() as d:
             task = _NeedsUnavailableResource(workspace_directory=d)
             with self.assertRaises(GokartBuildError) as cm:
                 gokart.build(task, return_value=False, reset_register=False, log_level=logging.CRITICAL)
             self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.NOT_RUN)
+            self.assertEqual(cm.exception.raised_exceptions, {})
 
 
 class TestGokartBuildErrorStatus(unittest.TestCase):

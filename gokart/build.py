@@ -48,8 +48,8 @@ class LoggerConfig:
 class GokartBuildError(Exception):
     """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution.
 
-    ``status`` is the ``luigi.LuigiStatusCode`` of the build. For ``MISSING_EXT`` / ``NOT_RUN`` no task crashed, so
-    ``raised_exceptions`` is empty and ``status`` is the way to tell them apart from a failed task.
+    ``raised_exceptions`` holds the exceptions of failed task runs. ``status`` is the ``luigi.LuigiStatusCode`` of the build
+    and is the authoritative signal: for ``MISSING_EXT`` / ``NOT_RUN`` / ``SCHEDULING_FAILED`` no task run failed, so ``raised_exceptions`` has nothing for them.
     """
 
     def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]], status: LuigiStatusCode | None = None) -> None:
