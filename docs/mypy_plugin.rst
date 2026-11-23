@@ -6,6 +6,8 @@ Mypy plugin provides type checking for gokart tasks using Mypy.
 .. warning::
 
     The mypy plugin is deprecated and will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
+    It emits a ``DeprecationWarning`` when mypy loads it. If you run mypy with ``-W error`` (or ``PYTHONWARNINGS=error``), mypy fails to load the plugin,
+    so ignore the warning by message until you migrate: ``PYTHONWARNINGS='error,ignore:gokart mypy plugin is deprecated:DeprecationWarning'``.
 
     Annotate parameters with the parameter type instead.
     Type checkers that support ``dataclass_transform``, such as mypy and pyright, check this style without any plugin.
