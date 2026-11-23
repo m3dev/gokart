@@ -35,6 +35,16 @@ from gokart.target import (
 from test.util import _get_temporary_directory
 
 
+def _pickle_dump(obj, path):
+    with open(path, 'wb') as f:
+        pickle.dump(obj, f)
+
+
+def _pickle_load(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+
 class LocalTargetTest(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = _get_temporary_directory()
@@ -416,8 +426,8 @@ class TestGCSTarget:
         target = make_model_target(
             file_path=f'gs://{gcs_bucket}/model.zip',
             temporary_directory=str(tmp_path),
-            save_function=lambda obj, path: pickle.dump(obj, open(path, 'wb')),
-            load_function=lambda path: pickle.load(open(path, 'rb')),
+            save_function=_pickle_dump,
+            load_function=_pickle_load,
         )
 
         target.dump(1, task_params={'a': '1'}, custom_labels={'b': '2'})
@@ -431,8 +441,8 @@ class TestGCSTarget:
         target = make_model_target(
             file_path=f'gs://{gcs_bucket}/model.zip',
             temporary_directory=str(tmp_path),
-            save_function=lambda obj, path: pickle.dump(obj, open(path, 'wb')),
-            load_function=lambda path: pickle.load(open(path, 'rb')),
+            save_function=_pickle_dump,
+            load_function=_pickle_load,
         )
 
         with patch('google.cloud.storage.Blob.reload') as reload, patch('google.cloud.storage.Blob.patch') as blob_patch:

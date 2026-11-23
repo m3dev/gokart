@@ -13,9 +13,9 @@ from gokart.parameter import ByteSizeParameter, OptionalByteSizeParameter
 from gokart.process_cache import cached_per_process
 
 if TYPE_CHECKING:
-    import luigi.contrib.gcs
     from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
     from google.oauth2.service_account import Credentials
+    from luigi.contrib.gcs import GCSClient
 
 
 def import_storage() -> ModuleType:
@@ -58,7 +58,7 @@ class GCSConfig(luigi.Config):
         credentials = self._load_oauth_credentials()
         return storage.Client(project=getattr(credentials, 'project_id', None), credentials=credentials)
 
-    def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
+    def get_gcs_client(self) -> GCSClient:
         # FutureWarning, because DeprecationWarning is hidden by default unless the caller is __main__.
         warnings.warn(
             'GCSConfig.get_gcs_client() is deprecated and will be removed in gokart 2.0.0. '
@@ -70,11 +70,11 @@ class GCSConfig(luigi.Config):
             self._client = self._get_gcs_client()
         return self._client
 
-    def _get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
+    def _get_gcs_client(self) -> GCSClient:
         _import_gcs_dependency('googleapiclient')
-        import luigi.contrib.gcs
+        from luigi.contrib.gcs import GCSClient
 
-        return luigi.contrib.gcs.GCSClient(oauth_credentials=self._load_oauth_credentials())
+        return GCSClient(oauth_credentials=self._load_oauth_credentials())
 
     def _load_oauth_credentials(self) -> Credentials | None:
         service_account = _import_gcs_dependency('google.oauth2.service_account')

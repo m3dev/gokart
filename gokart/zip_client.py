@@ -21,7 +21,6 @@ class ZipClient:
     @abstractmethod
     def make_archive(self, metadata: dict[str, str] | None = None) -> None:
         """Archive the temporary directory to the file path. `metadata` is attached to the object where the storage supports it (only GCS)."""
-        pass
 
     @abstractmethod
     def unpack_archive(self) -> None:

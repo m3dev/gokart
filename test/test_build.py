@@ -334,7 +334,8 @@ class _DependsOnMissingExternal(gokart.TaskOnKart[int]):
 class _NeedsUnavailableResource(gokart.TaskOnKart[int]):
     task_namespace = __name__
     # WHY: luigi treats an unconfigured resource as having 1 unit, so asking for 2 is never satisfiable; the odd name keeps a developer's luigi.cfg out of it
-    resources = {'_gokart_test_not_run': 2}
+    def process_resources(self) -> dict[str, int]:
+        return {'_gokart_test_not_run': 2}
 
     def run(self):
         self.dump(1)
