@@ -33,6 +33,12 @@ def path_to_bucket_and_key(path: str) -> tuple[str, str]:
 
 # GCS limits custom metadata to 8 KiB per object (keys plus values): https://cloud.google.com/storage/quotas#objects
 _MAX_METADATA_SIZE: Final[int] = 8 * 1024
+# XML API multipart upload parts other than the last must be at least 5 MiB: https://cloud.google.com/storage/quotas#requests
+_MIN_MULTIPART_PART_SIZE: Final[int] = 5 * 1024 * 1024
+# RFC 9110 field-name token; anything else (e.g. ':' or a space) is rejected by requests or by GCS as a header name
+_HTTP_TOKEN: Final = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
+# printable ASCII without surrounding whitespace, which HTTP would strip from the value
+_HTTP_HEADER_VALUE: Final = re.compile(r'[!-~]([ -~]*[!-~])?')
 _LOG_PATH_PATTERN: Final = re.compile(r'^gs://.+?/log/(processing_time/|task_info/|task_log/|module_versions/|random_seed/|task_params/).+')
 
 
@@ -152,11 +158,32 @@ class GCSClient:
 
         # google-cloud-storage<3 does not retry uploads without a precondition; overwriting with the same content is idempotent for gokart.
         # filename is a randomly named temporary file, so the content type has to be guessed from the destination like luigi.contrib.gcs did
+        config = GCSConfig()
         blob = self._blob(dest_path)
+        content_type = mimetypes.guess_type(dest_path)[0]
         if metadata:
             # sent in the same request as the content, so labels never need a separate GET and PATCH
             blob.metadata = metadata
-        blob.upload_from_filename(filename, content_type=mimetypes.guess_type(dest_path)[0], retry=DEFAULT_RETRY)
+        threshold = config.parallel_upload_threshold
+        if threshold is not None and os.path.getsize(filename) >= threshold and _fits_in_http_headers(metadata):
+            if config.parallel_chunk_size < _MIN_MULTIPART_PART_SIZE:
+                # fail before sending anything: GCS only rejects small parts when the whole file has been uploaded
+                raise ValueError(
+                    f'GCSConfig.parallel_chunk_size must be at least {_MIN_MULTIPART_PART_SIZE} bytes for a parallel upload: {config.parallel_chunk_size}'
+                )
+            transfer_manager = _import_transfer_manager()
+            transfer_manager.upload_chunks_concurrently(
+                filename,
+                blob,
+                content_type=content_type,
+                chunk_size=config.parallel_chunk_size,
+                max_workers=config.parallel_max_workers,
+                # luigi runs tasks in daemonic processes when workers > 1, and those cannot start the default process pool
+                worker_type=transfer_manager.THREAD,
+                retry=DEFAULT_RETRY,
+            )
+            return
+        blob.upload_from_filename(filename, content_type=content_type, retry=DEFAULT_RETRY)
 
     def get_timestamp(self, path: str) -> datetime:
         bucket, key = path_to_bucket_and_key(path)
@@ -167,16 +194,52 @@ class GCSClient:
 
     def download(self, path: str) -> io.FileIO:
         # stream to a temporary file instead of memory, since outputs can be large
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
-            try:
-                self._blob(path).download_to_file(fp)
-            except BaseException:
-                fp.close()
-                # a cleanup failure must not mask the download error
-                with contextlib.suppress(OSError):
-                    os.remove(fp.name)
-                raise
-        return _DeleteOnCloseFile(fp.name, 'r')
+        fd, filename = tempfile.mkstemp()
+        os.close(fd)
+        try:
+            self._download_to_filename(path, filename)
+        except BaseException:
+            # a cleanup failure must not mask the download error
+            with contextlib.suppress(OSError):
+                os.remove(filename)
+            raise
+        return _DeleteOnCloseFile(filename, 'r')
+
+    def _download_to_filename(self, path: str, filename: str) -> None:
+        from google.api_core.exceptions import NotFound
+
+        config = GCSConfig()
+        threshold = config.parallel_download_threshold
+        if threshold is None:
+            blob = self._blob(path)
+        else:
+            # the size decides the path, so this costs one metadata request per download
+            bucket, key = path_to_bucket_and_key(path)
+            blob = self._bucket(bucket).get_blob(key)
+            if blob is None:
+                raise NotFound(f'No such object: {path}')
+            # GCS ignores Range on an object it decompresses while serving (Content-Encoding: gzip), so every chunk would get the whole object
+            if blob.size >= threshold and blob.content_encoding != 'gzip':
+                if config.parallel_chunk_size <= 0:
+                    raise ValueError(f'GCSConfig.parallel_chunk_size must be positive: {config.parallel_chunk_size}')
+                transfer_manager = _import_transfer_manager()
+                transfer_manager.download_chunks_concurrently(
+                    blob, filename, chunk_size=config.parallel_chunk_size, max_workers=config.parallel_max_workers, worker_type=transfer_manager.THREAD
+                )
+                return
+        with open(filename, 'wb') as fp:
+            blob.download_to_file(fp)
+
+
+def _import_transfer_manager() -> Any:
+    from google.cloud.storage import transfer_manager  # pyright: ignore[reportMissingTypeStubs]
+
+    return transfer_manager
+
+
+def _fits_in_http_headers(metadata: dict[str, str] | None) -> bool:
+    """Whether the labels can be sent as the x-goog-meta-* headers that an XML API multipart upload uses."""
+    return all(_HTTP_TOKEN.fullmatch(name) and _HTTP_HEADER_VALUE.fullmatch(value) for name, value in (metadata or {}).items())
 
 
 class _AtomicGCSFile(luigi.target.AtomicLocalFile):
