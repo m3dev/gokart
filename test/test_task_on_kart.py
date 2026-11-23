@@ -282,7 +282,7 @@ class TaskTest(unittest.TestCase):
 
     def test_default_large_dataframe_target(self):
         task = _DummyTaskD()
-        with self.assertWarns(DeprecationWarning):
+        with self.assertWarns(FutureWarning):
             default_large_dataframe_target = task.make_large_data_frame_target()
         self.assertIsInstance(default_large_dataframe_target, ModelTarget)
         target = cast(ModelTarget, default_large_dataframe_target)

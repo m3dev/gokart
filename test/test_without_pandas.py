@@ -112,7 +112,7 @@ _PANDAS_FEATURES: list[Any] = [
     pytest.param(
         lambda: _AnyTask().make_large_data_frame_target('data.zip'),
         id='make_large_data_frame_target',
-        marks=pytest.mark.filterwarnings('ignore:make_large_data_frame_target is deprecated:DeprecationWarning'),
+        marks=pytest.mark.filterwarnings('ignore:make_large_data_frame_target is deprecated:FutureWarning'),
     ),
     pytest.param(lambda: make_task_info_as_table(_AnyTask()), id='make_task_info_as_table'),
     pytest.param(lambda: assert_frame_contents_equal(object(), object()), id='assert_frame_contents_equal'),  # pyright: ignore[reportArgumentType]

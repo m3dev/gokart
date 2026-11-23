@@ -312,13 +312,14 @@ class LargeDataFrameProcessor(_LargeDataFrameProcessor):
     )
 
     def __init__(self, max_byte: int):
-        warnings.warn(self._DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
+        # FutureWarning, because DeprecationWarning is hidden by default outside __main__, where tasks are usually defined.
+        warnings.warn(self._DEPRECATION_MESSAGE, FutureWarning, stacklevel=2)
         super().__init__(max_byte)
 
     @staticmethod
     def load(file_path: str) -> pd.DataFrame:
         # WHY: load is a staticmethod, so code that only reads old outputs, e.g. load_function=LargeDataFrameProcessor.load, never runs __init__.
-        warnings.warn(LargeDataFrameProcessor._DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
+        warnings.warn(LargeDataFrameProcessor._DEPRECATION_MESSAGE, FutureWarning, stacklevel=2)
         return _LargeDataFrameProcessor.load(file_path)
 
 
