@@ -400,13 +400,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
         """Make a target that splits a DataFrame into several pickle files and zips them.
 
         .. warning::
-            ``make_large_data_frame_target`` is deprecated and will be removed in a future major release.
+            ``make_large_data_frame_target`` is deprecated and will be removed in gokart 2.0.0.
             Use a single pickle file instead, e.g. ``self.make_target('data.pkl')``, which dumps and loads faster.
             Splitting only keeps the peak memory of dump lower, which still matters mainly for very large DataFrames with ``object`` dtype columns.
         """
         # FutureWarning, because DeprecationWarning is hidden by default outside __main__, where tasks are usually defined.
         warnings.warn(
-            'make_large_data_frame_target is deprecated and will be removed in a future major release. '
+            'make_large_data_frame_target is deprecated and will be removed in gokart 2.0.0. '
             "Use a single pickle file instead, e.g. self.make_target('data.pkl'). "
             'Note that dumping a single pickle takes more peak memory, mainly for very large DataFrames with object dtype columns.',
             FutureWarning,
