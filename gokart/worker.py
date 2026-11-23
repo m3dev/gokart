@@ -114,34 +114,45 @@ class _ExceptionFromChildProcess(NamedTuple):
     # WHY: the exception is pickled here so that one that can't be pickled never reaches the queue, which would
     # drop the whole result and make the parent wait for the task forever. The parent unpickles it with a fallback.
     pickled: bytes | None
-    fallback: ChildProcessTaskError
+    type_name: str
+    message: str
+    traceback: str
+    pid: int
 
     @classmethod
     def from_exception(cls, ex: BaseException) -> _ExceptionFromChildProcess:
-        # WHY: pickle drops __traceback__, so the parent would not know where the task failed.
-        tb = ''.join(traceback.format_exception(ex))
-        note = f'Traceback in the worker process (pid {os.getpid()}):\n{tb}'
         try:
             message = str(ex)
         except Exception:
             message = f'<{type(ex).__name__}.__str__() failed>'
-        fallback = ChildProcessTaskError(f'{type(ex).__module__}.{type(ex).__qualname__}', message, tb)
-        fallback.add_note(note)
         try:
-            # WHY: this runs after the FAILURE handlers and on_failure(), so they see the exception as raised, as with workers=1.
-            ex.add_note(note)
             pickled: bytes | None = pickle.dumps(ex)
         except Exception:
             pickled = None
-        return cls(pickled=pickled, fallback=fallback)
+        return cls(
+            pickled=pickled,
+            type_name=f'{type(ex).__module__}.{type(ex).__qualname__}',
+            message=message,
+            traceback=''.join(traceback.format_exception(ex)),
+            pid=os.getpid(),
+        )
 
     def load(self) -> BaseException:
+        ex: BaseException | None = None
         if self.pickled is not None:
             try:
-                return pickle.loads(self.pickled)
+                ex = pickle.loads(self.pickled)
             except Exception:
                 logger.warning(f'Failed to unpickle the exception from the worker process. Using {ChildProcessTaskError.__name__} instead.', exc_info=True)
-        return self.fallback
+        if ex is None:
+            ex = ChildProcessTaskError(self.type_name, self.message, self.traceback)
+        # WHY: pickle drops __traceback__, so the parent would not know where the task failed. The note is added here rather
+        # than in the worker process because an exception whose __reduce__ rebuilds it from args alone drops __notes__.
+        try:
+            ex.add_note(f'Traceback in the worker process (pid {self.pid}):\n{self.traceback}')
+        except Exception:
+            logger.warning('Failed to add the traceback in the worker process as a note.', exc_info=True)
+        return ex
 
 
 # luigi's rpc_message_callback decorator is untyped; declare it as signature-preserving

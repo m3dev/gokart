@@ -434,6 +434,20 @@ class _FailWithErrorOnlyLoadableInChildProcess(gokart.TaskOnKart[Any]):
         raise _ErrorOnlyLoadableInChildProcess('loadable only in the child')
 
 
+class _ErrorWithReduceDroppingState(Exception):
+    """Like many library exceptions, its __reduce__ rebuilds it from args only, so attributes such as __notes__ are not pickled."""
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (type(self), self.args)
+
+
+class _FailWithErrorWithReduceDroppingState(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorWithReduceDroppingState('state is dropped by pickle')
+
+
 class _UnprintableError(Exception):
     def __str__(self) -> str:
         raise RuntimeError('__str__ is broken')
@@ -529,6 +543,15 @@ class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
         assert isinstance(error, ChildProcessTaskError)
         self.assertEqual(error.type_name, f'{__name__}._ErrorOnlyLoadableInChildProcess')
         self.assertEqual(error.message, 'loadable only in the child')
+
+    def test_traceback_note_is_kept_when_reduce_drops_the_exception_state(self):
+        task = _FailWithErrorWithReduceDroppingState()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, _ErrorWithReduceDroppingState)
+        self.assertIn("raise _ErrorWithReduceDroppingState('state is dropped by pickle')", '\n'.join(getattr(error, '__notes__', [])))
 
     def test_exception_whose_str_raises_is_sent_back(self):
         task = _FailWithUnprintableError()
