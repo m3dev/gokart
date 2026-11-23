@@ -157,7 +157,7 @@ class _TaskInfoExampleTaskC(gokart.TaskOnKart[str]):
     task_namespace = __name__
 
     def requires(self):
-        return dict(taskA=_TaskInfoExampleTaskA(), taskB=_TaskInfoExampleTaskB())
+        return {'taskA': _TaskInfoExampleTaskA(), 'taskB': _TaskInfoExampleTaskB()}
 
     def run(self):
         self.dump('DONE')

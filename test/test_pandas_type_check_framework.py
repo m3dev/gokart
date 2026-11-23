@@ -34,7 +34,7 @@ class _DummyFailTask(gokart.TaskOnKart[pd.DataFrame]):
         return self.make_target('dummy.pkl')
 
     def run(self):
-        df = pd.DataFrame(dict(system_cd=['1']))
+        df = pd.DataFrame({'system_cd': ['1']})
         self.dump(df)
 
 
@@ -46,7 +46,7 @@ class _DummyFailWithNoneTask(gokart.TaskOnKart[pd.DataFrame]):
         return self.make_target('dummy.pkl')
 
     def run(self):
-        df = pd.DataFrame(dict(system_cd=[1, None]))
+        df = pd.DataFrame({'system_cd': [1, None]})
         self.dump(df)
 
 
@@ -58,7 +58,7 @@ class _DummySuccessTask(gokart.TaskOnKart[pd.DataFrame]):
         return self.make_target('dummy.pkl')
 
     def run(self):
-        df = pd.DataFrame(dict(system_cd=[1]))
+        df = pd.DataFrame({'system_cd': [1]})
         self.dump(df)
 
 

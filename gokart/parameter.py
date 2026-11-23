@@ -6,7 +6,7 @@ import json
 import re
 from collections.abc import Callable, Iterable
 from logging import getLogger
-from typing import Any, Generic, Protocol, TypedDict, TypeVar, Unpack, cast
+from typing import Any, Generic, Protocol, Self, TypedDict, TypeVar, Unpack, cast
 from warnings import warn
 
 import luigi
@@ -70,7 +70,7 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
 
     def serialize(self, x: TASK_ON_KART_TYPE) -> str:
         params = bz2.compress(json.dumps(x.to_str_params(only_significant=True)).encode()).hex()
-        values = dict(type=x.get_task_family(), params=params)
+        values = {'type': x.get_task_family(), 'params': params}
         return cast(str, cast(Any, luigi.DictParameter()).serialize(values))
 
     def _warn_on_wrong_param_type(self, param_name: str, param_value: Any) -> None:
@@ -132,7 +132,7 @@ class Serializable(Protocol):
         ...
 
     @classmethod
-    def gokart_deserialize(cls: type[T], s: str) -> T:
+    def gokart_deserialize(cls, s: str) -> Self:
         """Implement this method to deserialize the object from a string"""
         ...
 
