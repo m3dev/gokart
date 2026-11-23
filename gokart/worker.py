@@ -128,6 +128,7 @@ class _ExceptionFromChildProcess(NamedTuple):
         fallback = ChildProcessTaskError(f'{type(ex).__module__}.{type(ex).__qualname__}', message, tb)
         fallback.add_note(note)
         try:
+            # WHY: this runs after the FAILURE handlers and on_failure(), so they see the exception as raised, as with workers=1.
             ex.add_note(note)
             pickled: bytes | None = pickle.dumps(ex)
         except Exception:
@@ -539,7 +540,7 @@ class Worker:
         worker_processes: int = 1,
         assistant: bool = False,
         config: gokart_worker | None = None,
-        on_child_process_failure: Callable[[Task, Exception], None] | None = None,
+        on_child_process_failure: Callable[[Task, BaseException], None] | None = None,
     ) -> None:
         """
         :param on_child_process_failure: called in this process with the exception of a task that failed in a worker process.
@@ -1321,6 +1322,7 @@ class Worker:
 
             task = self._scheduled_tasks[task_id]
             if not task or task_id not in self._running_tasks:
+                # WHY: the run was already handled (e.g. _purge_children reported a timeout), so its exception is dropped with its status.
                 continue
                 # Not a running task. Probably already removed.
                 # Maybe it yielded something?

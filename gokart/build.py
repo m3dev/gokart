@@ -94,7 +94,7 @@ class WorkerProtocol(Protocol):
 
 
 class WorkerSchedulerFactory:
-    def __init__(self, on_child_process_failure: Callable[[Task, Exception], None] | None = None) -> None:
+    def __init__(self, on_child_process_failure: Callable[[Task, BaseException], None] | None = None) -> None:
         self._on_child_process_failure = on_child_process_failure
 
     def create_local_scheduler(self) -> scheduler.Scheduler:
@@ -226,13 +226,15 @@ def build(
         raised_exceptions: dict[str, list[Exception]] = dict()
 
         @cast(Any, TaskOnKart).event_handler(luigi.Event.FAILURE)
-        def when_failure(task: Any, exception: Exception):
+        def when_failure(task: Any, exception: BaseException):
             if isinstance(exception, TaskLockException):
                 task_lock_exception_raised.flag = True
             else:
-                raised_exceptions.setdefault(task.make_unique_id(), []).append(exception)
+                # WHY: a task run can fail with a BaseException such as SystemExit. It is kept as is, but the public type of
+                # GokartBuildError.raised_exceptions stays list[Exception], since widening it would break typed callers.
+                raised_exceptions.setdefault(task.make_unique_id(), []).append(cast(Exception, exception))
 
-        def when_child_process_failure(task: Any, exception: Exception):
+        def when_child_process_failure(task: Any, exception: BaseException):
             # WHY: the worker calls this for every task, but the FAILURE event handler above fires only for TaskOnKart.
             if isinstance(task, TaskOnKart):
                 when_failure(task, exception)

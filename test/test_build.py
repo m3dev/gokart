@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 from copy import copy
-from typing import Any, assert_type
+from typing import Any, assert_type, cast
 from unittest.mock import patch
 
 import luigi
@@ -385,6 +385,25 @@ class _FailWithValueError(gokart.TaskOnKart[Any]):
         raise ValueError('boom')
 
 
+_raised_in_run: list[BaseException] = []
+
+
+class _FailWithRecordedError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        error = ValueError('recorded')
+        _raised_in_run.append(error)
+        raise error
+
+
+class _FailWithSystemExit(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise SystemExit(3)
+
+
 class _FailWithUnpicklableError(gokart.TaskOnKart[Any]):
     task_namespace = __name__
 
@@ -457,6 +476,33 @@ class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
         self.assertIsInstance(exceptions[0], ValueError)
         self.assertEqual(str(exceptions[0]), 'boom')
         self.assertIn("raise ValueError('boom')", '\n'.join(exceptions[0].__notes__))
+        # WHY: pickle drops __traceback__, which is why the note carries the child's traceback.
+        self.assertIsNone(exceptions[0].__traceback__)
+
+    def test_single_worker_keeps_the_raised_exception_without_note(self):
+        # WHY: pins the difference from workers > 1: in-process, the same object arrives with its traceback and no note.
+        _raised_in_run.clear()
+        task = _FailWithRecordedError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=1, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual(len(exceptions), 1)
+        self.assertIs(exceptions[0], _raised_in_run[0])
+        self.assertIsNotNone(exceptions[0].__traceback__)
+        self.assertFalse(hasattr(exceptions[0], '__notes__'))
+
+    def test_base_exception_is_collected_as_with_a_single_worker(self):
+        for workers in (1, 2):
+            with self.subTest(workers=workers):
+                task = _FailWithSystemExit()
+                with self.assertRaises(GokartBuildError) as cm:
+                    gokart.build(task, reset_register=False, workers=workers, log_level=logging.CRITICAL)
+
+                exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+                self.assertEqual(len(exceptions), 1)
+                self.assertIsInstance(exceptions[0], SystemExit)
+                self.assertEqual(cast(SystemExit, exceptions[0]).code, 3)
 
     def test_exception_that_cannot_be_unpickled_becomes_child_process_task_error(self):
         task = _FailWithUnpicklableError()
