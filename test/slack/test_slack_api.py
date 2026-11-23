@@ -24,8 +24,11 @@ def _slack_response(token, data):
 class TestSlackAPI(unittest.TestCase):
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_is_deprecated(self, _):
-        with self.assertWarnsRegex(FutureWarning, r'gokart\.slack \(Slack notification\) is deprecated and will be removed in gokart 2\.0\.0'):
+        with self.assertWarnsRegex(FutureWarning, r'gokart\.slack \(Slack notification\) is deprecated and will be removed in gokart 2\.0\.0') as cm:
             gokart.slack.SlackAPI(token='valid', channel='valid', to_user='test user')
+
+        # attributed to the caller of SlackAPI (gokart.run in practice), not to gokart.slack itself
+        self.assertEqual(cm.filename, __file__)
 
     @mock.patch('gokart.slack.slack_api.slack_sdk.WebClient')
     def test_initialization_with_invalid_token(self, patch):
