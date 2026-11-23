@@ -52,6 +52,11 @@ class GokartBuildError(Exception):
         super().__init__(message)
         self.raised_exceptions = raised_exceptions
 
+    def __reduce__(self) -> tuple[Any, ...]:
+        # WHY: Exception.__reduce__ rebuilds the error as cls(*self.args), which lacks the required raised_exceptions.
+        # Then the error can't be sent back from a multiprocessing worker. __dict__ keeps the other attributes.
+        return (self.__class__, (*self.args, self.raised_exceptions), self.__dict__)
+
 
 class HasLockedTaskException(Exception):
     """Raised when the task failed to acquire the lock in the task execution."""

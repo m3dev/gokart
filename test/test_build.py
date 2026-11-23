@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import io
 import logging
+import multiprocessing
 import os
+import pickle
 import tempfile
 import unittest
+from concurrent.futures import ProcessPoolExecutor
 from copy import copy
 from typing import Any, assert_type
 from unittest.mock import patch
@@ -307,6 +310,32 @@ class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
             # This should raise GokartBuildError after the fix
             with self.assertRaises(GokartBuildError):
                 gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
+
+
+def _raise_gokart_build_error() -> None:
+    raise GokartBuildError('build failed', raised_exceptions={'Task(a=1)': [ValueError('boom')]})
+
+
+class TestGokartBuildErrorPickle(unittest.TestCase):
+    def test_pickle_round_trip_keeps_message_and_attributes(self):
+        error = GokartBuildError('build failed', raised_exceptions={'Task(a=1)': [ValueError('boom')]})
+        error.extra = 'kept'  # type: ignore[attr-defined]
+
+        restored = pickle.loads(pickle.dumps(error))
+
+        self.assertIsInstance(restored, GokartBuildError)
+        self.assertEqual(str(restored), 'build failed')
+        self.assertEqual(restored.args, ('build failed',))
+        self.assertEqual(list(restored.raised_exceptions), ['Task(a=1)'])
+        self.assertEqual([repr(e) for e in restored.raised_exceptions['Task(a=1)']], [repr(ValueError('boom'))])
+        self.assertEqual(restored.extra, 'kept')
+
+    def test_error_raised_in_child_process_reaches_parent(self):
+        with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as executor:
+            with self.assertRaises(GokartBuildError) as cm:
+                executor.submit(_raise_gokart_build_error).result(timeout=60)
+        self.assertEqual(str(cm.exception), 'build failed')
+        self.assertEqual(list(cm.exception.raised_exceptions), ['Task(a=1)'])
 
 
 if __name__ == '__main__':
