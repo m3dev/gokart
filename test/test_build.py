@@ -392,6 +392,58 @@ class _FailWithUnpicklableError(gokart.TaskOnKart[Any]):
         raise _ErrorWithRequiredArgument('cannot be unpickled', code=1)
 
 
+_TEST_PROCESS_ID = os.getpid()
+
+
+def _rebuild_only_in_child_process(message: str) -> _ErrorOnlyLoadableInChildProcess:
+    if os.getpid() == _TEST_PROCESS_ID:
+        raise ModuleNotFoundError('the module of this exception is importable only in the worker process')
+    return _ErrorOnlyLoadableInChildProcess(message)
+
+
+class _ErrorOnlyLoadableInChildProcess(Exception):
+    """Unpickling works in the worker process but fails in the parent, like an exception class imported only in run()."""
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (_rebuild_only_in_child_process, self.args)
+
+
+class _FailWithErrorOnlyLoadableInChildProcess(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorOnlyLoadableInChildProcess('loadable only in the child')
+
+
+class _UnprintableError(Exception):
+    def __str__(self) -> str:
+        raise RuntimeError('__str__ is broken')
+
+
+class _FailWithUnprintableError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _UnprintableError()
+
+
+class _PlainLuigiFailTask(luigi.Task):
+    task_namespace = __name__
+
+    def run(self):
+        raise ValueError('plain luigi task failed')
+
+
+class _RequirePlainLuigiFailTask(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def requires(self) -> Any:
+        return _PlainLuigiFailTask()
+
+    def run(self):
+        self.dump('done')
+
+
 class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
     """With workers > 1, a task runs and fails in a forked process, so its exception has to be sent back to the parent."""
 
@@ -420,6 +472,30 @@ class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
         self.assertEqual(error.message, 'cannot be unpickled')
         self.assertIn("raise _ErrorWithRequiredArgument('cannot be unpickled', code=1)", error.traceback)
         self.assertIn(error.traceback, '\n'.join(error.__notes__))
+
+    def test_exception_that_the_parent_cannot_unpickle_becomes_child_process_task_error(self):
+        task = _FailWithErrorOnlyLoadableInChildProcess()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, ChildProcessTaskError)
+        assert isinstance(error, ChildProcessTaskError)
+        self.assertEqual(error.type_name, f'{__name__}._ErrorOnlyLoadableInChildProcess')
+        self.assertEqual(error.message, 'loadable only in the child')
+
+    def test_exception_whose_str_raises_is_sent_back(self):
+        task = _FailWithUnprintableError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        self.assertIsInstance(cm.exception.raised_exceptions[task.make_unique_id()][0], _UnprintableError)
+
+    def test_failure_of_non_gokart_task_raises_gokart_build_error(self):
+        # WHY: the FAILURE handler of gokart.build is registered on TaskOnKart, so a plain luigi task is not collected.
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(_RequirePlainLuigiFailTask(), reset_register=False, workers=2, log_level=logging.CRITICAL)
+        self.assertEqual(cm.exception.raised_exceptions, {})
 
     def test_failure_handler_runs_only_once(self):
         # WHY: the handler runs in the forked child, so the count lives in shared memory to be visible here.

@@ -232,6 +232,11 @@ def build(
             else:
                 raised_exceptions.setdefault(task.make_unique_id(), []).append(exception)
 
+        def when_child_process_failure(task: Any, exception: Exception):
+            # WHY: the worker calls this for every task, but the FAILURE event handler above fires only for TaskOnKart.
+            if isinstance(task, TaskOnKart):
+                when_failure(task, exception)
+
         @retry(
             retry=retry_if_exception_type(HasLockedTaskException),
             stop=stop_after_attempt(task_lock_exception_max_tries),
@@ -242,7 +247,7 @@ def build(
             task_lock_exception_raised.flag = False
             result = cast(Any, luigi).build(
                 [task],
-                worker_scheduler_factory=WorkerSchedulerFactory(on_child_process_failure=when_failure),
+                worker_scheduler_factory=WorkerSchedulerFactory(on_child_process_failure=when_child_process_failure),
                 local_scheduler=True,
                 detailed_summary=True,
                 log_level=logging.getLevelName(log_level),
