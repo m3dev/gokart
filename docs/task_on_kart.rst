@@ -110,6 +110,20 @@ Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later 
     When you set `serialized_task_definition_check=True`, the task will rerun when you modify the scripts of the task.
     Please note that the scripts outside the class are not considered.
 
+.. note::
+    ``make_unique_id()`` is a hash of the task's significant parameters, the class name of the task itself,
+    and the identities of the tasks returned by ``requires()``. It does not include everything that defines the dependencies:
+
+    - The keys of a dict returned by ``requires()`` are not included. Only the values are hashed, in order, so renaming a key
+      (or changing which key maps to which task without changing the order of the values) does not change the output path.
+    - The class name of a dependency that is a plain ``luigi.Task`` (not a ``TaskOnKart``) is not included.
+      Only its significant parameters are hashed. A ``TaskOnKart`` dependency contributes its own ``make_unique_id()``, which includes its class name.
+
+    As a result, if you swap a dependency for another task with the same parameters, or rewire the keys of ``requires()``,
+    the output path stays the same and a stale cache may be reused.
+    To avoid this, set ``serialized_task_definition_check=True`` (the source code of the task, including ``requires()``, is then hashed)
+    or run the task with ``rerun=True``.
+
 
 
 TaskOnKart.load
