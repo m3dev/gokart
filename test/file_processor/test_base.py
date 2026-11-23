@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gzip
+import io
 import os
 import pickle
 import subprocess
@@ -14,6 +16,7 @@ from io import BytesIO
 from typing import Any
 
 import boto3
+import dill  # pyright: ignore[reportMissingTypeStubs]
 import numpy as np
 from luigi import LocalTarget
 from moto import mock_aws
@@ -32,6 +35,44 @@ def _answer(self: _Holder) -> int:
 
 class _Holder:
     answer = _answer
+
+
+class _NonSeekableWriter(BytesIO):
+    def seekable(self) -> bool:
+        return False
+
+
+class _FullDiskWriter(BytesIO):
+    def __init__(self) -> None:
+        super().__init__()
+        self.write_calls = 0
+
+    def write(self, b: Any) -> int:
+        self.write_calls += 1
+        raise OSError(28, 'No space left on device')
+
+
+class _WriteOnlyFile:
+    def __init__(self) -> None:
+        self.buffer = BytesIO()
+
+    def write(self, b: Any) -> int:
+        return self.buffer.write(b)
+
+
+class _WriteSizeRecorder(BytesIO):
+    def __init__(self) -> None:
+        super().__init__()
+        self.write_sizes: list[int] = []
+
+    def write(self, b: Any) -> int:
+        self.write_sizes.append(memoryview(b).nbytes)
+        return super().write(b)
+
+
+def _with_lambda() -> list[Any]:
+    # The C pickler writes the array before it fails on the lambda, which only dill can pickle.
+    return [np.arange(1 << 16), lambda x: x + 1]
 
 
 def _dump_and_load(obj: Any) -> Any:
@@ -108,7 +149,112 @@ class TestPickleFileProcessor(unittest.TestCase):
 
         PickleFileProcessor().dump(array, buffer)
 
-        self.assertEqual(buffer.getvalue(), pickle.dumps(array, protocol=4))
+        self.assertEqual(buffer.getvalue(), pickle.dumps(array, protocol=5))
+
+    def test_dump_streams_to_the_file_instead_of_building_the_whole_pickle_in_memory(self):
+        obj = [f'item{i}' for i in range(100_000)]
+        file = _WriteSizeRecorder()
+
+        PickleFileProcessor().dump(obj, file)
+
+        self.assertGreater(len(file.write_sizes), 1)
+        self.assertLess(max(file.write_sizes), len(file.getvalue()))
+
+    def test_dump_falls_back_to_dill_without_leaving_a_partial_pickle(self):
+        obj = _with_lambda()
+        processor = PickleFileProcessor()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            local_target = LocalTarget(path=f'{temp_dir}/temp.pkl', format=processor.format())
+            with local_target.open('w') as f:
+                # luigi's atomic file has to take the rollback path, which the memory path would also pass
+                self.assertTrue(processor._can_roll_back(f))
+                processor.dump(obj, f)
+            with open(f'{temp_dir}/temp.pkl', 'rb') as f:
+                dumped = f.read()
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+        self.assertEqual(dumped, dill.dumps(obj, protocol=5))
+        np.testing.assert_array_equal(loaded[0], obj[0])
+        self.assertEqual(loaded[1](1), 2)
+
+    def test_dump_to_a_non_seekable_file(self):
+        array = np.arange(3)
+        with_lambda = _with_lambda()
+        for name, obj, expected in [
+            ('C pickler', array, pickle.dumps(array, protocol=5)),
+            ('dill fallback', with_lambda, dill.dumps(with_lambda, protocol=5)),
+        ]:
+            with self.subTest(name):
+                file = _NonSeekableWriter()
+
+                PickleFileProcessor().dump(obj, file)
+
+                self.assertEqual(file.getvalue(), expected)
+
+    def test_dump_raises_a_write_error_without_retrying_with_dill(self):
+        file = _FullDiskWriter()
+
+        with self.assertRaises(OSError):
+            PickleFileProcessor().dump([np.arange(1 << 16)], file)
+
+        self.assertEqual(file.write_calls, 1)
+
+    def test_read_only_ndarray_loads_writable(self):
+        array = np.arange(3)
+        array.flags.writeable = False
+
+        loaded = _dump_and_load({'array': array})
+
+        np.testing.assert_array_equal(loaded['array'], array)
+        self.assertTrue(loaded['array'].flags.writeable)
+
+    def test_dump_falls_back_to_dill_on_a_gzip_file(self):
+        # GzipFile says it is seekable, but cannot seek back over what it has already compressed.
+        obj = _with_lambda()
+        raw = BytesIO()
+
+        with gzip.GzipFile(fileobj=raw, mode='wb') as f:
+            PickleFileProcessor().dump(obj, f)
+
+        self.assertEqual(gzip.decompress(raw.getvalue()), dill.dumps(obj, protocol=5))
+
+    def test_dump_falls_back_to_dill_on_a_buffered_gzip_file(self):
+        # the buffered writer is seekable because the GzipFile it wraps says so
+        obj = _with_lambda()
+        raw = BytesIO()
+
+        with gzip.GzipFile(fileobj=raw, mode='wb') as g, io.BufferedWriter(g) as f:
+            PickleFileProcessor().dump(obj, f)
+
+        self.assertEqual(gzip.decompress(raw.getvalue()), dill.dumps(obj, protocol=5))
+
+    def test_dump_to_a_file_like_object_with_only_write(self):
+        file = _WriteOnlyFile()
+
+        PickleFileProcessor().dump(np.arange(3), file)
+
+        self.assertEqual(file.buffer.getvalue(), pickle.dumps(np.arange(3), protocol=5))
+
+    def test_dump_to_a_pipe(self):
+        read_fd, write_fd = os.pipe()
+        with open(read_fd, 'rb') as reader:
+            with open(write_fd, 'wb') as f:
+                self.assertFalse(PickleFileProcessor._can_roll_back(f))
+                # small enough for the pipe buffer, since nothing reads the other end while dumping
+                PickleFileProcessor().dump([1, lambda x: x + 1], f)
+            self.assertEqual(PickleFileProcessor().load(BytesIO(reader.read()))[1](1), 2)
+
+    def test_load_pickles_dumped_with_protocol_4(self):
+        # files written before the switch to protocol 5, by the C pickler and by dill
+        processor = PickleFileProcessor()
+
+        loaded = processor.load(BytesIO(pickle.dumps({'array': np.arange(3)}, protocol=4)))
+        loaded_by_dill = processor.load(BytesIO(dill.dumps([1, lambda x: x + 1], protocol=4)))
+
+        np.testing.assert_array_equal(loaded['array'], np.arange(3))
+        self.assertEqual(loaded_by_dill[1](1), 2)
 
     def test_dump_and_load_object_defined_in_main_module(self):
         dump_script = textwrap.dedent(
