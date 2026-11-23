@@ -168,4 +168,4 @@ To output logs of each tasks, you can pass `~log_level` parameter to `~gokart.bu
 
 
 This feature is very useful for running `~gokart` on jupyter notebook.
-When some tasks are failed, gokart.build raises GokartBuildError. If you have to get tracebacks, you should set `log_level` as `logging.DEBUG`.
+When some tasks are failed, an external dependency is missing, or a task was not run, gokart.build raises GokartBuildError. Its `status` attribute is the `luigi.LuigiStatusCode` of the build, which tells apart a missing external dependency (`MISSING_EXT`) or a task that was not run (`NOT_RUN`) from a failed task (`raised_exceptions` is empty in the former cases). If you have to get tracebacks, you should set `log_level` as `logging.DEBUG`.

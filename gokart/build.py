@@ -46,11 +46,16 @@ class LoggerConfig:
 
 
 class GokartBuildError(Exception):
-    """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution."""
+    """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution.
 
-    def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]]) -> None:
+    ``status`` is the ``luigi.LuigiStatusCode`` of the build. For ``MISSING_EXT`` / ``NOT_RUN`` no task crashed, so
+    ``raised_exceptions`` is empty and ``status`` is the way to tell them apart from a failed task.
+    """
+
+    def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]], status: LuigiStatusCode | None = None) -> None:
         super().__init__(message)
         self.raised_exceptions = raised_exceptions
+        self.status = status
 
 
 class HasLockedTaskException(Exception):
@@ -239,9 +244,10 @@ def build(
             if task_lock_exception_raised.flag:
                 raise HasLockedTaskException()
             result = cast(LuigiRunResult, result)
-            # WHY: only SUCCESS / SUCCESS_WITH_RETRY mean the requested task finished; MISSING_EXT / NOT_RUN leave it unrun.
+            # WHY: MISSING_EXT / NOT_RUN mean the requested task did not run. Note that luigi reports SUCCESS_WITH_RETRY even if
+            # other problems remain, as long as every failed task was retried successfully (see #690).
             if result.status not in (LuigiStatusCode.SUCCESS, LuigiStatusCode.SUCCESS_WITH_RETRY):
-                raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
+                raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions, status=result.status)
             return _get_output(task) if return_value else None
 
         try:

@@ -328,28 +328,51 @@ class _DependsOnMissingExternal(gokart.TaskOnKart[int]):
         self.dump(1)
 
 
+class _NeedsUnavailableResource(gokart.TaskOnKart[int]):
+    task_namespace = __name__
+    resources = {'r': 2}
+
+    def run(self):
+        self.dump(1)
+
+
 class TestBuildMissingExternal(unittest.TestCase):
     def test_build_raises_when_external_dependency_is_missing(self):
         """MISSING_EXT must not look like a success (the task never ran)."""
+        for return_value in (True, False):
+            with self.subTest(return_value=return_value), tempfile.TemporaryDirectory() as d:
+                task = _DependsOnMissingExternal(path=os.path.join(d, 'missing'))
+                with self.assertRaises(GokartBuildError) as cm:
+                    gokart.build(task, return_value=return_value, reset_register=False, log_level=logging.CRITICAL)
+                self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.MISSING_EXT)
+                self.assertEqual(cm.exception.raised_exceptions, {})
+
+
+class TestBuildNotRun(unittest.TestCase):
+    def setUp(self):
+        config = luigi.configuration.get_config()
+        if not config.has_section('resources'):
+            config.add_section('resources')
+        config.set('resources', 'r', '1')
+        self.addCleanup(config.remove_option, 'resources', 'r')
+
+    def test_build_raises_when_task_cannot_run(self):
+        """NOT_RUN: the task needs more of resource 'r' than the scheduler has, so it is never run."""
         with tempfile.TemporaryDirectory() as d:
-            task = _DependsOnMissingExternal(path=os.path.join(d, 'missing'))
-            with self.assertRaises(GokartBuildError):
+            task = _NeedsUnavailableResource(workspace_directory=d)
+            with self.assertRaises(GokartBuildError) as cm:
                 gokart.build(task, return_value=False, reset_register=False, log_level=logging.CRITICAL)
+            self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.NOT_RUN)
 
-    def test_build_raises_when_external_dependency_is_missing_with_return_value(self):
-        with tempfile.TemporaryDirectory() as d:
-            task = _DependsOnMissingExternal(path=os.path.join(d, 'missing'))
-            with self.assertRaises(GokartBuildError):
-                gokart.build(task, return_value=True, reset_register=False, log_level=logging.CRITICAL)
 
-    def test_build_raises_on_not_run(self):
-        class MockResult:
-            status = luigi.LuigiStatusCode.NOT_RUN
-            summary_text = 'Task was not run'
+class TestGokartBuildErrorStatus(unittest.TestCase):
+    def test_status_defaults_to_none(self):
+        self.assertIsNone(GokartBuildError('msg', raised_exceptions={}).status)
 
-        with patch('luigi.build', return_value=MockResult()):
-            with self.assertRaises(GokartBuildError):
-                gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
+    def test_failed_task_has_failed_status(self):
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(_DummyFailedTask(), reset_register=False, log_level=logging.CRITICAL)
+        self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)
 
 
 if __name__ == '__main__':
