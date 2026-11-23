@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gzip
+import io
 import os
 import pickle
 import subprocess
@@ -48,6 +50,14 @@ class _FullDiskWriter(BytesIO):
     def write(self, b: Any) -> int:
         self.write_calls += 1
         raise OSError(28, 'No space left on device')
+
+
+class _WriteOnlyFile:
+    def __init__(self) -> None:
+        self.buffer = BytesIO()
+
+    def write(self, b: Any) -> int:
+        return self.buffer.write(b)
 
 
 class _WriteSizeRecorder(BytesIO):
@@ -157,6 +167,8 @@ class TestPickleFileProcessor(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             local_target = LocalTarget(path=f'{temp_dir}/temp.pkl', format=processor.format())
             with local_target.open('w') as f:
+                # luigi's atomic file has to take the rollback path, which the memory path would also pass
+                self.assertTrue(processor._can_roll_back(f))
                 processor.dump(obj, f)
             with open(f'{temp_dir}/temp.pkl', 'rb') as f:
                 dumped = f.read()
@@ -197,6 +209,42 @@ class TestPickleFileProcessor(unittest.TestCase):
 
         np.testing.assert_array_equal(loaded['array'], array)
         self.assertTrue(loaded['array'].flags.writeable)
+
+    def test_dump_falls_back_to_dill_on_a_gzip_file(self):
+        # GzipFile says it is seekable, but cannot seek back over what it has already compressed.
+        obj = _with_lambda()
+        raw = BytesIO()
+
+        with gzip.GzipFile(fileobj=raw, mode='wb') as f:
+            PickleFileProcessor().dump(obj, f)
+
+        self.assertEqual(gzip.decompress(raw.getvalue()), dill.dumps(obj, protocol=5))
+
+    def test_dump_falls_back_to_dill_on_a_buffered_gzip_file(self):
+        # the buffered writer is seekable because the GzipFile it wraps says so
+        obj = _with_lambda()
+        raw = BytesIO()
+
+        with gzip.GzipFile(fileobj=raw, mode='wb') as g, io.BufferedWriter(g) as f:
+            PickleFileProcessor().dump(obj, f)
+
+        self.assertEqual(gzip.decompress(raw.getvalue()), dill.dumps(obj, protocol=5))
+
+    def test_dump_to_a_file_like_object_with_only_write(self):
+        file = _WriteOnlyFile()
+
+        PickleFileProcessor().dump(np.arange(3), file)
+
+        self.assertEqual(file.buffer.getvalue(), pickle.dumps(np.arange(3), protocol=5))
+
+    def test_dump_to_a_pipe(self):
+        read_fd, write_fd = os.pipe()
+        with open(read_fd, 'rb') as reader:
+            with open(write_fd, 'wb') as f:
+                self.assertFalse(PickleFileProcessor._can_roll_back(f))
+                # small enough for the pipe buffer, since nothing reads the other end while dumping
+                PickleFileProcessor().dump([1, lambda x: x + 1], f)
+            self.assertEqual(PickleFileProcessor().load(BytesIO(reader.read()))[1](1), 2)
 
     def test_load_pickles_dumped_with_protocol_4(self):
         # files written before the switch to protocol 5, by the C pickler and by dill

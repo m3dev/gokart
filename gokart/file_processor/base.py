@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import pickle
 import types
 import xml.etree.ElementTree as ET
@@ -89,14 +90,22 @@ class PickleFileProcessor(FileProcessor):
         return load_dill_with_pandas_backward_compatibility(file)
 
     def dump(self, obj: Any, file: Any):
-        if not file.seekable():
+        if not self._can_roll_back(file):
             # A failed C pickler could not be rolled back, so build the pickle in memory first.
             buffer = BytesIO()
             self._dump_to(obj, buffer)
-            file.write(buffer.getbuffer())
+            file.write(buffer.getvalue())
             return
         # Writing straight to the file keeps the peak memory at about the size of obj, instead of obj plus the whole pickle.
         self._dump_to(obj, file)
+
+    @staticmethod
+    def _can_roll_back(file: Any) -> bool:
+        # This has to be known before anything is written. seekable() alone is not enough: GzipFile is "seekable"
+        # but cannot seek back over what it has already compressed, and a buffered writer seeks through the stream it wraps.
+        # luigi's atomic files (local, GCS, S3) are BufferedWriters over a FileIO. A FileIO on a pipe is not seekable.
+        raw: object = cast(Any, file).raw if isinstance(file, io.BufferedWriter | io.BufferedRandom) else file
+        return isinstance(raw, io.FileIO | io.BytesIO) and file.seekable()
 
     def _dump_to(self, obj: Any, file: Any) -> None:
         start = file.tell()
