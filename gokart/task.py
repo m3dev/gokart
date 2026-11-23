@@ -539,9 +539,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
         required_task_outputs = _drop_marked(
             map_flattenable_items(
                 lambda task: map_flattenable_items(
-                    lambda output: RequiredTaskOutput(task_name=task.get_task_family(), output_path=gokart.target.target_path(output))
-                    if gokart.target.is_persistent_target(output)
-                    else _DROPPED,
+                    lambda output: (
+                        RequiredTaskOutput(task_name=task.get_task_family(), output_path=gokart.target.target_path(output))
+                        if gokart.target.is_persistent_target(output)
+                        else _DROPPED
+                    ),
                     task.output(),
                 ),
                 self.requires(),
