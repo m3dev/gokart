@@ -1,9 +1,10 @@
 Slack notification
 =========================
 
-.. deprecated::
-   ``gokart.slack`` (Slack notification) is deprecated and will be removed in a future major release.
-   A ``DeprecationWarning`` is emitted when the notification is activated.
+.. warning::
+   ``gokart.slack`` (Slack notification) is deprecated and will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
+   A ``FutureWarning`` is emitted when the notification is activated.
+   The warning is reported at gokart's code that sets up the notification, not at yours, so filter it by message to silence it until you migrate: ``python -W 'ignore:gokart.slack:FutureWarning' ...`` (or the same value in ``PYTHONWARNINGS``), or ``warnings.filterwarnings('ignore', message=r'gokart\.slack', category=FutureWarning)``.
    Please use Luigi event handlers instead (see `Migration`_ below).
 
 Prerequisites

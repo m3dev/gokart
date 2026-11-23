@@ -133,15 +133,19 @@ class TaskOnKart(luigi.Task, Generic[T]):
     )  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
     redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(
-        default=None, description='Deprecated: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.', significant=False
+        default=None,
+        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
+        significant=False,
     )
     redis_port: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
         default=None,
-        description='Deprecated: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
+        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
         significant=False,
     )
     redis_timeout: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
-        default=None, description='Deprecated: use `timeout` of the [gokart_lock] section (180 seconds by default).', significant=False
+        default=None,
+        description='Deprecated, and will be removed in gokart 2.0.0: use `timeout` of the [gokart_lock] section (180 seconds by default).',
+        significant=False,
     )
 
     fail_on_empty_dump: luigi.Parameter[bool] = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
@@ -400,13 +404,13 @@ class TaskOnKart(luigi.Task, Generic[T]):
         """Make a target that splits a DataFrame into several pickle files and zips them.
 
         .. warning::
-            ``make_large_data_frame_target`` is deprecated and will be removed in a future major release.
+            ``make_large_data_frame_target`` is deprecated and will be removed in gokart 2.0.0.
             Use a single pickle file instead, e.g. ``self.make_target('data.pkl')``, which dumps and loads faster.
             Splitting only keeps the peak memory of dump lower, which still matters mainly for very large DataFrames with ``object`` dtype columns.
         """
         # FutureWarning, because DeprecationWarning is hidden by default outside __main__, where tasks are usually defined.
         warnings.warn(
-            'make_large_data_frame_target is deprecated and will be removed in a future major release. '
+            'make_large_data_frame_target is deprecated and will be removed in gokart 2.0.0. '
             "Use a single pickle file instead, e.g. self.make_target('data.pkl'). "
             'Note that dumping a single pickle takes more peak memory, mainly for very large DataFrames with object dtype columns.',
             FutureWarning,

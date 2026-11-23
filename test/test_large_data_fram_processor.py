@@ -137,14 +137,14 @@ class _LargeDataFrameTask(gokart.TaskOnKart[pd.DataFrame]):
 class TestLargeDataFrameDeprecation:
     def test_make_large_data_frame_target_warns_once_at_the_caller(self, tmp_path):
         task = _LargeDataFrameTask(workspace_directory=str(tmp_path))
-        with pytest.warns(FutureWarning, match='make_large_data_frame_target') as record:
+        with pytest.warns(FutureWarning, match=r'make_large_data_frame_target is deprecated and will be removed in gokart 2\.0\.0') as record:
             task.make_large_data_frame_target('data.zip')
 
         assert len(record) == 1
         assert record[0].filename == __file__
 
     def test_large_data_frame_processor_warns_at_the_caller(self):
-        with pytest.warns(FutureWarning, match='LargeDataFrameProcessor') as record:
+        with pytest.warns(FutureWarning, match=r'LargeDataFrameProcessor is deprecated and will be removed in gokart 2\.0\.0') as record:
             LargeDataFrameProcessor(max_byte=800)
 
         assert len(record) == 1
@@ -153,7 +153,7 @@ class TestLargeDataFrameDeprecation:
     def test_large_data_frame_processor_load_warns_at_the_caller(self, tmp_path):
         file_path = str(tmp_path / 'data.zip')
         _LargeDataFrameProcessor(max_byte=800).save(pd.DataFrame(dict(data=[1.0])), file_path)
-        with pytest.warns(FutureWarning, match='LargeDataFrameProcessor') as record:
+        with pytest.warns(FutureWarning, match=r'LargeDataFrameProcessor is deprecated and will be removed in gokart 2\.0\.0') as record:
             LargeDataFrameProcessor.load(file_path)
 
         assert len(record) == 1

@@ -78,12 +78,12 @@ class JsonFileProcessor(FileProcessor):
 
         Args:
             orient: JSON orientation. 'records' currently reads/writes newline-delimited JSON, but this is deprecated
-                and will change to a JSON array in a future release. Use NdjsonFileProcessor for newline-delimited JSON.
+                and will change to a JSON array in gokart 2.0.0. Use NdjsonFileProcessor for newline-delimited JSON.
             dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
         if orient == 'records':
             warnings.warn(
-                "JsonFileProcessor(orient='records') reads/writes newline-delimited JSON, but this will change to a JSON array in a future release. "
+                "JsonFileProcessor(orient='records') reads/writes newline-delimited JSON, but this will change to a JSON array in gokart 2.0.0. "
                 'Use NdjsonFileProcessor to keep NDJSON.',
                 FutureWarning,
                 stacklevel=2,

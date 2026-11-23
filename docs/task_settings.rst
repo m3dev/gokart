@@ -57,7 +57,7 @@ To access GCS from your own code with the same credentials, use ``GCSConfig().ge
     blob = client.bucket('YOUR_BUCKET').get_blob('path/to/object.pkl')
 
 .. warning::
-   ``GCSConfig().get_gcs_client()``, which returns a ``luigi.contrib.gcs.GCSClient`` built on ``google-api-python-client``, is deprecated and will be removed in a future major release, together with ``google-api-python-client`` in the ``gcs`` extra.
+   ``GCSConfig().get_gcs_client()``, which returns a ``luigi.contrib.gcs.GCSClient`` built on ``google-api-python-client``, is deprecated and will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_), together with ``google-api-python-client`` in the ``gcs`` extra.
    Use ``GCSConfig().get_storage_client()`` instead.
    Errors from GCS I/O in gokart are now ``google.api_core.exceptions.GoogleAPICallError`` subclasses (e.g. ``NotFound``) instead of ``googleapiclient.errors.HttpError``.
 

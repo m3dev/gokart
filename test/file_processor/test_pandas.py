@@ -114,7 +114,7 @@ class TestJsonFileProcessor:
         ],
     )
     def test_records_orient_warns_and_keeps_ndjson(self, input_data, expected_json):
-        with pytest.warns(FutureWarning, match='NdjsonFileProcessor'):
+        with pytest.warns(FutureWarning, match=r'will change to a JSON array in gokart 2\.0\.0\. Use NdjsonFileProcessor'):
             processor = JsonFileProcessor(orient='records')
 
         with tempfile.TemporaryDirectory() as temp_dir:
