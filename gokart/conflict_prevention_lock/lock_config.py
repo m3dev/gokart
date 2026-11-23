@@ -162,7 +162,7 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
     if explicit and warn:
         # FutureWarning, because DeprecationWarning is hidden by default outside __main__ and the setting usually comes from a config file.
         warnings.warn(
-            f'{", ".join(explicit)} of TaskOnKart is deprecated and will be removed in the next major release. Use `url` and `timeout` of the [gokart_lock] section instead.',
+            f'{", ".join(explicit)} of TaskOnKart is deprecated and will be removed in gokart 2.0.0. Use `url` and `timeout` of the [gokart_lock] section instead.',
             FutureWarning,
             stacklevel=2,
         )
