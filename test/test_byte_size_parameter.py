@@ -25,7 +25,7 @@ class _ByteSizeTask(luigi.Task):
         ('256mib', 256 * 1024**2),
         ('256MIB', 256 * 1024**2),
         ('10 MB', 10 * 1000**2),
-        (' 10  MiB ', 10 * 1024**2),
+        ('10 \t MiB', 10 * 1024**2),
     ],
 )
 def test_parse(text, expected):
@@ -47,6 +47,10 @@ def test_parse(text, expected):
         '-10MB',
         'MB',
         '10 MB MB',
+        # only spaces and tabs between the number and the unit, and nothing around
+        '10\nMB',
+        '10MiB\n',
+        ' 10MiB',
         # full-width digits
         '\uff11\uff10MB',
         '',
@@ -55,6 +59,11 @@ def test_parse(text, expected):
 def test_parse_rejects(text):
     with pytest.raises(luigi.parameter.ParameterException):
         ByteSizeParameter().parse(text)
+
+
+def test_parse_takes_an_int_as_bytes():
+    # a TOML luigi config hands over `size = 1024` as an int, not a str
+    assert ByteSizeParameter().parse(1024) == 1024  # type: ignore[arg-type]
 
 
 def test_serialize_round_trips_as_bytes():

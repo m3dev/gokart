@@ -192,7 +192,7 @@ _BYTE_SIZE_UNITS: dict[str, int] = {
     'mib': 1024**2,
     'gib': 1024**3,
 }
-_BYTE_SIZE_PATTERN = re.compile(r'(?P<number>\d+)\s*(?P<unit>[kmg]i?b)?', re.IGNORECASE | re.ASCII)
+_BYTE_SIZE_PATTERN = re.compile(r'(?P<number>\d+)[ \t]*(?P<unit>[kmg]i?b)?', re.IGNORECASE | re.ASCII)
 
 
 class ByteSizeParameter(luigi.Parameter[int]):
@@ -204,7 +204,10 @@ class ByteSizeParameter(luigi.Parameter[int]):
     """
 
     def parse(self, x: str) -> int:
-        match = _BYTE_SIZE_PATTERN.fullmatch(x.strip())
+        # a TOML luigi config hands over a bare number as an int, as luigi.IntParameter accepts
+        if isinstance(x, int) and not isinstance(x, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+            return x
+        match = _BYTE_SIZE_PATTERN.fullmatch(x)
         if match is None:
             # a bare M / K / G is rejected since it is unclear whether it means MB or MiB
             raise luigi.parameter.ParameterException(

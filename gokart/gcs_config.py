@@ -38,7 +38,7 @@ class GCSConfig(luigi.Config):
     )
     parallel_chunk_size: ByteSizeParameter = ByteSizeParameter(
         default=32 * 1024 * 1024,
-        description='Size of each chunk of a parallel upload or download (bytes, or e.g. 32MiB). Upload chunks must be at least 5 MiB.',
+        description='Size of each chunk of a parallel upload or download (bytes, or e.g. 32MiB). Upload chunks must be 5 MiB to 5 GiB.',
     )
     parallel_max_workers: luigi.IntParameter = luigi.IntParameter(default=8, description='Number of concurrent requests of a parallel upload or download.')
     _client = None

@@ -35,8 +35,11 @@ def path_to_bucket_and_key(path: str) -> tuple[str, str]:
 _MAX_METADATA_SIZE: Final[int] = 8 * 1024
 # XML API multipart upload parts other than the last must be at least 5 MiB: https://cloud.google.com/storage/quotas#requests
 _MIN_MULTIPART_PART_SIZE: Final[int] = 5 * 1024 * 1024
+# and at most 5 GiB: https://cloud.google.com/storage/quotas#requests
+_MAX_MULTIPART_PART_SIZE: Final[int] = 5 * 1024 * 1024 * 1024
 # an XML API multipart upload takes part numbers 1 to 10,000: https://cloud.google.com/storage/quotas#requests
 _MAX_MULTIPART_PARTS: Final[int] = 10_000
+_MIN_DOWNLOAD_CHUNK_SIZE: Final[int] = 1024 * 1024
 # RFC 9110 field-name token; anything else (e.g. ':' or a space) is rejected by requests or by GCS as a header name
 _HTTP_TOKEN: Final = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
 # printable ASCII without surrounding whitespace, which HTTP would strip from the value
@@ -134,6 +137,8 @@ class GCSClient:
     def __init__(self) -> None:
         # fail when the target is built, not on first I/O, so a missing extra is reported where the gs:// path is configured
         import_storage()
+        # likewise, a bad parallel transfer setting fails here instead of at the first large file, which may be hours into a pipeline
+        _validate_parallel_settings(GCSConfig())
 
     def _bucket(self, bucket: str) -> Any:
         # resolved on every call so that a forked worker gets its own client (see GCSConfig.get_storage_client)
@@ -168,22 +173,14 @@ class GCSClient:
             blob.metadata = metadata
         threshold = config.parallel_upload_threshold
         size = os.path.getsize(filename)
-        # a multipart upload of an empty file has no parts, which GCS rejects on completion
-        if threshold is not None and size > 0 and size >= threshold and _fits_in_http_headers(metadata):
-            if config.parallel_chunk_size < _MIN_MULTIPART_PART_SIZE:
-                # fail before sending anything: GCS only rejects small parts when the whole file has been uploaded
-                raise ValueError(
-                    f'GCSConfig.parallel_chunk_size must be at least {_MIN_MULTIPART_PART_SIZE} bytes for a parallel upload: {config.parallel_chunk_size}'
-                )
-            # transfer_manager initiates the upload before starting its pool, and a pool that fails to start leaves the upload behind
-            _check_max_workers(config.parallel_max_workers)
+        # a file of one chunk or less would be a single-part multipart upload: two more requests, no parallelism, and no MD5
+        if threshold is not None and size >= threshold and size > config.parallel_chunk_size and _fits_in_http_headers(metadata):
             transfer_manager = _import_transfer_manager()
             transfer_manager.upload_chunks_concurrently(
                 filename,
                 blob,
                 content_type=content_type,
-                # grow the chunks of a huge file instead of failing at part 10,001 after uploading the rest
-                chunk_size=max(config.parallel_chunk_size, -(-size // _MAX_MULTIPART_PARTS)),
+                chunk_size=_multipart_chunk_size(size, config.parallel_chunk_size),
                 max_workers=config.parallel_max_workers,
                 # luigi runs tasks in daemonic processes when workers > 1, and those cannot start the default process pool
                 worker_type=transfer_manager.THREAD,
@@ -226,10 +223,7 @@ class GCSClient:
             if blob is None:
                 raise NotFound(f'No such object: {path}')
             # GCS ignores Range on an object it decompresses while serving (Content-Encoding: gzip), so every chunk would get the whole object
-            if blob.size >= threshold and blob.content_encoding != 'gzip':
-                if config.parallel_chunk_size <= 0:
-                    raise ValueError(f'GCSConfig.parallel_chunk_size must be positive: {config.parallel_chunk_size}')
-                _check_max_workers(config.parallel_max_workers)
+            if blob.size >= threshold and blob.size > config.parallel_chunk_size and blob.content_encoding != 'gzip':
                 transfer_manager = _import_transfer_manager()
                 transfer_manager.download_chunks_concurrently(
                     blob, filename, chunk_size=config.parallel_chunk_size, max_workers=config.parallel_max_workers, worker_type=transfer_manager.THREAD
@@ -245,9 +239,27 @@ def _import_transfer_manager() -> Any:
     return transfer_manager
 
 
-def _check_max_workers(max_workers: int) -> None:
-    if max_workers <= 0:
-        raise ValueError(f'GCSConfig.parallel_max_workers must be positive: {max_workers}')
+def _validate_parallel_settings(config: GCSConfig) -> None:
+    upload, download = config.parallel_upload_threshold is not None, config.parallel_download_threshold is not None
+    # GCS only rejects small parts when the whole file has been uploaded
+    if upload and config.parallel_chunk_size < _MIN_MULTIPART_PART_SIZE:
+        raise ValueError(f'GCSConfig.parallel_chunk_size must be at least {_MIN_MULTIPART_PART_SIZE} bytes for parallel uploads: {config.parallel_chunk_size}')
+    # an oversized part is rejected only after it has been read into memory and sent
+    if upload and config.parallel_chunk_size > _MAX_MULTIPART_PART_SIZE:
+        raise ValueError(f'GCSConfig.parallel_chunk_size must be at most {_MAX_MULTIPART_PART_SIZE} bytes for parallel uploads: {config.parallel_chunk_size}')
+    # every chunk is a future and a request, so tiny chunks of a large object exhaust memory
+    if download and config.parallel_chunk_size < _MIN_DOWNLOAD_CHUNK_SIZE:
+        raise ValueError(
+            f'GCSConfig.parallel_chunk_size must be at least {_MIN_DOWNLOAD_CHUNK_SIZE} bytes for parallel downloads: {config.parallel_chunk_size}'
+        )
+    # transfer_manager initiates an upload before starting its pool, and a pool that fails to start leaves the upload behind
+    if (upload or download) and config.parallel_max_workers <= 0:
+        raise ValueError(f'GCSConfig.parallel_max_workers must be positive: {config.parallel_max_workers}')
+
+
+def _multipart_chunk_size(size: int, chunk_size: int) -> int:
+    # grow the chunks of a huge file instead of failing at part 10,001 after uploading the rest
+    return max(chunk_size, -(-size // _MAX_MULTIPART_PARTS))
 
 
 def _fits_in_http_headers(metadata: dict[str, str] | None) -> bool:
