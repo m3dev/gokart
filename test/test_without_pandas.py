@@ -109,7 +109,11 @@ _PANDAS_FEATURES: list[Any] = [
     pytest.param(lambda: FeatherFileProcessor(store_index_in_feather=True), id='feather'),
     pytest.param(lambda: make_file_processor('data.tsv'), id='make_file_processor'),
     pytest.param(lambda: _AnyTask().make_target('data.csv'), id='make_target'),
-    pytest.param(lambda: _AnyTask().make_large_data_frame_target('data.zip'), id='make_large_data_frame_target'),
+    pytest.param(
+        lambda: _AnyTask().make_large_data_frame_target('data.zip'),
+        id='make_large_data_frame_target',
+        marks=pytest.mark.filterwarnings('ignore:make_large_data_frame_target is deprecated:FutureWarning'),
+    ),
     pytest.param(lambda: make_task_info_as_table(_AnyTask()), id='make_task_info_as_table'),
     pytest.param(lambda: assert_frame_contents_equal(object(), object()), id='assert_frame_contents_equal'),  # pyright: ignore[reportArgumentType]
 ]
