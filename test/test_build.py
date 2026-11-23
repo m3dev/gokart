@@ -309,5 +309,48 @@ class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
                 gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
 
 
+class _MissingExternalTask(luigi.ExternalTask):
+    task_namespace = __name__
+    path: luigi.Parameter = luigi.Parameter()
+
+    def output(self) -> Any:
+        return luigi.LocalTarget(self.path)
+
+
+class _DependsOnMissingExternal(gokart.TaskOnKart[int]):
+    task_namespace = __name__
+    path: luigi.Parameter = luigi.Parameter()
+
+    def requires(self) -> Any:
+        return _MissingExternalTask(path=self.path)
+
+    def run(self):
+        self.dump(1)
+
+
+class TestBuildMissingExternal(unittest.TestCase):
+    def test_build_raises_when_external_dependency_is_missing(self):
+        """MISSING_EXT must not look like a success (the task never ran)."""
+        with tempfile.TemporaryDirectory() as d:
+            task = _DependsOnMissingExternal(path=os.path.join(d, 'missing'))
+            with self.assertRaises(GokartBuildError):
+                gokart.build(task, return_value=False, reset_register=False, log_level=logging.CRITICAL)
+
+    def test_build_raises_when_external_dependency_is_missing_with_return_value(self):
+        with tempfile.TemporaryDirectory() as d:
+            task = _DependsOnMissingExternal(path=os.path.join(d, 'missing'))
+            with self.assertRaises(GokartBuildError):
+                gokart.build(task, return_value=True, reset_register=False, log_level=logging.CRITICAL)
+
+    def test_build_raises_on_not_run(self):
+        class MockResult:
+            status = luigi.LuigiStatusCode.NOT_RUN
+            summary_text = 'Task was not run'
+
+        with patch('luigi.build', return_value=MockResult()):
+            with self.assertRaises(GokartBuildError):
+                gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
+
+
 if __name__ == '__main__':
     unittest.main()

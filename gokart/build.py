@@ -239,7 +239,8 @@ def build(
             if task_lock_exception_raised.flag:
                 raise HasLockedTaskException()
             result = cast(LuigiRunResult, result)
-            if result.status in (LuigiStatusCode.FAILED, LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED, LuigiStatusCode.SCHEDULING_FAILED):
+            # WHY: only SUCCESS / SUCCESS_WITH_RETRY mean the requested task finished; MISSING_EXT / NOT_RUN leave it unrun.
+            if result.status not in (LuigiStatusCode.SUCCESS, LuigiStatusCode.SUCCESS_WITH_RETRY):
                 raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
             return _get_output(task) if return_value else None
 
