@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import logging
+import multiprocessing
 import os
 import tempfile
 import unittest
@@ -16,6 +17,7 @@ from luigi import setup_logging
 import gokart
 from gokart.build import GokartBuildError, HasLockedTaskException, LoggerConfig, TaskDumpConfig, TaskDumpMode, TaskDumpOutputType, process_task_info
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
+from gokart.errors import ChildProcessTaskError
 from gokart.utils import add_config
 
 
@@ -368,6 +370,71 @@ class TestGokartBuildErrorStatus(unittest.TestCase):
         with self.assertRaises(GokartBuildError) as cm:
             gokart.build(_DummyFailedTask(), reset_register=False, log_level=logging.CRITICAL)
         self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)
+
+
+class _ErrorWithRequiredArgument(Exception):
+    def __init__(self, message: str, code: int) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+class _FailWithValueError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise ValueError('boom')
+
+
+class _FailWithUnpicklableError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorWithRequiredArgument('cannot be unpickled', code=1)
+
+
+class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
+    """With workers > 1, a task runs and fails in a forked process, so its exception has to be sent back to the parent."""
+
+    def test_raised_exceptions_has_exception_of_failed_task(self):
+        task = _FailWithValueError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual(len(exceptions), 1)
+        self.assertIsInstance(exceptions[0], ValueError)
+        self.assertEqual(str(exceptions[0]), 'boom')
+        self.assertIn("raise ValueError('boom')", '\n'.join(exceptions[0].__notes__))
+
+    def test_exception_that_cannot_be_unpickled_becomes_child_process_task_error(self):
+        task = _FailWithUnpicklableError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual(len(exceptions), 1)
+        error = exceptions[0]
+        self.assertIsInstance(error, ChildProcessTaskError)
+        assert isinstance(error, ChildProcessTaskError)
+        self.assertEqual(error.type_name, f'{__name__}._ErrorWithRequiredArgument')
+        self.assertEqual(error.message, 'cannot be unpickled')
+        self.assertIn("raise _ErrorWithRequiredArgument('cannot be unpickled', code=1)", error.traceback)
+        self.assertIn(error.traceback, '\n'.join(error.__notes__))
+
+    def test_failure_handler_runs_only_once(self):
+        # WHY: the handler runs in the forked child, so the count lives in shared memory to be visible here.
+        calls = multiprocessing.get_context('fork').Value('i', 0)
+
+        def count_failure(task: Any, exception: Exception) -> None:
+            with calls.get_lock():
+                calls.value += 1
+
+        _FailWithValueError.event_handler(luigi.Event.FAILURE)(count_failure)
+        self.addCleanup(_FailWithValueError.remove_event_handler, luigi.Event.FAILURE, count_failure)
+
+        with self.assertRaises(GokartBuildError):
+            gokart.build(_FailWithValueError(), reset_register=False, workers=2, log_level=logging.CRITICAL)
+        self.assertEqual(calls.value, 1)
 
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@ import enum
 import io
 import logging
 import multiprocessing
+from collections.abc import Callable
 from dataclasses import dataclass
 from logging import getLogger
 from types import TracebackType
@@ -13,6 +14,7 @@ from typing import Any, Literal, Protocol, TypeVar, cast, overload
 import luigi
 from luigi import LuigiStatusCode, rpc, scheduler, task_register
 from luigi.execution_summary import LuigiRunResult
+from luigi.task import Task
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random_exponential
 
 import gokart
@@ -92,6 +94,9 @@ class WorkerProtocol(Protocol):
 
 
 class WorkerSchedulerFactory:
+    def __init__(self, on_child_process_failure: Callable[[Task, Exception], None] | None = None) -> None:
+        self._on_child_process_failure = on_child_process_failure
+
     def create_local_scheduler(self) -> scheduler.Scheduler:
         return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 
@@ -99,7 +104,9 @@ class WorkerSchedulerFactory:
         return rpc.RemoteScheduler(url)
 
     def create_worker(self, scheduler: scheduler.Scheduler, worker_processes: int, assistant: bool = False) -> WorkerProtocol:
-        return worker.Worker(scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
+        return worker.Worker(
+            scheduler=scheduler, worker_processes=worker_processes, assistant=assistant, on_child_process_failure=self._on_child_process_failure
+        )
 
 
 def _get_output(task: TaskOnKart[T]) -> T:
@@ -235,7 +242,7 @@ def build(
             task_lock_exception_raised.flag = False
             result = cast(Any, luigi).build(
                 [task],
-                worker_scheduler_factory=WorkerSchedulerFactory(),
+                worker_scheduler_factory=WorkerSchedulerFactory(on_child_process_failure=when_failure),
                 local_scheduler=True,
                 detailed_summary=True,
                 log_level=logging.getLevelName(log_level),
