@@ -672,7 +672,7 @@ class Worker:
         self._keep_alive_thread.start()
         return self
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None) -> Literal[False]:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, exc_tb: TracebackType | None) -> Literal[False]:
         """
         Stop the KeepAliveThread and kill still running tasks.
         """
