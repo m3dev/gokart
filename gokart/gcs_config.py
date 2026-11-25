@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import luigi
 
 from gokart._optional_dependency import import_optional_dependency
+from gokart.parameter import ByteSizeParameter, OptionalByteSizeParameter
 from gokart.process_cache import cached_per_process
 
 if TYPE_CHECKING:
@@ -27,6 +28,19 @@ def _import_gcs_dependency(module_name: str) -> ModuleType:
 
 class GCSConfig(luigi.Config):
     gcs_credential_name: luigi.StrParameter = luigi.StrParameter(default='GCS_CREDENTIAL', description='GCS credential environment variable.')
+    parallel_upload_threshold: OptionalByteSizeParameter = OptionalByteSizeParameter(
+        default=None,
+        description='Upload files of at least this size (bytes, or e.g. 256MiB) in parallel chunks with an XML API multipart upload. Off when unset.',
+    )
+    parallel_download_threshold: OptionalByteSizeParameter = OptionalByteSizeParameter(
+        default=None,
+        description='Download objects of at least this size (bytes, or e.g. 256MiB) in parallel ranged requests. Off when unset.',
+    )
+    parallel_chunk_size: ByteSizeParameter = ByteSizeParameter(
+        default=32 * 1024 * 1024,
+        description='Size of each chunk of a parallel upload or download (bytes, or e.g. 32MiB). Upload chunks must be 5 MiB to 5 GiB.',
+    )
+    parallel_max_workers: luigi.IntParameter = luigi.IntParameter(default=8, description='Number of concurrent requests of a parallel upload or download.')
     _client = None
     _storage_client: tuple[int, storage.Client] | None = None
 
