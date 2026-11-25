@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
+import uuid
 import zipfile
 from abc import abstractmethod
 from typing import IO
@@ -46,8 +48,16 @@ class LocalZipClient(ZipClient):
         return os.path.exists(self._file_path)
 
     def make_archive(self, metadata: dict[str, str] | None = None) -> None:
+        # Write next to the destination and rename it into place, so readers without a target lock see either the old or the new archive, never a partial one.
         [base, extension] = os.path.splitext(self._file_path)
-        shutil.make_archive(base_name=base, format=extension[1:], root_dir=self._temporary_directory)
+        temporary_base = f'{base}-gokart-tmp-{uuid.uuid4().hex}'
+        try:
+            temporary_file_path = shutil.make_archive(base_name=temporary_base, format=extension[1:], root_dir=self._temporary_directory)
+            os.replace(temporary_file_path, self._file_path)
+        except BaseException:
+            with contextlib.suppress(FileNotFoundError):
+                os.remove(temporary_base + extension)
+            raise
 
     def unpack_archive(self) -> None:
         unzip_file(fp=self._file_path, extract_dir=self._temporary_directory)
