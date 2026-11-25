@@ -33,6 +33,17 @@ def path_to_bucket_and_key(path: str) -> tuple[str, str]:
 
 # GCS limits custom metadata to 8 KiB per object (keys plus values): https://cloud.google.com/storage/quotas#objects
 _MAX_METADATA_SIZE: Final[int] = 8 * 1024
+# XML API multipart upload parts other than the last must be at least 5 MiB: https://cloud.google.com/storage/quotas#requests
+_MIN_MULTIPART_PART_SIZE: Final[int] = 5 * 1024 * 1024
+# and at most 5 GiB: https://cloud.google.com/storage/quotas#requests
+_MAX_MULTIPART_PART_SIZE: Final[int] = 5 * 1024 * 1024 * 1024
+# an XML API multipart upload takes part numbers 1 to 10,000: https://cloud.google.com/storage/quotas#requests
+_MAX_MULTIPART_PARTS: Final[int] = 10_000
+_MIN_DOWNLOAD_CHUNK_SIZE: Final[int] = 1024 * 1024
+# RFC 9110 field-name token; anything else (e.g. ':' or a space) is rejected by requests or by GCS as a header name
+_HTTP_TOKEN: Final = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
+# printable ASCII without surrounding whitespace, which HTTP would strip from the value
+_HTTP_HEADER_VALUE: Final = re.compile(r'[!-~]([ -~]*[!-~])?')
 _LOG_PATH_PATTERN: Final = re.compile(r'^gs://.+?/log/(processing_time/|task_info/|task_log/|module_versions/|random_seed/|task_params/).+')
 
 
@@ -126,6 +137,8 @@ class GCSClient:
     def __init__(self) -> None:
         # fail when the target is built, not on first I/O, so a missing extra is reported where the gs:// path is configured
         import_storage()
+        # likewise, a bad parallel transfer setting fails here instead of at the first large file, which may be hours into a pipeline
+        _validate_parallel_settings(GCSConfig())
 
     def _bucket(self, bucket: str) -> Any:
         # resolved on every call so that a forked worker gets its own client (see GCSConfig.get_storage_client)
@@ -152,11 +165,29 @@ class GCSClient:
 
         # google-cloud-storage<3 does not retry uploads without a precondition; overwriting with the same content is idempotent for gokart.
         # filename is a randomly named temporary file, so the content type has to be guessed from the destination like luigi.contrib.gcs did
+        config = GCSConfig()
         blob = self._blob(dest_path)
+        content_type = mimetypes.guess_type(dest_path)[0]
         if metadata:
             # sent in the same request as the content, so labels never need a separate GET and PATCH
             blob.metadata = metadata
-        blob.upload_from_filename(filename, content_type=mimetypes.guess_type(dest_path)[0], retry=DEFAULT_RETRY)
+        threshold = config.parallel_upload_threshold
+        size = os.path.getsize(filename)
+        # a file of one chunk or less would be a single-part multipart upload: two more requests, no parallelism, and no MD5
+        if threshold is not None and size >= threshold and size > config.parallel_chunk_size and _fits_in_http_headers(metadata):
+            transfer_manager = _import_transfer_manager()
+            transfer_manager.upload_chunks_concurrently(
+                filename,
+                blob,
+                content_type=content_type,
+                chunk_size=_multipart_chunk_size(size, config.parallel_chunk_size),
+                max_workers=config.parallel_max_workers,
+                # luigi runs tasks in daemonic processes when workers > 1, and those cannot start the default process pool
+                worker_type=transfer_manager.THREAD,
+                retry=DEFAULT_RETRY,
+            )
+            return
+        blob.upload_from_filename(filename, content_type=content_type, retry=DEFAULT_RETRY)
 
     def get_timestamp(self, path: str) -> datetime:
         bucket, key = path_to_bucket_and_key(path)
@@ -167,16 +198,74 @@ class GCSClient:
 
     def download(self, path: str) -> io.FileIO:
         # stream to a temporary file instead of memory, since outputs can be large
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
-            try:
-                self._blob(path).download_to_file(fp)
-            except BaseException:
-                fp.close()
-                # a cleanup failure must not mask the download error
-                with contextlib.suppress(OSError):
-                    os.remove(fp.name)
-                raise
-        return _DeleteOnCloseFile(fp.name, 'r')
+        fd, filename = tempfile.mkstemp()
+        os.close(fd)
+        try:
+            self._download_to_filename(path, filename)
+        except BaseException:
+            # a cleanup failure must not mask the download error
+            with contextlib.suppress(OSError):
+                os.remove(filename)
+            raise
+        return _DeleteOnCloseFile(filename, 'r')
+
+    def _download_to_filename(self, path: str, filename: str) -> None:
+        from google.api_core.exceptions import NotFound
+
+        config = GCSConfig()
+        threshold = config.parallel_download_threshold
+        if threshold is None:
+            blob = self._blob(path)
+        else:
+            # the size decides the path, so this costs one metadata request per download
+            bucket, key = path_to_bucket_and_key(path)
+            blob = self._bucket(bucket).get_blob(key)
+            if blob is None:
+                raise NotFound(f'No such object: {path}')
+            # GCS ignores Range on an object it decompresses while serving (Content-Encoding: gzip), so every chunk would get the whole object
+            if blob.size >= threshold and blob.size > config.parallel_chunk_size and blob.content_encoding != 'gzip':
+                transfer_manager = _import_transfer_manager()
+                transfer_manager.download_chunks_concurrently(
+                    blob, filename, chunk_size=config.parallel_chunk_size, max_workers=config.parallel_max_workers, worker_type=transfer_manager.THREAD
+                )
+                return
+        with open(filename, 'wb') as fp:
+            blob.download_to_file(fp)
+
+
+def _import_transfer_manager() -> Any:
+    from google.cloud.storage import transfer_manager  # pyright: ignore[reportMissingTypeStubs]
+
+    return transfer_manager
+
+
+def _validate_parallel_settings(config: GCSConfig) -> None:
+    upload, download = config.parallel_upload_threshold is not None, config.parallel_download_threshold is not None
+    # GCS only rejects small parts when the whole file has been uploaded
+    if upload and config.parallel_chunk_size < _MIN_MULTIPART_PART_SIZE:
+        raise ValueError(f'GCSConfig.parallel_chunk_size must be at least {_MIN_MULTIPART_PART_SIZE} bytes for parallel uploads: {config.parallel_chunk_size}')
+    # an oversized part is rejected only after it has been read into memory and sent
+    if upload and config.parallel_chunk_size > _MAX_MULTIPART_PART_SIZE:
+        raise ValueError(f'GCSConfig.parallel_chunk_size must be at most {_MAX_MULTIPART_PART_SIZE} bytes for parallel uploads: {config.parallel_chunk_size}')
+    # every chunk is a future and a request, so tiny chunks of a large object exhaust memory
+    if download and config.parallel_chunk_size < _MIN_DOWNLOAD_CHUNK_SIZE:
+        raise ValueError(
+            f'GCSConfig.parallel_chunk_size must be at least {_MIN_DOWNLOAD_CHUNK_SIZE} bytes for parallel downloads: {config.parallel_chunk_size}'
+        )
+    # transfer_manager initiates an upload before starting its pool, and a pool that fails to start leaves the upload behind
+    if (upload or download) and config.parallel_max_workers <= 0:
+        raise ValueError(f'GCSConfig.parallel_max_workers must be positive: {config.parallel_max_workers}')
+
+
+def _multipart_chunk_size(size: int, chunk_size: int) -> int:
+    # grow the chunks of a huge file instead of failing at part 10,001 after uploading the rest
+    return max(chunk_size, -(-size // _MAX_MULTIPART_PARTS))
+
+
+def _fits_in_http_headers(metadata: dict[str, str] | None) -> bool:
+    """Whether the labels can be sent as the x-goog-meta-* headers that an XML API multipart upload uses."""
+    # the XML API lowercases metadata keys, so a name with upper case letters would not be stored as given
+    return all(_HTTP_TOKEN.fullmatch(name) and name == name.lower() and _HTTP_HEADER_VALUE.fullmatch(value) for name, value in (metadata or {}).items())
 
 
 class _AtomicGCSFile(luigi.target.AtomicLocalFile):
