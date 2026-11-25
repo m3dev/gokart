@@ -35,7 +35,7 @@ class TestMakeRequiresInfo(unittest.TestCase):
         self.assertEqual(resulted, expected)
 
     def test_make_requires_info_with_dict(self):
-        requires = dict(taskA=_RequiredTaskExampleTaskA())
+        requires = {'taskA': _RequiredTaskExampleTaskA()}
         resulted = _make_requires_info(requires=requires)
         expected = {key: RequiredTask(name=require.__class__.__name__, unique_id=require.make_unique_id()) for key, require in requires.items()}
         self.assertEqual(resulted, expected)

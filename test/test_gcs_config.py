@@ -12,7 +12,7 @@ class TestGCSConfig(unittest.TestCase):
         mock = MagicMock()
         with patch.dict(os.environ, {'env_name': ''}), patch('luigi.contrib.gcs.GCSClient', mock):
             GCSConfig(gcs_credential_name='env_name')._get_gcs_client()
-            self.assertEqual(dict(oauth_credentials=None), mock.call_args[1])
+            self.assertEqual({'oauth_credentials': None}, mock.call_args[1])
 
     def test_get_gcs_client_with_file_path(self):
         mock = MagicMock()
@@ -29,7 +29,7 @@ class TestGCSConfig(unittest.TestCase):
         with patch.dict(os.environ, {'env_name': json_str}), patch('luigi.contrib.gcs.GCSClient'):
             with patch('google.oauth2.service_account.Credentials.from_service_account_info', mock):
                 GCSConfig(gcs_credential_name='env_name')._get_gcs_client()
-                self.assertEqual(dict(test=1), mock.call_args[0][0])
+                self.assertEqual({'test': 1}, mock.call_args[0][0])
 
 
 class TestGetStorageClient:

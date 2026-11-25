@@ -53,7 +53,7 @@ import time
 import traceback
 from collections.abc import Callable, Generator
 from multiprocessing.reduction import ForkingPickler
-from typing import Any, Literal, NamedTuple, TypeVar, cast
+from typing import Any, Literal, NamedTuple, Self, TypeVar, cast
 
 import luigi
 import luigi.worker
@@ -407,7 +407,7 @@ class TaskProcess(_ForkProcess):
             yield self
         finally:
             # reset attributes again
-            for _, task_attr in self.forward_reporter_attributes.items():
+            for task_attr in self.forward_reporter_attributes.values():
                 setattr(self.task, task_attr, None)
 
 
@@ -662,7 +662,7 @@ class Worker:
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
 
-    def __enter__(self) -> Worker:
+    def __enter__(self) -> Self:
         """
         Start the KeepAliveThread.
         """
@@ -1432,9 +1432,7 @@ class Worker:
             return cast(bool, get_work_response.n_unique_pending > 0)
         elif get_work_response.n_pending_tasks == 0:
             return False
-        elif not self._config.max_keep_alive_idle_duration:
-            return True
-        elif not self._idle_since:
+        elif not self._config.max_keep_alive_idle_duration or not self._idle_since:
             return True
         else:
             time_to_shutdown = self._idle_since + self._config.max_keep_alive_idle_duration - datetime.datetime.now()

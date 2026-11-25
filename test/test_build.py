@@ -177,10 +177,9 @@ class LoggerConfigTest(unittest.TestCase):
             (logging.DEBUG, logging.DEBUG, logging.NOTSET),
             (logging.CRITICAL, logging.CRITICAL, logging.ERROR),
         ):
-            with self.subTest(level=level, enable_expected=enable_expected, disable_expected=disable_expected):
-                with LoggerConfig(level) as lc:
-                    self.assertTrue(lc.logger.isEnabledFor(enable_expected))
-                    self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
+            with self.subTest(level=level, enable_expected=enable_expected, disable_expected=disable_expected), LoggerConfig(level) as lc:
+                self.assertTrue(lc.logger.isEnabledFor(enable_expected))
+                self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
 
     def test_logger_config_restores_previous_disable_level(self):
         original_disable = logging.root.manager.disable

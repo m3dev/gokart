@@ -57,14 +57,12 @@ class TestSerializableParameter:
                 cp.get_task_obj()
 
     def test_value_error(self):
-        with pytest.raises(ValueError):
-            with CmdlineParser.global_instance([f'{__name__}.SerializableParameterWithOutDefault', '--config', 'Foo']) as cp:
-                cp.get_task_obj()
+        with pytest.raises(ValueError), CmdlineParser.global_instance([f'{__name__}.SerializableParameterWithOutDefault', '--config', 'Foo']) as cp:
+            cp.get_task_obj()
 
     def test_expected_one_argument_error(self):
-        with pytest.raises(SystemExit):
-            with CmdlineParser.global_instance([f'{__name__}.SerializableParameterWithOutDefault', '--config']) as cp:
-                cp.get_task_obj()
+        with pytest.raises(SystemExit), CmdlineParser.global_instance([f'{__name__}.SerializableParameterWithOutDefault', '--config']) as cp:
+            cp.get_task_obj()
 
     def test_mypy(self):
         """check invalid object cannot used for SerializableParameter"""
