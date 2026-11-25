@@ -5,6 +5,8 @@ import pickle
 import types
 import xml.etree.ElementTree as ET
 from abc import abstractmethod
+from collections.abc import Generator
+from contextlib import contextmanager
 from io import BytesIO
 from logging import getLogger
 from typing import Any, Literal, cast
@@ -20,6 +22,31 @@ logger = getLogger(__name__)
 
 # Type alias for DataFrame library return type
 DataFrameType = Literal['pandas', 'polars', 'polars-lazy']
+
+
+class _CallerOwnedBufferedWriter(io.BufferedWriter):
+    def close(self) -> None:
+        # The raw file belongs to the caller. detach() cannot be relied on to stop the finalizer from closing it,
+        # because detach() flushes first and gives up without detaching when that flush fails.
+        pass
+
+
+@contextmanager
+def _write_all(file: Any) -> Generator[Any]:
+    """Yields a file whose write() writes all of the data.
+
+    A raw stream such as open(path, 'wb', buffering=0) may write only part of it (on Linux one write(2) writes
+    at most 0x7ffff000 bytes) and only returns the count, which pickle and the callers here ignore.
+    BufferedWriter keeps writing the rest.
+    """
+    # BufferedWriter refuses a raw stream that does not report writable(), which a plain write() used to accept.
+    if not isinstance(file, io.RawIOBase) or not file.writable():
+        yield file
+        return
+    buffered = _CallerOwnedBufferedWriter(file)
+    yield buffered
+    # Not flushed when the dump failed, so that a second write error cannot replace the original one.
+    buffered.flush()
 
 
 class FileProcessor:
@@ -52,7 +79,8 @@ class BinaryFileProcessor(FileProcessor):
         return file.read()
 
     def dump(self, obj: Any, file: Any):
-        file.write(obj)
+        with _write_all(file) as f:
+            f.write(obj)
 
 
 class PickleFileProcessor(FileProcessor):
@@ -90,6 +118,10 @@ class PickleFileProcessor(FileProcessor):
         return load_dill_with_pandas_backward_compatibility(file)
 
     def dump(self, obj: Any, file: Any):
+        with _write_all(file) as f:
+            self._dump(obj, f)
+
+    def _dump(self, obj: Any, file: Any) -> None:
         if not self._can_roll_back(file):
             # A failed C pickler could not be rolled back, so build the pickle in memory first.
             buffer = BytesIO()
