@@ -78,9 +78,17 @@ def _drop_marked(items: Any) -> Any:
     return items
 
 
+_TASK_ON_KART_EVENT_HANDLERS: list[tuple[str, Callable[..., Any]]] = []
+
+
 def _event_handler(event: str) -> Callable[[_F], _F]:
-    # luigi's event_handler decorator is untyped; declare it as signature-preserving
-    return cast(Callable[[_F], _F], cast(Any, luigi.Task).event_handler(event))
+    # WHY: only collects the handler; they are registered on TaskOnKart after its class body, where it exists. Registering them on luigi.Task
+    # would run them for every luigi.Task in the process, and they fail on a plain luigi.Task.
+    def collect(handler: _F) -> _F:
+        _TASK_ON_KART_EVENT_HANDLERS.append((event, handler))
+        return handler
+
+    return collect
 
 
 class TaskOnKart(luigi.Task, Generic[T]):
@@ -801,6 +809,9 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return f'[{", ".join(f"{v.get_task_family()}({v.make_unique_id()})" for v in param_value)}]'
         return str(cast(Any, param_obj).serialize(param_value))
 
+
+for _event, _handler in _TASK_ON_KART_EVENT_HANDLERS:
+    cast(Any, TaskOnKart).event_handler(_event)(_handler)
 
 # WHY: captured once so that `_complete_requirement` can tell the original `complete` from a wrapper installed on the class later.
 _TASK_ON_KART_COMPLETE: Any = cast(Any, TaskOnKart).complete
