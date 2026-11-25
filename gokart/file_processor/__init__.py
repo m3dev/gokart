@@ -231,13 +231,10 @@ def make_file_processor(file_path: str, store_index_in_feather: bool = True, *, 
 
 
 __all__ = [
-    # Common processors
     'BinaryFileProcessor',
-    # DataFrame processors (with factory pattern)
     'CsvFileProcessor',
     'DataFrameType',
     'FeatherFileProcessor',
-    # Base classes and types
     'FileProcessor',
     'GzipFileProcessor',
     'JsonFileProcessor',

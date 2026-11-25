@@ -121,9 +121,6 @@ class ExplicitBoolParameter(luigi.BoolParameter):
         return cast(dict[str, Any], cast(Any, luigi.Parameter)._parser_kwargs(*args, **kwargs))
 
 
-T = TypeVar('T')
-
-
 class Serializable(Protocol):
     def gokart_serialize(self) -> str:
         """Implement this method to serialize the object as an parameter
