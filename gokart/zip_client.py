@@ -49,14 +49,18 @@ class LocalZipClient(ZipClient):
 
     def make_archive(self, metadata: dict[str, str] | None = None) -> None:
         # Write next to the destination and rename it into place, so readers without a target lock see either the old or the new archive, never a partial one.
-        [base, extension] = os.path.splitext(self._file_path)
-        temporary_base = f'{base}-gokart-tmp-{uuid.uuid4().hex}'
+        # Resolve symlinks so the rename replaces the file they point to, as writing in place did, instead of the link itself.
+        destination = os.path.realpath(self._file_path)
+        extension = os.path.splitext(self._file_path)[1]
+        # The name does not derive from the destination, so a long file name does not exceed the file system limit, and the dot hides leftovers from globs.
+        temporary_base = os.path.join(os.path.dirname(destination), f'.gokart-tmp-{uuid.uuid4().hex}')
+        temporary_file_path = temporary_base + extension
         try:
-            temporary_file_path = shutil.make_archive(base_name=temporary_base, format=extension[1:], root_dir=self._temporary_directory)
-            os.replace(temporary_file_path, self._file_path)
+            shutil.make_archive(base_name=temporary_base, format=extension[1:], root_dir=self._temporary_directory)
+            os.replace(temporary_file_path, destination)
         except BaseException:
             with contextlib.suppress(FileNotFoundError):
-                os.remove(temporary_base + extension)
+                os.remove(temporary_file_path)
             raise
 
     def unpack_archive(self) -> None:

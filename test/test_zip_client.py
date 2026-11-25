@@ -79,6 +79,26 @@ class TestLocalZipClient:
 
         assert os.listdir(tmp_path) == ['tmp']
 
+    def test_make_archive_writes_through_symlink(self, tmp_path):
+        real_path = tmp_path / 'real' / 'archive.zip'
+        real_path.parent.mkdir()
+        _make_archive_with(tmp_path / 'old', str(real_path), 'old')
+        link_path = tmp_path / 'link.zip'
+        link_path.symlink_to(real_path)
+
+        _make_archive_with(tmp_path / 'new', str(link_path), 'new')
+
+        assert link_path.is_symlink()
+        assert _unpack_text(tmp_path, str(real_path)) == 'new'
+
+    def test_make_archive_accepts_file_name_at_file_system_limit(self, tmp_path):
+        name_max = os.pathconf(tmp_path, 'PC_NAME_MAX')
+        file_path = str(tmp_path / ('a' * (name_max - len('.zip')) + '.zip'))
+
+        _make_archive_with(tmp_path / 'new', file_path, 'new')
+
+        assert _unpack_text(tmp_path, file_path) == 'new'
+
 
 def _make_archive_with(temporary_directory: Path, file_path: str, text: str) -> None:
     temporary_directory.mkdir()
