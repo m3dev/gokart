@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from collections.abc import Iterator
 from typing import Any
-from unittest.mock import patch
 
 import luigi
 import luigi.configuration
@@ -16,22 +15,11 @@ from gokart.conflict_prevention_lock.lock_config import (
     redis_connection_kwargs,
     resolve_redis_lock_settings,
 )
-from gokart.conflict_prevention_lock.task_lock import make_task_lock_params, make_task_lock_params_for_run
-from gokart.target import make_target
+from gokart.conflict_prevention_lock.task_lock import make_task_lock_params_for_run
 
 
 class _Task(gokart.TaskOnKart[Any]):
     task_namespace = __name__
-
-
-def _save_text(obj: Any, path: str) -> None:
-    with open(path, 'w') as f:
-        f.write(str(obj))
-
-
-def _load_text(path: str) -> Any:
-    with open(path) as f:
-        return f.read()
 
 
 @pytest.fixture
@@ -161,55 +149,12 @@ class TestResolveRedisLockSettings:
 
 
 class TestTaskIntegration:
-    def test_make_task_lock_params_does_not_read_the_config(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380', timeout='60')
-        params = make_task_lock_params(file_path='gs://aaa.pkl', unique_id='123')
-        assert (params.redis_host, params.redis_port, params.should_task_lock) == (None, None, False)
-
-    def test_task_targets_use_the_config(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380', timeout='60')
-        params = _Task()._make_task_lock_params('gs://aaa.pkl', '123')
-        assert (params.redis_host, params.redis_port, params.redis_timeout, params.should_task_lock) == ('lock-host', 6380, 60, True)
-
-    def test_lock_params_carry_db_tls_and_the_password_flag_but_not_the_password(self, lock_config: Any, monkeypatch: pytest.MonkeyPatch):
+    def test_run_lock_params_carry_db_tls_and_the_password_flag_but_not_the_password(self, lock_config: Any, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
         lock_config(url='rediss://lock-host:6380/3')
-        params = _Task()._make_task_lock_params('gs://aaa.pkl', '123')
+        params = make_task_lock_params_for_run(task_self=_Task(should_lock_run=True))
         assert (params.redis_db, params.redis_ssl, params.redis_use_password) == (3, True, True)
         assert 'secret-value' not in repr(params)
-
-    def test_in_memory_output_is_not_locked_when_only_a_backend_is_configured(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380')
-
-        class _InMemoryTask(gokart.TaskOnKart[Any]):
-            task_namespace = __name__
-
-            def output(self):
-                return self.make_target('feature.pkl', persist=False)
-
-        assert not _InMemoryTask().output()._get_task_lock_params().should_task_lock
-
-    def test_targets_made_without_lock_settings_are_not_locked(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380')
-        assert not make_target('gs://aaa.pkl')._get_task_lock_params().should_task_lock
-
-    def test_the_inner_files_of_a_model_target_are_not_locked(self, lock_config: Any, tmp_path: Any):
-        # The outer zip is locked, but the load_function.pkl in its private temporary directory must not take a lock on a key shared by every model.
-        lock_config(url='redis://lock-host:6380')
-
-        class _ModelTask(gokart.TaskOnKart[Any]):
-            task_namespace = __name__
-
-            def output(self):
-                return self.make_model_target('model.zip', save_function=_save_text, load_function=_load_text)
-
-        task = _ModelTask(workspace_directory=str(tmp_path), local_temporary_directory=str(tmp_path / 'tmp'))
-        with (
-            patch('gokart.conflict_prevention_lock.task_lock_wrappers.set_task_lock') as set_task_lock,
-            patch('gokart.conflict_prevention_lock.task_lock_wrappers.set_lock_scheduler'),
-        ):
-            task.output().dump('model')
-        assert [call.kwargs['task_lock_params'].redis_key for call in set_task_lock.call_args_list] == [f'model_{task.make_unique_id()}']
 
     def test_run_lock_params_use_the_config(self, lock_config: Any):
         lock_config(url='redis://lock-host:6380', timeout='60')
@@ -233,7 +178,6 @@ class TestTaskIntegration:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             task = _Task(redis_host='localhost', redis_port=6379)
-            task._make_task_lock_params('gs://aaa.pkl', '123')
             make_task_lock_params_for_run(task_self=task)
         assert [str(w.message) for w in caught if issubclass(w.category, FutureWarning) and 'redis_host' in str(w.message)] != []
         assert len([w for w in caught if issubclass(w.category, FutureWarning)]) == 1
@@ -335,6 +279,17 @@ class TestGcsBackendUrl:
     def test_should_lock_run_accepts_a_timeout_above_the_worst_case_heartbeat_duration(self, lock_config: Any):
         lock_config(url='gs://my-bucket/locks', timeout='51')
         _Task(should_lock_run=True)
+
+    @pytest.mark.parametrize('timeout', ['10', '2'])
+    def test_should_lock_run_rejects_a_redis_timeout_that_expires_between_heartbeats(self, lock_config: Any, timeout: str):
+        lock_config(url='redis://localhost:6379', timeout=timeout)
+        with pytest.raises(ValueError, match='heartbeat interval'):
+            _Task(should_lock_run=True)
+
+    def test_redis_timeout_is_not_checked_without_should_lock_run(self, lock_config: Any):
+        # Only the run lock uses the timeout.
+        lock_config(url='redis://localhost:6379', timeout='2')
+        _Task()
 
     def test_should_lock_run_rejects_a_negative_skew_margin(self, lock_config: Any):
         lock_config(url='gs://my-bucket/locks', skew_margin='-1')

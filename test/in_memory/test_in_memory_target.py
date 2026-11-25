@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 from gokart.in_memory import InMemoryTarget, InMemoryTargetError, make_in_memory_target
 from gokart.in_memory.repository import acquire_repository, in_memory_scope
 
@@ -80,19 +79,6 @@ class TestInMemoryTarget:
             acquire_repository()
             assert not target.exists()
         assert target.exists()
-
-    def test_task_lock_is_not_supported(self) -> None:
-        task_lock_params = TaskLockParams(
-            redis_host='localhost',
-            redis_port=6379,
-            redis_timeout=None,
-            redis_key='dummy',
-            should_task_lock=True,
-            raise_task_lock_exception_on_collision=False,
-            lock_extend_seconds=0,
-        )
-        with pytest.raises(ValueError):
-            make_in_memory_target(target_key='dummy_key', task_lock_params=task_lock_params)
 
 
 class TestInMemoryTargetOutsideBuild:

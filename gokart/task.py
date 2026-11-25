@@ -24,12 +24,11 @@ from gokart._gcs import needs_task_state_labels
 from gokart._pandas import is_pandas_data_frame
 from gokart.conflict_prevention_lock.lock_config import (
     check_object_storage_lock_settings,
+    check_redis_lock_settings,
     resolve_redis_lock_settings,
     uses_object_storage_lock,
-    warn_once_that_dump_locks_are_not_taken,
 )
 from gokart.conflict_prevention_lock.redis_import import import_redis
-from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.in_memory.target import make_in_memory_target
 from gokart.pandas_type_config import PandasTypeConfigMap
@@ -188,7 +187,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
         self.task_unique_id = None
         cast(Any, super()).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
-        self._lock_at_dump = True
+        # Set by the gokart worker while it holds the run lock of this task.
+        self._run_lock_held = False
         self._has_only_in_memory_outputs_cache: bool | None = None
 
         # Cache to_str_params to avoid slow task creation in a deep task tree.
@@ -196,19 +196,18 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self._cache_to_str_params()
 
-        # Resolved once here and passed down, so that make_task_lock_params stays independent of the global config.
+        # Resolved once here, so that the deprecated task-level redis_* warn once per task; the run lock reads the result.
         self._lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
-        if self._lock_settings.host is not None and self._lock_settings.port is not None:
-            # Fail at construction rather than at dump() after a whole run() has been spent.
-            import_redis()
         if self.should_lock_run:
             assert self._has_redis_lock() or uses_object_storage_lock(), (
                 'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section. '
                 'If `url` is set, a leftover redis_host or redis_port of the task overrides it; redis_host and redis_port are both required, or remove them.'
             )
-        if uses_object_storage_lock() and not self._has_redis_lock():
-            warn_once_that_dump_locks_are_not_taken()
-            if self.should_lock_run:
+            # Fail at construction rather than when the worker takes the run lock, possibly after its upstream tasks have run.
+            if self._has_redis_lock():
+                import_redis()
+                check_redis_lock_settings(self._lock_settings.timeout)
+            else:
                 check_object_storage_lock_settings(self._lock_settings.timeout)
 
     def _cache_to_str_params(self) -> None:
@@ -374,35 +373,16 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if not persist:
             if processor is not None:
                 raise ValueError('`processor` cannot be used with `persist=False`.')
-            # WHY: the dump / load lock is skipped because the in-memory store is not shared with other processes.
             return make_in_memory_target(file_path, unique_id=unique_id)
 
         # Auto-select processor based on type parameter if not provided
         if processor is None and relative_file_path is not None:
             processor = self._create_processor_for_dataframe_type(file_path)
 
-        task_lock_params = self._make_task_lock_params(file_path, unique_id)
-
-        return gokart.target.make_target(
-            file_path=file_path, unique_id=unique_id, processor=processor, task_lock_params=task_lock_params, store_index_in_feather=self.store_index_in_feather
-        )
+        return gokart.target.make_target(file_path=file_path, unique_id=unique_id, processor=processor, store_index_in_feather=self.store_index_in_feather)
 
     def _has_redis_lock(self) -> bool:
         return self._lock_settings.host is not None and self._lock_settings.port is not None
-
-    def _make_task_lock_params(self, file_path: str, unique_id: str | None) -> TaskLockParams:
-        settings = self._lock_settings
-        return make_task_lock_params(
-            file_path=file_path,
-            unique_id=unique_id,
-            redis_host=settings.host,
-            redis_port=settings.port,
-            redis_timeout=settings.timeout,
-            raise_task_lock_exception_on_collision=False,
-            redis_db=settings.db,
-            redis_ssl=settings.ssl,
-            redis_use_password=settings.use_password,
-        )
 
     def _create_processor_for_dataframe_type(self, file_path: str) -> FileProcessor:
         df_type = get_dataframe_type_from_task(self)
@@ -429,7 +409,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         )
         file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
         unique_id = self.make_unique_id() if use_unique_id else None
-        task_lock_params = self._make_task_lock_params(file_path, unique_id)
 
         return gokart.target.make_model_target(
             file_path=file_path,
@@ -438,7 +417,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
             # WHY: the public LargeDataFrameProcessor would warn a second time, pointing at gokart instead of the caller.
             save_function=gokart.target._LargeDataFrameProcessor(max_byte=max_byte).save,  # pyright: ignore[reportPrivateUsage]
             load_function=gokart.target._LargeDataFrameProcessor.load,  # pyright: ignore[reportPrivateUsage]
-            task_lock_params=task_lock_params,
         )
 
     def make_model_target(
@@ -455,7 +433,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         file_path = os.path.join(self.workspace_directory, relative_file_path)
         assert relative_file_path[-3:] == 'zip', f'extension must be zip, but {relative_file_path} is passed.'
         unique_id = self.make_unique_id() if use_unique_id else None
-        task_lock_params = self._make_task_lock_params(file_path, unique_id)
 
         return gokart.target.make_model_target(
             file_path=file_path,
@@ -463,7 +440,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
             unique_id=unique_id,
             save_function=save_function,
             load_function=load_function,
-            task_lock_params=task_lock_params,
         )
 
     @overload
@@ -515,11 +491,10 @@ class TaskOnKart(luigi.Task, Generic[T]):
         if self.fail_on_empty_dump and _is_empty_data_frame(obj):
             raise EmptyDumpError()
 
-        if self.should_lock_run and self._lock_at_dump:
-            fallback = 'Falling back to the dump lock.' if self._has_redis_lock() else 'No lock is taken, because the lock url points to object storage.'
+        if self.should_lock_run and not self._run_lock_held:
             warnings.warn(
-                f'{self.get_task_family()} has should_lock_run=True, but it is not run by the gokart worker, so the run lock is not taken. '
-                f'{fallback} Use gokart.build or gokart.run to take the run lock.',
+                f'{self.get_task_family()} has should_lock_run=True, but it is not run by the gokart worker, so no lock is taken. '
+                'Use gokart.build or gokart.run to take the run lock.',
                 UserWarning,
                 stacklevel=2,
             )
@@ -535,7 +510,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
         output_target.dump(
             obj,
-            lock_at_dump=self._lock_at_dump,
             task_params=task_params,
             custom_labels=custom_labels,
             required_task_outputs=required_task_outputs,

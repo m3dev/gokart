@@ -94,42 +94,6 @@ def make_task_lock_key(file_path: str, unique_id: str | None) -> str:
     return f'{basename_without_ext}_{unique_id}'
 
 
-def make_task_lock_params(
-    file_path: str,
-    unique_id: str | None,
-    redis_host: str | None = None,
-    redis_port: int | None = None,
-    redis_timeout: int | None = None,
-    raise_task_lock_exception_on_collision: bool = False,
-    lock_extend_seconds: int = LOCK_EXTEND_SECONDS,
-    redis_db: int = 0,
-    redis_ssl: bool = False,
-    redis_use_password: bool = False,
-) -> TaskLockParams:
-    """Build the lock parameters from explicit values only; ``[gokart_lock]`` is resolved by ``TaskOnKart``, which passes the result down.
-
-    Reading the config here would make every caller without lock settings (in-memory targets, the temporary files of ModelTarget, ...) take locks.
-    """
-    redis_key = make_task_lock_key(file_path, unique_id)
-    should_task_lock = redis_host is not None and redis_port is not None
-    if redis_timeout is not None:
-        assert redis_timeout > lock_extend_seconds, (
-            f'The lock timeout (`[gokart_lock] timeout`) must be greater than lock_extend_seconds:{lock_extend_seconds}, not {redis_timeout}.'
-        )
-    return TaskLockParams(
-        redis_host=redis_host,
-        redis_port=redis_port,
-        redis_key=redis_key,
-        should_task_lock=should_task_lock,
-        redis_timeout=redis_timeout,
-        raise_task_lock_exception_on_collision=raise_task_lock_exception_on_collision,
-        lock_extend_seconds=lock_extend_seconds,
-        redis_db=redis_db,
-        redis_ssl=redis_ssl,
-        redis_use_password=redis_use_password,
-    )
-
-
 def make_task_lock_params_for_run(task_self: Any, lock_extend_seconds: int = LOCK_EXTEND_SECONDS) -> TaskLockParams:
     task_path_name = os.path.join(task_self.__module__.replace('.', '/'), f'{type(task_self).__name__}')
     unique_id = task_self.make_unique_id() + '-run'

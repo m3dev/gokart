@@ -125,7 +125,7 @@ class TestMakeInMemoryTarget:
         with pytest.raises(InMemoryTargetError, match='should_lock_run'):
             gokart.build(task, reset_register=False)
 
-    def test_dump_and_load_lock_is_skipped(self) -> None:
+    def test_dump_and_load_with_a_redis_backend_configured(self) -> None:
         task = _DumpTask(param='a', redis_host='localhost', redis_port=6379)
         with in_memory_scope():
             acquire_repository()

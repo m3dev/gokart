@@ -4,7 +4,7 @@ from typing import Any
 from unittest.mock import patch
 
 import gokart
-from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams, make_task_lock_key, make_task_lock_params, make_task_lock_params_for_run
+from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams, make_task_lock_key, make_task_lock_params_for_run
 
 
 class TestRedisClient(unittest.TestCase):
@@ -48,48 +48,6 @@ class TestMakeRedisKey(unittest.TestCase):
     def test_make_redis_key(self):
         result = make_task_lock_key(file_path='gs://test_ll/dir/fname.pkl', unique_id='12345')
         self.assertEqual(result, 'fname_12345')
-
-
-class TestMakeRedisParams(unittest.TestCase):
-    def test_make_task_lock_params_with_valid_host(self):
-        result = make_task_lock_params(
-            file_path='gs://aaa.pkl', unique_id='123', redis_host='0.0.0.0', redis_port=12345, redis_timeout=180, raise_task_lock_exception_on_collision=False
-        )
-        expected = TaskLockParams(
-            redis_host='0.0.0.0',
-            redis_port=12345,
-            redis_key='aaa_123',
-            should_task_lock=True,
-            redis_timeout=180,
-            raise_task_lock_exception_on_collision=False,
-            lock_extend_seconds=10,
-        )
-        self.assertEqual(result, expected)
-
-    def test_make_task_lock_params_with_no_host(self):
-        result = make_task_lock_params(
-            file_path='gs://aaa.pkl', unique_id='123', redis_host=None, redis_port=12345, redis_timeout=180, raise_task_lock_exception_on_collision=False
-        )
-        expected = TaskLockParams(
-            redis_host=None,
-            redis_port=12345,
-            redis_key='aaa_123',
-            should_task_lock=False,
-            redis_timeout=180,
-            raise_task_lock_exception_on_collision=False,
-            lock_extend_seconds=10,
-        )
-        self.assertEqual(result, expected)
-
-    def test_assert_when_redis_timeout_is_too_short(self):
-        with self.assertRaises(AssertionError):
-            make_task_lock_params(
-                file_path='test_dir/test_file.pkl',
-                unique_id='123abc',
-                redis_host='0.0.0.0',
-                redis_port=12345,
-                redis_timeout=2,
-            )
 
 
 class TestMakeTaskLockParamsForRun(unittest.TestCase):

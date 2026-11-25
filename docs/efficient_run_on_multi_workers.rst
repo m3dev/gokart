@@ -50,7 +50,6 @@ Only one waiter wins a takeover. `skew_margin` (30 seconds by default) absorbs c
 
 Notes:
 
-- Only the run lock moves to object storage. By design, the dump / load / remove locks (see :doc:`using_task_task_conflict_prevention_lock`) are **not taken** when the url is an object storage URL, because they need Redis. This includes the load of the inputs and of the result. A task that holds the run lock does not need them under the gokart worker. gokart emits one ``UserWarning`` per process, when the first task is created, to tell you that no lock is taken. If you rely on the dump lock, keep the url on Redis.
 - The service account needs ``storage.objects.get``, ``storage.objects.create`` and ``storage.objects.delete`` on the bucket. Overwriting an existing object (every heartbeat) also requires ``delete``, so ``roles/storage.objectCreator`` is not enough; ``roles/storage.objectUser`` works.
 - On S3, the credentials need ``s3:GetObject``, ``s3:PutObject``, ``s3:DeleteObject`` and ``s3:ListBucket`` on the bucket. Without ``s3:ListBucket``, S3 answers a read of a missing key with 403 instead of 404, so every task with ``should_lock_run=True`` fails before it runs. A conditional delete with an ETag also needs ``s3:GetObject``.
 - Objects are left behind whenever ``release()`` never runs, for example after SIGKILL or an OOM kill of the worker. Add a lifecycle rule as a safety net, **scoped to the lock prefix**. A bucket-wide age rule would also delete your pipeline outputs when the bucket is shared with them. For GCS:
@@ -95,7 +94,7 @@ Notes:
 - Plain S3-compatible stores vary, and conditional PUT and conditional DELETE are separate features. Cloudflare R2 documents conditional headers for PutObject, CopyObject and multipart uploads, but not for DeleteObject. MinIO is not verified either. gokart raises an error when the store rejects the conditional headers, but it cannot detect a store that silently ignores them. On such a store the lock does not exclude anything, and the same task can run concurrently on several workers: a holder whose lock was taken over after it expired would delete the new holder's lock with an unconditional delete, letting a third worker in. Check your store before relying on the lock.
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
-If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so `dump()` falls back to the dump lock (or takes no lock at all when the url is an object storage URL) and emits a `UserWarning`.
+If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so no lock is taken at all, and `dump()` emits a `UserWarning`.
 This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.
 To get rid of the warning, run the task with `gokart.build` or `gokart.run`.
 

@@ -18,8 +18,6 @@ import luigi
 
 from gokart._gcs import GCSTarget, build_task_state_labels, needs_task_state_labels
 from gokart._pandas import import_pandas
-from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
-from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 from gokart.file_processor import FileProcessor, make_file_processor
 from gokart.object_storage import ObjectStorage
 from gokart.required_task_output import RequiredTaskOutput
@@ -38,29 +36,20 @@ class TargetOnKart(luigi.Target):
         return self._exists()
 
     def load(self) -> Any:
-        return wrap_load_with_lock(func=self._load, task_lock_params=self._get_task_lock_params())()
+        return self._load()
 
     def dump(
         self,
         obj: Any,
-        lock_at_dump: bool = True,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
     ) -> None:
-        if lock_at_dump:
-            wrap_dump_with_lock(func=self._dump, task_lock_params=self._get_task_lock_params(), exist_check=self.exists)(
-                obj=obj,
-                task_params=task_params,
-                custom_labels=custom_labels,
-                required_task_outputs=required_task_outputs,
-            )
-        else:
-            self._dump(obj=obj, task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs)
+        self._dump(obj=obj, task_params=task_params, custom_labels=custom_labels, required_task_outputs=required_task_outputs)
 
     def remove(self) -> None:
         if self.exists():
-            wrap_remove_with_lock(self._remove, task_lock_params=self._get_task_lock_params())()
+            self._remove()
 
     def last_modification_time(self) -> datetime:
         return self._last_modification_time()
@@ -78,10 +67,6 @@ class TargetOnKart(luigi.Target):
 
     @abstractmethod
     def _exists(self) -> bool:
-        pass
-
-    @abstractmethod
-    def _get_task_lock_params(self) -> TaskLockParams:
         pass
 
     @abstractmethod
@@ -116,17 +101,12 @@ class SingleFileTarget(TargetOnKart):
         self,
         target: luigi.target.FileSystemTarget,
         processor: FileProcessor,
-        task_lock_params: TaskLockParams,
     ) -> None:
         self._target = target
         self._processor = processor
-        self._task_lock_params = task_lock_params
 
     def _exists(self) -> bool:
         return cast(bool, self._target.exists())
-
-    def _get_task_lock_params(self) -> TaskLockParams:
-        return self._task_lock_params
 
     def _load(self) -> Any:
         # luigi.target.FileSystemTarget.open() has no annotation and its body is `pass`, so pyright infers its return type as None.
@@ -170,19 +150,14 @@ class ModelTarget(TargetOnKart):
         temporary_directory: str,
         load_function: Any,
         save_function: Any,
-        task_lock_params: TaskLockParams,
     ) -> None:
         self._zip_client = make_zip_client(file_path, temporary_directory)
         self._temporary_directory = temporary_directory
         self._save_function = save_function
         self._load_function = load_function
-        self._task_lock_params = task_lock_params
 
     def _exists(self) -> bool:
         return self._zip_client.exists()
-
-    def _get_task_lock_params(self) -> TaskLockParams:
-        return self._task_lock_params
 
     def _load(self) -> Any:
         with self._make_working_directory() as working_directory:
@@ -369,14 +344,12 @@ def make_target(
     file_path: str,
     unique_id: str | None = None,
     processor: FileProcessor | None = None,
-    task_lock_params: TaskLockParams | None = None,
     store_index_in_feather: bool = True,
 ) -> TargetOnKart:
-    _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     processor = processor or make_file_processor(file_path, store_index_in_feather=store_index_in_feather)
     file_system_target = _make_file_system_target(file_path, processor=processor, store_index_in_feather=store_index_in_feather)
-    return SingleFileTarget(target=file_system_target, processor=processor, task_lock_params=_task_lock_params)
+    return SingleFileTarget(target=file_system_target, processor=processor)
 
 
 def make_model_target(
@@ -385,9 +358,7 @@ def make_model_target(
     save_function: Any,
     load_function: Any,
     unique_id: str | None = None,
-    task_lock_params: TaskLockParams | None = None,
 ) -> TargetOnKart:
-    _task_lock_params = task_lock_params if task_lock_params is not None else make_task_lock_params(file_path=file_path, unique_id=unique_id)
     file_path = _make_file_path(file_path, unique_id)
     temporary_directory = os.path.join(temporary_directory, hashlib.md5(file_path.encode()).hexdigest())
     return ModelTarget(
@@ -395,5 +366,4 @@ def make_model_target(
         temporary_directory=temporary_directory,
         save_function=save_function,
         load_function=load_function,
-        task_lock_params=_task_lock_params,
     )

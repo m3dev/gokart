@@ -36,7 +36,6 @@ class RunLock(Protocol):
 class RedisRunLock:
     def __init__(self, task_lock_params: TaskLockParams) -> None:
         self._task_lock_params = task_lock_params
-        # A dedicated client keeps the worker's heartbeat thread off the shared connection pool that forked task processes use for dump/load locks.
         redis = import_redis()
         self._client = redis.Redis(
             **redis_connection_kwargs(

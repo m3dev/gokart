@@ -81,7 +81,7 @@ def dump_task_info_table(task: TaskOnKart[Any], task_info_dump_path: str, ignore
     unique_id = task.make_unique_id()
 
     task_info_target = make_target(file_path=task_info_dump_path, unique_id=unique_id)
-    task_info_target.dump(obj=task_info_table, lock_at_dump=False)
+    task_info_target.dump(obj=task_info_table)
 
 
 def dump_task_info_tree(task: TaskOnKart[Any], task_info_dump_path: str, ignore_task_names: list[str] | None = None, use_unique_id: bool = True) -> None:
@@ -110,4 +110,4 @@ def dump_task_info_tree(task: TaskOnKart[Any], task_info_dump_path: str, ignore_
     unique_id = task.make_unique_id() if use_unique_id else None
 
     task_info_target = make_target(file_path=task_info_dump_path, unique_id=unique_id)
-    task_info_target.dump(obj=task_info_tree, lock_at_dump=False)
+    task_info_target.dump(obj=task_info_tree)
