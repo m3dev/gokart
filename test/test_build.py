@@ -4,8 +4,10 @@ import io
 import logging
 import multiprocessing
 import os
+import pickle
 import tempfile
 import unittest
+from concurrent.futures import ProcessPoolExecutor
 from copy import copy
 from typing import Any, assert_type, cast
 from unittest.mock import patch
@@ -372,6 +374,34 @@ class TestGokartBuildErrorStatus(unittest.TestCase):
         self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)
 
 
+def _raise_gokart_build_error() -> None:
+    raise GokartBuildError('build failed', raised_exceptions={'Task(a=1)': [ValueError('boom')]}, status=luigi.LuigiStatusCode.FAILED)
+
+
+class TestGokartBuildErrorPickle(unittest.TestCase):
+    def test_pickle_round_trip_keeps_message_and_attributes(self):
+        error = GokartBuildError('build failed', raised_exceptions={'Task(a=1)': [ValueError('boom')]}, status=luigi.LuigiStatusCode.MISSING_EXT)
+        error.extra = 'kept'  # type: ignore[attr-defined]
+
+        restored = pickle.loads(pickle.dumps(error))
+
+        self.assertIsInstance(restored, GokartBuildError)
+        self.assertEqual(str(restored), 'build failed')
+        self.assertEqual(restored.args, ('build failed',))
+        self.assertEqual(list(restored.raised_exceptions), ['Task(a=1)'])
+        self.assertEqual([repr(e) for e in restored.raised_exceptions['Task(a=1)']], [repr(ValueError('boom'))])
+        self.assertEqual(restored.status, luigi.LuigiStatusCode.MISSING_EXT)
+        self.assertEqual(restored.extra, 'kept')
+
+    def test_error_raised_in_child_process_reaches_parent(self):
+        with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as executor:
+            with self.assertRaises(GokartBuildError) as cm:
+                executor.submit(_raise_gokart_build_error).result(timeout=60)
+        self.assertEqual(str(cm.exception), 'build failed')
+        self.assertEqual(list(cm.exception.raised_exceptions), ['Task(a=1)'])
+        self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)
+
+
 class _ErrorWithRequiredArgument(Exception):
     def __init__(self, message: str, code: int) -> None:
         super().__init__(message)
@@ -446,6 +476,14 @@ class _FailWithErrorWithReduceDroppingState(gokart.TaskOnKart[Any]):
 
     def run(self):
         raise _ErrorWithReduceDroppingState('state is dropped by pickle')
+
+
+class _FailWithGokartBuildError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        # WHY: like a task that calls gokart.build itself and lets its GokartBuildError propagate.
+        raise GokartBuildError('nested build failed', raised_exceptions={'Inner': [ValueError('inner')]}, status=luigi.LuigiStatusCode.FAILED)
 
 
 class _UnprintableError(Exception):
@@ -552,6 +590,19 @@ class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
         error = cm.exception.raised_exceptions[task.make_unique_id()][0]
         self.assertIsInstance(error, _ErrorWithReduceDroppingState)
         self.assertIn("raise _ErrorWithReduceDroppingState('state is dropped by pickle')", '\n'.join(getattr(error, '__notes__', [])))
+
+    def test_gokart_build_error_raised_in_task_is_sent_back_as_is(self):
+        task = _FailWithGokartBuildError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, GokartBuildError)
+        assert isinstance(error, GokartBuildError)
+        self.assertEqual(str(error), 'nested build failed')
+        self.assertEqual([repr(e) for e in error.raised_exceptions['Inner']], [repr(ValueError('inner'))])
+        self.assertEqual(error.status, luigi.LuigiStatusCode.FAILED)
+        self.assertIn('Traceback in the worker process', '\n'.join(error.__notes__))
 
     def test_exception_whose_str_raises_is_sent_back(self):
         task = _FailWithUnprintableError()
