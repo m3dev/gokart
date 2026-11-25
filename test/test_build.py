@@ -498,6 +498,32 @@ class _FailWithUnprintableError(gokart.TaskOnKart[Any]):
         raise _UnprintableError()
 
 
+def _rebuild_as_non_exception(message: str) -> str:
+    return message
+
+
+class _ErrorReducedToNonException(Exception):
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (_rebuild_as_non_exception, self.args)
+
+
+class _FailWithErrorReducedToNonException(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorReducedToNonException('not an exception after unpickling')
+
+
+class _FailWithBrokenOnFailure(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise ValueError('original failure')
+
+    def on_failure(self, exception: BaseException) -> str:
+        raise RuntimeError('on_failure is broken')
+
+
 class _PlainLuigiFailTask(luigi.Task):
     task_namespace = __name__
 
@@ -610,6 +636,24 @@ class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
             gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
 
         self.assertIsInstance(cm.exception.raised_exceptions[task.make_unique_id()][0], _UnprintableError)
+
+    def test_unpickled_object_that_is_not_an_exception_becomes_child_process_task_error(self):
+        task = _FailWithErrorReducedToNonException()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, ChildProcessTaskError)
+        assert isinstance(error, ChildProcessTaskError)
+        self.assertEqual(error.message, 'not an exception after unpickling')
+
+    def test_exception_is_sent_back_even_if_on_failure_raises(self):
+        task = _FailWithBrokenOnFailure()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual([str(e) for e in exceptions], ['original failure'])
 
     def test_failure_of_non_gokart_task_raises_gokart_build_error(self):
         # WHY: the FAILURE handler of gokart.build is registered on TaskOnKart, so a plain luigi task is not collected.

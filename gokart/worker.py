@@ -141,9 +141,15 @@ class _ExceptionFromChildProcess(NamedTuple):
         ex: BaseException | None = None
         if self.pickled is not None:
             try:
-                ex = pickle.loads(self.pickled)
+                loaded = pickle.loads(self.pickled)
             except Exception:
                 logger.warning(f'Failed to unpickle the exception from the worker process. Using {ChildProcessTaskError.__name__} instead.', exc_info=True)
+            else:
+                # WHY: a custom __reduce__ can rebuild any object, and a non-exception would end up in GokartBuildError.raised_exceptions.
+                if isinstance(loaded, BaseException):
+                    ex = loaded
+                else:
+                    logger.warning(f'Unpickled {type(loaded).__name__} is not an exception. Using {ChildProcessTaskError.__name__} instead.')
         if ex is None:
             ex = ChildProcessTaskError(self.type_name, self.message, self.traceback)
         # WHY: pickle drops __traceback__, so the parent would not know where the task failed. The note is added here rather
@@ -348,10 +354,13 @@ class TaskProcess(_ForkProcess):
             raise
         except BaseException as ex:
             status = FAILED
-            expl = self._handle_run_exception(ex)
-            if self.use_multiprocessing:
+            try:
+                expl = self._handle_run_exception(ex)
+            finally:
                 # WHY: FAILURE handlers ran in this process, so the parent gets the exception only through the result queue.
-                exception_from_child = _ExceptionFromChildProcess.from_exception(ex)
+                # It is sent even when on_failure() raises, since the FAILURE handlers have already seen it by then.
+                if self.use_multiprocessing:
+                    exception_from_child = _ExceptionFromChildProcess.from_exception(ex)
 
         finally:
             self.result_queue.put((self.task.task_id, status, expl, missing, new_deps, exception_from_child))
