@@ -91,6 +91,76 @@ fork_lock = threading.Lock()
 _WAIT_INTERVAL_EPS = 0.00001
 
 
+class ChildProcessTaskError(Exception):
+    """Stands in for a task exception that was raised in a worker process and could not be sent back to the parent by pickle.
+
+    It keeps the original exception's type name, message and traceback as strings.
+    """
+
+    def __init__(self, type_name: str, message: str, traceback: str) -> None:
+        # WHY: all fields go in args so that the default Exception.__reduce__ can pickle this error.
+        super().__init__(type_name, message, traceback)
+        self.type_name = type_name
+        self.message = message
+        self.traceback = traceback
+
+    def __str__(self) -> str:
+        return f'{self.type_name}: {self.message}'
+
+
+class _ExceptionFromChildProcess(NamedTuple):
+    """A task exception sent from a worker process to the parent through the result queue."""
+
+    # WHY: the exception is pickled here so that one that can't be pickled never reaches the queue, which would
+    # drop the whole result and make the parent wait for the task forever. The parent unpickles it with a fallback.
+    pickled: bytes | None
+    type_name: str
+    message: str
+    traceback: str
+    pid: int
+
+    @classmethod
+    def from_exception(cls, ex: BaseException) -> _ExceptionFromChildProcess:
+        try:
+            message = str(ex)
+        except Exception:
+            message = f'<{type(ex).__name__}.__str__() failed>'
+        try:
+            pickled: bytes | None = pickle.dumps(ex)
+        except Exception:
+            pickled = None
+        return cls(
+            pickled=pickled,
+            type_name=f'{type(ex).__module__}.{type(ex).__qualname__}',
+            message=message,
+            traceback=''.join(traceback.format_exception(ex)),
+            pid=os.getpid(),
+        )
+
+    def load(self) -> BaseException:
+        ex: BaseException | None = None
+        if self.pickled is not None:
+            try:
+                loaded = pickle.loads(self.pickled)
+            except Exception:
+                logger.warning(f'Failed to unpickle the exception from the worker process. Using {ChildProcessTaskError.__name__} instead.', exc_info=True)
+            else:
+                # WHY: a custom __reduce__ can rebuild any object, and a non-exception would end up in GokartBuildError.raised_exceptions.
+                if isinstance(loaded, BaseException):
+                    ex = loaded
+                else:
+                    logger.warning(f'Unpickled {type(loaded).__name__} is not an exception. Using {ChildProcessTaskError.__name__} instead.')
+        if ex is None:
+            ex = ChildProcessTaskError(self.type_name, self.message, self.traceback)
+        # WHY: pickle drops __traceback__, so the parent would not know where the task failed. The note is added here rather
+        # than in the worker process because an exception whose __reduce__ rebuilds it from args alone drops __notes__.
+        try:
+            ex.add_note(f'Traceback in the worker process (pid {self.pid}):\n{self.traceback}')
+        except Exception:
+            logger.warning('Failed to add the traceback in the worker process as a note.', exc_info=True)
+        return ex
+
+
 # luigi's rpc_message_callback decorator is untyped; declare it as signature-preserving
 _F = TypeVar('_F', bound=Callable[..., Any])
 
@@ -227,6 +297,7 @@ class TaskProcess(_ForkProcess):
         expl = ''
         missing: list[str] = []
         new_deps: list[tuple[str, str, dict[str, str]]] | None = []
+        exception_from_child: _ExceptionFromChildProcess | None = None
         try:
             # Verify that all the tasks are fulfilled! For external tasks we
             # don't care about unfulfilled dependencies, because we are just
@@ -283,10 +354,16 @@ class TaskProcess(_ForkProcess):
             raise
         except BaseException as ex:
             status = FAILED
-            expl = self._handle_run_exception(ex)
+            try:
+                expl = self._handle_run_exception(ex)
+            finally:
+                # WHY: FAILURE handlers ran in this process, so the parent gets the exception only through the result queue.
+                # It is sent even when on_failure() raises, since the FAILURE handlers have already seen it by then.
+                if self.use_multiprocessing:
+                    exception_from_child = _ExceptionFromChildProcess.from_exception(ex)
 
         finally:
-            self.result_queue.put((self.task.task_id, status, expl, missing, new_deps))
+            self.result_queue.put((self.task.task_id, status, expl, missing, new_deps, exception_from_child))
 
     def _handle_run_exception(self, ex: BaseException) -> str:
         logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
@@ -483,7 +560,12 @@ class Worker:
         worker_processes: int = 1,
         assistant: bool = False,
         config: gokart_worker | None = None,
+        on_child_process_failure: Callable[[Task, BaseException], None] | None = None,
     ) -> None:
+        """
+        :param on_child_process_failure: called in this process with the exception of a task that failed in a worker process.
+            FAILURE handlers run in that worker process, so they can't pass the exception back to this process.
+        """
         if scheduler is None:
             scheduler = Scheduler()
 
@@ -503,6 +585,7 @@ class Worker:
         # luigi's Scheduler methods are untyped, so keep the attribute as Any
         self._scheduler: Any = scheduler
         self._assistant = assistant
+        self._on_child_process_failure = on_child_process_failure
         self._stop_requesting_work = False
 
         self.host = socket.gethostname()
@@ -1237,7 +1320,7 @@ class Worker:
                 continue
 
             logger.info(error_msg)
-            self._task_result_queue.put((task_id, FAILED, error_msg, [], []))
+            self._task_result_queue.put((task_id, FAILED, error_msg, [], [], None))
 
     def _handle_next_task(self) -> None:
         """
@@ -1253,15 +1336,23 @@ class Worker:
             self._purge_children()  # Deal with subprocess failures
 
             try:
-                task_id, status, expl, missing, new_requirements = self._task_result_queue.get(timeout=self._config.wait_interval)
+                task_id, status, expl, missing, new_requirements, exception_from_child = self._task_result_queue.get(timeout=self._config.wait_interval)
             except Queue.Empty:
                 return
 
             task = self._scheduled_tasks[task_id]
             if not task or task_id not in self._running_tasks:
+                # WHY: the run was already handled (e.g. _purge_children reported a timeout), so its exception is dropped with its status.
                 continue
                 # Not a running task. Probably already removed.
                 # Maybe it yielded something?
+
+            if exception_from_child is not None and self._on_child_process_failure is not None:
+                try:
+                    self._on_child_process_failure(task, exception_from_child.load())
+                except Exception:
+                    # WHY: like luigi's event callbacks, a broken callback must not stop the worker loop.
+                    logger.exception(f'Error in on_child_process_failure for {task_id}')
 
             # external task if run not implemented, retry-able if config option is enabled.
             external_task_retryable = _is_external(task) and self._config.retry_external_tasks
