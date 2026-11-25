@@ -112,9 +112,8 @@ class TaskOnKartPlugin(Plugin):
             return self._task_on_kart_class_maker_callback
 
         sym = self.lookup_fully_qualified(fullname)
-        if sym and isinstance(sym.node, TypeInfo):
-            if any(base.fullname == 'gokart.task.TaskOnKart' for base in sym.node.mro):
-                return self._task_on_kart_class_maker_callback
+        if sym and isinstance(sym.node, TypeInfo) and any(base.fullname == 'gokart.task.TaskOnKart' for base in sym.node.mro):
+            return self._task_on_kart_class_maker_callback
         return None
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
@@ -453,9 +452,10 @@ class TaskOnKartTransformer:
             underlying_type = self._api.named_type('datetime.timedelta', [])
         elif parameter_name in ['luigi.parameter.DictParameter', 'luigi.parameter.OptionalDictParameter']:
             underlying_type = self._api.named_type('builtins.dict', [AnyType(TypeOfAny.unannotated), AnyType(TypeOfAny.unannotated)])
-        elif parameter_name in ['luigi.parameter.ListParameter', 'luigi.parameter.OptionalListParameter']:
-            underlying_type = self._api.named_type('builtins.tuple', [AnyType(TypeOfAny.unannotated)])
-        elif parameter_name in ['luigi.parameter.TupleParameter', 'luigi.parameter.OptionalTupleParameter']:
+        elif parameter_name in ['luigi.parameter.ListParameter', 'luigi.parameter.OptionalListParameter'] or parameter_name in [
+            'luigi.parameter.TupleParameter',
+            'luigi.parameter.OptionalTupleParameter',
+        ]:
             underlying_type = self._api.named_type('builtins.tuple', [AnyType(TypeOfAny.unannotated)])
         elif parameter_name in ['luigi.parameter.PathParameter', 'luigi.parameter.OptionalPathParameter']:
             underlying_type = self._api.named_type('pathlib.Path', [])
@@ -465,9 +465,7 @@ class TaskOnKartTransformer:
             underlying_type = self._api.named_type('builtins.list', [self._api.named_type('gokart.task.TaskOnKart', [AnyType(TypeOfAny.unannotated)])])
         elif parameter_name in ['gokart.parameter.ExplicitBoolParameter']:
             underlying_type = self._api.named_type('builtins.bool', [])
-        elif parameter_name in ['luigi.parameter.NumericalParameter']:
-            underlying_type = self._get_type_from_args(parameter, 'var_type')
-        elif parameter_name in ['luigi.parameter.ChoiceParameter']:
+        elif parameter_name in ['luigi.parameter.NumericalParameter'] or parameter_name in ['luigi.parameter.ChoiceParameter']:
             underlying_type = self._get_type_from_args(parameter, 'var_type')
         elif parameter_name in ['luigi.parameter.ChoiceListParameter']:
             base_type = self._get_type_from_args(parameter, 'var_type')
@@ -551,8 +549,11 @@ def _extract_parameter_name(expr: Expression) -> str | None:
 
 
 def plugin(version: str) -> type[Plugin]:
+    # DeprecationWarning, unlike the other deprecations: mypy calls plugin(), so the warning cannot point at the user's code,
+    # and mypy fails to load a plugin whose entry point raises, so FutureWarning would break CIs that run with -W error::FutureWarning.
+    # It still breaks mypy under -W error or -W error::DeprecationWarning; docs/mypy_plugin.rst says how to ignore it.
     warnings.warn(
-        'gokart mypy plugin is deprecated and will be removed in a future release. '
+        'gokart mypy plugin is deprecated and will be removed in gokart 2.0.0. '
         'Annotate parameters with the parameter type instead (e.g. `foo: luigi.IntParameter = luigi.IntParameter()`), '
         'which mypy and pyright check without any plugin. '
         'See https://gokart.readthedocs.io/en/latest/mypy_plugin.html',

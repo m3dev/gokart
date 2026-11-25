@@ -3,9 +3,10 @@ from __future__ import annotations
 import bz2
 import datetime
 import json
+import re
 from collections.abc import Callable, Iterable
 from logging import getLogger
-from typing import Any, Generic, Protocol, TypedDict, TypeVar, Unpack, cast
+from typing import Any, Generic, Protocol, Self, TypedDict, TypeVar, Unpack, cast
 from warnings import warn
 
 import luigi
@@ -69,7 +70,7 @@ class TaskInstanceParameter(luigi.Parameter[TASK_ON_KART_TYPE], Generic[TASK_ON_
 
     def serialize(self, x: TASK_ON_KART_TYPE) -> str:
         params = bz2.compress(json.dumps(x.to_str_params(only_significant=True)).encode()).hex()
-        values = dict(type=x.get_task_family(), params=params)
+        values = {'type': x.get_task_family(), 'params': params}
         return cast(str, cast(Any, luigi.DictParameter()).serialize(values))
 
     def _warn_on_wrong_param_type(self, param_name: str, param_value: Any) -> None:
@@ -120,9 +121,6 @@ class ExplicitBoolParameter(luigi.BoolParameter):
         return cast(dict[str, Any], cast(Any, luigi.Parameter)._parser_kwargs(*args, **kwargs))
 
 
-T = TypeVar('T')
-
-
 class Serializable(Protocol):
     def gokart_serialize(self) -> str:
         """Implement this method to serialize the object as an parameter
@@ -131,7 +129,7 @@ class Serializable(Protocol):
         ...
 
     @classmethod
-    def gokart_deserialize(cls: type[T], s: str) -> T:
+    def gokart_deserialize(cls, s: str) -> Self:
         """Implement this method to deserialize the object from a string"""
         ...
 
@@ -181,3 +179,45 @@ class ZonedDateSecondParameter(luigi.Parameter[datetime.datetime]):
         # microsecond is removed because the number of digits of microsecond is not fixed.
         # See also luigi's implementation  https://github.com/spotify/luigi/blob/v3.6.0/luigi/parameter.py#L612
         return x.replace(microsecond=0)
+
+
+_BYTE_SIZE_UNITS: dict[str, int] = {
+    'kb': 1000,
+    'mb': 1000**2,
+    'gb': 1000**3,
+    'kib': 1024,
+    'mib': 1024**2,
+    'gib': 1024**3,
+}
+_BYTE_SIZE_PATTERN = re.compile(r'(?P<number>\d+)[ \t]*(?P<unit>[kmg]i?b)?', re.IGNORECASE | re.ASCII)
+
+
+class ByteSizeParameter(luigi.Parameter[int]):
+    """
+    Parameter whose value is a number of bytes, written as an ``int`` or with a unit.
+
+    Decimal units (``10KB``, ``10MB``, ``10GB``) are powers of 1000 and binary units (``10KiB``, ``10MiB``, ``10GiB``) are powers of 1024.
+    Units are case-insensitive and may be separated from the number by spaces. The number must be a non-negative integer.
+    """
+
+    def parse(self, x: str) -> int:
+        # a TOML luigi config hands over a bare number as an int, as luigi.IntParameter accepts
+        if isinstance(x, int) and not isinstance(x, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+            return x
+        match = _BYTE_SIZE_PATTERN.fullmatch(x)
+        if match is None:
+            # a bare M / K / G is rejected since it is unclear whether it means MB or MiB
+            raise luigi.parameter.ParameterException(
+                f'Invalid byte size {x!r}: use a non-negative integer of bytes, or one with KB / MB / GB (1000) or KiB / MiB / GiB (1024).'
+            )
+        unit = match['unit']
+        return int(match['number']) * (_BYTE_SIZE_UNITS[unit.lower()] if unit else 1)
+
+    def serialize(self, x: int) -> str:
+        return str(x)
+
+
+class OptionalByteSizeParameter(luigi.parameter.OptionalParameterMixin[int], ByteSizeParameter):  # type: ignore[misc]
+    """ByteSizeParameter that also takes ``None``, which an empty string parses to."""
+
+    expected_type = int

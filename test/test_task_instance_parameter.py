@@ -9,17 +9,14 @@ from gokart import ListTaskInstanceParameter, TaskInstanceParameter, TaskOnKart
 
 class _DummySubTask(TaskOnKart[Any]):
     task_namespace = __name__
-    pass
 
 
 class _DummyCorrectSubClassTask(_DummySubTask):
     task_namespace = __name__
-    pass
 
 
 class _DummyInvalidSubClassTask(TaskOnKart[Any]):
     task_namespace = __name__
-    pass
 
 
 class _DummyTask(TaskOnKart[Any]):

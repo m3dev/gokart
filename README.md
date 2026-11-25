@@ -77,9 +77,11 @@ A minimal gokart tasks looks something like this:
 ```python
 import gokart
 
+
 class Example(gokart.TaskOnKart):
     def run(self):
         self.dump('Hello, world!')
+
 
 task = Example()
 output = gokart.build(task)
@@ -98,25 +100,29 @@ Hello, world!
 We introduce type-annotations to make a gokart pipeline robust.
 Please check the following example to see how to use type-annotations on gokart.
 Type checkers that support `dataclass_transform`, such as mypy and pyright, check this example without any plugin.
-(The [mypy plugin](https://gokart.readthedocs.io/en/latest/mypy_plugin.html) is deprecated and does not support this style.)
+(The [mypy plugin](https://gokart.readthedocs.io/en/latest/mypy_plugin.html) is deprecated, will be removed in gokart 2.0.0 ([#685](https://github.com/m3dev/gokart/issues/685)), and does not support this style.)
 
 ```python
 import gokart
+
 
 # `gokart.TaskOnKart[str]` means that the task dumps `str`
 class StrDumpTask(gokart.TaskOnKart[str]):
     def run(self):
         self.dump('Hello, world!')
 
+
 # `gokart.TaskOnKart[int]` means that the task dumps `int`
 class OneDumpTask(gokart.TaskOnKart[int]):
     def run(self):
         self.dump(1)
 
+
 # `gokart.TaskOnKart[int]` means that the task dumps `int`
 class TwoDumpTask(gokart.TaskOnKart[int]):
     def run(self):
         self.dump(2)
+
 
 class AddTask(gokart.TaskOnKart[int]):
     # `a` requires a task to dump `int`

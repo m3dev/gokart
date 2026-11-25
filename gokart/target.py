@@ -302,12 +302,12 @@ class LargeDataFrameProcessor(_LargeDataFrameProcessor):
     """Save a DataFrame as several pickle files, and load them back into one DataFrame.
 
     .. warning::
-        ``LargeDataFrameProcessor`` is deprecated and will be removed in a future major release.
+        ``LargeDataFrameProcessor`` is deprecated and will be removed in gokart 2.0.0.
         Dump the DataFrame to a single pickle file instead, e.g. with ``TaskOnKart.make_target('data.pkl')``.
     """
 
     _DEPRECATION_MESSAGE = (
-        'LargeDataFrameProcessor is deprecated and will be removed in a future major release. '
+        'LargeDataFrameProcessor is deprecated and will be removed in gokart 2.0.0. '
         "Dump the DataFrame to a single pickle file instead, e.g. with TaskOnKart.make_target('data.pkl')."
     )
 

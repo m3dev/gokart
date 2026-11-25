@@ -12,24 +12,30 @@ class TestGCSConfig(unittest.TestCase):
         mock = MagicMock()
         with patch.dict(os.environ, {'env_name': ''}), patch('luigi.contrib.gcs.GCSClient', mock):
             GCSConfig(gcs_credential_name='env_name')._get_gcs_client()
-            self.assertEqual(dict(oauth_credentials=None), mock.call_args[1])
+            self.assertEqual({'oauth_credentials': None}, mock.call_args[1])
 
     def test_get_gcs_client_with_file_path(self):
         mock = MagicMock()
         file_path = 'test.json'
-        with patch.dict(os.environ, {'env_name': file_path}), patch('luigi.contrib.gcs.GCSClient'):
-            with patch('google.oauth2.service_account.Credentials.from_service_account_file', mock):
-                with patch('os.path.isfile', return_value=True):
-                    GCSConfig(gcs_credential_name='env_name')._get_gcs_client()
-                    self.assertEqual(file_path, mock.call_args[0][0])
+        with (
+            patch.dict(os.environ, {'env_name': file_path}),
+            patch('luigi.contrib.gcs.GCSClient'),
+            patch('google.oauth2.service_account.Credentials.from_service_account_file', mock),
+            patch('os.path.isfile', return_value=True),
+        ):
+            GCSConfig(gcs_credential_name='env_name')._get_gcs_client()
+            self.assertEqual(file_path, mock.call_args[0][0])
 
     def test_get_gcs_client_with_json(self):
         mock = MagicMock()
         json_str = '{"test": 1}'
-        with patch.dict(os.environ, {'env_name': json_str}), patch('luigi.contrib.gcs.GCSClient'):
-            with patch('google.oauth2.service_account.Credentials.from_service_account_info', mock):
-                GCSConfig(gcs_credential_name='env_name')._get_gcs_client()
-                self.assertEqual(dict(test=1), mock.call_args[0][0])
+        with (
+            patch.dict(os.environ, {'env_name': json_str}),
+            patch('luigi.contrib.gcs.GCSClient'),
+            patch('google.oauth2.service_account.Credentials.from_service_account_info', mock),
+        ):
+            GCSConfig(gcs_credential_name='env_name')._get_gcs_client()
+            self.assertEqual({'test': 1}, mock.call_args[0][0])
 
 
 class TestGetStorageClient:
@@ -75,5 +81,5 @@ class TestGetStorageClient:
 
 class TestGetGCSClientDeprecation:
     def test_warns_and_points_to_get_storage_client(self):
-        with patch('luigi.contrib.gcs.GCSClient'), pytest.warns(DeprecationWarning, match='get_storage_client'):
+        with patch('luigi.contrib.gcs.GCSClient'), pytest.warns(FutureWarning, match=r'will be removed in gokart 2\.0\.0\. .*get_storage_client'):
             GCSConfig().get_gcs_client()

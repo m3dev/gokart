@@ -29,7 +29,7 @@ The lock is extended while the task is running, and expires after `timeout` seco
     url=redis://localhost:6379
     timeout=180
 
-`redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `FutureWarning`.
+`redis_host`, `redis_port` and `redis_timeout` of `gokart.TaskOnKart` still work, but they are deprecated: when set, they take precedence over `[gokart_lock]` and emit a `FutureWarning`. They will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
 
 Object storage (GCS / S3) backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

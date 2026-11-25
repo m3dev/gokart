@@ -78,12 +78,12 @@ class JsonFileProcessor(FileProcessor):
 
         Args:
             orient: JSON orientation. 'records' currently reads/writes newline-delimited JSON, but this is deprecated
-                and will change to a JSON array in a future release. Use NdjsonFileProcessor for newline-delimited JSON.
+                and will change to a JSON array in gokart 2.0.0. Use NdjsonFileProcessor for newline-delimited JSON.
             dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
         if orient == 'records':
             warnings.warn(
-                "JsonFileProcessor(orient='records') reads/writes newline-delimited JSON, but this will change to a JSON array in a future release. "
+                "JsonFileProcessor(orient='records') reads/writes newline-delimited JSON, but this will change to a JSON array in gokart 2.0.0. "
                 'Use NdjsonFileProcessor to keep NDJSON.',
                 FutureWarning,
                 stacklevel=2,
@@ -231,22 +231,19 @@ def make_file_processor(file_path: str, store_index_in_feather: bool = True, *, 
 
 
 __all__ = [
-    # Base classes and types
-    'FileProcessor',
-    'DataFrameType',
-    # Common processors
     'BinaryFileProcessor',
-    'PickleFileProcessor',
-    'TextFileProcessor',
-    'GzipFileProcessor',
-    'XmlFileProcessor',
-    'NpzFileProcessor',
-    # DataFrame processors (with factory pattern)
     'CsvFileProcessor',
+    'DataFrameType',
+    'FeatherFileProcessor',
+    'FileProcessor',
+    'GzipFileProcessor',
     'JsonFileProcessor',
     'NdjsonFileProcessor',
+    'NpzFileProcessor',
     'ParquetFileProcessor',
-    'FeatherFileProcessor',
+    'PickleFileProcessor',
+    'TextFileProcessor',
+    'XmlFileProcessor',
     # Utility functions
     'make_file_processor',
 ]

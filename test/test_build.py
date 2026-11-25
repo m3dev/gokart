@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import io
 import logging
+import multiprocessing
 import os
+import pickle
 import tempfile
 import unittest
+from concurrent.futures import ProcessPoolExecutor
 from copy import copy
-from typing import Any, assert_type
+from typing import Any, assert_type, cast
 from unittest.mock import patch
 
 import luigi
@@ -16,6 +19,7 @@ from luigi import setup_logging
 import gokart
 from gokart.build import GokartBuildError, HasLockedTaskException, LoggerConfig, TaskDumpConfig, TaskDumpMode, TaskDumpOutputType, process_task_info
 from gokart.conflict_prevention_lock.task_lock import TaskLockException
+from gokart.errors import ChildProcessTaskError
 from gokart.utils import add_config
 
 
@@ -173,10 +177,9 @@ class LoggerConfigTest(unittest.TestCase):
             (logging.DEBUG, logging.DEBUG, logging.NOTSET),
             (logging.CRITICAL, logging.CRITICAL, logging.ERROR),
         ):
-            with self.subTest(level=level, enable_expected=enable_expected, disable_expected=disable_expected):
-                with LoggerConfig(level) as lc:
-                    self.assertTrue(lc.logger.isEnabledFor(enable_expected))
-                    self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
+            with self.subTest(level=level, enable_expected=enable_expected, disable_expected=disable_expected), LoggerConfig(level) as lc:
+                self.assertTrue(lc.logger.isEnabledFor(enable_expected))
+                self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
 
     def test_logger_config_restores_previous_disable_level(self):
         original_disable = logging.root.manager.disable
@@ -307,6 +310,371 @@ class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
             # This should raise GokartBuildError after the fix
             with self.assertRaises(GokartBuildError):
                 gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
+
+
+class _MissingExternalTask(luigi.ExternalTask):
+    task_namespace = __name__
+    path: luigi.Parameter = luigi.Parameter()
+
+    def output(self) -> Any:
+        return luigi.LocalTarget(self.path)
+
+
+class _DependsOnMissingExternal(gokart.TaskOnKart[int]):
+    task_namespace = __name__
+    path: luigi.Parameter = luigi.Parameter()
+
+    def requires(self) -> Any:
+        return _MissingExternalTask(path=self.path)
+
+    def run(self):
+        self.dump(1)
+
+
+class _NeedsUnavailableResource(gokart.TaskOnKart[int]):
+    task_namespace = __name__
+
+    # WHY: luigi treats an unconfigured resource as having 1 unit, so asking for 2 is never satisfiable; the odd name keeps a developer's luigi.cfg out of it
+    def process_resources(self) -> dict[str, int]:
+        return {'_gokart_test_not_run': 2}
+
+    def run(self):
+        self.dump(1)
+
+
+class TestBuildMissingExternal(unittest.TestCase):
+    def test_build_raises_when_external_dependency_is_missing(self):
+        """MISSING_EXT must not look like a success (the task never ran)."""
+        for return_value in (True, False):
+            with self.subTest(return_value=return_value), tempfile.TemporaryDirectory() as d:
+                task = _DependsOnMissingExternal(path=os.path.join(d, 'missing'))
+                with self.assertRaises(GokartBuildError) as cm:
+                    gokart.build(task, return_value=return_value, reset_register=False, log_level=logging.CRITICAL)
+                self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.MISSING_EXT)
+                self.assertEqual(cm.exception.raised_exceptions, {})
+
+
+class TestBuildNotRun(unittest.TestCase):
+    def test_build_raises_when_task_cannot_run(self):
+        """NOT_RUN: the task needs more of an unconfigured resource (1 unit) than the scheduler has, so it is never run."""
+        with tempfile.TemporaryDirectory() as d:
+            task = _NeedsUnavailableResource(workspace_directory=d)
+            with self.assertRaises(GokartBuildError) as cm:
+                gokart.build(task, return_value=False, reset_register=False, log_level=logging.CRITICAL)
+            self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.NOT_RUN)
+            self.assertEqual(cm.exception.raised_exceptions, {})
+
+
+class TestGokartBuildErrorStatus(unittest.TestCase):
+    def test_status_defaults_to_none(self):
+        self.assertIsNone(GokartBuildError('msg', raised_exceptions={}).status)
+
+    def test_failed_task_has_failed_status(self):
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(_DummyFailedTask(), reset_register=False, log_level=logging.CRITICAL)
+        self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)
+
+
+def _raise_gokart_build_error() -> None:
+    raise GokartBuildError('build failed', raised_exceptions={'Task(a=1)': [ValueError('boom')]}, status=luigi.LuigiStatusCode.FAILED)
+
+
+class TestGokartBuildErrorPickle(unittest.TestCase):
+    def test_pickle_round_trip_keeps_message_and_attributes(self):
+        error = GokartBuildError('build failed', raised_exceptions={'Task(a=1)': [ValueError('boom')]}, status=luigi.LuigiStatusCode.MISSING_EXT)
+        error.extra = 'kept'  # type: ignore[attr-defined]
+
+        restored = pickle.loads(pickle.dumps(error))
+
+        self.assertIsInstance(restored, GokartBuildError)
+        self.assertEqual(str(restored), 'build failed')
+        self.assertEqual(restored.args, ('build failed',))
+        self.assertEqual(list(restored.raised_exceptions), ['Task(a=1)'])
+        self.assertEqual([repr(e) for e in restored.raised_exceptions['Task(a=1)']], [repr(ValueError('boom'))])
+        self.assertEqual(restored.status, luigi.LuigiStatusCode.MISSING_EXT)
+        self.assertEqual(restored.extra, 'kept')
+
+    def test_error_raised_in_child_process_reaches_parent(self):
+        with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as executor, self.assertRaises(GokartBuildError) as cm:
+            executor.submit(_raise_gokart_build_error).result(timeout=60)
+        self.assertEqual(str(cm.exception), 'build failed')
+        self.assertEqual(list(cm.exception.raised_exceptions), ['Task(a=1)'])
+        self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)
+
+
+class _ErrorWithRequiredArgument(Exception):
+    def __init__(self, message: str, code: int) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+class _FailWithValueError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise ValueError('boom')
+
+
+_raised_in_run: list[BaseException] = []
+
+
+class _FailWithRecordedError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        error = ValueError('recorded')
+        _raised_in_run.append(error)
+        raise error
+
+
+class _FailWithSystemExit(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise SystemExit(3)
+
+
+class _FailWithUnpicklableError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorWithRequiredArgument('cannot be unpickled', code=1)
+
+
+_TEST_PROCESS_ID = os.getpid()
+
+
+def _rebuild_only_in_child_process(message: str) -> _ErrorOnlyLoadableInChildProcess:
+    if os.getpid() == _TEST_PROCESS_ID:
+        raise ModuleNotFoundError('the module of this exception is importable only in the worker process')
+    return _ErrorOnlyLoadableInChildProcess(message)
+
+
+class _ErrorOnlyLoadableInChildProcess(Exception):
+    """Unpickling works in the worker process but fails in the parent, like an exception class imported only in run()."""
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (_rebuild_only_in_child_process, self.args)
+
+
+class _FailWithErrorOnlyLoadableInChildProcess(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorOnlyLoadableInChildProcess('loadable only in the child')
+
+
+class _ErrorWithReduceDroppingState(Exception):
+    """Like many library exceptions, its __reduce__ rebuilds it from args only, so attributes such as __notes__ are not pickled."""
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (type(self), self.args)
+
+
+class _FailWithErrorWithReduceDroppingState(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorWithReduceDroppingState('state is dropped by pickle')
+
+
+class _FailWithGokartBuildError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        # WHY: like a task that calls gokart.build itself and lets its GokartBuildError propagate.
+        raise GokartBuildError('nested build failed', raised_exceptions={'Inner': [ValueError('inner')]}, status=luigi.LuigiStatusCode.FAILED)
+
+
+class _UnprintableError(Exception):
+    def __str__(self) -> str:
+        raise RuntimeError('__str__ is broken')
+
+
+class _FailWithUnprintableError(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _UnprintableError()
+
+
+def _rebuild_as_non_exception(message: str) -> str:
+    return message
+
+
+class _ErrorReducedToNonException(Exception):
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (_rebuild_as_non_exception, self.args)
+
+
+class _FailWithErrorReducedToNonException(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise _ErrorReducedToNonException('not an exception after unpickling')
+
+
+class _FailWithBrokenOnFailure(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def run(self):
+        raise ValueError('original failure')
+
+    def on_failure(self, exception: BaseException) -> str:
+        raise RuntimeError('on_failure is broken')
+
+
+class _PlainLuigiFailTask(luigi.Task):
+    task_namespace = __name__
+
+    def run(self):
+        raise ValueError('plain luigi task failed')
+
+
+class _RequirePlainLuigiFailTask(gokart.TaskOnKart[Any]):
+    task_namespace = __name__
+
+    def requires(self) -> Any:
+        return _PlainLuigiFailTask()
+
+    def run(self):
+        self.dump('done')
+
+
+class TestBuildRaisedExceptionsWithMultipleWorkers(unittest.TestCase):
+    """With workers > 1, a task runs and fails in a forked process, so its exception has to be sent back to the parent."""
+
+    def test_raised_exceptions_has_exception_of_failed_task(self):
+        task = _FailWithValueError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual(len(exceptions), 1)
+        self.assertIsInstance(exceptions[0], ValueError)
+        self.assertEqual(str(exceptions[0]), 'boom')
+        self.assertIn("raise ValueError('boom')", '\n'.join(exceptions[0].__notes__))
+        # WHY: pickle drops __traceback__, which is why the note carries the child's traceback.
+        self.assertIsNone(exceptions[0].__traceback__)
+
+    def test_single_worker_keeps_the_raised_exception_without_note(self):
+        # WHY: pins the difference from workers > 1: in-process, the same object arrives with its traceback and no note.
+        _raised_in_run.clear()
+        task = _FailWithRecordedError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=1, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual(len(exceptions), 1)
+        self.assertIs(exceptions[0], _raised_in_run[0])
+        self.assertIsNotNone(exceptions[0].__traceback__)
+        self.assertFalse(hasattr(exceptions[0], '__notes__'))
+
+    def test_base_exception_is_collected_as_with_a_single_worker(self):
+        for workers in (1, 2):
+            with self.subTest(workers=workers):
+                task = _FailWithSystemExit()
+                with self.assertRaises(GokartBuildError) as cm:
+                    gokart.build(task, reset_register=False, workers=workers, log_level=logging.CRITICAL)
+
+                exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+                self.assertEqual(len(exceptions), 1)
+                self.assertIsInstance(exceptions[0], SystemExit)
+                self.assertEqual(cast(SystemExit, exceptions[0]).code, 3)
+
+    def test_exception_that_cannot_be_unpickled_becomes_child_process_task_error(self):
+        task = _FailWithUnpicklableError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual(len(exceptions), 1)
+        error = exceptions[0]
+        self.assertIsInstance(error, ChildProcessTaskError)
+        assert isinstance(error, ChildProcessTaskError)
+        self.assertEqual(error.type_name, f'{__name__}._ErrorWithRequiredArgument')
+        self.assertEqual(error.message, 'cannot be unpickled')
+        self.assertIn("raise _ErrorWithRequiredArgument('cannot be unpickled', code=1)", error.traceback)
+        self.assertIn(error.traceback, '\n'.join(error.__notes__))
+
+    def test_exception_that_the_parent_cannot_unpickle_becomes_child_process_task_error(self):
+        task = _FailWithErrorOnlyLoadableInChildProcess()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, ChildProcessTaskError)
+        assert isinstance(error, ChildProcessTaskError)
+        self.assertEqual(error.type_name, f'{__name__}._ErrorOnlyLoadableInChildProcess')
+        self.assertEqual(error.message, 'loadable only in the child')
+
+    def test_traceback_note_is_kept_when_reduce_drops_the_exception_state(self):
+        task = _FailWithErrorWithReduceDroppingState()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, _ErrorWithReduceDroppingState)
+        self.assertIn("raise _ErrorWithReduceDroppingState('state is dropped by pickle')", '\n'.join(getattr(error, '__notes__', [])))
+
+    def test_gokart_build_error_raised_in_task_is_sent_back_as_is(self):
+        task = _FailWithGokartBuildError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, GokartBuildError)
+        assert isinstance(error, GokartBuildError)
+        self.assertEqual(str(error), 'nested build failed')
+        self.assertEqual([repr(e) for e in error.raised_exceptions['Inner']], [repr(ValueError('inner'))])
+        self.assertEqual(error.status, luigi.LuigiStatusCode.FAILED)
+        self.assertIn('Traceback in the worker process', '\n'.join(error.__notes__))
+
+    def test_exception_whose_str_raises_is_sent_back(self):
+        task = _FailWithUnprintableError()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        self.assertIsInstance(cm.exception.raised_exceptions[task.make_unique_id()][0], _UnprintableError)
+
+    def test_unpickled_object_that_is_not_an_exception_becomes_child_process_task_error(self):
+        task = _FailWithErrorReducedToNonException()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        error = cm.exception.raised_exceptions[task.make_unique_id()][0]
+        self.assertIsInstance(error, ChildProcessTaskError)
+        assert isinstance(error, ChildProcessTaskError)
+        self.assertEqual(error.message, 'not an exception after unpickling')
+
+    def test_exception_is_sent_back_even_if_on_failure_raises(self):
+        task = _FailWithBrokenOnFailure()
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, workers=2, log_level=logging.CRITICAL)
+
+        exceptions = cm.exception.raised_exceptions[task.make_unique_id()]
+        self.assertEqual([str(e) for e in exceptions], ['original failure'])
+
+    def test_failure_of_non_gokart_task_raises_gokart_build_error(self):
+        # WHY: the FAILURE handler of gokart.build is registered on TaskOnKart, so a plain luigi task is not collected.
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(_RequirePlainLuigiFailTask(), reset_register=False, workers=2, log_level=logging.CRITICAL)
+        self.assertEqual(cm.exception.raised_exceptions, {})
+
+    def test_failure_handler_runs_only_once(self):
+        # WHY: the handler runs in the forked child, so the count lives in shared memory to be visible here.
+        calls = multiprocessing.get_context('fork').Value('i', 0)
+
+        def count_failure(task: Any, exception: Exception) -> None:
+            with calls.get_lock():
+                calls.value += 1
+
+        _FailWithValueError.event_handler(luigi.Event.FAILURE)(count_failure)
+        self.addCleanup(_FailWithValueError.remove_event_handler, luigi.Event.FAILURE, count_failure)
+
+        with self.assertRaises(GokartBuildError):
+            gokart.build(_FailWithValueError(), reset_register=False, workers=2, log_level=logging.CRITICAL)
+        self.assertEqual(calls.value, 1)
 
 
 if __name__ == '__main__':

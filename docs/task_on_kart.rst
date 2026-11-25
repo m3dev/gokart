@@ -272,7 +272,7 @@ TaskOnKart.make_large_data_frame_target
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-   :func:`~gokart.task.TaskOnKart.make_large_data_frame_target` and ``gokart.target.LargeDataFrameProcessor`` are deprecated and will be removed in a future major release.
+   :func:`~gokart.task.TaskOnKart.make_large_data_frame_target` and ``gokart.target.LargeDataFrameProcessor`` are deprecated and will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
 
 They split a DataFrame into several pickle files and zip them. Use a single pickle file instead, which dumps and loads faster:
 

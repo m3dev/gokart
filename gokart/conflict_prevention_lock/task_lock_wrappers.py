@@ -83,21 +83,21 @@ def wrap_remove_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams
             logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released.')
             cast(Any, scheduler).shutdown()
             return result
-        except BaseException as e:
+        except BaseException:
             logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released with BaseException.')
             task_lock.release()
             cast(Any, scheduler).shutdown()
-            raise e
+            raise
 
     return wrapper
 
 
 def wrap_run_with_lock(run_func: Callable[[], R], task_lock_params: TaskLockParams) -> Callable[[], R]:
-    """Deprecated: the gokart worker takes the run lock for tasks with `should_lock_run=True`. https://github.com/m3dev/gokart/issues/524"""
+    """Deprecated, and will be removed in gokart 2.0.0: the gokart worker takes the run lock for tasks with `should_lock_run=True`. https://github.com/m3dev/gokart/issues/524"""
+    # FutureWarning, because DeprecationWarning is hidden by default unless the caller is __main__.
     warnings.warn(
-        'wrap_run_with_lock is deprecated and will be removed in a future major release. '
-        'The gokart worker takes the run lock for tasks with should_lock_run=True.',
-        DeprecationWarning,
+        'wrap_run_with_lock is deprecated and will be removed in gokart 2.0.0. The gokart worker takes the run lock for tasks with should_lock_run=True.',
+        FutureWarning,
         stacklevel=2,
     )
 
@@ -113,10 +113,10 @@ def wrap_run_with_lock(run_func: Callable[[], R], task_lock_params: TaskLockPara
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released.')
             cast(Any, scheduler).shutdown()
             return result
-        except BaseException as e:
+        except BaseException:
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released with BaseException.')
             task_lock.release()
             cast(Any, scheduler).shutdown()
-            raise e
+            raise
 
     return wrapped

@@ -23,10 +23,11 @@ class FileNotUploadedError(RuntimeError):
 
 class SlackAPI:
     def __init__(self, token: str, channel: str, to_user: str) -> None:
+        # FutureWarning, because DeprecationWarning is hidden by default unless the caller is __main__, and SlackAPI is created inside gokart.
         warnings.warn(
-            'gokart.slack (Slack notification) is deprecated and will be removed in a future major release. '
+            'gokart.slack (Slack notification) is deprecated and will be removed in gokart 2.0.0. '
             'Use Luigi event handlers (e.g. @luigi.Task.event_handler) to send notifications instead.',
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         self._client = slack_sdk.WebClient(token=token)
@@ -48,9 +49,12 @@ class SlackAPI:
 
     def send_snippet(self, comment: str, title: str, content: str):
         try:
-            request_body = dict(
-                channels=self._channel_id, initial_comment=f'<{self._to_user}> {comment}' if self._to_user else comment, content=content, title=title
-            )
+            request_body = {
+                'channels': self._channel_id,
+                'initial_comment': f'<{self._to_user}> {comment}' if self._to_user else comment,
+                'content': content,
+                'title': title,
+            }
             response = cast(Any, self._client).api_call('files.upload', data=request_body)
             if not response['ok']:
                 raise FileNotUploadedError(f'Error while uploading file. The error reason is "{response["error"]}".')

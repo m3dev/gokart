@@ -5,14 +5,16 @@ import enum
 import io
 import logging
 import multiprocessing
+from collections.abc import Callable
 from dataclasses import dataclass
 from logging import getLogger
 from types import TracebackType
-from typing import Any, Literal, Protocol, TypeVar, cast, overload
+from typing import Any, Literal, Protocol, Self, TypeVar, cast, overload
 
 import luigi
 from luigi import LuigiStatusCode, rpc, scheduler, task_register
 from luigi.execution_summary import LuigiRunResult
+from luigi.task import Task
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random_exponential
 
 import gokart
@@ -46,11 +48,21 @@ class LoggerConfig:
 
 
 class GokartBuildError(Exception):
-    """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution."""
+    """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution.
 
-    def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]]) -> None:
+    ``raised_exceptions`` holds the exceptions of failed task runs. ``status`` is the ``luigi.LuigiStatusCode`` of the build
+    and is the authoritative signal: for ``MISSING_EXT`` / ``NOT_RUN`` / ``SCHEDULING_FAILED`` no task run failed, so ``raised_exceptions`` has nothing for them.
+    """
+
+    def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]], status: LuigiStatusCode | None = None) -> None:
         super().__init__(message)
         self.raised_exceptions = raised_exceptions
+        self.status = status
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        # WHY: Exception.__reduce__ rebuilds the error as cls(*self.args), which lacks the required raised_exceptions.
+        # Then the error can't be sent back from a multiprocessing worker. __dict__ keeps the other attributes.
+        return (self.__class__, (*self.args, self.raised_exceptions), self.__dict__)
 
 
 class HasLockedTaskException(Exception):
@@ -81,12 +93,15 @@ class WorkerProtocol(Protocol):
 
     def run(self) -> bool: ...
 
-    def __enter__(self) -> WorkerProtocol: ...
+    def __enter__(self) -> Self: ...
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]: ...
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, exc_tb: TracebackType | None) -> Literal[False]: ...
 
 
 class WorkerSchedulerFactory:
+    def __init__(self, on_child_process_failure: Callable[[Task, BaseException], None] | None = None) -> None:
+        self._on_child_process_failure = on_child_process_failure
+
     def create_local_scheduler(self) -> scheduler.Scheduler:
         return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 
@@ -94,13 +109,15 @@ class WorkerSchedulerFactory:
         return rpc.RemoteScheduler(url)
 
     def create_worker(self, scheduler: scheduler.Scheduler, worker_processes: int, assistant: bool = False) -> WorkerProtocol:
-        return worker.Worker(scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
+        return worker.Worker(
+            scheduler=scheduler, worker_processes=worker_processes, assistant=assistant, on_child_process_failure=self._on_child_process_failure
+        )
 
 
 def _get_output(task: TaskOnKart[T]) -> T:
     output = task.output()
     # FIXME: currently, nested output is not supported
-    if isinstance(output, list) or isinstance(output, tuple):
+    if isinstance(output, (list, tuple)):
         return cast(T, [t.load() for t in output if isinstance(t, TargetOnKart)])
     if isinstance(output, dict):
         return cast(T, {k: t.load() for k, t in output.items() if isinstance(t, TargetOnKart)})
@@ -211,14 +228,21 @@ def build(
         log_handler_before_run.close()
 
         task_lock_exception_raised = TaskLockExceptionRaisedFlag()
-        raised_exceptions: dict[str, list[Exception]] = dict()
+        raised_exceptions: dict[str, list[Exception]] = {}
 
         @cast(Any, TaskOnKart).event_handler(luigi.Event.FAILURE)
-        def when_failure(task: Any, exception: Exception):
+        def when_failure(task: Any, exception: BaseException):
             if isinstance(exception, TaskLockException):
                 task_lock_exception_raised.flag = True
             else:
-                raised_exceptions.setdefault(task.make_unique_id(), []).append(exception)
+                # WHY: a task run can fail with a BaseException such as SystemExit. It is kept as is, but the public type of
+                # GokartBuildError.raised_exceptions stays list[Exception], since widening it would break typed callers.
+                raised_exceptions.setdefault(task.make_unique_id(), []).append(cast(Exception, exception))
+
+        def when_child_process_failure(task: Any, exception: BaseException):
+            # WHY: the worker calls this for every task, but the FAILURE event handler above fires only for TaskOnKart.
+            if isinstance(task, TaskOnKart):
+                when_failure(task, exception)
 
         @retry(
             retry=retry_if_exception_type(HasLockedTaskException),
@@ -230,7 +254,7 @@ def build(
             task_lock_exception_raised.flag = False
             result = cast(Any, luigi).build(
                 [task],
-                worker_scheduler_factory=WorkerSchedulerFactory(),
+                worker_scheduler_factory=WorkerSchedulerFactory(on_child_process_failure=when_child_process_failure),
                 local_scheduler=True,
                 detailed_summary=True,
                 log_level=logging.getLevelName(log_level),
@@ -239,8 +263,10 @@ def build(
             if task_lock_exception_raised.flag:
                 raise HasLockedTaskException()
             result = cast(LuigiRunResult, result)
-            if result.status in (LuigiStatusCode.FAILED, LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED, LuigiStatusCode.SCHEDULING_FAILED):
-                raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
+            # WHY: MISSING_EXT / NOT_RUN mean the requested task did not run. Note that luigi reports SUCCESS_WITH_RETRY even if
+            # other problems remain, as long as every failed task was retried successfully (see #690).
+            if result.status not in (LuigiStatusCode.SUCCESS, LuigiStatusCode.SUCCESS_WITH_RETRY):
+                raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions, status=result.status)
             return _get_output(task) if return_value else None
 
         try:
