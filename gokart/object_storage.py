@@ -35,7 +35,7 @@ class ObjectStorage:
 
             return GCSTarget(path, format=format)
         else:
-            raise
+            raise ValueError(f'{path} is not an object storage path')
 
     @staticmethod
     def exists(path: str) -> bool:
@@ -48,7 +48,7 @@ class ObjectStorage:
 
             return GCSClient().exists(path)
         else:
-            raise
+            raise ValueError(f'{path} is not an object storage path')
 
     @staticmethod
     def get_timestamp(path: str) -> datetime:
@@ -64,7 +64,7 @@ class ObjectStorage:
 
             return GCSClient().get_timestamp(path)
         else:
-            raise
+            raise ValueError(f'{path} is not an object storage path')
 
     @staticmethod
     def get_zip_client(file_path: str, temporary_directory: str) -> ZipClient:
@@ -77,7 +77,7 @@ class ObjectStorage:
 
             return GCSZipClient(file_path=file_path, temporary_directory=temporary_directory)
         else:
-            raise
+            raise ValueError(f'{file_path} is not an object storage path')
 
     @staticmethod
     def is_buffered_reader(file: object) -> bool:

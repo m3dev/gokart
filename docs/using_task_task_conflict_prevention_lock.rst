@@ -52,7 +52,7 @@ How to use
     ``timeout`` is the number of seconds after which a lock is released without extension (180 by default).
 
     The deprecated ``redis_host``, ``redis_port`` and ``redis_timeout`` parameters of gokart.TaskOnKart (e.g. ``--redis-host=localhost --redis-port=6379``) still work.
-    When they are set, they take precedence over ``[gokart_lock]`` and emit a ``FutureWarning``. They will be removed in the next major release.
+    When they are set, they take precedence over ``[gokart_lock]`` and emit a ``FutureWarning``. They will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
     ``redis_host`` and ``redis_port`` replace the whole endpoint (both are required, and the db number, TLS and password of ``url`` are not used), while ``redis_timeout`` falls back to ``timeout``.
     The replacement of ``--redis-host`` / ``--redis-port`` on the command line is ``--gokart-lock-url=redis://localhost:6379``.
     If only one of ``redis_host`` and ``redis_port`` is set, a ``FutureWarning`` says that ``url`` is ignored and no Redis lock is taken.

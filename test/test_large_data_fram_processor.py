@@ -4,9 +4,13 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from gokart.target import LargeDataFrameProcessor
+import gokart
+from gokart.target import LargeDataFrameProcessor, _LargeDataFrameProcessor
 from test.util import _get_temporary_directory
+
+pytestmark = pytest.mark.filterwarnings('ignore:LargeDataFrameProcessor is deprecated:FutureWarning')
 
 
 class _NoValuesDataFrame(pd.DataFrame):
@@ -124,6 +128,46 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
         loaded = processor.load(file_path)
 
         pd.testing.assert_frame_equal(loaded, df, check_like=True)
+
+
+class _LargeDataFrameTask(gokart.TaskOnKart[pd.DataFrame]):
+    task_namespace = __name__
+
+
+class TestLargeDataFrameDeprecation:
+    def test_make_large_data_frame_target_warns_once_at_the_caller(self, tmp_path):
+        task = _LargeDataFrameTask(workspace_directory=str(tmp_path))
+        with pytest.warns(FutureWarning, match=r'make_large_data_frame_target is deprecated and will be removed in gokart 2\.0\.0') as record:
+            task.make_large_data_frame_target('data.zip')
+
+        assert len(record) == 1
+        assert record[0].filename == __file__
+
+    def test_large_data_frame_processor_warns_at_the_caller(self):
+        with pytest.warns(FutureWarning, match=r'LargeDataFrameProcessor is deprecated and will be removed in gokart 2\.0\.0') as record:
+            LargeDataFrameProcessor(max_byte=800)
+
+        assert len(record) == 1
+        assert record[0].filename == __file__
+
+    def test_large_data_frame_processor_load_warns_at_the_caller(self, tmp_path):
+        file_path = str(tmp_path / 'data.zip')
+        _LargeDataFrameProcessor(max_byte=800).save(pd.DataFrame(dict(data=[1.0])), file_path)
+        with pytest.warns(FutureWarning, match=r'LargeDataFrameProcessor is deprecated and will be removed in gokart 2\.0\.0') as record:
+            LargeDataFrameProcessor.load(file_path)
+
+        assert len(record) == 1
+        assert record[0].filename == __file__
+
+    def test_make_large_data_frame_target_still_dumps_and_loads(self, tmp_path):
+        task = _LargeDataFrameTask(workspace_directory=str(tmp_path))
+        with pytest.warns(FutureWarning):
+            target = task.make_large_data_frame_target('data.zip', max_byte=800)
+        df = pd.DataFrame(dict(data=np.arange(1000, dtype=np.float64)))
+
+        target.dump(df)
+
+        pd.testing.assert_frame_equal(target.load(), df)
 
 
 if __name__ == '__main__':

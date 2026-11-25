@@ -46,11 +46,21 @@ class LoggerConfig:
 
 
 class GokartBuildError(Exception):
-    """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution."""
+    """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution.
 
-    def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]]) -> None:
+    ``raised_exceptions`` holds the exceptions of failed task runs. ``status`` is the ``luigi.LuigiStatusCode`` of the build
+    and is the authoritative signal: for ``MISSING_EXT`` / ``NOT_RUN`` / ``SCHEDULING_FAILED`` no task run failed, so ``raised_exceptions`` has nothing for them.
+    """
+
+    def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]], status: LuigiStatusCode | None = None) -> None:
         super().__init__(message)
         self.raised_exceptions = raised_exceptions
+        self.status = status
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        # WHY: Exception.__reduce__ rebuilds the error as cls(*self.args), which lacks the required raised_exceptions.
+        # Then the error can't be sent back from a multiprocessing worker. __dict__ keeps the other attributes.
+        return (self.__class__, (*self.args, self.raised_exceptions), self.__dict__)
 
 
 class HasLockedTaskException(Exception):
@@ -239,8 +249,10 @@ def build(
             if task_lock_exception_raised.flag:
                 raise HasLockedTaskException()
             result = cast(LuigiRunResult, result)
-            if result.status in (LuigiStatusCode.FAILED, LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED, LuigiStatusCode.SCHEDULING_FAILED):
-                raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions)
+            # WHY: MISSING_EXT / NOT_RUN mean the requested task did not run. Note that luigi reports SUCCESS_WITH_RETRY even if
+            # other problems remain, as long as every failed task was retried successfully (see #690).
+            if result.status not in (LuigiStatusCode.SUCCESS, LuigiStatusCode.SUCCESS_WITH_RETRY):
+                raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions, status=result.status)
             return _get_output(task) if return_value else None
 
         try:

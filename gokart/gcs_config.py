@@ -59,10 +59,11 @@ class GCSConfig(luigi.Config):
         return storage.Client(project=getattr(credentials, 'project_id', None), credentials=credentials)
 
     def get_gcs_client(self) -> luigi.contrib.gcs.GCSClient:
+        # FutureWarning, because DeprecationWarning is hidden by default unless the caller is __main__.
         warnings.warn(
-            'GCSConfig.get_gcs_client() is deprecated and will be removed in a future major release. '
+            'GCSConfig.get_gcs_client() is deprecated and will be removed in gokart 2.0.0. '
             'gokart no longer uses luigi.contrib.gcs; use GCSConfig.get_storage_client(), which returns a google.cloud.storage.Client, instead.',
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         if self._client is None:  # use cache as like singleton object
