@@ -9,7 +9,6 @@ from gokart import TaskOnKart
 
 class _DummySubTask(TaskOnKart[Any]):
     task_namespace = __name__
-    pass
 
 
 class _DummyTask(TaskOnKart[Any]):

@@ -53,7 +53,8 @@ import time
 import traceback
 from collections.abc import Callable, Generator
 from multiprocessing.reduction import ForkingPickler
-from typing import Any, Literal, NamedTuple, Self, TypeVar, cast
+from types import TracebackType
+from typing import Any, ClassVar, Literal, NamedTuple, Self, TypeVar, cast
 
 import luigi
 import luigi.worker
@@ -207,7 +208,7 @@ class TaskProcess(_ForkProcess):
 
     # mapping of status_reporter attributes to task attributes that are added to tasks
     # before they actually run, and removed afterwards
-    forward_reporter_attributes = {
+    forward_reporter_attributes: ClassVar[dict[str, str]] = {
         'update_tracking_url': 'set_tracking_url',
         'update_status_message': 'set_status_message',
         'update_progress_percentage': 'set_progress_percentage',
@@ -671,7 +672,7 @@ class Worker:
         self._keep_alive_thread.start()
         return self
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, exc_tb: TracebackType | None) -> Literal[False]:
         """
         Stop the KeepAliveThread and kill still running tasks.
         """

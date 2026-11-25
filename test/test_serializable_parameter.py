@@ -52,9 +52,11 @@ class TestSerializableParameter:
             assert cp.get_task_obj().config == Config(foo=100, bar='val')
 
     def test_missing_parameter(self):
-        with pytest.raises(luigi.parameter.MissingParameterException):
-            with CmdlineParser.global_instance([f'{__name__}.SerializableParameterWithOutDefault']) as cp:
-                cp.get_task_obj()
+        with (
+            pytest.raises(luigi.parameter.MissingParameterException),
+            CmdlineParser.global_instance([f'{__name__}.SerializableParameterWithOutDefault']) as cp,
+        ):
+            cp.get_task_obj()
 
     def test_value_error(self):
         with pytest.raises(ValueError), CmdlineParser.global_instance([f'{__name__}.SerializableParameterWithOutDefault', '--config', 'Foo']) as cp:
