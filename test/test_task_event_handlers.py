@@ -2,9 +2,11 @@
 
 import logging
 from pathlib import Path
+from typing import cast
 
 import luigi
 import pytest
+from luigi.execution_summary import LuigiRunResult, LuigiStatusCode
 
 import gokart
 from gokart.errors import GokartBuildError
@@ -24,6 +26,9 @@ class _PlainTask(luigi.Task):
 
 class _FailingPlainTask(luigi.Task):
     task_namespace = __name__
+
+    def complete(self):
+        return False
 
     def run(self):
         raise RuntimeError('boom')
@@ -56,7 +61,9 @@ def test_plain_luigi_task_success_does_not_log_event_callback_errors(tmp_path: P
 
 def test_plain_luigi_task_failure_does_not_log_event_callback_errors(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.ERROR, logger='luigi-interface'):
-        assert not luigi.build([_FailingPlainTask()], local_scheduler=True)
+        # WHY: a scheduling failure also makes luigi.build fail, but then the task never runs and FAILURE handlers are never triggered.
+        result = cast(LuigiRunResult, luigi.build([_FailingPlainTask()], local_scheduler=True, detailed_summary=True))
+    assert result.status == LuigiStatusCode.FAILED
 
     assert _event_callback_errors(caplog) == []
 

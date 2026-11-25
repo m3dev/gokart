@@ -810,8 +810,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return str(cast(Any, param_obj).serialize(param_value))
 
 
-for _event, _handler in _TASK_ON_KART_EVENT_HANDLERS:
-    cast(Any, TaskOnKart).event_handler(_event)(_handler)
+def _register_task_on_kart_event_handlers() -> None:
+    for event, handler in _TASK_ON_KART_EVENT_HANDLERS:
+        cast(Any, TaskOnKart).event_handler(event)(handler)
+
+
+_register_task_on_kart_event_handlers()
 
 # WHY: captured once so that `_complete_requirement` can tell the original `complete` from a wrapper installed on the class later.
 _TASK_ON_KART_COMPLETE: Any = cast(Any, TaskOnKart).complete
