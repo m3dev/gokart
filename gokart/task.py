@@ -141,12 +141,12 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(
         default=None,
-        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
+        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Only used by the run lock of tasks with should_lock_run=True.',
         significant=False,
     )
     redis_port: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
         default=None,
-        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Task lock check is deactivated, when None.',
+        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Only used by the run lock of tasks with should_lock_run=True.',
         significant=False,
     )
     redis_timeout: luigi.OptionalIntParameter = luigi.OptionalIntParameter(

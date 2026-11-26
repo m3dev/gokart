@@ -94,7 +94,7 @@ Notes:
 - Plain S3-compatible stores vary, and conditional PUT and conditional DELETE are separate features. Cloudflare R2 documents conditional headers for PutObject, CopyObject and multipart uploads, but not for DeleteObject. MinIO is not verified either. gokart raises an error when the store rejects the conditional headers, but it cannot detect a store that silently ignores them. On such a store the lock does not exclude anything, and the same task can run concurrently on several workers: a holder whose lock was taken over after it expired would delete the new holder's lock with an unconditional delete, letting a third worker in. Check your store before relying on the lock.
 
 The run lock is taken by the gokart worker, i.e. when the task is run with `gokart.build` or `gokart.run`.
-If a `should_lock_run` task is dumped outside the gokart worker, the run lock is not taken, so no lock is taken at all, and `dump()` emits a `UserWarning`.
+If a `should_lock_run` task is dumped outside the gokart worker, no lock is taken, and `dump()` emits a `UserWarning`.
 This happens, for example, when the task is run with `luigi.build` or the luigi CLI, or when `dump()` is called directly in a unit test.
 To get rid of the warning, run the task with `gokart.build` or `gokart.run`.
 

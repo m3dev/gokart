@@ -38,9 +38,11 @@ class TargetOnKart(luigi.Target):
     def load(self) -> Any:
         return self._load()
 
+    # Keyword-only, because the second positional argument used to be lock_at_dump, which would otherwise be taken as task_params silently.
     def dump(
         self,
         obj: Any,
+        *,
         task_params: dict[str, str] | None = None,
         custom_labels: dict[str, str] | None = None,
         required_task_outputs: FlattenableItems[RequiredTaskOutput] | None = None,
@@ -344,6 +346,8 @@ def make_target(
     file_path: str,
     unique_id: str | None = None,
     processor: FileProcessor | None = None,
+    # Keyword-only, because the fourth positional argument used to be task_lock_params, which would otherwise be taken as store_index_in_feather silently.
+    *,
     store_index_in_feather: bool = True,
 ) -> TargetOnKart:
     file_path = _make_file_path(file_path, unique_id)

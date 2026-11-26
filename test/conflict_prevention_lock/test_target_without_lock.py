@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import patch
 
 import fakeredis
@@ -20,11 +20,20 @@ import gokart
 @pytest.fixture(autouse=True)
 def redis_lock_url() -> Iterator[None]:
     config = luigi.configuration.get_config()
-    config.add_section('gokart_lock')
+    existed = config.has_section('gokart_lock')
+    if not existed:
+        config.add_section('gokart_lock')
+    previous = cast(str | None, config.get('gokart_lock', 'url', fallback=None))
     config.set('gokart_lock', 'url', 'redis://localhost:6379')
     # gokart_lock() is cached by luigi; conftest's _clear_luigi_instance_cache keeps it empty until the test body builds it
     yield
-    config.remove_section('gokart_lock')
+    # restore, so that a section from the developer's luigi.cfg survives the test
+    if not existed:
+        config.remove_section('gokart_lock')
+    elif previous is None:
+        config.remove_option('gokart_lock', 'url')
+    else:
+        config.set('gokart_lock', 'url', previous)
 
 
 @pytest.fixture(autouse=True)
