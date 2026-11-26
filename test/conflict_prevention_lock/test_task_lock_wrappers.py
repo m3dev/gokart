@@ -394,9 +394,9 @@ class TestLockCleanupWhenUnlockingFails(unittest.TestCase):
                 with (
                     patch('redis.Redis', side_effect=fakeredis.FakeRedis),
                     patch.object(Lock, 'release', autospec=True, side_effect=LockNotOwnedError('lock expired')) as release_mock,
+                    self.assertRaises(LockNotOwnedError),
                 ):
-                    with self.assertRaises(LockNotOwnedError):
-                        wrap(MagicMock(), self._task_lock_params(name))()
+                    wrap(MagicMock(), self._task_lock_params(name))()
 
                 self.assertEqual(release_mock.call_count, 1)
                 self.assertEqual(_lock_scheduler_threads(), threads_before)
@@ -409,9 +409,9 @@ class TestLockCleanupWhenUnlockingFails(unittest.TestCase):
                 with (
                     patch('redis.Redis', side_effect=fakeredis.FakeRedis),
                     patch.object(Lock, 'release', autospec=True, side_effect=LockNotOwnedError('lock expired')) as release_mock,
+                    self.assertRaises(ValueError),
                 ):
-                    with self.assertRaises(ValueError):
-                        _WRAPPERS[name](MagicMock(side_effect=ValueError('func failed')), self._task_lock_params(name))()
+                    _WRAPPERS[name](MagicMock(side_effect=ValueError('func failed')), self._task_lock_params(name))()
 
                 self.assertEqual(release_mock.call_count, 1)
                 self.assertEqual(_lock_scheduler_threads(), threads_before)
@@ -429,9 +429,9 @@ class TestLockCleanupWhenUnlockingFails(unittest.TestCase):
                     patch('redis.Redis', side_effect=fakeredis.FakeRedis),
                     patch.object(BackgroundScheduler, 'shutdown', autospec=True, side_effect=shutdown_then_fail),
                     patch.object(Lock, 'release', autospec=True, side_effect=Lock.release) as release_mock,
+                    self.assertRaises(RuntimeError),
                 ):
-                    with self.assertRaises(RuntimeError):
-                        wrap(MagicMock(), self._task_lock_params(name))()
+                    wrap(MagicMock(), self._task_lock_params(name))()
 
                 self.assertEqual(release_mock.call_count, 1)
 
@@ -443,9 +443,9 @@ class TestLockCleanupWhenUnlockingFails(unittest.TestCase):
                     patch('redis.Redis', side_effect=fakeredis.FakeRedis),
                     patch.object(BackgroundScheduler, 'start', autospec=True, side_effect=RuntimeError("can't start new thread")),
                     patch.object(Lock, 'release', autospec=True, side_effect=Lock.release) as release_mock,
+                    self.assertRaises(RuntimeError),
                 ):
-                    with self.assertRaises(RuntimeError):
-                        wrap(func, self._task_lock_params(name))()
+                    wrap(func, self._task_lock_params(name))()
 
                 self.assertEqual(release_mock.call_count, 1)
                 func.assert_not_called()
