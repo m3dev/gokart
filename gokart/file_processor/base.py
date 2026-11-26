@@ -209,4 +209,5 @@ class NpzFileProcessor(FileProcessor):
 
     def dump(self, obj: Any, file: Any):
         assert isinstance(obj, np.ndarray), f'requires np.ndarray, but {type(obj)} is passed.'
-        cast(Any, np).savez_compressed(file, data=obj)
+        with _write_all(file) as f:
+            cast(Any, np).savez_compressed(f, data=obj)

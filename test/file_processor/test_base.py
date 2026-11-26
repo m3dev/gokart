@@ -12,6 +12,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from io import BytesIO
 from typing import Any
@@ -22,7 +23,7 @@ import numpy as np
 from luigi import LocalTarget
 from moto import mock_aws
 
-from gokart.file_processor import BinaryFileProcessor, PickleFileProcessor
+from gokart.file_processor import BinaryFileProcessor, NpzFileProcessor, PickleFileProcessor, XmlFileProcessor
 from gokart.object_storage import ObjectStorage
 
 
@@ -419,3 +420,27 @@ class TestBinaryFileProcessor(unittest.TestCase):
         BinaryFileProcessor().dump(b'data', file)
 
         self.assertEqual(file.buffer.getvalue(), b'data')
+
+
+class TestNpzFileProcessor(unittest.TestCase):
+    def test_dump_to_a_raw_stream_writes_everything_despite_short_writes(self):
+        array = np.arange(1 << 16)
+        file = _ShortWriteRaw()
+
+        NpzFileProcessor().dump(array, file)
+
+        self.assertFalse(file.closed)
+        file.buffer.seek(0)
+        np.testing.assert_array_equal(NpzFileProcessor().load(file.buffer), array)
+
+
+class TestXmlFileProcessor(unittest.TestCase):
+    def test_dump_to_a_raw_stream_writes_everything_despite_short_writes(self):
+        tree = ET.ElementTree(ET.fromstring('<root>' + '<child>1</child>' * 2000 + '</root>'))
+        file = _ShortWriteRaw()
+
+        XmlFileProcessor().dump(tree, file)
+
+        self.assertFalse(file.closed)
+        file.buffer.seek(0)
+        self.assertEqual(len(list(XmlFileProcessor().load(file.buffer).iter('child'))), 2000)
