@@ -51,8 +51,8 @@ class GokartBuildError(Exception):
     """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution.
 
     ``raised_exceptions`` holds the exceptions of failed task runs. When ``gokart.build`` retried on ``HasLockedTaskException``, it holds only
-    those of the last attempt. ``status`` is the ``luigi.LuigiStatusCode`` of the build
-    and is the authoritative signal: for ``MISSING_EXT`` / ``NOT_RUN`` / ``SCHEDULING_FAILED`` no task run failed, so ``raised_exceptions`` has nothing for them.
+    those of the last attempt. ``status`` is the ``luigi.LuigiStatusCode`` of the build and is the authoritative signal:
+    for ``MISSING_EXT`` / ``NOT_RUN`` / ``SCHEDULING_FAILED`` no task run failed, so ``raised_exceptions`` has nothing for them.
     """
 
     def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]], status: LuigiStatusCode | None = None) -> None:
