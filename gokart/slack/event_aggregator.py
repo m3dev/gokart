@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import Callable
 from logging import getLogger
 from typing import Any, TypedDict, cast
 
 import luigi
+
+from gokart.task import TaskOnKart
 
 logger = getLogger(__name__)
 
@@ -21,9 +24,18 @@ class EventAggregator:
         self._failure_events: list[FailureEvent] = []
 
     def set_handlers(self):
-        handlers: list[tuple[Any, Callable[..., None]]] = [(luigi.Event.SUCCESS, self._success), (luigi.Event.FAILURE, self._failure)]
-        for event, handler in handlers:
-            cast(Any, luigi.Task).event_handler(event)(handler)
+        # WHY: registered on TaskOnKart, because _task_to_str() needs make_unique_id(), which a plain luigi.Task does not have. https://github.com/m3dev/gokart/issues/718
+        for event, handler in self._handlers():
+            cast(Any, TaskOnKart).event_handler(event)(handler)
+
+    def remove_handlers(self):
+        # WHY: gokart.run() calls this in a finally block, where a KeyError for an already removed handler would replace its SystemExit.
+        for event, handler in self._handlers():
+            with contextlib.suppress(KeyError):
+                cast(Any, TaskOnKart).remove_event_handler(event, handler)
+
+    def _handlers(self) -> list[tuple[Any, Callable[..., None]]]:
+        return [(luigi.Event.SUCCESS, self._success), (luigi.Event.FAILURE, self._failure)]
 
     def get_summary(self) -> str:
         return f'Success: {len(self._success_events)}; Failure: {len(self._failure_events)}'
