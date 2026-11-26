@@ -12,6 +12,7 @@ from types import TracebackType
 from typing import Any, Literal, Protocol, Self, TypeVar, cast, overload
 
 import luigi
+import luigi.execution_summary
 from luigi import LuigiStatusCode, rpc, scheduler, task_register
 from luigi.execution_summary import LuigiRunResult
 from luigi.task import Task
@@ -52,6 +53,7 @@ class GokartBuildError(Exception):
 
     ``raised_exceptions`` holds the exceptions of failed task runs. ``status`` is the ``luigi.LuigiStatusCode`` of the build
     and is the authoritative signal: for ``MISSING_EXT`` / ``NOT_RUN`` / ``SCHEDULING_FAILED`` no task run failed, so ``raised_exceptions`` has nothing for them.
+    ``status`` can also be ``SUCCESS_WITH_RETRY``: every failed task succeeded on a retry, but the requested task still did not complete.
     """
 
     def __init__(self, message: str, raised_exceptions: dict[str, list[Exception]], status: LuigiStatusCode | None = None) -> None:
@@ -263,10 +265,18 @@ def build(
             if task_lock_exception_raised.flag:
                 raise HasLockedTaskException()
             result = cast(LuigiRunResult, result)
-            # WHY: MISSING_EXT / NOT_RUN mean the requested task did not run. Note that luigi reports SUCCESS_WITH_RETRY even if
-            # other problems remain, as long as every failed task was retried successfully (see #690).
+            # WHY: MISSING_EXT / NOT_RUN mean the requested task did not run.
             if result.status not in (LuigiStatusCode.SUCCESS, LuigiStatusCode.SUCCESS_WITH_RETRY):
                 raise GokartBuildError(result.summary_text, raised_exceptions=raised_exceptions, status=result.status)
+            # WHY: luigi reports SUCCESS_WITH_RETRY whenever every failed task succeeded on a retry, even if the root task is still
+            # waiting on a missing input or never ran (#690). Check the root task as gokart.run does, from the worker's history without calling complete().
+            task_sets = cast(dict[str, Any], cast(Any, luigi.execution_summary)._summary_dict(result.worker))
+            if task not in task_sets['completed'] and task not in task_sets['already_done']:
+                raise GokartBuildError(
+                    f'{task.get_task_family()}[{task.make_unique_id()}] did not complete.\n{result.summary_text}',
+                    raised_exceptions=raised_exceptions,
+                    status=result.status,
+                )
             return _get_output(task) if return_value else None
 
         try:

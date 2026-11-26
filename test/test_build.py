@@ -274,26 +274,6 @@ class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
             with self.assertRaises(GokartBuildError):
                 gokart.build(_DummyTask(param='test'), reset_register=False, log_level=logging.CRITICAL)
 
-    def test_build_not_raises_exception_when_success_with_retry(self):
-        """Test that build() does not raise GokartBuildError when task succeeds with retry"""
-
-        # Create a mock result object with SUCCESS_WITH_RETRY status
-        class MockResult:
-            def __init__(self):
-                self.status = luigi.LuigiStatusCode.SUCCESS_WITH_RETRY
-                self.summary_text = 'Task completed successfully after retries'
-
-        # Mock _build_task to return a test value directly
-        with patch('luigi.build') as mock_luigi_build:
-            mock_luigi_build.return_value = MockResult()
-
-            # Create a mock task that will be used by build()
-            mock_task = _DummyTask(param='test')
-
-            # This should not raise GokartBuildError
-            # The test output will be whatever the mock returns
-            gokart.build(mock_task, reset_register=False, return_value=False, log_level=logging.CRITICAL)
-
     def test_build_not_raises_exception_on_scheduling_failed_only(self):
         """Test that build() raises GokartBuildError when SCHEDULING_FAILED occurs"""
 
@@ -363,6 +343,90 @@ class TestBuildNotRun(unittest.TestCase):
                 gokart.build(task, return_value=False, reset_register=False, log_level=logging.CRITICAL)
             self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.NOT_RUN)
             self.assertEqual(cm.exception.raised_exceptions, {})
+
+
+class _FailsOnce(gokart.TaskOnKart[int]):
+    """Fails on its first run and succeeds on the retry. The marker file works with workers > 1, where runs happen in forked processes."""
+
+    task_namespace = __name__
+
+    def run(self):
+        marker = os.path.join(self.workspace_directory, 'failed_once')
+        if not os.path.exists(marker):
+            open(marker, 'w').close()
+            raise ValueError('first run fails')
+        self.dump(1)
+
+
+class _CompleteRaises(luigi.Task):
+    task_namespace = __name__
+
+    def complete(self) -> bool:
+        raise RuntimeError('complete() failed')
+
+
+class _RootWithRetriedDependency(gokart.TaskOnKart[int]):
+    """Requires a task that succeeds on a retry, so luigi reports SUCCESS_WITH_RETRY whatever happens to the other dependency."""
+
+    task_namespace = __name__
+    other: luigi.Parameter = luigi.Parameter()
+    path: luigi.Parameter = luigi.Parameter(default='')
+
+    def requires(self) -> Any:
+        others: dict[str, Any] = {
+            'none': [],
+            'missing_external': _MissingExternalTask(path=self.path),
+            'complete_raises': _CompleteRaises(),
+            'resource_never_granted': _NeedsUnavailableResource(workspace_directory=self.workspace_directory),
+        }
+        return [_FailsOnce(workspace_directory=self.workspace_directory), others[self.other]]
+
+    def run(self):
+        self.dump(1)
+
+
+class TestBuildRootTaskNotComplete(unittest.TestCase):
+    """#690: luigi reports SUCCESS_WITH_RETRY when every failed task succeeded on a retry, even if the root task never ran."""
+
+    def setUp(self):
+        self.config_paths = copy(luigi.configuration.LuigiConfigParser._config_paths)
+        self.addCleanup(self._restore_config)
+        tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp_dir.cleanup)
+        self.tmp_dir = tmp_dir.name
+        config_path = os.path.join(self.tmp_dir, 'luigi.cfg')
+        with open(config_path, 'w') as f:
+            # WHY: luigi disables a task once it has failed retry_count times, so 2 allows one retry. The retry needs keep_alive and no retry delay; the idle limit lets the worker stop while the root task stays blocked.
+            f.write('[scheduler]\nretry_count=2\nretry_delay=0\n[gokart_worker]\nkeep_alive=true\nwait_interval=0.1\nmax_keep_alive_idle_duration=1 second\n')
+        luigi.configuration.LuigiConfigParser._instance = None
+        add_config(config_path)
+
+    def _restore_config(self):
+        luigi.configuration.LuigiConfigParser._config_paths = self.config_paths
+        luigi.configuration.LuigiConfigParser._instance = None
+
+    def test_build_raises_when_root_task_did_not_complete(self):
+        for other in ('missing_external', 'complete_raises', 'resource_never_granted'):
+            for return_value in (True, False):
+                with self.subTest(other=other, return_value=return_value), tempfile.TemporaryDirectory() as workspace:
+                    task = _RootWithRetriedDependency(other=other, path=os.path.join(self.tmp_dir, 'missing'), workspace_directory=workspace)
+                    with self.assertRaises(GokartBuildError) as cm:
+                        gokart.build(task, return_value=return_value, reset_register=False, log_level=logging.CRITICAL)
+                    self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.SUCCESS_WITH_RETRY)
+                    self.assertIn(f'{task.get_task_family()}[{task.make_unique_id()}] did not complete.', str(cm.exception))
+                    self.assertEqual(list(cm.exception.raised_exceptions), [_FailsOnce(workspace_directory=workspace).make_unique_id()])
+
+    def test_build_returns_output_when_root_task_completed_after_retry(self):
+        for workers in (1, 2):
+            with self.subTest(workers=workers), tempfile.TemporaryDirectory() as workspace:
+                task = _RootWithRetriedDependency(other='none', workspace_directory=workspace)
+                self.assertEqual(gokart.build(task, reset_register=False, log_level=logging.CRITICAL, workers=workers), 1)
+
+    def test_build_returns_output_when_root_task_is_already_done(self):
+        with tempfile.TemporaryDirectory() as workspace:
+            task = _RootWithRetriedDependency(other='none', workspace_directory=workspace)
+            gokart.build(task, reset_register=False, log_level=logging.CRITICAL)
+            self.assertEqual(gokart.build(task, reset_register=False, log_level=logging.CRITICAL), 1)
 
 
 class TestGokartBuildErrorStatus(unittest.TestCase):
