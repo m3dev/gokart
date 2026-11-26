@@ -10,18 +10,7 @@ from luigi.execution_summary import LuigiRunResult, LuigiStatusCode
 
 import gokart
 from gokart.errors import GokartBuildError
-
-
-class _PlainTask(luigi.Task):
-    task_namespace = __name__
-    path: luigi.Parameter[str] = luigi.Parameter()
-
-    def output(self):  # pyright: ignore[reportIncompatibleMethodOverride]
-        return luigi.LocalTarget(self.path)
-
-    def run(self):
-        with self.output().open('w') as f:
-            f.write('ok')
+from test.util import PlainLuigiTask
 
 
 class _FailingPlainTask(luigi.Task):
@@ -54,7 +43,7 @@ def _event_callback_errors(caplog: pytest.LogCaptureFixture) -> list[str]:
 
 def test_plain_luigi_task_success_does_not_log_event_callback_errors(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.ERROR, logger='luigi-interface'):
-        assert luigi.build([_PlainTask(path=str(tmp_path / 'plain.txt'))], local_scheduler=True)
+        assert luigi.build([PlainLuigiTask(path=str(tmp_path / 'plain.txt'))], local_scheduler=True)
 
     assert _event_callback_errors(caplog) == []
 
