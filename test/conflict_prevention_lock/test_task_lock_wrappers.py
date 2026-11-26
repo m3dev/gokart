@@ -380,7 +380,7 @@ def _lock_scheduler_threads() -> list[threading.Thread]:
 class TestLockCleanupWhenUnlockingFails(unittest.TestCase):
     """The scheduler extending the lock must always be shut down and the lock released exactly once, even if one of them raises.
 
-    https://github.com/m3dev/gokart/pull/705
+    https://github.com/m3dev/gokart/issues/709
     """
 
     def _task_lock_params(self, wrapper_name: str):
