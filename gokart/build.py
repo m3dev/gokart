@@ -50,7 +50,8 @@ class LoggerConfig:
 class GokartBuildError(Exception):
     """Raised when ``gokart.build`` failed. This exception contains raised exceptions in the task execution.
 
-    ``raised_exceptions`` holds the exceptions of failed task runs. ``status`` is the ``luigi.LuigiStatusCode`` of the build
+    ``raised_exceptions`` holds the exceptions of failed task runs. When ``gokart.build`` retried on ``HasLockedTaskException``, it holds only
+    those of the last attempt. ``status`` is the ``luigi.LuigiStatusCode`` of the build
     and is the authoritative signal: for ``MISSING_EXT`` / ``NOT_RUN`` / ``SCHEDULING_FAILED`` no task run failed, so ``raised_exceptions`` has nothing for them.
     """
 
@@ -252,6 +253,9 @@ def build(
         )
         def _build_task():
             task_lock_exception_raised.flag = False
+            # WHY: each retry runs a new luigi.build that reruns the failed tasks, so GokartBuildError has to hold only the exceptions
+            # of the last attempt, the one that its status and summary describe.
+            raised_exceptions.clear()
             result = cast(Any, luigi).build(
                 [task],
                 worker_scheduler_factory=WorkerSchedulerFactory(on_child_process_failure=when_child_process_failure),
