@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import gzip
 import io
 import os
@@ -21,7 +22,7 @@ import numpy as np
 from luigi import LocalTarget
 from moto import mock_aws
 
-from gokart.file_processor import PickleFileProcessor
+from gokart.file_processor import BinaryFileProcessor, PickleFileProcessor
 from gokart.object_storage import ObjectStorage
 
 
@@ -68,6 +69,46 @@ class _WriteSizeRecorder(BytesIO):
     def write(self, b: Any) -> int:
         self.write_sizes.append(memoryview(b).nbytes)
         return super().write(b)
+
+
+def _short_write(write: Callable[[Any], int | None], b: Any) -> int | None:
+    # Like write(2) with more than 0x7ffff000 bytes on Linux: only part of the data is written.
+    view = memoryview(b).cast('B')
+    return write(view[: max(1, len(view) // 2)])
+
+
+class _ShortWriteFileIO(io.FileIO):
+    def write(self, b: Any) -> int | None:
+        return _short_write(super().write, b)
+
+
+class _ShortWriteRaw(io.RawIOBase):
+    def __init__(self) -> None:
+        super().__init__()
+        self.buffer = BytesIO()
+
+    def writable(self) -> bool:
+        return True
+
+    def write(self, b: Any) -> int | None:
+        return _short_write(self.buffer.write, b)
+
+
+class _FullDiskRaw(io.RawIOBase):
+    def writable(self) -> bool:
+        return True
+
+    def write(self, b: Any) -> int | None:
+        raise OSError(28, 'No space left on device')
+
+
+class _RawWithoutWritable(io.RawIOBase):
+    def __init__(self) -> None:
+        super().__init__()
+        self.buffer = BytesIO()
+
+    def write(self, b: Any) -> int | None:
+        return self.buffer.write(b)
 
 
 def _with_lambda() -> list[Any]:
@@ -201,6 +242,34 @@ class TestPickleFileProcessor(unittest.TestCase):
 
         self.assertEqual(file.write_calls, 1)
 
+    def test_dump_to_an_unbuffered_file_writes_everything_despite_short_writes(self):
+        array = np.arange(1 << 16)
+        with_lambda = _with_lambda()
+        for name, obj, expected in [
+            ('C pickler', array, pickle.dumps(array, protocol=5)),
+            ('dill fallback', with_lambda, dill.dumps(with_lambda, protocol=5)),
+        ]:
+            with self.subTest(name), tempfile.TemporaryDirectory() as temp_dir:
+                path = f'{temp_dir}/temp.pkl'
+                with _ShortWriteFileIO(path, 'wb') as f:
+                    io.FileIO.write(f, b'header')
+                    PickleFileProcessor().dump(obj, f)
+                    # the caller's file stays open, right after the pickle
+                    self.assertFalse(f.closed)
+                    self.assertEqual(f.tell(), len(b'header') + len(expected))
+                with open(path, 'rb') as f:
+                    self.assertEqual(f.read(), b'header' + expected)
+
+    def test_dump_to_a_raw_stream_writes_everything_despite_short_writes(self):
+        array = np.arange(1 << 16)
+        file = _ShortWriteRaw()
+
+        PickleFileProcessor().dump(array, file)
+
+        self.assertFalse(file.closed)
+        file.buffer.seek(0)
+        np.testing.assert_array_equal(PickleFileProcessor().load(file.buffer), array)
+
     def test_read_only_ndarray_loads_writable(self):
         array = np.arange(3)
         array.flags.writeable = False
@@ -323,3 +392,30 @@ class TestPickleFileProcessor(unittest.TestCase):
             loaded = processor.load(f)
 
         self.assertEqual(loaded, var)
+
+
+class TestBinaryFileProcessor(unittest.TestCase):
+    def test_dump_to_a_raw_stream_writes_everything_despite_short_writes(self):
+        data = bytes(range(256)) * 256
+        file = _ShortWriteRaw()
+
+        BinaryFileProcessor().dump(data, file)
+
+        self.assertFalse(file.closed)
+        self.assertEqual(file.buffer.getvalue(), data)
+
+    def test_dump_to_a_raw_stream_that_fails_to_write_keeps_it_open(self):
+        file = _FullDiskRaw()
+
+        with self.assertRaises(OSError):
+            BinaryFileProcessor().dump(b'data', file)
+        gc.collect()
+
+        self.assertFalse(file.closed)
+
+    def test_dump_to_a_raw_stream_that_does_not_report_writable(self):
+        file = _RawWithoutWritable()
+
+        BinaryFileProcessor().dump(b'data', file)
+
+        self.assertEqual(file.buffer.getvalue(), b'data')

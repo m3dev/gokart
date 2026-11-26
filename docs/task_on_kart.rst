@@ -298,7 +298,7 @@ Please refer to :doc:`for_pandas`.
 
 
 TaskOnKart.should_dump_supplementary_log_files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Whether to dump supplementary files (task_log, random_seed, task_params, processing_time, module_versions) or not. Default is True.
 
