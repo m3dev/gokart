@@ -644,7 +644,7 @@ class TaskTest(unittest.TestCase):
     @patch('luigi.configuration.get_config')
     def test_add_configuration(self, mock_config: Mock) -> None:
         mock_config.return_value = {'_DummyTask': {'list_param': '["c", "d"]', 'param': '3', 'bool_param': 'True'}}
-        kwargs: dict[str, Any] = dict()
+        kwargs: dict[str, Any] = {}
         _DummyTask._add_configuration(kwargs, '_DummyTask')
         self.assertEqual(3, kwargs['param'])
         self.assertEqual(['c', 'd'], list(kwargs['list_param']))
@@ -734,7 +734,7 @@ class TaskTest(unittest.TestCase):
         expected = (
             f'{__name__}._DummyTaskWithPrivateParameter[{task_id}](int_param=1, private_int_param=1, task_param={__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), '
             f'list_task_param=[{__name__}._DummySubTaskWithPrivateParameter({sub_task_id}), {__name__}._DummySubTaskWithPrivateParameter({sub_task_id})])'
-        )  # noqa:E501
+        )
         self.assertEqual(expected, repr(task))
 
     def test_str(self):
@@ -755,7 +755,7 @@ class TaskTest(unittest.TestCase):
     def test_is_task_on_kart(self):
         self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart(gokart.TaskOnKart()))
         self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart(1))
-        self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart(list()))
+        self.assertEqual(False, gokart.TaskOnKart.is_task_on_kart([]))
         self.assertEqual(True, gokart.TaskOnKart.is_task_on_kart((gokart.TaskOnKart(), gokart.TaskOnKart())))
 
     def test_serialize_and_deserialize_default_values(self):
@@ -845,19 +845,17 @@ class TaskTest(unittest.TestCase):
     def test_should_lock_run_falls_back_to_dump_lock_without_gokart_worker(self):
         task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
 
-        with patch('redis.Redis', side_effect=fakeredis.FakeRedis):
-            with self.assertWarnsRegex(UserWarning, 'should_lock_run'):
-                self.assertTrue(luigi.build([task], local_scheduler=True))
+        with patch('redis.Redis', side_effect=fakeredis.FakeRedis), self.assertWarnsRegex(UserWarning, 'should_lock_run'):
+            self.assertTrue(luigi.build([task], local_scheduler=True))
 
         self.assertEqual(cast(TargetOnKart, task.output()).load(), 'hello')
 
     def test_should_lock_run_does_not_warn_with_gokart_worker(self):
         task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
 
-        with patch('redis.Redis', side_effect=fakeredis.FakeRedis):
-            with warnings.catch_warnings():
-                warnings.filterwarnings('error', message='.*should_lock_run.*')
-                self.assertEqual(gokart.build(task, reset_register=False), 'hello')
+        with patch('redis.Redis', side_effect=fakeredis.FakeRedis), warnings.catch_warnings():
+            warnings.filterwarnings('error', message='.*should_lock_run.*')
+            self.assertEqual(gokart.build(task, reset_register=False), 'hello')
 
 
 class _DummyTaskWithLockRun(gokart.TaskOnKart[str]):

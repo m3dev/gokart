@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from logging import getLogger
 from types import TracebackType
-from typing import Any, Literal, Protocol, TypeVar, cast, overload
+from typing import Any, Literal, Protocol, Self, TypeVar, cast, overload
 
 import luigi
 from luigi import LuigiStatusCode, rpc, scheduler, task_register
@@ -93,9 +93,9 @@ class WorkerProtocol(Protocol):
 
     def run(self) -> bool: ...
 
-    def __enter__(self) -> WorkerProtocol: ...
+    def __enter__(self) -> Self: ...
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]: ...
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, exc_tb: TracebackType | None) -> Literal[False]: ...
 
 
 class WorkerSchedulerFactory:
@@ -117,7 +117,7 @@ class WorkerSchedulerFactory:
 def _get_output(task: TaskOnKart[T]) -> T:
     output = task.output()
     # FIXME: currently, nested output is not supported
-    if isinstance(output, list) or isinstance(output, tuple):
+    if isinstance(output, (list, tuple)):
         return cast(T, [t.load() for t in output if isinstance(t, TargetOnKart)])
     if isinstance(output, dict):
         return cast(T, {k: t.load() for k, t in output.items() if isinstance(t, TargetOnKart)})
@@ -228,7 +228,7 @@ def build(
         log_handler_before_run.close()
 
         task_lock_exception_raised = TaskLockExceptionRaisedFlag()
-        raised_exceptions: dict[str, list[Exception]] = dict()
+        raised_exceptions: dict[str, list[Exception]] = {}
 
         @cast(Any, TaskOnKart).event_handler(luigi.Event.FAILURE)
         def when_failure(task: Any, exception: BaseException):

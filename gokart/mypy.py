@@ -112,9 +112,8 @@ class TaskOnKartPlugin(Plugin):
             return self._task_on_kart_class_maker_callback
 
         sym = self.lookup_fully_qualified(fullname)
-        if sym and isinstance(sym.node, TypeInfo):
-            if any(base.fullname == 'gokart.task.TaskOnKart' for base in sym.node.mro):
-                return self._task_on_kart_class_maker_callback
+        if sym and isinstance(sym.node, TypeInfo) and any(base.fullname == 'gokart.task.TaskOnKart' for base in sym.node.mro):
+            return self._task_on_kart_class_maker_callback
         return None
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
@@ -453,9 +452,10 @@ class TaskOnKartTransformer:
             underlying_type = self._api.named_type('datetime.timedelta', [])
         elif parameter_name in ['luigi.parameter.DictParameter', 'luigi.parameter.OptionalDictParameter']:
             underlying_type = self._api.named_type('builtins.dict', [AnyType(TypeOfAny.unannotated), AnyType(TypeOfAny.unannotated)])
-        elif parameter_name in ['luigi.parameter.ListParameter', 'luigi.parameter.OptionalListParameter']:
-            underlying_type = self._api.named_type('builtins.tuple', [AnyType(TypeOfAny.unannotated)])
-        elif parameter_name in ['luigi.parameter.TupleParameter', 'luigi.parameter.OptionalTupleParameter']:
+        elif parameter_name in ['luigi.parameter.ListParameter', 'luigi.parameter.OptionalListParameter'] or parameter_name in [
+            'luigi.parameter.TupleParameter',
+            'luigi.parameter.OptionalTupleParameter',
+        ]:
             underlying_type = self._api.named_type('builtins.tuple', [AnyType(TypeOfAny.unannotated)])
         elif parameter_name in ['luigi.parameter.PathParameter', 'luigi.parameter.OptionalPathParameter']:
             underlying_type = self._api.named_type('pathlib.Path', [])
@@ -465,9 +465,7 @@ class TaskOnKartTransformer:
             underlying_type = self._api.named_type('builtins.list', [self._api.named_type('gokart.task.TaskOnKart', [AnyType(TypeOfAny.unannotated)])])
         elif parameter_name in ['gokart.parameter.ExplicitBoolParameter']:
             underlying_type = self._api.named_type('builtins.bool', [])
-        elif parameter_name in ['luigi.parameter.NumericalParameter']:
-            underlying_type = self._get_type_from_args(parameter, 'var_type')
-        elif parameter_name in ['luigi.parameter.ChoiceParameter']:
+        elif parameter_name in ['luigi.parameter.NumericalParameter'] or parameter_name in ['luigi.parameter.ChoiceParameter']:
             underlying_type = self._get_type_from_args(parameter, 'var_type')
         elif parameter_name in ['luigi.parameter.ChoiceListParameter']:
             base_type = self._get_type_from_args(parameter, 'var_type')

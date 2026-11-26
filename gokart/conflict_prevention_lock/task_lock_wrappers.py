@@ -83,11 +83,11 @@ def wrap_remove_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams
             logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released.')
             cast(Any, scheduler).shutdown()
             return result
-        except BaseException as e:
+        except BaseException:
             logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released with BaseException.')
             task_lock.release()
             cast(Any, scheduler).shutdown()
-            raise e
+            raise
 
     return wrapper
 
@@ -113,10 +113,10 @@ def wrap_run_with_lock(run_func: Callable[[], R], task_lock_params: TaskLockPara
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released.')
             cast(Any, scheduler).shutdown()
             return result
-        except BaseException as e:
+        except BaseException:
             logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released with BaseException.')
             task_lock.release()
             cast(Any, scheduler).shutdown()
-            raise e
+            raise
 
     return wrapped

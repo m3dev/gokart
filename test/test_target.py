@@ -35,6 +35,16 @@ from gokart.target import (
 from test.util import _get_temporary_directory
 
 
+def _pickle_dump(obj, path):
+    with open(path, 'wb') as f:
+        pickle.dump(obj, f)
+
+
+def _pickle_load(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+
 class LocalTargetTest(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = _get_temporary_directory()
@@ -83,7 +93,7 @@ class LocalTargetTest(unittest.TestCase):
 
     def test_save_and_load_figure(self):
         figure_binary = io.BytesIO()
-        pd.DataFrame(dict(x=range(10), y=range(10))).plot.scatter(x='x', y='y')
+        pd.DataFrame({'x': range(10), 'y': range(10)}).plot.scatter(x='x', y='y')
         pyplot.savefig(figure_binary)
         figure_binary.seek(0)
         file_path = os.path.join(self.temporary_directory, 'test.png')
@@ -94,7 +104,7 @@ class LocalTargetTest(unittest.TestCase):
         self.assertGreater(len(loaded), 1000)  # any binary
 
     def test_save_and_load_csv(self):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})
         file_path = os.path.join(self.temporary_directory, 'test.csv')
 
         target = make_target(file_path=file_path, unique_id=None)
@@ -104,7 +114,7 @@ class LocalTargetTest(unittest.TestCase):
         pd.testing.assert_frame_equal(loaded, obj)
 
     def test_save_and_load_tsv(self):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})
         file_path = os.path.join(self.temporary_directory, 'test.tsv')
 
         target = make_target(file_path=file_path, unique_id=None)
@@ -114,7 +124,7 @@ class LocalTargetTest(unittest.TestCase):
         pd.testing.assert_frame_equal(loaded, obj)
 
     def test_save_and_load_parquet(self):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})
         file_path = os.path.join(self.temporary_directory, 'test.parquet')
 
         target = make_target(file_path=file_path, unique_id=None)
@@ -124,7 +134,7 @@ class LocalTargetTest(unittest.TestCase):
         pd.testing.assert_frame_equal(loaded, obj)
 
     def test_save_and_load_feather(self):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]), index=pd.Index([33, 44], name='object_index'))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]}, index=pd.Index([33, 44], name='object_index'))
         file_path = os.path.join(self.temporary_directory, 'test.feather')
 
         target = make_target(file_path=file_path, unique_id=None)
@@ -134,7 +144,7 @@ class LocalTargetTest(unittest.TestCase):
         pd.testing.assert_frame_equal(loaded, obj)
 
     def test_save_and_load_feather_without_store_index_in_feather(self):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]), index=pd.Index([33, 44], name='object_index')).reset_index()
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]}, index=pd.Index([33, 44], name='object_index')).reset_index()
         file_path = os.path.join(self.temporary_directory, 'test.feather')
 
         target = make_target(file_path=file_path, unique_id=None, store_index_in_feather=False)
@@ -144,7 +154,7 @@ class LocalTargetTest(unittest.TestCase):
         pd.testing.assert_frame_equal(loaded, obj)
 
     def test_last_modified_time(self):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})
         file_path = os.path.join(self.temporary_directory, 'test.csv')
 
         target = make_target(file_path=file_path, unique_id=None)
@@ -230,7 +240,7 @@ class S3TargetTest(unittest.TestCase):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
 
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})
         file_path = os.path.join('s3://test/', 'test.feather')
 
         target = make_target(file_path=file_path, unique_id=None)
@@ -244,7 +254,7 @@ class S3TargetTest(unittest.TestCase):
         conn = boto3.resource('s3', region_name='us-east-1')
         conn.create_bucket(Bucket='test')
 
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})
         file_path = os.path.join('s3://test/', 'test.parquet')
 
         target = make_target(file_path=file_path, unique_id=None)
@@ -314,7 +324,7 @@ class ModelTargetTest(unittest.TestCase):
 
     def test_large_data_frame_dump_ignores_chunks_of_another_dump(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        df = pd.DataFrame(dict(data=np.arange(10, dtype=np.float64)))
+        df = pd.DataFrame({'data': np.arange(10, dtype=np.float64)})
         target = self._make_large_data_frame_target(file_path)
         loaded = []
 
@@ -322,26 +332,26 @@ class ModelTargetTest(unittest.TestCase):
             target.dump(df)
             loaded.append(target.load())
 
-        self._dump_large_data_frame_while(file_path, pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64))), dump_and_load)
+        self._dump_large_data_frame_while(file_path, pd.DataFrame({'data': np.arange(1200, dtype=np.float64)}), dump_and_load)
 
         pd.testing.assert_frame_equal(loaded[0], df)
 
     def test_large_data_frame_load_ignores_chunks_of_another_dump(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        df = pd.DataFrame(dict(data=np.arange(10, dtype=np.float64)))
+        df = pd.DataFrame({'data': np.arange(10, dtype=np.float64)})
         target = self._make_large_data_frame_target(file_path)
         target.dump(df)
         loaded = []
 
-        self._dump_large_data_frame_while(file_path, pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64))), lambda: loaded.append(target.load()))
+        self._dump_large_data_frame_while(file_path, pd.DataFrame({'data': np.arange(1200, dtype=np.float64)}), lambda: loaded.append(target.load()))
 
         pd.testing.assert_frame_equal(loaded[0], df)
 
     def test_large_data_frame_load_keeps_chunks_of_another_dump(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
         target = self._make_large_data_frame_target(file_path)
-        target.dump(pd.DataFrame(dict(data=np.arange(10, dtype=np.float64))))
-        df = pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64)))
+        target.dump(pd.DataFrame({'data': np.arange(10, dtype=np.float64)}))
+        df = pd.DataFrame({'data': np.arange(1200, dtype=np.float64)})
 
         self._dump_large_data_frame_while(file_path, df, target.load)
 
@@ -349,7 +359,7 @@ class ModelTargetTest(unittest.TestCase):
 
     def test_large_data_frame_load_keeps_files_of_another_load(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        df = pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64)))
+        df = pd.DataFrame({'data': np.arange(1200, dtype=np.float64)})
         another_target = self._make_large_data_frame_target(file_path)
         another_target.dump(df)
 
@@ -394,7 +404,7 @@ class TestGCSTarget:
         assert target.load() == {'a': 1}
 
     def test_dump_and_load(self, gcs_bucket):
-        obj = pd.DataFrame(dict(a=[1, 2], b=[3, 4]))
+        obj = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})
         for file_name in ['test.pkl', 'test.csv', 'test.feather', 'test.parquet']:
             target = make_target(file_path=self._log_path(gcs_bucket, file_name), unique_id=None)
 
@@ -416,8 +426,8 @@ class TestGCSTarget:
         target = make_model_target(
             file_path=f'gs://{gcs_bucket}/model.zip',
             temporary_directory=str(tmp_path),
-            save_function=lambda obj, path: pickle.dump(obj, open(path, 'wb')),
-            load_function=lambda path: pickle.load(open(path, 'rb')),
+            save_function=_pickle_dump,
+            load_function=_pickle_load,
         )
 
         target.dump(1, task_params={'a': '1'}, custom_labels={'b': '2'})
@@ -431,8 +441,8 @@ class TestGCSTarget:
         target = make_model_target(
             file_path=f'gs://{gcs_bucket}/model.zip',
             temporary_directory=str(tmp_path),
-            save_function=lambda obj, path: pickle.dump(obj, open(path, 'wb')),
-            load_function=lambda path: pickle.load(open(path, 'rb')),
+            save_function=_pickle_dump,
+            load_function=_pickle_load,
         )
 
         with patch('google.cloud.storage.Blob.reload') as reload, patch('google.cloud.storage.Blob.patch') as blob_patch:

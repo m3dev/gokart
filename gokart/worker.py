@@ -53,7 +53,8 @@ import time
 import traceback
 from collections.abc import Callable, Generator
 from multiprocessing.reduction import ForkingPickler
-from typing import Any, Literal, NamedTuple, TypeVar, cast
+from types import TracebackType
+from typing import Any, ClassVar, Literal, NamedTuple, Self, TypeVar, cast
 
 import luigi
 import luigi.worker
@@ -207,7 +208,7 @@ class TaskProcess(_ForkProcess):
 
     # mapping of status_reporter attributes to task attributes that are added to tasks
     # before they actually run, and removed afterwards
-    forward_reporter_attributes = {
+    forward_reporter_attributes: ClassVar[dict[str, str]] = {
         'update_tracking_url': 'set_tracking_url',
         'update_status_message': 'set_status_message',
         'update_progress_percentage': 'set_progress_percentage',
@@ -407,7 +408,7 @@ class TaskProcess(_ForkProcess):
             yield self
         finally:
             # reset attributes again
-            for _, task_attr in self.forward_reporter_attributes.items():
+            for task_attr in self.forward_reporter_attributes.values():
                 setattr(self.task, task_attr, None)
 
 
@@ -662,7 +663,7 @@ class Worker:
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
 
-    def __enter__(self) -> Worker:
+    def __enter__(self) -> Self:
         """
         Start the KeepAliveThread.
         """
@@ -671,7 +672,7 @@ class Worker:
         self._keep_alive_thread.start()
         return self
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, exc_tb: TracebackType | None) -> Literal[False]:
         """
         Stop the KeepAliveThread and kill still running tasks.
         """
@@ -1432,9 +1433,7 @@ class Worker:
             return cast(bool, get_work_response.n_unique_pending > 0)
         elif get_work_response.n_pending_tasks == 0:
             return False
-        elif not self._config.max_keep_alive_idle_duration:
-            return True
-        elif not self._idle_since:
+        elif not self._config.max_keep_alive_idle_duration or not self._idle_since:
             return True
         else:
             time_to_shutdown = self._idle_since + self._config.max_keep_alive_idle_duration - datetime.datetime.now()

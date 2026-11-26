@@ -32,7 +32,7 @@ class _LockExtensionProbe:
 
     def long_func(self, a: int, b: str) -> dict[str, int | str]:
         assert self._extended.wait(timeout=10), 'lock was not extended'
-        return dict(a=a, b=b)
+        return {'a': a, 'b': b}
 
 
 class TestWrapDumpWithLock(unittest.TestCase):
@@ -49,7 +49,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
         self.assertTupleEqual(called_args, (123,))
-        self.assertDictEqual(called_kwargs, dict(b='abc'))
+        self.assertDictEqual(called_kwargs, {'b': 'abc'})
 
     def test_use_redis(self):
         task_lock_params = make_task_lock_params(
@@ -67,7 +67,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123,))
-            self.assertDictEqual(called_kwargs, dict(b='abc'))
+            self.assertDictEqual(called_kwargs, {'b': 'abc'})
 
     def test_if_func_is_skipped_when_cache_already_exists(self):
         task_lock_params = make_task_lock_params(
@@ -117,7 +117,7 @@ class TestWrapDumpWithLock(unittest.TestCase):
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123,))
-            self.assertDictEqual(called_kwargs, dict(b='abc'))
+            self.assertDictEqual(called_kwargs, {'b': 'abc'})
 
             fake_redis = fakeredis.FakeStrictRedis(server=server)
             with self.assertRaises(KeyError):
@@ -157,7 +157,7 @@ class TestWrapLoadWithLock(unittest.TestCase):
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
         self.assertTupleEqual(called_args, (123,))
-        self.assertDictEqual(called_kwargs, dict(b='abc'))
+        self.assertDictEqual(called_kwargs, {'b': 'abc'})
 
         self.assertEqual(resulted, mock_func())
 
@@ -177,7 +177,7 @@ class TestWrapLoadWithLock(unittest.TestCase):
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123,))
-            self.assertDictEqual(called_kwargs, dict(b='abc'))
+            self.assertDictEqual(called_kwargs, {'b': 'abc'})
 
             self.assertEqual(resulted, mock_func())
 
@@ -196,12 +196,12 @@ class TestWrapLoadWithLock(unittest.TestCase):
 
         def func_checking_lock(a: int, b: str) -> dict[str, int | str]:
             self.assertFalse(fake_redis.exists(task_lock_params.redis_key))
-            return dict(a=a, b=b)
+            return {'a': a, 'b': b}
 
         with patch('redis.Redis') as redis_mock:
             redis_mock.return_value = fakeredis.FakeRedis(server=server, host=task_lock_params.redis_host, port=task_lock_params.redis_port)
             resulted = wrap_load_with_lock(func=func_checking_lock, task_lock_params=task_lock_params)(123, b='abc')
-            expected = dict(a=123, b='abc')
+            expected = {'a': 123, 'b': 'abc'}
             self.assertEqual(resulted, expected)
 
     def test_lock_is_removed_after_func_is_finished(self):
@@ -222,7 +222,7 @@ class TestWrapLoadWithLock(unittest.TestCase):
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123,))
-            self.assertDictEqual(called_kwargs, dict(b='abc'))
+            self.assertDictEqual(called_kwargs, {'b': 'abc'})
             self.assertEqual(resulted, mock_func())
 
             fake_redis = fakeredis.FakeStrictRedis(server=server)
@@ -263,7 +263,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
         mock_func.assert_called_once()
         called_args, called_kwargs = mock_func.call_args
         self.assertTupleEqual(called_args, (123,))
-        self.assertDictEqual(called_kwargs, dict(b='abc'))
+        self.assertDictEqual(called_kwargs, {'b': 'abc'})
         self.assertEqual(resulted, mock_func())
 
     def test_use_redis(self):
@@ -282,7 +282,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123,))
-            self.assertDictEqual(called_kwargs, dict(b='abc'))
+            self.assertDictEqual(called_kwargs, {'b': 'abc'})
             self.assertEqual(resulted, mock_func())
 
     def test_check_lock_extended(self):
@@ -299,7 +299,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
         with probe.patch_extend(), patch('redis.Redis') as redis_mock:
             redis_mock.side_effect = fakeredis.FakeRedis
             resulted = wrap_remove_with_lock(func=probe.long_func, task_lock_params=task_lock_params)(123, b='abc')
-            expected = dict(a=123, b='abc')
+            expected = {'a': 123, 'b': 'abc'}
             self.assertEqual(resulted, expected)
 
     def test_lock_is_removed_after_func_is_finished(self):
@@ -319,7 +319,7 @@ class TestWrapRemoveWithLock(unittest.TestCase):
             mock_func.assert_called_once()
             called_args, called_kwargs = mock_func.call_args
             self.assertTupleEqual(called_args, (123,))
-            self.assertDictEqual(called_kwargs, dict(b='abc'))
+            self.assertDictEqual(called_kwargs, {'b': 'abc'})
             self.assertEqual(resulted, mock_func())
 
             fake_redis = fakeredis.FakeStrictRedis(server=server)

@@ -184,7 +184,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._add_configuration(kwargs, 'TaskOnKart')
         # 'This parameter is dumped into "workspace_directory/log/task_log/" when this task finishes with success.'
-        self.task_log: dict[str, Any] = dict()
+        self.task_log: dict[str, Any] = {}
         self.task_unique_id = None
         cast(Any, super()).__init__(*args, **kwargs)
         self._rerun_state = self.rerun
@@ -246,7 +246,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     @staticmethod
     def is_task_on_kart(value: Any) -> bool:
         return isinstance(value, TaskOnKart) or (
-            isinstance(value, tuple) and bool(cast(tuple[Any, ...], value)) and all([isinstance(v, TaskOnKart) for v in cast(tuple[Any, ...], value)])
+            isinstance(value, tuple) and bool(cast(tuple[Any, ...], value)) and all(isinstance(v, TaskOnKart) for v in cast(tuple[Any, ...], value))
         )
 
     @classmethod
@@ -408,7 +408,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         df_type = get_dataframe_type_from_task(self)
         return make_file_processor(file_path, dataframe_type=df_type, store_index_in_feather=self.store_index_in_feather)
 
-    def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte: int = int(2**26)) -> TargetOnKart:
+    def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte: int = (2**26)) -> TargetOnKart:
         """Make a target that splits a DataFrame into several pickle files and zips them.
 
         .. warning::
@@ -477,7 +477,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def load(self, target: None | str | TargetOnKart | TaskOnKart[K] | list[TaskOnKart[K]] = None) -> Any:
         def _load(targets: Any) -> Any:
-            if isinstance(targets, list) or isinstance(targets, tuple):
+            if isinstance(targets, (list, tuple)):
                 return [_load(t) for t in cast(list[Any] | tuple[Any, ...], targets)]
             if isinstance(targets, dict):
                 return {k: _load(t) for k, t in cast(dict[str, Any], targets).items()}
@@ -493,7 +493,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def load_generator(self, target: None | str | TargetOnKart | list[TaskOnKart[K]] = None) -> Generator[Any, None, None]:
         def _load(targets: Any) -> Generator[Any, None, None]:
-            if isinstance(targets, list) or isinstance(targets, tuple):
+            if isinstance(targets, (list, tuple)):
                 for t in cast(list[Any] | tuple[Any, ...], targets):
                     yield from _load(t)
             elif isinstance(targets, dict):
@@ -512,9 +512,8 @@ class TaskOnKart(luigi.Task, Generic[T]):
 
     def dump(self, obj: Any, target: None | str | TargetOnKart = None, custom_labels: dict[str, Any] | None = None) -> None:
         PandasTypeConfigMap().check(obj, task_namespace=self.task_namespace)
-        if self.fail_on_empty_dump:
-            if _is_empty_data_frame(obj):
-                raise EmptyDumpError()
+        if self.fail_on_empty_dump and _is_empty_data_frame(obj):
+            raise EmptyDumpError()
 
         if self.should_lock_run and self._lock_at_dump:
             fallback = 'Falling back to the dump lock.' if self._has_redis_lock() else 'No lock is taken, because the lock url points to object storage.'
@@ -569,7 +568,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
     def get_own_code(self):
         gokart_codes = self.get_code(TaskOnKart)
         own_codes = self.get_code(self)
-        return ''.join(sorted(list(own_codes - gokart_codes)))
+        return ''.join(sorted(own_codes - gokart_codes))
 
     def make_unique_id(self) -> str:
         unique_id = self.task_unique_id or self._make_hash_id()
@@ -654,7 +653,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
             return self.task_log
         if target.exists():
             return cast(dict[Any, Any], self.load(target))
-        return dict()
+        return {}
 
     @_event_handler(luigi.Event.SUCCESS)
     def _dump_task_log(self):
@@ -669,7 +668,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         target = self._get_task_params_target()
         if target.exists():
             return cast(dict[Any, Any], self.load(target))
-        return dict()
+        return {}
 
     @_event_handler(luigi.Event.START)
     def _set_random_seed(self):
@@ -701,7 +700,7 @@ class TaskOnKart(luigi.Task, Generic[T]):
         return success_methods
 
     def _get_random_seed(self):
-        if self.fix_random_seed_value and (not self.fix_random_seed_value == self.FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER):
+        if self.fix_random_seed_value and (self.fix_random_seed_value != self.FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER):
             return self.fix_random_seed_value
         return int(self.make_unique_id(), 16) % (2**32 - 1)  # maximum numpy.random.seed
 

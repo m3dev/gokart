@@ -7,8 +7,8 @@ from .slack_api import ChannelListNotLoadedError, ChannelNotFoundError, FileNotU
 __all__ = [
     'ChannelListNotLoadedError',
     'ChannelNotFoundError',
-    'FileNotUploadedError',
     'EventAggregator',
+    'FileNotUploadedError',
     'SlackAPI',
     'SlackConfig',
 ]

@@ -177,10 +177,9 @@ class LoggerConfigTest(unittest.TestCase):
             (logging.DEBUG, logging.DEBUG, logging.NOTSET),
             (logging.CRITICAL, logging.CRITICAL, logging.ERROR),
         ):
-            with self.subTest(level=level, enable_expected=enable_expected, disable_expected=disable_expected):
-                with LoggerConfig(level) as lc:
-                    self.assertTrue(lc.logger.isEnabledFor(enable_expected))
-                    self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
+            with self.subTest(level=level, enable_expected=enable_expected, disable_expected=disable_expected), LoggerConfig(level) as lc:
+                self.assertTrue(lc.logger.isEnabledFor(enable_expected))
+                self.assertTrue(not lc.logger.isEnabledFor(disable_expected))
 
     def test_logger_config_restores_previous_disable_level(self):
         original_disable = logging.root.manager.disable
@@ -334,8 +333,10 @@ class _DependsOnMissingExternal(gokart.TaskOnKart[int]):
 
 class _NeedsUnavailableResource(gokart.TaskOnKart[int]):
     task_namespace = __name__
+
     # WHY: luigi treats an unconfigured resource as having 1 unit, so asking for 2 is never satisfiable; the odd name keeps a developer's luigi.cfg out of it
-    resources = {'_gokart_test_not_run': 2}
+    def process_resources(self) -> dict[str, int]:
+        return {'_gokart_test_not_run': 2}
 
     def run(self):
         self.dump(1)
@@ -394,9 +395,8 @@ class TestGokartBuildErrorPickle(unittest.TestCase):
         self.assertEqual(restored.extra, 'kept')
 
     def test_error_raised_in_child_process_reaches_parent(self):
-        with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as executor:
-            with self.assertRaises(GokartBuildError) as cm:
-                executor.submit(_raise_gokart_build_error).result(timeout=60)
+        with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as executor, self.assertRaises(GokartBuildError) as cm:
+            executor.submit(_raise_gokart_build_error).result(timeout=60)
         self.assertEqual(str(cm.exception), 'build failed')
         self.assertEqual(list(cm.exception.raised_exceptions), ['Task(a=1)'])
         self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.FAILED)

@@ -32,16 +32,16 @@ class TaskInfo:
         return f'(parameter={self.params}, output={self.output_paths}, time={self.processing_time}, task_log={self.task_log})'
 
     def task_info_dict(self):
-        return dict(
-            name=self.name,
-            unique_id=self.unique_id,
-            output_paths=self.output_paths,
-            params=self.params,
-            processing_time=self.processing_time,
-            is_complete=self.is_complete,
-            task_log=self.task_log,
-            requires=self.requires,
-        )
+        return {
+            'name': self.name,
+            'unique_id': self.unique_id,
+            'output_paths': self.output_paths,
+            'params': self.params,
+            'processing_time': self.processing_time,
+            'is_complete': self.is_complete,
+            'task_log': self.task_log,
+            'requires': self.requires,
+        }
 
 
 class RequiredTask(NamedTuple):

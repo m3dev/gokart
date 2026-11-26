@@ -11,7 +11,7 @@ from gokart.conflict_prevention_lock.lock_config import LOCK_REQUEST_RETRY_DEADL
 from gokart.process_cache import cached_per_process
 
 if TYPE_CHECKING:
-    import luigi.contrib.s3
+    from luigi.contrib.s3 import S3Client
 
 
 _MIN_BOTOCORE_FOR_CONDITIONAL_WRITES = (1, 35, 69)
@@ -32,21 +32,21 @@ class S3Config(luigi.Config):
         default=None, description='Endpoint URL of an S3-compatible store (e.g. MinIO, R2), used by S3 targets and the S3 run lock. AWS S3 is used when None.'
     )
 
-    _client: tuple[int, luigi.contrib.s3.S3Client] | None = None
+    _client: tuple[int, S3Client] | None = None
 
-    def get_s3_client(self) -> luigi.contrib.s3.S3Client:
+    def get_s3_client(self) -> S3Client:
         # boto3 sessions and clients are not fork-safe
         self._client = cached_per_process(self._client, self._get_s3_client)
         return self._client[1]
 
-    def _get_s3_client(self) -> luigi.contrib.s3.S3Client:
+    def _get_s3_client(self) -> S3Client:
         return self._new_luigi_client()
 
-    def _new_luigi_client(self, **extra: Any) -> luigi.contrib.s3.S3Client:
+    def _new_luigi_client(self, **extra: Any) -> S3Client:
         import_s3_dependency('boto3')
-        import luigi.contrib.s3
+        from luigi.contrib.s3 import S3Client
 
-        return luigi.contrib.s3.S3Client(
+        return S3Client(
             aws_access_key_id=os.environ.get(self.aws_access_key_id_name),
             aws_secret_access_key=os.environ.get(self.aws_secret_access_key_name),
             **self._endpoint_kwargs(),

@@ -329,10 +329,9 @@ class TestWorkerRunLock:
             raise KeyboardInterrupt
 
         monkeypatch.setattr(task, '_run', _interrupt)
-        with pytest.raises(KeyboardInterrupt):
-            with Worker(scheduler=scheduler.Scheduler()) as worker:
-                assert worker.add(task)
-                worker.run()
+        with pytest.raises(KeyboardInterrupt), Worker(scheduler=scheduler.Scheduler()) as worker:
+            assert worker.add(task)
+            worker.run()
 
         assert not fakeredis.FakeRedis(server=redis_server).exists(_run_lock_key(task))
 
