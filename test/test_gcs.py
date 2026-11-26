@@ -126,11 +126,11 @@ class TestGCSClientParallelSettings:
     @pytest.mark.parametrize(
         ('values', 'match'),
         [
-            (dict(parallel_upload_threshold='1', parallel_chunk_size=str(5 * MiB - 1)), 'parallel_chunk_size'),
-            (dict(parallel_download_threshold='1', parallel_chunk_size=str(MiB - 1)), 'parallel_chunk_size'),
-            (dict(parallel_upload_threshold='1', parallel_max_workers='0'), 'parallel_max_workers'),
-            (dict(parallel_download_threshold='1', parallel_max_workers='0'), 'parallel_max_workers'),
-            (dict(parallel_upload_threshold='1', parallel_chunk_size=str(5 * 1024 * MiB + 1)), 'parallel_chunk_size'),
+            ({'parallel_upload_threshold': '1', 'parallel_chunk_size': str(5 * MiB - 1)}, 'parallel_chunk_size'),
+            ({'parallel_download_threshold': '1', 'parallel_chunk_size': str(MiB - 1)}, 'parallel_chunk_size'),
+            ({'parallel_upload_threshold': '1', 'parallel_max_workers': '0'}, 'parallel_max_workers'),
+            ({'parallel_download_threshold': '1', 'parallel_max_workers': '0'}, 'parallel_max_workers'),
+            ({'parallel_upload_threshold': '1', 'parallel_chunk_size': str(5 * 1024 * MiB + 1)}, 'parallel_chunk_size'),
         ],
     )
     def test_invalid_settings_are_rejected_when_the_client_is_created(self, gcs_config_section, values, match):
@@ -142,11 +142,11 @@ class TestGCSClientParallelSettings:
     @pytest.mark.parametrize(
         'values',
         [
-            dict(parallel_upload_threshold='1', parallel_chunk_size='5MiB'),
-            dict(parallel_upload_threshold='1', parallel_chunk_size='5GiB'),
-            dict(parallel_download_threshold='1', parallel_chunk_size='1MiB'),
+            {'parallel_upload_threshold': '1', 'parallel_chunk_size': '5MiB'},
+            {'parallel_upload_threshold': '1', 'parallel_chunk_size': '5GiB'},
+            {'parallel_download_threshold': '1', 'parallel_chunk_size': '1MiB'},
             # the minimums only matter for the direction that is turned on
-            dict(parallel_chunk_size='1', parallel_max_workers='0'),
+            {'parallel_chunk_size': '1', 'parallel_max_workers': '0'},
         ],
     )
     def test_valid_settings_are_accepted(self, gcs_config_section, values):
@@ -250,9 +250,11 @@ class TestGCSClientParallelDownload:
         _upload(gcs_bucket, 'data.bin', data)
         gcs_config_section(parallel_download_threshold=str(len(data)), parallel_chunk_size='1MiB')
 
-        with patch.object(transfer_manager, 'download_chunks_concurrently', wraps=transfer_manager.download_chunks_concurrently) as download:
-            with GCSClient().download(f'gs://{gcs_bucket}/data.bin') as f:
-                assert f.read() == data
+        with (
+            patch.object(transfer_manager, 'download_chunks_concurrently', wraps=transfer_manager.download_chunks_concurrently) as download,
+            GCSClient().download(f'gs://{gcs_bucket}/data.bin') as f,
+        ):
+            assert f.read() == data
 
         download.assert_called_once()
         assert download.call_args.kwargs['worker_type'] == transfer_manager.THREAD
@@ -262,9 +264,8 @@ class TestGCSClientParallelDownload:
         _upload(gcs_bucket, 'data.bin', data)
         gcs_config_section(parallel_download_threshold=str(len(data) + 1), parallel_chunk_size='1MiB')
 
-        with patch.object(transfer_manager, 'download_chunks_concurrently') as download:
-            with GCSClient().download(f'gs://{gcs_bucket}/data.bin') as f:
-                assert f.read() == data
+        with patch.object(transfer_manager, 'download_chunks_concurrently') as download, GCSClient().download(f'gs://{gcs_bucket}/data.bin') as f:
+            assert f.read() == data
 
         download.assert_not_called()
 
@@ -273,9 +274,8 @@ class TestGCSClientParallelDownload:
         _upload(gcs_bucket, 'data.bin', data)
         gcs_config_section(parallel_download_threshold='1', parallel_chunk_size='1MiB')
 
-        with patch.object(transfer_manager, 'download_chunks_concurrently') as download:
-            with GCSClient().download(f'gs://{gcs_bucket}/data.bin') as f:
-                assert f.read() == data
+        with patch.object(transfer_manager, 'download_chunks_concurrently') as download, GCSClient().download(f'gs://{gcs_bucket}/data.bin') as f:
+            assert f.read() == data
 
         download.assert_not_called()
 
@@ -302,9 +302,11 @@ class TestGCSClientParallelDownload:
                 f.write(b'partial')
             raise RuntimeError('checksum mismatch')
 
-        with patch.object(transfer_manager, 'download_chunks_concurrently', side_effect=fail_halfway):
-            with pytest.raises(RuntimeError, match='checksum mismatch'):
-                GCSClient().download(f'gs://{gcs_bucket}/data.bin')
+        with (
+            patch.object(transfer_manager, 'download_chunks_concurrently', side_effect=fail_halfway),
+            pytest.raises(RuntimeError, match='checksum mismatch'),
+        ):
+            GCSClient().download(f'gs://{gcs_bucket}/data.bin')
 
         assert list(tmp_path.iterdir()) == []
 

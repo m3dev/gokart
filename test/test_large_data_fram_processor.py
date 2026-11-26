@@ -33,7 +33,7 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
 
     def test_save_and_load(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        df = pd.DataFrame(dict(data=np.random.uniform(0, 1, size=int(1e6))))
+        df = pd.DataFrame({'data': np.random.uniform(0, 1, size=int(1e6))})
         processor = LargeDataFrameProcessor(max_byte=int(1e6))
         processor.save(df, file_path)
         loaded = processor.load(file_path)
@@ -42,7 +42,7 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
 
     def test_save_and_load_keeps_row_order_with_more_than_ten_chunks(self):
         file_path = os.path.join(self.temporary_directory, 'test_with_many_chunks.zip')
-        df = pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64)))
+        df = pd.DataFrame({'data': np.arange(1200, dtype=np.float64)})
         processor = LargeDataFrameProcessor(max_byte=800)
         processor.save(df, file_path)
         loaded = processor.load(file_path)
@@ -51,7 +51,7 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
 
     def test_save_and_load_when_split_size_exceeds_row_count(self):
         file_path = os.path.join(self.temporary_directory, 'test_with_tiny_max_byte.zip')
-        df = pd.DataFrame(dict(data=np.arange(2, dtype=np.float64)))
+        df = pd.DataFrame({'data': np.arange(2, dtype=np.float64)})
         processor = LargeDataFrameProcessor(max_byte=1)
         processor.save(df, file_path)
         loaded = processor.load(file_path)
@@ -60,14 +60,14 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
 
     def test_save_does_not_materialize_values(self):
         file_path = os.path.join(self.temporary_directory, 'test_no_values.zip')
-        df = _NoValuesDataFrame(dict(data=np.arange(100, dtype=np.float64)))
+        df = _NoValuesDataFrame({'data': np.arange(100, dtype=np.float64)})
         LargeDataFrameProcessor(max_byte=200).save(df, file_path)
 
         pd.testing.assert_frame_equal(pd.DataFrame(LargeDataFrameProcessor.load(file_path)), pd.DataFrame(df))
 
     def test_save_splits_uneven_row_count_without_losing_rows(self):
         file_path = os.path.join(self.temporary_directory, 'test_uneven.zip')
-        df = pd.DataFrame(dict(data=np.arange(1003, dtype=np.float64)))
+        df = pd.DataFrame({'data': np.arange(1003, dtype=np.float64)})
         processor = LargeDataFrameProcessor(max_byte=800)
         processor.save(df, file_path)
         chunk_sizes = [len(pd.read_pickle(p)) for _, p in processor._chunk_paths(self.temporary_directory)]
@@ -82,7 +82,7 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
         file_path = os.path.join(self.temporary_directory, 'test_mixed.zip')
         # dtype=object explicitly: pandas 3 would turn the strings into StringDtype.
         # values.nbytes counts 8 bytes per object pointer, so it underestimated the strings themselves.
-        df = pd.DataFrame(dict(text=pd.Series(['x' * 1000] * 100, dtype=object), number=np.arange(100, dtype=np.float64)))
+        df = pd.DataFrame({'text': pd.Series(['x' * 1000] * 100, dtype=object), 'number': np.arange(100, dtype=np.float64)})
         processor = LargeDataFrameProcessor(max_byte=10000)
         processor.save(df, file_path)
 
@@ -95,14 +95,13 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
 
     def test_invalid_max_byte_raises_value_error(self):
         for max_byte in (0, -1):
-            with self.subTest(max_byte=max_byte):
-                with self.assertRaises(ValueError):
-                    LargeDataFrameProcessor(max_byte=max_byte)
+            with self.subTest(max_byte=max_byte), self.assertRaises(ValueError):
+                LargeDataFrameProcessor(max_byte=max_byte)
 
     def test_save_removes_stale_chunks_from_previous_larger_save(self):
         file_path = os.path.join(self.temporary_directory, 'test_with_stale.zip')
-        large_df = pd.DataFrame(dict(data=np.arange(1200, dtype=np.float64)))
-        small_df = pd.DataFrame(dict(data=np.arange(10, dtype=np.float64)))
+        large_df = pd.DataFrame({'data': np.arange(1200, dtype=np.float64)})
+        small_df = pd.DataFrame({'data': np.arange(10, dtype=np.float64)})
         LargeDataFrameProcessor(max_byte=800).save(large_df, file_path)
         processor = LargeDataFrameProcessor(max_byte=int(1e6))
         processor.save(small_df, file_path)
@@ -116,7 +115,7 @@ class LargeDataFrameProcessorTest(unittest.TestCase):
         os.makedirs(self.temporary_directory, exist_ok=True)
         with open(unrelated, 'w') as f:
             f.write('keep')
-        LargeDataFrameProcessor(max_byte=int(1e6)).save(pd.DataFrame(dict(data=[1.0])), file_path)
+        LargeDataFrameProcessor(max_byte=int(1e6)).save(pd.DataFrame({'data': [1.0]}), file_path)
 
         self.assertTrue(os.path.exists(unrelated))
 
@@ -152,7 +151,7 @@ class TestLargeDataFrameDeprecation:
 
     def test_large_data_frame_processor_load_warns_at_the_caller(self, tmp_path):
         file_path = str(tmp_path / 'data.zip')
-        _LargeDataFrameProcessor(max_byte=800).save(pd.DataFrame(dict(data=[1.0])), file_path)
+        _LargeDataFrameProcessor(max_byte=800).save(pd.DataFrame({'data': [1.0]}), file_path)
         with pytest.warns(FutureWarning, match=r'LargeDataFrameProcessor is deprecated and will be removed in gokart 2\.0\.0') as record:
             LargeDataFrameProcessor.load(file_path)
 
@@ -163,7 +162,7 @@ class TestLargeDataFrameDeprecation:
         task = _LargeDataFrameTask(workspace_directory=str(tmp_path))
         with pytest.warns(FutureWarning):
             target = task.make_large_data_frame_target('data.zip', max_byte=800)
-        df = pd.DataFrame(dict(data=np.arange(1000, dtype=np.float64)))
+        df = pd.DataFrame({'data': np.arange(1000, dtype=np.float64)})
 
         target.dump(df)
 

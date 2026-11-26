@@ -63,7 +63,7 @@ class JsonFileProcessorPandas(FileProcessor):
         import pandas as pd
 
         try:
-            return pd.read_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)
+            return pd.read_json(file, orient=self._orient, lines=self._orient == 'records')
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
 
@@ -75,7 +75,7 @@ class JsonFileProcessorPandas(FileProcessor):
         if not isinstance(obj, pd.DataFrame | pd.Series):
             raise TypeError(f'requires pd.DataFrame or pd.Series or dict, but {type(obj)} is passed.')
         # pandas-stubs does not allow 'columns' and 'values' for Series.to_json; pandas raises ValueError for them at runtime.
-        obj.to_json(file, orient=self._orient, lines=True if self._orient == 'records' else False)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        obj.to_json(file, orient=self._orient, lines=self._orient == 'records')  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 class NdjsonFileProcessorPandas(FileProcessor):
@@ -162,15 +162,14 @@ class FeatherFileProcessorPandas(FileProcessor):
         else:
             loaded_df = pd.read_feather(BytesIO(file.read()))
 
-        if self._store_index_in_feather:
-            if any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
-                index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
-                index_column = index_columns[0]
-                index_name: str | None = index_column[len(self.INDEX_COLUMN_PREFIX) :]
-                if index_name == 'None':
-                    index_name = None
-                loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
-                loaded_df = loaded_df.drop(columns=[index_column])
+        if self._store_index_in_feather and any(col.startswith(self.INDEX_COLUMN_PREFIX) for col in loaded_df.columns):
+            index_columns = [col_name for col_name in loaded_df.columns[::-1] if col_name[: len(self.INDEX_COLUMN_PREFIX)] == self.INDEX_COLUMN_PREFIX]
+            index_column = index_columns[0]
+            index_name: str | None = index_column[len(self.INDEX_COLUMN_PREFIX) :]
+            if index_name == 'None':
+                index_name = None
+            loaded_df.index = pd.Index(loaded_df[index_column].values, name=index_name)
+            loaded_df = loaded_df.drop(columns=[index_column])
 
         return loaded_df
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import os
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 
 from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
 
@@ -34,7 +34,7 @@ class TaskLockException(Exception):
 
 
 class RedisClient:
-    _instances: dict[Any, Any] = {}
+    _instances: ClassVar[dict[Any, Any]] = {}
 
     def __new__(cls, *args: Any, **kwargs: Any):
         key = (args, tuple(sorted(kwargs.items())))

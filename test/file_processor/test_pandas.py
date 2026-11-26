@@ -223,6 +223,5 @@ class TestFeatherFileProcessor(unittest.TestCase):
             temp_path = f'{temp_dir}/temp.feather'
 
             local_target = LocalTarget(path=temp_path, format=processor.format())
-            with local_target.open('w') as f:
-                with self.assertRaises(AssertionError):
-                    processor.dump(df, f)
+            with local_target.open('w') as f, self.assertRaises(AssertionError):
+                processor.dump(df, f)

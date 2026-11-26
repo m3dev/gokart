@@ -79,7 +79,7 @@ def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) ->
     if isinstance(items, str):
         return func(items)  # pyright: ignore[reportArgumentType]
     if isinstance(items, Sequence):
-        return list(map(lambda item: map_flattenable_items(func, item), cast(Sequence[FlattenableItems[T]], items)))
+        return [map_flattenable_items(func, item) for item in cast(Sequence[FlattenableItems[T]], items)]
     return func(items)
 
 

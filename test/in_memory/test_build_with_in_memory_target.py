@@ -115,10 +115,12 @@ class TestUnsupportedCombinations:
             config.remove_option('gokart_worker', 'timeout')
 
     def test_force_multiprocessing(self) -> None:
-        with in_memory_scope():
-            with Worker(scheduler=scheduler.Scheduler(), config=gokart_worker(force_multiprocessing=True)) as worker:
-                with pytest.raises(InMemoryTargetError, match='force_multiprocessing'):
-                    worker.add(_FixedKeyTask(value=1))
+        with (
+            in_memory_scope(),
+            Worker(scheduler=scheduler.Scheduler(), config=gokart_worker(force_multiprocessing=True)) as worker,
+            pytest.raises(InMemoryTargetError, match='force_multiprocessing'),
+        ):
+            worker.add(_FixedKeyTask(value=1))
         assert _run_values == []
 
     def test_should_lock_run_with_make_in_memory_target(self) -> None:

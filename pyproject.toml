@@ -98,8 +98,6 @@ exclude = ["venv/*", "tox/*", "examples/*"]
 
 [tool.ruff.lint]
 # All the rules are listed on https://docs.astral.sh/ruff/rules/
-# ruff 0.17 widened the default rule set; pin the previous defaults so upgrades do not silently add rules.
-select = ["E4", "E7", "E9", "F"]
 extend-select = [
   "B", # bugbear
   "I", # isort
@@ -109,7 +107,9 @@ extend-select = [
 
 # B006: Do not use mutable data structures for argument defaults. They are created during function definition time. All calls to the function reuse this one instance of that data structure, persisting changes between them.
 # B008 Do not perform function calls in argument defaults.  The call is performed only once at function definition time. All calls to your function will reuse the result of that definition-time function call.  If this is intended, assign the function call to a module-level variable and use that variable as a default value.
-ignore = ["B006", "B008"]
+# BLE001 / S110: the worker deliberately catches every exception raised by user code and reports it as a task failure, and the file processors catch everything to fall back to another loader.
+# TRY002 / TRY004: fixing them changes the exception type users see, which belongs to a major release.
+ignore = ["B006", "B008", "BLE001", "S110", "TRY002", "TRY004"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # pandas and polars are optional: import them where they are used (or under TYPE_CHECKING), so that import gokart does not need or load them.
