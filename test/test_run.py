@@ -1,5 +1,8 @@
+import logging
 import os
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -8,11 +11,17 @@ import luigi.mock
 
 import gokart
 from gokart.run import _try_to_send_event_summary_to_slack
+from test.util import PlainLuigiTask
 
 
 class _DummyTask(gokart.TaskOnKart[Any]):
     task_namespace = __name__
     param: luigi.StrParameter = luigi.StrParameter()
+
+
+def _event_callbacks() -> dict[Any, dict[str, set[Any]]]:
+    callbacks: dict[Any, dict[str, set[Any]]] = luigi.Task._event_callbacks
+    return {cls: {event: set(handlers) for event, handlers in events.items()} for cls, events in callbacks.items()}
 
 
 class RunTest(unittest.TestCase):
@@ -33,6 +42,23 @@ class RunTest(unittest.TestCase):
         with self.assertRaises(SystemExit) as exit_code:
             gokart.run()
         self.assertEqual(exit_code.exception.code, 0)
+
+    @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler', '--no-lock'])
+    def test_run_removes_its_event_handlers(self):
+        # https://github.com/m3dev/gokart/issues/718
+        callbacks_before = _event_callbacks()
+        with self.assertRaises(SystemExit):
+            gokart.run()
+        self.assertEqual(_event_callbacks(), callbacks_before)
+
+    @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--param', 'test', '--log-level=CRITICAL', '--local-scheduler', '--no-lock'])
+    def test_plain_luigi_task_after_run_does_not_log_event_callback_errors(self):
+        # https://github.com/m3dev/gokart/issues/718
+        with self.assertRaises(SystemExit):
+            gokart.run()
+
+        with TemporaryDirectory() as tmp_dir, self.assertNoLogs('luigi-interface', level=logging.ERROR):
+            self.assertTrue(luigi.build([PlainLuigiTask(path=str(Path(tmp_dir) / 'plain.txt'))], local_scheduler=True))
 
     @patch('sys.argv', new=['main', f'{__name__}._DummyTask', '--log-level=CRITICAL', '--local-scheduler'])
     def test_run_with_undefined_environ(self):
