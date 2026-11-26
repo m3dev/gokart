@@ -79,6 +79,14 @@ class TestLocalZipClient:
 
         assert os.listdir(tmp_path) == ['tmp']
 
+    def test_make_archive_creates_missing_parent_directory(self, tmp_path):
+        file_path = str(tmp_path / 'new_dir' / 'archive.zip')
+
+        _make_archive_with(tmp_path / 'new', file_path, 'new')
+
+        assert os.listdir(tmp_path / 'new_dir') == ['archive.zip']
+        assert _unpack_text(tmp_path, file_path) == 'new'
+
     def test_make_archive_writes_through_symlink(self, tmp_path):
         real_path = tmp_path / 'real' / 'archive.zip'
         real_path.parent.mkdir()
