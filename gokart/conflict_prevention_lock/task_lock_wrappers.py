@@ -2,17 +2,59 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from logging import getLogger
-from typing import Any, ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, set_lock_scheduler, set_task_lock
+
+if TYPE_CHECKING:
+    from apscheduler.schedulers.background import BackgroundScheduler  # pyright: ignore[reportMissingTypeStubs]
+    from redis.lock import Lock
 
 logger = getLogger(__name__)
 
 
 P = ParamSpec('P')
 R = TypeVar('R')
+
+
+def _unlock(task_lock: Lock, scheduler: BackgroundScheduler) -> None:
+    # Stop extending the lock before releasing it, and do both even if one raises: a scheduler left running would extend the lock forever.
+    try:
+        cast(Any, scheduler).shutdown()
+    finally:
+        task_lock.release()
+
+
+def _unlock_after_error(unlock: Callable[[], None], task_lock_params: TaskLockParams, operation: str) -> None:
+    try:
+        unlock()
+    except Exception:
+        # Raising this would hide the error that is already propagating.
+        logger.warning(f'Failed to release the task {operation} lock of {task_lock_params.redis_key}.', exc_info=True)
+    else:
+        logger.debug(f'Task {operation} lock of {task_lock_params.redis_key} released.')
+
+
+@contextmanager
+def _hold_lock(task_lock_params: TaskLockParams, operation: str) -> Generator[None]:
+    task_lock = set_task_lock(task_lock_params=task_lock_params)
+    try:
+        scheduler = set_lock_scheduler(task_lock=task_lock, task_lock_params=task_lock_params)
+    except BaseException:
+        # Otherwise other workers wait for the lock timeout, or forever when no timeout is set.
+        _unlock_after_error(task_lock.release, task_lock_params, operation)
+        raise
+    logger.debug(f'Task {operation} lock of {task_lock_params.redis_key} locked.')
+    try:
+        yield
+    except BaseException:
+        _unlock_after_error(functools.partial(_unlock, task_lock, scheduler), task_lock_params, operation)
+        raise
+    _unlock(task_lock, scheduler)
+    logger.debug(f'Task {operation} lock of {task_lock_params.redis_key} released.')
 
 
 def wrap_dump_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams, exist_check: Callable[..., bool]) -> Callable[P, R | None]:
@@ -25,18 +67,10 @@ def wrap_dump_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams, 
         return func
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
-        task_lock = set_task_lock(task_lock_params=task_lock_params)
-        scheduler = set_lock_scheduler(task_lock=task_lock, task_lock_params=task_lock_params)
-
-        try:
-            logger.debug(f'Task DUMP lock of {task_lock_params.redis_key} locked.')
+        with _hold_lock(task_lock_params, 'DUMP'):
             if not exist_check():
                 return func(*args, **kwargs)
             return None
-        finally:
-            logger.debug(f'Task DUMP lock of {task_lock_params.redis_key} released.')
-            task_lock.release()
-            cast(Any, scheduler).shutdown()
 
     return wrapper
 
@@ -51,15 +85,10 @@ def wrap_load_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams) 
         return func
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        task_lock = set_task_lock(task_lock_params=task_lock_params)
-        scheduler = set_lock_scheduler(task_lock=task_lock, task_lock_params=task_lock_params)
-
-        logger.debug(f'Task LOAD lock of {task_lock_params.redis_key} locked.')
-        task_lock.release()
-        logger.debug(f'Task LOAD lock of {task_lock_params.redis_key} released.')
-        cast(Any, scheduler).shutdown()
-        result = func(*args, **kwargs)
-        return result
+        # Taking the lock only waits for a dump in progress; it need not be held while loading.
+        with _hold_lock(task_lock_params, 'LOAD'):
+            pass
+        return func(*args, **kwargs)
 
     return wrapper
 
@@ -73,21 +102,8 @@ def wrap_remove_with_lock(func: Callable[P, R], task_lock_params: TaskLockParams
         return func
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        task_lock = set_task_lock(task_lock_params=task_lock_params)
-        scheduler = set_lock_scheduler(task_lock=task_lock, task_lock_params=task_lock_params)
-
-        try:
-            logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} locked.')
-            result = func(*args, **kwargs)
-            task_lock.release()
-            logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released.')
-            cast(Any, scheduler).shutdown()
-            return result
-        except BaseException:
-            logger.debug(f'Task REMOVE lock of {task_lock_params.redis_key} released with BaseException.')
-            task_lock.release()
-            cast(Any, scheduler).shutdown()
-            raise
+        with _hold_lock(task_lock_params, 'REMOVE'):
+            return func(*args, **kwargs)
 
     return wrapper
 
@@ -103,20 +119,7 @@ def wrap_run_with_lock(run_func: Callable[[], R], task_lock_params: TaskLockPara
 
     @functools.wraps(run_func)
     def wrapped():
-        task_lock = set_task_lock(task_lock_params=task_lock_params)
-        scheduler = set_lock_scheduler(task_lock=task_lock, task_lock_params=task_lock_params)
-
-        try:
-            logger.debug(f'Task RUN lock of {task_lock_params.redis_key} locked.')
-            result = run_func()
-            task_lock.release()
-            logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released.')
-            cast(Any, scheduler).shutdown()
-            return result
-        except BaseException:
-            logger.debug(f'Task RUN lock of {task_lock_params.redis_key} released with BaseException.')
-            task_lock.release()
-            cast(Any, scheduler).shutdown()
-            raise
+        with _hold_lock(task_lock_params, 'RUN'):
+            return run_func()
 
     return wrapped
