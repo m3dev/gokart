@@ -110,6 +110,36 @@ Please refer to :func:`~gokart.task.TaskOnKart.make_target` and described later 
     When you set `serialized_task_definition_check=True`, the task will rerun when you modify the scripts of the task.
     Please note that the scripts outside the class are not considered.
 
+.. note::
+    ``make_unique_id()`` is a hash of the task's significant parameters, the class name of the task itself,
+    and the identities of the tasks returned by ``requires()``. It does not include everything that defines the dependencies:
+
+    - The keys of a dict returned by an overridden ``requires()`` are not included. Only the values are hashed, in order, so renaming a key
+      (or changing which key maps to which task without changing the order of the values) does not change the output path.
+      Reordering the entries without changing the mapping does change it. The shape of the container is not included either:
+      ``{'a': X(), 'b': Y()}``, ``[X(), Y()]`` and ``(X(), Y())`` give the same id.
+      This does not apply to the default ``requires()``, where dependencies are passed as ``TaskInstanceParameter``:
+      the parameter names are hashed through the task's own parameters (only for significant parameters, so renaming a
+      ``TaskInstanceParameter(significant=False)`` behaves like renaming a dict key).
+    - The class name of a dependency that is a plain ``luigi.Task`` (not a ``TaskOnKart``) is not included.
+      Only its significant parameters are hashed. Everything upstream of it is hidden as well: in ``C -> plain luigi.Task B -> TaskOnKart A``,
+      changing the parameters of ``A`` does not change the id of ``C``.
+    - A ``TaskOnKart`` dependency contributes its own ``make_unique_id()``, which includes only its bare class name (no module or namespace),
+      so two same-named ``TaskOnKart`` classes from different modules with the same parameters get the same id.
+      This holds for an overridden ``requires()``. With the default ``requires()``, ``TaskInstanceParameter`` also serializes the task family,
+      which includes ``task_namespace``, so same-named classes in different namespaces get different ids.
+    - A dependency task created with ``significant=False`` (e.g. ``X(significant=False)``) is not hashed at all.
+
+    As a result, if you swap a dependency for another task with the same parameters, or rewire the keys of ``requires()``,
+    the output path stays the same and a stale cache may be reused.
+    To avoid this, add a significant parameter (e.g. a version) and change it when you change ``requires()`` (see :doc:`task_settings`).
+    ``rerun=True`` only re-runs the task itself. It does not change the hash, so tasks that depend on it keep their existing outputs.
+
+    Alternatively, set ``serialized_task_definition_check=True``. The source code of the methods of the task, including ``requires()``,
+    is then hashed. Class attributes, code outside the class and changes inside a dependency class are not,
+    unless the dependency also sets ``serialized_task_definition_check=True``: its own id then changes and flows into this task.
+    Turning it on changes the id, so the existing outputs of the task and of its downstream tasks are recomputed once,
+    and any later edit to a method, even in ``run()``, does the same.
 
 
 TaskOnKart.load
