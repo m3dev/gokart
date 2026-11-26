@@ -10,7 +10,6 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 from gokart.in_memory import make_in_memory_target
 from gokart.in_memory.repository import acquire_repository, in_memory_scope
 from gokart.target import TargetOnKart, make_target
@@ -97,8 +96,7 @@ def test_custom_naive_and_non_utc_aware_timestamps(local_timezone) -> None:
 
 def test_in_memory_and_aware_timestamps(local_timezone) -> None:
     instant = datetime(2020, 1, 1, tzinfo=UTC)
-    lock = TaskLockParams(None, None, None, 'timestamp-test', False, False, 0)
-    memory = make_in_memory_target('timestamp-test', lock)
+    memory = make_in_memory_target('timestamp-test')
     remote = _target('remote', instant)
     # in-memory targets are stored only inside gokart.build; the scope stands in for it and drops the store on exit
     with in_memory_scope():

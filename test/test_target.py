@@ -19,7 +19,6 @@ from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
 from matplotlib import pyplot
 from moto import mock_aws
 
-from gokart.conflict_prevention_lock.task_lock import make_task_lock_params
 from gokart.file_processor import make_file_processor
 from gokart.in_memory import make_in_memory_target
 from gokart.required_task_output import RequiredTaskOutput
@@ -177,24 +176,6 @@ class LocalTargetTest(unittest.TestCase):
         loaded = target.load()
 
         pd.testing.assert_series_equal(loaded['column_name'], obj)
-
-    def test_dump_with_lock(self):
-        with patch('gokart.target.wrap_dump_with_lock') as wrap_with_lock_mock:
-            obj = 1
-            file_path = os.path.join(self.temporary_directory, 'test.pkl')
-            target = make_target(file_path=file_path, unique_id=None)
-            target.dump(obj, lock_at_dump=True)
-
-            wrap_with_lock_mock.assert_called_once()
-
-    def test_dump_without_lock(self):
-        with patch('gokart.target.wrap_dump_with_lock') as wrap_with_lock_mock:
-            obj = 1
-            file_path = os.path.join(self.temporary_directory, 'test.pkl')
-            target = make_target(file_path=file_path, unique_id=None)
-            target.dump(obj, lock_at_dump=False)
-
-            wrap_with_lock_mock.assert_not_called()
 
 
 class S3TargetTest(unittest.TestCase):
@@ -516,7 +497,6 @@ class TestGCSTarget:
         target = SingleFileTarget(
             target=luigi.mock.MockTarget(path, format=processor.format()),
             processor=processor,
-            task_lock_params=make_task_lock_params(file_path=path, unique_id=None),
         )
 
         with caplog.at_level(logging.DEBUG, logger='gokart.target'):

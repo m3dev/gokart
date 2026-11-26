@@ -19,7 +19,6 @@ from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
 
 import gokart
-from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 from gokart.file_processor import XmlFileProcessor
 from gokart.parameter import ListTaskInstanceParameter, TaskInstanceParameter
 from gokart.target import ModelTarget, SingleFileTarget, TargetOnKart
@@ -571,7 +570,6 @@ class TaskTest(unittest.TestCase):
                 temporary_directory=tmp,
                 load_function=lambda path: pathlib.Path(path).read_text(),
                 save_function=lambda obj, path: pathlib.Path(path).write_text(obj),
-                task_lock_params=TaskLockParams(None, None, None, '', False, False, 0),
             )
             task.output = Mock(return_value=target)
             required_task = self._make_required_task()
@@ -842,10 +840,11 @@ class TaskTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             gokart.TaskOnKart(redis_host='host', redis_timeout=180, should_lock_run=True)
 
-    def test_should_lock_run_falls_back_to_dump_lock_without_gokart_worker(self):
+    def test_should_lock_run_warns_that_no_lock_is_taken_without_gokart_worker(self):
+        # No Redis server listens on this port: dump() must not connect to it.
         task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
 
-        with patch('redis.Redis', side_effect=fakeredis.FakeRedis), self.assertWarnsRegex(UserWarning, 'should_lock_run'):
+        with self.assertWarnsRegex(UserWarning, 'should_lock_run=True, but it is not run by the gokart worker, so no lock is taken'):
             self.assertTrue(luigi.build([task], local_scheduler=True))
 
         self.assertEqual(cast(TargetOnKart, task.output()).load(), 'hello')

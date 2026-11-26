@@ -109,25 +109,12 @@ def uses_object_storage_lock() -> bool:
     return lock_url_scheme(gokart_lock().url) in OBJECT_STORAGE_SCHEMES
 
 
-_object_storage_warning_emitted = False
-
-
-def warn_once_that_dump_locks_are_not_taken() -> None:
-    """Warn, once per process, that an object storage url leaves the dump / load / remove locks untaken.
-
-    The default "once per location" filter would repeat it for every call site inside gokart and for every forked task process,
-    so the flag is kept here and the warning is emitted from the parent process when the first task is constructed.
-    """
-    global _object_storage_warning_emitted
-    if _object_storage_warning_emitted:
-        return
-    _object_storage_warning_emitted = True
-    warnings.warn(
-        'The [gokart_lock] url points to object storage, so no lock is taken when targets are dumped, loaded or removed: those locks need Redis. '
-        'Only the run lock of tasks with should_lock_run=True (taken by the gokart worker) is active.',
-        UserWarning,
-        stacklevel=3,
-    )
+def check_redis_lock_settings(timeout: int) -> None:
+    """Reject a timeout under which the lock would expire between two heartbeats."""
+    if timeout <= LOCK_EXTEND_SECONDS:
+        raise ValueError(
+            f'The lock timeout (`[gokart_lock] timeout`) must be greater than the heartbeat interval of {LOCK_EXTEND_SECONDS} seconds, not {timeout}.'
+        )
 
 
 def check_object_storage_lock_settings(timeout: int) -> None:
@@ -180,7 +167,6 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
                 stacklevel=2,
             )
         return RedisLockSettings(host=redis_host, port=redis_port, timeout=timeout)
-    # Only the run lock moves to object storage; dump / load / remove locks stay on Redis.
     if scheme in ('redis', 'rediss'):
         redis_url = parse_lock_url(cast(str, config.url))
         return RedisLockSettings(host=redis_url.host, port=redis_url.port, timeout=timeout, db=redis_url.db, ssl=redis_url.ssl, use_password=True)

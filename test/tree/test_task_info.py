@@ -192,7 +192,7 @@ class TestTaskInfoTree(unittest.TestCase):
         with patch('gokart.target.SingleFileTarget.dump') as mock_obj:
             self.dumped_data = None
 
-            def _side_effect(obj, lock_at_dump):
+            def _side_effect(obj):
                 self.dumped_data = obj
 
             mock_obj.side_effect = _side_effect
