@@ -157,9 +157,12 @@ def run(cmdline_args: list[str] | None = None, set_retcode: bool = True):
 
     slack_api = _try_get_slack_api(cmdline_args)
     event_aggregator = gokart.slack.EventAggregator()
+    event_aggregator.set_handlers()
     try:
-        event_aggregator.set_handlers()
         _run_with_retcodes(cmdline_args)
     except SystemExit as e:
         _try_to_send_event_summary_to_slack(slack_api, event_aggregator, cmdline_args)
         sys.exit(e.code)
+    finally:
+        # otherwise every later run in the process would also trigger this aggregator
+        event_aggregator.remove_handlers()
