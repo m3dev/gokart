@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from contextlib import AbstractContextManager
 from logging import getLogger
@@ -15,7 +14,6 @@ import luigi.setup_logging
 from luigi.cmdline_parser import CmdlineParser
 
 import gokart
-import gokart.slack
 from gokart.build import WorkerSchedulerFactory
 from gokart.object_storage import ObjectStorage
 
@@ -65,36 +63,6 @@ def _try_to_delete_unnecessary_output_file(cmdline_args: list[str]) -> None:
             else:
                 gokart.delete_local_unnecessary_outputs(task)
             sys.exit()
-
-
-def _try_get_slack_api(cmdline_args: list[str]) -> gokart.slack.SlackAPI | None:
-    with _global_instance(cmdline_args):
-        config = gokart.slack.SlackConfig()
-        token = os.getenv(config.token_name, '')
-        channel = config.channel
-        to_user = config.to_user
-        if token and channel:
-            logger.info('Slack notification is activated.')
-            return gokart.slack.SlackAPI(token=token, channel=channel, to_user=to_user)
-    logger.info('Slack notification is not activated.')
-    return None
-
-
-def _try_to_send_event_summary_to_slack(
-    slack_api: gokart.slack.SlackAPI | None, event_aggregator: gokart.slack.EventAggregator, cmdline_args: list[str]
-) -> None:
-    if slack_api is None:
-        # do nothing
-        return
-    options = gokart.slack.SlackConfig()
-    with _global_instance(cmdline_args) as cp:
-        task = _get_task_obj(cp)
-        tree_info = gokart.make_tree_info(task, details=True) if options.send_tree_info else 'Please add SlackConfig.send_tree_info to include tree-info'
-        task_name = type(task).__name__
-
-    comment = f'Report of {task_name}' + os.linesep + event_aggregator.get_summary()
-    content = os.linesep.join(['===== Event List ====', event_aggregator.get_event_list(), os.linesep, '==== Tree Info ====', tree_info])
-    slack_api.send_snippet(comment=comment, title='event.txt', content=content)
 
 
 def _run_with_retcodes(argv: list[str]):
@@ -155,14 +123,4 @@ def run(cmdline_args: list[str] | None = None, set_retcode: bool = True):
 
     try_to_run_test_for_empty_data_frame(cmdline_args)
 
-    slack_api = _try_get_slack_api(cmdline_args)
-    event_aggregator = gokart.slack.EventAggregator()
-    event_aggregator.set_handlers()
-    try:
-        _run_with_retcodes(cmdline_args)
-    except SystemExit as e:
-        _try_to_send_event_summary_to_slack(slack_api, event_aggregator, cmdline_args)
-        sys.exit(e.code)
-    finally:
-        # otherwise every later run in the process would also trigger this aggregator
-        event_aggregator.remove_handlers()
+    _run_with_retcodes(cmdline_args)

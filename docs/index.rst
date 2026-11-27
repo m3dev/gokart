@@ -59,7 +59,6 @@ User Guide
    task_settings
    task_information
    logging
-   slack_notification
    using_task_task_conflict_prevention_lock
    efficient_run_on_multi_workers
    for_pandas
