@@ -256,6 +256,61 @@ class TestBuildHasLockedTaskException(unittest.TestCase):
             )
 
 
+# WHY: shared memory, so that the counts survive both the retries and the forked processes of workers > 1.
+_lock_attempts = multiprocessing.get_context('fork').RawValue('i', 0)
+_failure_attempts = multiprocessing.get_context('fork').RawValue('i', 0)
+
+
+class _LockedOnFirstAttemptTask(gokart.TaskOnKart[Any]):
+    def run(self):
+        _lock_attempts.value += 1
+        if _lock_attempts.value == 1:
+            raise TaskLockException()
+        self.dump('done')
+
+
+class _FailWithAttemptNumberTask(gokart.TaskOnKart[Any]):
+    def run(self):
+        _failure_attempts.value += 1
+        raise ValueError(f'attempt {_failure_attempts.value}')
+
+
+class _RequiresLockedAndFailingTask(gokart.TaskOnKart[Any]):
+    def requires(self):
+        return [_LockedOnFirstAttemptTask(), _FailWithAttemptNumberTask()]
+
+    def run(self):
+        self.dump('done')
+
+
+class TestBuildRaisedExceptionsAcrossLockRetries(unittest.TestCase):
+    """The first attempt fails with a locked task and a failed task, so gokart.build retries. The second attempt fails again."""
+
+    def setUp(self):
+        _lock_attempts.value = 0
+        _failure_attempts.value = 0
+
+    def test_raised_exceptions_has_only_the_last_attempt(self):
+        self._assert_raised_exceptions_has_only_the_last_attempt(workers=1)
+
+    def test_raised_exceptions_has_only_the_last_attempt_with_multiple_workers(self):
+        self._assert_raised_exceptions_has_only_the_last_attempt(workers=2)
+
+    def _assert_raised_exceptions_has_only_the_last_attempt(self, workers: int):
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(
+                _RequiresLockedAndFailingTask(),
+                reset_register=False,
+                workers=workers,
+                task_lock_exception_max_wait_seconds=1,
+                log_level=logging.CRITICAL,
+            )
+
+        self.assertEqual(_lock_attempts.value, 2)
+        exceptions = cm.exception.raised_exceptions[_FailWithAttemptNumberTask().make_unique_id()]
+        self.assertEqual([str(e) for e in exceptions], ['attempt 2'])
+
+
 class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
     def test_build_raises_exception_on_failed_and_scheduling_failed(self):
         """Test that build() raises GokartBuildError when FAILED_AND_SCHEDULING_FAILED occurs"""
@@ -385,6 +440,34 @@ class _RootWithRetriedDependency(gokart.TaskOnKart[int]):
         self.dump(1)
 
 
+# WHY: RawValue, like _lock_attempts, so that the task and the patched luigi.build share the state without global statements.
+_build_attempts = multiprocessing.get_context('fork').RawValue('i', 0)
+_failed_in_second_attempt = multiprocessing.get_context('fork').RawValue('b', False)
+
+
+class _FailsUntilSecondAttemptRetry(gokart.TaskOnKart[int]):
+    """Always fails in the first build attempt, and fails once and then succeeds on the retry in the second one."""
+
+    task_namespace = __name__
+
+    def run(self):
+        if _build_attempts.value == 1 or not _failed_in_second_attempt.value:
+            _failed_in_second_attempt.value = _build_attempts.value == 2
+            raise ValueError(f'attempt {_build_attempts.value}')
+        self.dump(1)
+
+
+class _RootAfterLockRetry(gokart.TaskOnKart[int]):
+    task_namespace = __name__
+    path: luigi.Parameter = luigi.Parameter()
+
+    def requires(self) -> Any:
+        return [_LockedOnFirstAttemptTask(), _FailsUntilSecondAttemptRetry(), _MissingExternalTask(path=self.path)]
+
+    def run(self):
+        self.dump(1)
+
+
 class TestBuildRootTaskNotComplete(unittest.TestCase):
     """#690: luigi reports SUCCESS_WITH_RETRY when every failed task succeeded on a retry, even if the root task never ran."""
 
@@ -415,6 +498,26 @@ class TestBuildRootTaskNotComplete(unittest.TestCase):
                     self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.SUCCESS_WITH_RETRY)
                     self.assertIn(f'{task.get_task_family()}[{task.make_unique_id()}] did not complete.', str(cm.exception))
                     self.assertEqual(list(cm.exception.raised_exceptions), [_FailsOnce(workspace_directory=workspace).make_unique_id()])
+
+    def test_build_error_holds_only_the_last_lock_retry_attempt(self):
+        _lock_attempts.value = 0
+        _failed_in_second_attempt.value = False
+        _build_attempts.value = 0
+        luigi_build = luigi.build
+
+        def counting_build(*args: Any, **kwargs: Any) -> Any:
+            _build_attempts.value += 1
+            return luigi_build(*args, **kwargs)
+
+        task = _RootAfterLockRetry(path=os.path.join(self.tmp_dir, 'missing'))
+        with patch('luigi.build', side_effect=counting_build), self.assertRaises(GokartBuildError) as cm:
+            gokart.build(task, reset_register=False, task_lock_exception_max_wait_seconds=1, log_level=logging.CRITICAL)
+
+        self.assertEqual(_build_attempts.value, 2)
+        self.assertEqual(cm.exception.status, luigi.LuigiStatusCode.SUCCESS_WITH_RETRY)
+        self.assertIn(f'{task.get_task_family()}[{task.make_unique_id()}] did not complete.', str(cm.exception))
+        exceptions = cm.exception.raised_exceptions[_FailsUntilSecondAttemptRetry().make_unique_id()]
+        self.assertEqual([str(e) for e in exceptions], ['attempt 2'])
 
     def test_build_returns_output_when_root_task_completed_after_retry(self):
         for workers in (1, 2):
