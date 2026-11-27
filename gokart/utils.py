@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from io import BytesIO
 from typing import Any, Literal, Protocol, TypeAlias, TypeVar, cast, get_args, get_origin
 
 import dill  # pyright: ignore[reportMissingTypeStubs]
@@ -10,13 +9,19 @@ import luigi
 
 
 class FileLike(Protocol):
-    def read(self, n: int) -> bytes: ...
+    # Structurally compatible with pandas' ReadPickleBuffer, so that it can be passed to pd.read_pickle without a cast.
+    @property
+    def mode(self) -> str: ...
+
+    def read(self, n: int = ..., /) -> bytes: ...
 
     def readline(self) -> bytes: ...
 
-    def seek(self, offset: int) -> None: ...
+    def seek(self, offset: int, whence: int = ..., /) -> int: ...
 
     def seekable(self) -> bool: ...
+
+    def tell(self) -> int: ...
 
 
 def add_config(file_path: str) -> None:
@@ -83,7 +88,7 @@ def map_flattenable_items(func: Callable[[T], K], items: FlattenableItems[T]) ->
     return func(items)
 
 
-def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> Any:
+def load_dill_with_pandas_backward_compatibility(file: FileLike) -> Any:
     """Load binary dumped by dill with pandas backward compatibility.
     pd.read_pickle can load binary dumped in backward pandas version, and also any objects dumped by pickle.
     It is unclear whether all objects dumped by dill can be loaded by pd.read_pickle, we use dill.load as a fallback.
@@ -100,7 +105,7 @@ def load_dill_with_pandas_backward_compatibility(file: FileLike | BytesIO) -> An
             raise dill_error from None
         assert file.seekable(), f'{file} is not seekable.'
         file.seek(0)
-        return pd.read_pickle(cast(Any, file))
+        return pd.read_pickle(file)
 
 
 def _resolve_type_var(type_arg: Any, substitutions: dict[TypeVar, Any]) -> Any:
