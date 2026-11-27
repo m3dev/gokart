@@ -256,6 +256,61 @@ class TestBuildHasLockedTaskException(unittest.TestCase):
             )
 
 
+# WHY: shared memory, so that the counts survive both the retries and the forked processes of workers > 1.
+_lock_attempts = multiprocessing.get_context('fork').RawValue('i', 0)
+_failure_attempts = multiprocessing.get_context('fork').RawValue('i', 0)
+
+
+class _LockedOnFirstAttemptTask(gokart.TaskOnKart[Any]):
+    def run(self):
+        _lock_attempts.value += 1
+        if _lock_attempts.value == 1:
+            raise TaskLockException()
+        self.dump('done')
+
+
+class _FailWithAttemptNumberTask(gokart.TaskOnKart[Any]):
+    def run(self):
+        _failure_attempts.value += 1
+        raise ValueError(f'attempt {_failure_attempts.value}')
+
+
+class _RequiresLockedAndFailingTask(gokart.TaskOnKart[Any]):
+    def requires(self):
+        return [_LockedOnFirstAttemptTask(), _FailWithAttemptNumberTask()]
+
+    def run(self):
+        self.dump('done')
+
+
+class TestBuildRaisedExceptionsAcrossLockRetries(unittest.TestCase):
+    """The first attempt fails with a locked task and a failed task, so gokart.build retries. The second attempt fails again."""
+
+    def setUp(self):
+        _lock_attempts.value = 0
+        _failure_attempts.value = 0
+
+    def test_raised_exceptions_has_only_the_last_attempt(self):
+        self._assert_raised_exceptions_has_only_the_last_attempt(workers=1)
+
+    def test_raised_exceptions_has_only_the_last_attempt_with_multiple_workers(self):
+        self._assert_raised_exceptions_has_only_the_last_attempt(workers=2)
+
+    def _assert_raised_exceptions_has_only_the_last_attempt(self, workers: int):
+        with self.assertRaises(GokartBuildError) as cm:
+            gokart.build(
+                _RequiresLockedAndFailingTask(),
+                reset_register=False,
+                workers=workers,
+                task_lock_exception_max_wait_seconds=1,
+                log_level=logging.CRITICAL,
+            )
+
+        self.assertEqual(_lock_attempts.value, 2)
+        exceptions = cm.exception.raised_exceptions[_FailWithAttemptNumberTask().make_unique_id()]
+        self.assertEqual([str(e) for e in exceptions], ['attempt 2'])
+
+
 class TestBuildFailedAndSchedulingFailed(unittest.TestCase):
     def test_build_raises_exception_on_failed_and_scheduling_failed(self):
         """Test that build() raises GokartBuildError when FAILED_AND_SCHEDULING_FAILED occurs"""
