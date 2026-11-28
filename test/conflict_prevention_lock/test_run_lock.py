@@ -1,5 +1,5 @@
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -26,19 +26,20 @@ def server():
         yield server
 
 
-def _make_task(redis_timeout: int = 180) -> _LockedTask:
-    return _LockedTask(redis_host='0.0.0.0', redis_port=12345, redis_timeout=redis_timeout, should_lock_run=True)
+def _make_task(lock_config: Callable[..., None], timeout: int = 180) -> _LockedTask:
+    lock_config(url='redis://0.0.0.0:12345', timeout=str(timeout))
+    return _LockedTask(should_lock_run=True)
 
 
 class TestMakeRunLock:
     def test_returns_none_when_should_lock_run_is_false(self):
-        assert make_run_lock(_LockedTask(redis_host='0.0.0.0', redis_port=12345)) is None
+        assert make_run_lock(_LockedTask()) is None
 
     def test_returns_none_for_non_gokart_task(self):
         assert make_run_lock(luigi.Task()) is None
 
-    def test_returns_redis_lock_when_should_lock_run_is_true(self, server: fakeredis.FakeServer):
-        assert isinstance(make_run_lock(_make_task()), RedisRunLock)
+    def test_returns_redis_lock_when_should_lock_run_is_true(self, server: fakeredis.FakeServer, lock_config: Callable[..., None]):
+        assert isinstance(make_run_lock(_make_task(lock_config)), RedisRunLock)
 
 
 class TestRedisRunLockOptions:
@@ -87,12 +88,6 @@ class TestRedisRunLockOptions:
         make_run_lock(_LockedTask(should_lock_run=True))
         assert recorded_kwargs == [{'host': 'lock-host', 'port': 6380, 'db': 4, 'ssl': True, 'password': 'secret-value'}]
 
-    def test_password_is_not_sent_to_a_task_level_host(self, recorded_kwargs: list[dict[str, Any]], gokart_lock_url: Any, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
-        gokart_lock_url('rediss://lock-host:6380/4')
-        make_run_lock(_make_task())
-        assert recorded_kwargs == [{'host': '0.0.0.0', 'port': 12345}]
-
 
 def _patch_redis_recording_close(server: fakeredis.FakeServer, close_mocks: list[MagicMock]):
     def _make_client(host: str, port: int) -> fakeredis.FakeRedis:
@@ -106,8 +101,8 @@ def _patch_redis_recording_close(server: fakeredis.FakeServer, close_mocks: list
 
 
 class TestRedisRunLock:
-    def test_try_acquire_and_release(self, server: fakeredis.FakeServer):
-        task = _make_task()
+    def test_try_acquire_and_release(self, server: fakeredis.FakeServer, lock_config: Callable[..., None]):
+        task = _make_task(lock_config)
         key = make_task_lock_params_for_run(task_self=task).redis_key
         lock = make_run_lock(task)
         assert lock is not None
@@ -118,8 +113,8 @@ class TestRedisRunLock:
         lock.release()
         assert not fakeredis.FakeRedis(server=server).exists(key)
 
-    def test_try_acquire_returns_false_when_lock_is_held_by_another(self, server: fakeredis.FakeServer):
-        task = _make_task()
+    def test_try_acquire_returns_false_when_lock_is_held_by_another(self, server: fakeredis.FakeServer, lock_config: Callable[..., None]):
+        task = _make_task(lock_config)
         key = make_task_lock_params_for_run(task_self=task).redis_key
         other = Lock(fakeredis.FakeRedis(server=server), name=key, timeout=180, thread_local=False)
         assert other.acquire(blocking=False)
@@ -128,8 +123,8 @@ class TestRedisRunLock:
         assert lock is not None
         assert not lock.try_acquire()
 
-    def test_release_does_not_raise_when_lock_is_already_expired(self, server: fakeredis.FakeServer):
-        task = _make_task()
+    def test_release_does_not_raise_when_lock_is_already_expired(self, server: fakeredis.FakeServer, lock_config: Callable[..., None]):
+        task = _make_task(lock_config)
         key = make_task_lock_params_for_run(task_self=task).redis_key
         lock = make_run_lock(task)
         assert lock is not None
@@ -139,10 +134,10 @@ class TestRedisRunLock:
         lock.release()
 
     @pytest.mark.parametrize('expired', [pytest.param(False, id='held'), pytest.param(True, id='already expired')])
-    def test_release_closes_redis_client(self, expired: bool):
+    def test_release_closes_redis_client(self, expired: bool, lock_config: Callable[..., None]):
         server = fakeredis.FakeServer()
         close_mocks: list[MagicMock] = []
-        task = _make_task()
+        task = _make_task(lock_config)
         with _patch_redis_recording_close(server, close_mocks):
             lock = make_run_lock(task)
         assert lock is not None
@@ -155,8 +150,8 @@ class TestRedisRunLock:
         assert len(close_mocks) == 1
         close_mocks[0].assert_called_once()
 
-    def test_extend_resets_ttl(self, server: fakeredis.FakeServer):
-        task = _make_task(redis_timeout=100)
+    def test_extend_resets_ttl(self, server: fakeredis.FakeServer, lock_config: Callable[..., None]):
+        task = _make_task(lock_config, timeout=100)
         key = make_task_lock_params_for_run(task_self=task).redis_key
         lock = make_run_lock(task)
         assert lock is not None
@@ -273,9 +268,6 @@ class TestMakeRunLockWithGcsUrl:
         with patch.object(GCSConfig, 'create_storage_client', autospec=True) as create:
             make_run_lock(_LockedTask(should_lock_run=True))
         create.assert_not_called()
-
-    def test_explicit_task_level_redis_settings_still_win(self, gs_url: None, server: fakeredis.FakeServer):
-        assert isinstance(make_run_lock(_make_task()), RedisRunLock)
 
 
 class TestMakeRunLockWithS3Url:

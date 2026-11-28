@@ -43,7 +43,6 @@ class RedisRunLock:
                 task_lock_params.redis_port,
                 task_lock_params.redis_db,
                 task_lock_params.redis_ssl,
-                task_lock_params.redis_use_password,
             )
         )
         self._lock = redis.lock.Lock(redis=self._client, name=task_lock_params.redis_key, timeout=task_lock_params.redis_timeout, thread_local=False)
@@ -73,8 +72,7 @@ def make_run_lock(task: Any) -> RunLock | None:
         return None
     params = make_task_lock_params_for_run(task_self=task)
     config = gokart_lock()
-    # Task-level redis_* settings are deprecated but still take precedence over [gokart_lock].
-    if not params.should_task_lock and uses_object_storage_lock():
+    if uses_object_storage_lock():
         return _make_object_storage_run_lock(cast(str, config.url), cast(str, lock_url_scheme(config.url)), params, config.skew_margin)
     return RedisRunLock(params)
 

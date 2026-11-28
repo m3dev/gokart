@@ -1,4 +1,5 @@
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -123,9 +124,10 @@ class TestUnsupportedCombinations:
             worker.add(_FixedKeyTask(value=1))
         assert _run_values == []
 
-    def test_should_lock_run_with_make_in_memory_target(self) -> None:
+    def test_should_lock_run_with_make_in_memory_target(self, lock_config: Callable[..., None]) -> None:
+        lock_config(url='redis://localhost:6379')
         with pytest.raises(InMemoryTargetError, match='should_lock_run'):
-            gokart.build(_FixedKeyTask(value=1, should_lock_run=True, redis_host='localhost', redis_port=6379), reset_register=False)
+            gokart.build(_FixedKeyTask(value=1, should_lock_run=True), reset_register=False)
         assert _run_values == []
 
     def test_outside_gokart_build(self) -> None:

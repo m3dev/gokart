@@ -1,9 +1,10 @@
 import os
 import socket
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
+import luigi.configuration
 import pytest
 from luigi.task_register import Register
 
@@ -53,3 +54,28 @@ def gcs_bucket(_gcs_emulator_host: str, monkeypatch: pytest.MonkeyPatch) -> str:
     bucket_name = f'test-{uuid.uuid4().hex}'
     storage.Client().create_bucket(bucket_name)
     return bucket_name
+
+
+@pytest.fixture
+def lock_config() -> Iterator[Callable[..., None]]:
+    """Set options of the [gokart_lock] section for one test, e.g. lock_config(url='redis://localhost:6379')."""
+    config = luigi.configuration.get_config()
+    existed = config.has_section('gokart_lock')
+    if not existed:
+        config.add_section('gokart_lock')
+    previous = dict(config.items('gokart_lock'))
+
+    def _set(**values: str) -> None:
+        for name, value in values.items():
+            config.set('gokart_lock', name, value)
+
+    yield _set
+    # restore, so that a section from the developer's luigi.cfg survives the test
+    if existed:
+        for name in dict(config.items('gokart_lock')):
+            if name not in previous:
+                config.remove_option('gokart_lock', name)
+        for name, value in previous.items():
+            config.set('gokart_lock', name, value)
+    else:
+        config.remove_section('gokart_lock')

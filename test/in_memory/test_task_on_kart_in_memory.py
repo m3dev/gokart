@@ -1,5 +1,6 @@
 import json
 import random
+from collections.abc import Callable
 from pathlib import Path
 
 import luigi
@@ -120,13 +121,15 @@ class TestMakeInMemoryTarget:
         with pytest.raises(ValueError, match='persist=False'):
             _DumpTask(param='a').make_target('data.pkl', processor=PickleFileProcessor(), persist=False)
 
-    def test_should_lock_run_is_not_supported(self) -> None:
-        task = _DumpTask(param='a', should_lock_run=True, redis_host='localhost', redis_port=6379)
+    def test_should_lock_run_is_not_supported(self, lock_config: Callable[..., None]) -> None:
+        lock_config(url='redis://localhost:6379')
+        task = _DumpTask(param='a', should_lock_run=True)
         with pytest.raises(InMemoryTargetError, match='should_lock_run'):
             gokart.build(task, reset_register=False)
 
-    def test_dump_and_load_with_a_redis_backend_configured(self) -> None:
-        task = _DumpTask(param='a', redis_host='localhost', redis_port=6379)
+    def test_dump_and_load_with_a_redis_backend_configured(self, lock_config: Callable[..., None]) -> None:
+        lock_config(url='redis://localhost:6379')
+        task = _DumpTask(param='a')
         with in_memory_scope():
             acquire_repository()
             task.dump('a')

@@ -14,7 +14,6 @@ class TaskLockParams(NamedTuple):
     should_task_lock: bool
     redis_db: int = 0
     redis_ssl: bool = False
-    redis_use_password: bool = False
 
 
 class TaskLockException(Exception):
@@ -41,5 +40,4 @@ def make_task_lock_params_for_run(task_self: Any) -> TaskLockParams:
         redis_timeout=settings.timeout,
         redis_db=settings.db,
         redis_ssl=settings.ssl,
-        redis_use_password=settings.use_password,
     )

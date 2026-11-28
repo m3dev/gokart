@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import re
-import warnings
 from typing import Any, NamedTuple, cast
 from urllib.parse import urlsplit
 
@@ -44,8 +43,6 @@ class RedisLockSettings(NamedTuple):
     timeout: int
     db: int = 0
     ssl: bool = False
-    # The password is only meant for the server that `url` points at, so it is not sent to a host given by the deprecated task-level redis_host.
-    use_password: bool = False
 
 
 class RedisUrl(NamedTuple):
@@ -78,7 +75,7 @@ def parse_lock_url(url: str) -> RedisUrl:
     return RedisUrl(parts.hostname, DEFAULT_REDIS_PORT if port is None else port, int(db_match.group(1) or 0), parts.scheme == 'rediss')
 
 
-def redis_connection_kwargs(host: str | None, port: int | None, db: int, ssl: bool, use_password: bool = False) -> dict[str, Any]:
+def redis_connection_kwargs(host: str | None, port: int | None, db: int, ssl: bool) -> dict[str, Any]:
     """Keyword arguments for ``redis.Redis``; options at their default are left out."""
     kwargs: dict[str, Any] = {'host': host or 'localhost', 'port': DEFAULT_REDIS_PORT if port is None else port}
     if db:
@@ -86,7 +83,7 @@ def redis_connection_kwargs(host: str | None, port: int | None, db: int, ssl: bo
     if ssl:
         kwargs['ssl'] = True
     # An unset variable simply means that the server has no password.
-    password = os.environ.get(REDIS_PASSWORD_ENV) if use_password else None
+    password = os.environ.get(REDIS_PASSWORD_ENV)
     if password:
         kwargs['password'] = password
     return kwargs
@@ -131,12 +128,8 @@ def check_object_storage_lock_settings(timeout: int) -> None:
         raise ValueError(f'`[gokart_lock] skew_margin` must not be negative, not {skew_margin}.')
 
 
-def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, redis_timeout: int | None, warn: bool = True) -> RedisLockSettings:
-    """Merge the deprecated task-level ``redis_*`` parameters with ``[gokart_lock]``.
-
-    The deprecated ``redis_host`` / ``redis_port`` replace the whole Redis endpoint as one unit, as they did before ``[gokart_lock]`` existed,
-    so that an endpoint is never assembled from two sources. Only the timeout falls back to the config field by field.
-    """
+def resolve_redis_lock_settings() -> RedisLockSettings:
+    """Resolve the Redis lock settings from ``[gokart_lock]``."""
     config = gokart_lock()
     scheme = lock_url_scheme(config.url)
     if scheme in OBJECT_STORAGE_SCHEMES:
@@ -145,29 +138,7 @@ def resolve_redis_lock_settings(redis_host: str | None, redis_port: int | None, 
         raise ValueError(
             f'Unsupported lock backend URL: {config.url!r}. Only redis[s]://host[:port][/db], gs://bucket[/prefix] and s3://bucket[/prefix] are supported.'
         )
-    explicit = [name for name, value in (('redis_host', redis_host), ('redis_port', redis_port), ('redis_timeout', redis_timeout)) if value is not None]
-    if explicit and warn:
-        # FutureWarning, because DeprecationWarning is hidden by default outside __main__ and the setting usually comes from a config file.
-        warnings.warn(
-            f'{", ".join(explicit)} of TaskOnKart is deprecated and will be removed in gokart 2.0.0. Use `url` and `timeout` of the [gokart_lock] section instead.',
-            FutureWarning,
-            stacklevel=2,
-        )
-    timeout = redis_timeout if redis_timeout is not None else config.timeout
-    if redis_host is not None or redis_port is not None:
-        if scheme in OBJECT_STORAGE_SCHEMES and (redis_host is None or redis_port is None):
-            # Without a port the task would silently fall through to the object storage lock, contradicting "task-level redis_* take precedence".
-            raise ValueError('redis_host and redis_port of TaskOnKart must be set together.')
-        if (redis_host is None or redis_port is None) and config.url:
-            # A leftover half of the old setting would otherwise switch the lock off without any hint.
-            warnings.warn(
-                'Only one of redis_host and redis_port of TaskOnKart is set, so `url` of the [gokart_lock] section is ignored and no Redis lock is taken. '
-                'Set both, or remove them to use `url`.',
-                FutureWarning,
-                stacklevel=2,
-            )
-        return RedisLockSettings(host=redis_host, port=redis_port, timeout=timeout)
     if scheme in ('redis', 'rediss'):
         redis_url = parse_lock_url(cast(str, config.url))
-        return RedisLockSettings(host=redis_url.host, port=redis_url.port, timeout=timeout, db=redis_url.db, ssl=redis_url.ssl, use_password=True)
-    return RedisLockSettings(host=None, port=None, timeout=timeout)
+        return RedisLockSettings(host=redis_url.host, port=redis_url.port, timeout=config.timeout, db=redis_url.db, ssl=redis_url.ssl)
+    return RedisLockSettings(host=None, port=None, timeout=config.timeout)
