@@ -13,7 +13,7 @@ import pytest
 import gokart
 from gokart.conflict_prevention_lock.redis_import import import_redis
 from gokart.conflict_prevention_lock.run_lock import RedisRunLock
-from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams
+from gokart.conflict_prevention_lock.task_lock import TaskLockParams
 
 
 @pytest.fixture
@@ -56,14 +56,8 @@ def test_import_redis_keeps_original_error_when_installed_redis_fails_to_import(
 
 
 @pytest.mark.usefixtures('without_redis')
-def test_redis_client_raises_install_hint() -> None:
-    with pytest.raises(ImportError, match=r'pip install gokart\[redis\]'):
-        RedisClient(host='without-redis', port=6379)
-
-
-@pytest.mark.usefixtures('without_redis')
 def test_redis_run_lock_raises_install_hint() -> None:
-    params = TaskLockParams('localhost', 6379, 10, 'key', True, False, 1)
+    params = TaskLockParams('localhost', 6379, 10, 'key', True)
     with pytest.raises(ImportError, match=r'pip install gokart\[redis\]'):
         RedisRunLock(params)
 
