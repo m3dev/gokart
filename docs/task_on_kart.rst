@@ -273,24 +273,6 @@ It is dumped and zipped with ``gensim.model.Word2Vec.save``.
 Please refer to :func:`~gokart.task.TaskOnKart.make_model_target`.
 
 
-TaskOnKart.make_large_data_frame_target
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. warning::
-   :func:`~gokart.task.TaskOnKart.make_large_data_frame_target` and ``gokart.target.LargeDataFrameProcessor`` are deprecated and will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
-
-They split a DataFrame into several pickle files and zip them. Use a single pickle file instead, which dumps and loads faster:
-
-.. code:: python
-
-    def output(self):
-        return self.make_target('data.pkl')
-
-Switching ``output()`` to a pickle file changes the output path, so the task runs once more and the existing zip is no longer used.
-Splitting only keeps the peak memory of dump lower. This still matters mainly for very large DataFrames with ``object`` dtype columns.
-See `#679 <https://github.com/m3dev/gokart/issues/679>`_ for the benchmark.
-
-
 TaskOnKart.fail_on_empty_dump
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -353,6 +335,6 @@ The key of the output is made from the file path and the unique id, in the same 
 - **Only in gokart.build and in a single process**: an error is raised when the output is used outside ``gokart.build`` (e.g. ``luigi.build`` or ``gokart.run``), or with ``workers > 1``, ``[gokart_worker] force_multiprocessing``, or a worker timeout, because these run tasks in separate processes.
 - **Threads**: threads started in ``run()`` can load and dump in-memory outputs, also while ``run()`` calls ``gokart.build``: the outer and the nested builds keep their outputs apart. If both builds output the same key, such a thread dumps it to the nested build, and loads it from the nested build once the nested build has it. Running ``gokart.build`` calls that have in-memory outputs in multiple threads at the same time is not supported, and the later one raises ``InMemoryTargetError``. Builds without in-memory outputs are not affected and can run in other threads at the same time.
 - **No lock**: ``should_lock_run=True`` raises an error. When only a lock backend is configured (``url`` of ``[gokart_lock]``, or the deprecated ``redis_host`` and ``redis_port``), the output is not locked at dump and load.
-- ``processor`` cannot be used with ``persist=False``. ``make_model_target`` and ``make_large_data_frame_target`` do not support it.
+- ``processor`` cannot be used with ``persist=False``. ``make_model_target`` does not support it.
 - **Redis client still needed**: even though the output is not locked, a task needs ``gokart[redis]`` when it is created if a Redis lock backend is configured.
 - **No log files**: when all outputs of a task use ``persist=False``, the supplementary log files (``log/task_log/``, ``log/task_params/``, ``log/random_seed/``, ``log/processing_time/`` and ``log/module_versions/``) are not dumped either. The random seed is still fixed with ``fix_random_seed_methods``. Because of this, task information tools such as ``gokart.tree.task_info`` cannot show these files for such tasks.

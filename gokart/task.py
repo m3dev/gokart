@@ -408,39 +408,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         df_type = get_dataframe_type_from_task(self)
         return make_file_processor(file_path, dataframe_type=df_type, store_index_in_feather=self.store_index_in_feather)
 
-    def make_large_data_frame_target(self, relative_file_path: str | None = None, use_unique_id: bool = True, max_byte: int = (2**26)) -> TargetOnKart:
-        """Make a target that splits a DataFrame into several pickle files and zips them.
-
-        .. warning::
-            ``make_large_data_frame_target`` is deprecated and will be removed in gokart 2.0.0.
-            Use a single pickle file instead, e.g. ``self.make_target('data.pkl')``, which dumps and loads faster.
-            Splitting only keeps the peak memory of dump lower, which still matters mainly for very large DataFrames with ``object`` dtype columns.
-        """
-        # FutureWarning, because DeprecationWarning is hidden by default outside __main__, where tasks are usually defined.
-        warnings.warn(
-            'make_large_data_frame_target is deprecated and will be removed in gokart 2.0.0. '
-            "Use a single pickle file instead, e.g. self.make_target('data.pkl'). "
-            'Note that dumping a single pickle takes more peak memory, mainly for very large DataFrames with object dtype columns.',
-            FutureWarning,
-            stacklevel=2,
-        )
-        formatted_relative_file_path = (
-            relative_file_path if relative_file_path is not None else os.path.join(self.__module__.replace('.', '/'), f'{type(self).__name__}.zip')
-        )
-        file_path = os.path.join(self.workspace_directory, formatted_relative_file_path)
-        unique_id = self.make_unique_id() if use_unique_id else None
-        task_lock_params = self._make_task_lock_params(file_path, unique_id)
-
-        return gokart.target.make_model_target(
-            file_path=file_path,
-            temporary_directory=self.local_temporary_directory,
-            unique_id=unique_id,
-            # WHY: the public LargeDataFrameProcessor would warn a second time, pointing at gokart instead of the caller.
-            save_function=gokart.target._LargeDataFrameProcessor(max_byte=max_byte).save,  # pyright: ignore[reportPrivateUsage]
-            load_function=gokart.target._LargeDataFrameProcessor.load,  # pyright: ignore[reportPrivateUsage]
-            task_lock_params=task_lock_params,
-        )
-
     def make_model_target(
         self, relative_file_path: str, save_function: Callable[[Any, str], None], load_function: Callable[[str], Any], use_unique_id: bool = True
     ) -> TargetOnKart:
