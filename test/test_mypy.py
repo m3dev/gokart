@@ -46,9 +46,11 @@ import gokart
 
 class MyTask(gokart.TaskOnKart[str]):
     foo: luigi.IntParameter = luigi.IntParameter()
+    bar: luigi.Parameter = luigi.Parameter()
     baz: gokart.ExplicitBoolParameter = gokart.ExplicitBoolParameter()
 
 
+# bar is missing but not an error, because it can be set by a config file.
 MyTask(foo='1', baz='not bool', complete_check_at_run='not bool')
 """
         stdout, stderr, exitcode = self._run_mypy(test_code)
