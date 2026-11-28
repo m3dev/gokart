@@ -34,7 +34,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 s3 = ["boto3", "botocore>=1.35.69"]
-gcs = ["google-cloud-storage>=2.18.2", "google-api-python-client"]
+gcs = ["google-cloud-storage>=2.18.2"]
 redis = ["redis"]
 # pandas is still a required dependency; the extra is added first so that users can depend on gokart[pandas] before it becomes optional (#674).
 pandas = ["pandas>=3", "pyarrow"]
@@ -50,7 +50,6 @@ Documentation = "https://gokart.readthedocs.io/en/latest/"
 test = [
   "boto3",
   "google-cloud-storage",
-  "google-api-python-client",
   "gcp-storage-emulator",
   "fakeredis",
   "lupa",
@@ -65,7 +64,6 @@ test = [
   "testfixtures",
   "boto3-stubs[s3]>=1.43.126",
   "pandas-stubs>=3.1.0.261029",
-  "google-api-python-client-stubs",
 ]
 
 lint = [
@@ -102,6 +100,7 @@ extend-select = [
   "B", # bugbear
   "I", # isort
   "UP", # pyupgrade, upgrade syntax for newer versions of the language.
+  "TID251", # banned-api, configured below.
   "TID253", # banned-module-level-imports, configured below.
 ]
 
@@ -114,6 +113,11 @@ ignore = ["B006", "B008", "BLE001", "S110", "TRY002", "TRY004"]
 [tool.ruff.lint.flake8-tidy-imports]
 # pandas and polars are optional: import them where they are used (or under TYPE_CHECKING), so that import gokart does not need or load them.
 banned-module-level-imports = ["pandas", "polars"]
+
+# gokart talks to GCS through google-cloud-storage (gokart._gcs); google-api-python-client was dropped from the gcs extra in 2.0.0 (#685).
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"googleapiclient".msg = "google-api-python-client is not a dependency of gokart; use google-cloud-storage via GCSConfig.get_storage_client()."
+"luigi.contrib.gcs".msg = "luigi.contrib.gcs needs google-api-python-client, which gokart does not depend on; use gokart._gcs instead."
 
 [tool.ruff.lint.per-file-ignores]
 "test/**" = ["TID253"]
@@ -128,7 +132,7 @@ typeCheckingMode = "strict"
 # not part of strict
 reportUnnecessaryTypeIgnoreComment = "error"
 
-# tests legitimately reach into internals (e.g. _configured, _get_gcs_client) to set up and inspect state,
+# tests legitimately reach into internals (e.g. _configured, _load_oauth_credentials) to set up and inspect state,
 # and annotating every test helper parameter adds noise without catching real bugs, so the strict-only rules are turned off for tests
 [[tool.pyright.executionEnvironments]]
 root = "test"

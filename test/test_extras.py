@@ -107,15 +107,6 @@ class TestS3ExtrasNotInstalled:
 
 
 class TestGCSExtrasNotInstalled:
-    def test_gcs_config_raises_import_error_without_gcs_lib(self, block_modules: BlockModules):
-        from gokart.gcs_config import GCSConfig
-
-        config = GCSConfig()
-
-        block_modules('googleapiclient')
-        with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
-            config._get_gcs_client()
-
     def test_gcs_config_load_credentials_raises_without_google_auth(self, block_modules: BlockModules):
         from gokart.gcs_config import GCSConfig
 
@@ -179,12 +170,6 @@ def _get_gcs_storage_client() -> object:
     return GCSConfig().get_storage_client()
 
 
-def _get_gcs_client() -> object:
-    from gokart.gcs_config import GCSConfig
-
-    return GCSConfig()._get_gcs_client()
-
-
 def _load_gcs_credentials() -> object:
     from gokart.gcs_config import GCSConfig
 
@@ -195,7 +180,6 @@ _EXTRA_IMPORTS = [
     pytest.param(_new_s3_client, 'boto3', id='s3_config-new-luigi-client'),
     pytest.param(_get_s3_target, 'boto3', id='object_storage-get-s3-target'),
     pytest.param(_get_gcs_storage_client, 'google.cloud.storage', id='gcs_config-import-storage'),
-    pytest.param(_get_gcs_client, 'googleapiclient', id='gcs_config-get-gcs-client'),
     pytest.param(_load_gcs_credentials, 'google.oauth2.service_account', id='gcs_config-load-oauth-credentials'),
 ]
 
@@ -268,15 +252,6 @@ class TestExtrasParentPackageNotInstalled:
         with pytest.raises(ImportError, match=r'pip install gokart\[gcs\]'):
             call()
 
-    def test_gcs_client_keeps_original_error_when_googleapiclient_lacks_google(self, break_module: BreakModule):
-        # googleapiclient has no parent package; when it is installed but its dependency google-auth (the google package) is not, the
-        # install is broken, and the original error names what is missing.
-        error = ModuleNotFoundError("No module named 'google'", name='google')
-        break_module('googleapiclient', error)
-        with pytest.raises(ModuleNotFoundError) as exc_info:
-            _get_gcs_client()
-        assert exc_info.value is error
-
 
 class TestExtrasInstalled:
     """Verify that imports succeed when extras are installed (current test environment)."""
@@ -300,8 +275,3 @@ class TestExtrasInstalled:
         import luigi.contrib.s3
 
         assert luigi.contrib.s3 is not None
-
-    def test_luigi_contrib_gcs_is_importable(self):
-        import luigi.contrib.gcs
-
-        assert luigi.contrib.gcs is not None

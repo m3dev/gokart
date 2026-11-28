@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import warnings
 from types import ModuleType
 from typing import TYPE_CHECKING
 
@@ -15,7 +14,6 @@ from gokart.process_cache import cached_per_process
 if TYPE_CHECKING:
     from google.cloud import storage  # pyright: ignore[reportMissingTypeStubs]
     from google.oauth2.service_account import Credentials
-    from luigi.contrib.gcs import GCSClient
 
 
 def import_storage() -> ModuleType:
@@ -41,7 +39,6 @@ class GCSConfig(luigi.Config):
         description='Size of each chunk of a parallel upload or download (bytes, or e.g. 32MiB). Upload chunks must be 5 MiB to 5 GiB.',
     )
     parallel_max_workers: luigi.IntParameter = luigi.IntParameter(default=8, description='Number of concurrent requests of a parallel upload or download.')
-    _client = None
     _storage_client: tuple[int, storage.Client] | None = None
 
     def get_storage_client(self) -> storage.Client:
@@ -57,24 +54,6 @@ class GCSConfig(luigi.Config):
         storage = import_storage()
         credentials = self._load_oauth_credentials()
         return storage.Client(project=getattr(credentials, 'project_id', None), credentials=credentials)
-
-    def get_gcs_client(self) -> GCSClient:
-        # FutureWarning, because DeprecationWarning is hidden by default unless the caller is __main__.
-        warnings.warn(
-            'GCSConfig.get_gcs_client() is deprecated and will be removed in gokart 2.0.0. '
-            'gokart no longer uses luigi.contrib.gcs; use GCSConfig.get_storage_client(), which returns a google.cloud.storage.Client, instead.',
-            FutureWarning,
-            stacklevel=2,
-        )
-        if self._client is None:  # use cache as like singleton object
-            self._client = self._get_gcs_client()
-        return self._client
-
-    def _get_gcs_client(self) -> GCSClient:
-        _import_gcs_dependency('googleapiclient')
-        from luigi.contrib.gcs import GCSClient
-
-        return GCSClient(oauth_credentials=self._load_oauth_credentials())
 
     def _load_oauth_credentials(self) -> Credentials | None:
         service_account = _import_gcs_dependency('google.oauth2.service_account')
