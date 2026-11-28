@@ -39,7 +39,7 @@ redis = ["redis"]
 # pandas is still a required dependency; the extra is added first so that users can depend on gokart[pandas] before it becomes optional (#674).
 pandas = ["pandas>=3", "pyarrow"]
 all = ["gokart[s3]", "gokart[gcs]", "gokart[redis]", "gokart[pandas]"]
-polars = ["polars>=0.19.0"]
+polars = ["polars>=2.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/m3dev/gokart"
@@ -57,7 +57,7 @@ test = [
   "matplotlib",
   "moto>=5.1.22", # for use mock_aws api
   "mypy", # for test_mypy.py, which tests the deprecated gokart.mypy plugin
-  "polars>=0.19.0",
+  "polars>=2.0.0",
   "psutil", # imported lazily by gokart.worker
   "pytest",
   "pytest-cov",

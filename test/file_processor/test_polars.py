@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -254,6 +255,46 @@ class TestJsonFileProcessorWithPolars:
             # Compare values
             assert list(loaded_df['a']) == [1, 2, 3]
             assert list(loaded_df['b']) == [4, 5, 6]
+
+
+@pytest.mark.skipif(not _has_polars, reason='polars not installed')
+class TestJsonFileProcessorOrientWithPolars:
+    """polars only supports orient=None and 'records', so the other orients must fail instead of being silently ignored."""
+
+    @pytest.mark.parametrize('dataframe_type', ['polars', 'polars-lazy'])
+    @pytest.mark.parametrize('orient', ['split', 'index', 'columns', 'values', 'table'])
+    def test_unsupported_orient_raises_value_error(self, orient: str, dataframe_type: str):
+        # No deprecation period: it must fail directly, without a warning first.
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            with pytest.raises(ValueError, match=orient):
+                JsonFileProcessor(orient=orient, dataframe_type=dataframe_type)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize('lazy', [False, True])
+    @pytest.mark.parametrize('orient', ['split', 'index', 'columns', 'values', 'table'])
+    def test_unsupported_orient_raises_value_error_for_polars_processor(self, orient: str, lazy: bool):
+        from gokart.file_processor.polars import JsonFileProcessorPolars
+
+        with pytest.raises(ValueError, match=orient):
+            JsonFileProcessorPolars(orient=orient, lazy=lazy)
+
+    @pytest.mark.parametrize('dataframe_type', ['polars', 'polars-lazy'])
+    @pytest.mark.parametrize('orient', [None, 'records'])
+    def test_supported_orient_round_trips(self, orient: str | None, dataframe_type: str):
+        df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', FutureWarning)
+            processor = JsonFileProcessor(orient=orient, dataframe_type=dataframe_type)  # type: ignore[arg-type]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            local_target = LocalTarget(path=f'{temp_dir}/temp.json', format=processor.format())
+            with local_target.open('w') as f:
+                processor.dump(df, f)
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+
+        loaded_df = loaded.collect() if isinstance(loaded, pl.LazyFrame) else loaded
+        assert loaded_df.equals(df)
 
 
 @pytest.mark.skipif(not _has_polars, reason='polars not installed')

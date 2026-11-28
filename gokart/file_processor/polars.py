@@ -67,6 +67,10 @@ class JsonFileProcessorPolars(FileProcessor):
 
     def __init__(self, orient: str | None = None, lazy: bool = False):
         _check_polars_installed()
+        # polars can only read/write a JSON array of records (None) or NDJSON ('records'); failing here instead of ignoring
+        # the orient keeps a file from silently being written in a different layout than the one requested.
+        if orient not in (None, 'records'):
+            raise ValueError(f"orient={orient!r} is not supported with the polars backend; only None and 'records' are supported.")
         self._orient = orient
         self._lazy = lazy
 
