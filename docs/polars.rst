@@ -141,7 +141,7 @@ FeatherFileProcessor
 Using Pandas and Polars Together
 ---------------------------------
 
-Since projects often migrate from pandas gradually, gokart allows you to use both pandas and Polars simultaneously:
+Since projects often migrate from pandas gradually, gokart allows you to use both pandas and Polars simultaneously. pandas needs its own extra, so install both: ``pip install gokart[pandas,polars]``.
 
 .. code:: python
 

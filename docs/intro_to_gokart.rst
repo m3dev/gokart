@@ -21,7 +21,7 @@ If you use pandas, the Redis lock, or S3 or GCS as a data store, install the cor
     pip install gokart[redis]  # Redis lock support
     pip install gokart[all]  # pandas, S3, GCS and Redis
 
-pandas is still installed by ``pip install gokart``, but it will become optional in a future major release (`#674 <https://github.com/m3dev/gokart/issues/674>`_). If you use pandas with gokart, depend on ``gokart[pandas]``.
+``pip install gokart`` does not install pandas or pyarrow. Install ``gokart[pandas]`` to use the :doc:`features for pandas <for_pandas>`, including CSV, TSV, JSON, NDJSON, Parquet and Feather files of tasks that are not typed with a polars DataFrame or LazyFrame.
 
 
 Quickstart

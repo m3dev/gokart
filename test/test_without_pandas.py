@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 import io
 import subprocess
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from packaging.requirements import Requirement
 
 import gokart
 from gokart.file_processor import (
@@ -30,6 +32,17 @@ _INSTALL_HINT = r'pip install gokart\[pandas\]'
 
 def _run_python(code: str, cwd: Path | None = None) -> None:
     subprocess.run([sys.executable, '-c', textwrap.dedent(code)], check=True, cwd=cwd)
+
+
+def test_pandas_and_pyarrow_are_installed_only_with_the_pandas_extra() -> None:
+    requirements = [Requirement(r) for r in importlib.metadata.requires('gokart') or []]
+    # evaluate the markers instead of skipping them, so that e.g. `pandas; python_version < "3.12"` would still count as required
+    required = {r.name for r in requirements if r.marker is None or r.marker.evaluate({'extra': ''})}
+    from_pandas_extra = {r.name for r in requirements if r.marker is not None and r.marker.evaluate({'extra': 'pandas'})}
+
+    assert {'pandas', 'pyarrow'}.isdisjoint(required)
+    assert {'pandas', 'pyarrow'} <= from_pandas_extra
+    assert 'numpy' in required
 
 
 def test_import_gokart_does_not_import_pandas() -> None:
