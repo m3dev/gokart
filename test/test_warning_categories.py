@@ -20,11 +20,7 @@ _HIDDEN_CATEGORIES = frozenset({'DeprecationWarning', 'PendingDeprecationWarning
 _DEPRECATED_MODULES = frozenset({'warnings', 'typing_extensions'})
 
 # (path relative to gokart/, qualified name of the enclosing function) -> why it may use a hidden category
-_ALLOWED: dict[tuple[str, str], str] = {
-    # mypy calls plugin(), and fails to load a plugin whose entry point raises: with FutureWarning,
-    # a CI running with -W error::FutureWarning would break mypy itself (#689).
-    ('mypy.py', 'plugin'): 'mypy cannot load the plugin under -W error::FutureWarning',
-}
+_ALLOWED: dict[tuple[str, str], str] = {}
 
 
 def _name(node: ast.expr) -> str | None:
