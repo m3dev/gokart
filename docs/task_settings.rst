@@ -83,6 +83,8 @@ Sizes are bytes (``268435456``) or a number with a unit: ``KB`` / ``MB`` / ``GB`
   The download then reads the generation found by that request, so an object overwritten in the meantime is never read as a mix of the old and new content: the download raises ``NotFound`` (or, with Object Versioning, returns the old content).
 
 .. note::
+   gokart 2.0.0 removed ``GCSConfig().get_gcs_client()``, which returned a ``luigi.contrib.gcs.GCSClient``, and dropped ``google-api-python-client`` from the ``gcs`` extra (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
+   If your own code uses ``luigi.contrib.gcs`` or ``googleapiclient``, install ``google-api-python-client`` yourself.
    Errors from GCS I/O in gokart are ``google.api_core.exceptions.GoogleAPICallError`` subclasses (e.g. ``NotFound``) instead of ``googleapiclient.errors.HttpError``.
    To use the GCS client gokart uses, call ``GCSConfig().get_storage_client()``, which returns a ``google.cloud.storage.Client``.
 
