@@ -72,7 +72,8 @@ def make_run_lock(task: Any) -> RunLock | None:
         return None
     params = make_task_lock_params_for_run(task_self=task)
     config = gokart_lock()
-    if uses_object_storage_lock():
+    # Follow the backend resolved when the task was constructed, so that a Redis lock is not swapped for another backend afterwards.
+    if not params.should_task_lock and uses_object_storage_lock():
         return _make_object_storage_run_lock(cast(str, config.url), cast(str, lock_url_scheme(config.url)), params, config.skew_margin)
     return RedisRunLock(params)
 

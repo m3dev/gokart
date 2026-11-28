@@ -53,6 +53,10 @@ How to use
 
     ``timeout`` is the number of seconds after which a lock is released without extension (180 by default).
 
+    The ``redis_host``, ``redis_port`` and ``redis_timeout`` parameters of gokart.TaskOnKart were removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
+    Use ``url`` and ``timeout`` of ``[gokart_lock]`` instead; on the command line, ``--redis-host=localhost --redis-port=6379`` becomes ``--gokart-lock-url=redis://localhost:6379``.
+    These options left in the ``[TaskOnKart]`` section of a config file are ignored.
+
 3. Set ``should_lock_run`` of the tasks that should not run on several nodes at once.
 
     .. code:: python
