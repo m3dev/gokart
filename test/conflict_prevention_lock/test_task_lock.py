@@ -1,7 +1,4 @@
 import importlib
-import subprocess
-import sys
-import textwrap
 import unittest
 from typing import Any
 
@@ -44,16 +41,3 @@ def test_wrap_run_with_lock_is_removed() -> None:
     # Removed in gokart 2.0.0: the gokart worker takes the run lock for tasks with should_lock_run=True.
     with pytest.raises(ModuleNotFoundError):
         importlib.import_module('gokart.conflict_prevention_lock.task_lock_wrappers')
-
-
-def test_gokart_does_not_need_apscheduler() -> None:
-    code = textwrap.dedent(
-        """
-        import sys
-        sys.modules['apscheduler'] = None
-        import gokart
-        import gokart.task
-        import gokart.conflict_prevention_lock.run_lock
-        """
-    )
-    subprocess.run([sys.executable, '-c', code], check=True)

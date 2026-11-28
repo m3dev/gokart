@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 import os
-from logging import getLogger
 from typing import Any, NamedTuple
 
 from gokart.conflict_prevention_lock.lock_config import RedisLockSettings
-
-logger = getLogger(__name__)
 
 
 class TaskLockParams(NamedTuple):
@@ -21,7 +18,7 @@ class TaskLockParams(NamedTuple):
 
 
 class TaskLockException(Exception):
-    """Raised when the task failed to acquire the lock in the task execution. Only used internally."""
+    """Makes gokart.build retry the build when raised from a task. gokart itself does not raise it."""
 
 
 def make_task_lock_key(file_path: str, unique_id: str | None) -> str:
