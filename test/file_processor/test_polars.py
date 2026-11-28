@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -218,10 +219,12 @@ class TestJsonFileProcessorWithPolars:
         loaded_df = loaded.collect() if isinstance(loaded, pl.LazyFrame) else loaded
         assert loaded_df.equals(pl.DataFrame())
 
-    def test_records_orient_warns_and_keeps_ndjson_with_polars(self):
+    @pytest.mark.parametrize('dataframe_type', ['polars', 'polars-lazy'])
+    def test_records_orient_reads_and_writes_json_array_with_polars(self, dataframe_type):
         df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-        with pytest.warns(FutureWarning, match=r'will change to a JSON array in gokart 2\.0\.0\. Use NdjsonFileProcessor'):
-            processor = JsonFileProcessor(orient='records', dataframe_type='polars')
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            processor = JsonFileProcessor(orient='records', dataframe_type=dataframe_type)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = f'{temp_dir}/temp.json'
@@ -229,8 +232,36 @@ class TestJsonFileProcessorWithPolars:
             local_target = LocalTarget(path=temp_path, format=processor.format())
             with local_target.open('w') as f:
                 processor.dump(df, f)
+            with local_target.open('r') as f:
+                loaded = processor.load(f)
+                f.seek(0)
+                dumped_json = f.read().decode('utf-8')
 
-            assert pl.read_ndjson(temp_path).equals(df)
+        assert dumped_json == '[{"a":1,"b":4},{"a":2,"b":5},{"a":3,"b":6}]'
+        loaded_df = loaded.collect() if isinstance(loaded, pl.LazyFrame) else loaded
+        assert loaded_df.equals(df)
+
+    @pytest.mark.parametrize('dataframe_type', ['polars', 'polars-lazy'])
+    def test_records_orient_file_is_shared_between_pandas_and_polars(self, dataframe_type):
+        pandas_processor = JsonFileProcessor(orient='records', dataframe_type='pandas')
+        polars_processor = JsonFileProcessor(orient='records', dataframe_type=dataframe_type)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pandas_target = LocalTarget(path=f'{temp_dir}/pandas.json', format=pandas_processor.format())
+            with pandas_target.open('w') as f:
+                pandas_processor.dump(pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}), f)
+            with pandas_target.open('r') as f:
+                loaded_by_polars = polars_processor.load(f)
+
+            polars_target = LocalTarget(path=f'{temp_dir}/polars.json', format=polars_processor.format())
+            with polars_target.open('w') as f:
+                polars_processor.dump(pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}), f)
+            with polars_target.open('r') as f:
+                loaded_by_pandas = pandas_processor.load(f)
+
+        loaded_by_polars_df = loaded_by_polars.collect() if isinstance(loaded_by_polars, pl.LazyFrame) else loaded_by_polars
+        assert loaded_by_polars_df.equals(pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}))
+        pd.testing.assert_frame_equal(loaded_by_pandas, pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}))
 
     def test_dump_polars_with_pandas_load(self):
         """Test that polars dump can be loaded by pandas processor"""

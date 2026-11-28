@@ -67,7 +67,6 @@ class JsonFileProcessorPolars(FileProcessor):
 
     def __init__(self, orient: str | None = None, lazy: bool = False):
         _check_polars_installed()
-        self._orient = orient
         self._lazy = lazy
 
     def format(self):
@@ -77,14 +76,9 @@ class JsonFileProcessorPolars(FileProcessor):
         import polars as pl
 
         try:
-            if self._orient == 'records':
-                if self._lazy:
-                    return pl.scan_ndjson(file)
-                return pl.read_ndjson(file)
-            else:
-                # polars doesn't have scan_json, so we read and convert if lazy
-                df = pl.read_json(file)
-                return df.lazy() if self._lazy else df
+            # polars doesn't have scan_json, so we read and convert if lazy
+            df = pl.read_json(file)
+            return df.lazy() if self._lazy else df
         except Exception as e:
             # Handle empty files
             if 'empty' in str(e).lower() or 'no data' in str(e).lower():
@@ -98,10 +92,7 @@ class JsonFileProcessorPolars(FileProcessor):
             obj = obj.collect()
         if not isinstance(obj, pl.DataFrame):
             raise TypeError(f'requires pl.DataFrame or pl.LazyFrame, but {type(obj)} is passed.')
-        if self._orient == 'records':
-            obj.write_ndjson(file)
-        else:
-            obj.write_json(file)
+        obj.write_json(file)
 
 
 class NdjsonFileProcessorPolars(FileProcessor):
