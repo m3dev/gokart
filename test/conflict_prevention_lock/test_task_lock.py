@@ -1,47 +1,11 @@
-import random
+import importlib
 import unittest
 from typing import Any
-from unittest.mock import patch
+
+import pytest
 
 import gokart
-from gokart.conflict_prevention_lock.task_lock import RedisClient, TaskLockParams, make_task_lock_key, make_task_lock_params_for_run
-
-
-class TestRedisClient(unittest.TestCase):
-    @staticmethod
-    def _get_randint(host, port):
-        return random.randint(0, 100000)
-
-    def test_redis_client_is_singleton(self):
-        with patch('redis.Redis') as mock:
-            mock.side_effect = self._get_randint
-
-            redis_client_0_0 = RedisClient(host='host_0', port=123)
-            redis_client_1 = RedisClient(host='host_1', port=123)
-            redis_client_0_1 = RedisClient(host='host_0', port=123)
-
-            self.assertNotEqual(redis_client_0_0, redis_client_1)
-            self.assertEqual(redis_client_0_0, redis_client_0_1)
-
-            self.assertEqual(redis_client_0_0.get_redis_client(), redis_client_0_1.get_redis_client())
-
-
-class TestRedisClientOptions:
-    def test_db_ssl_and_password_reach_redis(self, monkeypatch):
-        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
-        with patch('redis.Redis') as mock:
-            RedisClient(host='opt-host', port=1, db=2, ssl=True, use_password=True)
-        mock.assert_called_once_with(host='opt-host', port=1, db=2, ssl=True, password='secret-value')
-
-    def test_password_is_not_sent_without_use_password(self, monkeypatch):
-        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
-        with patch('redis.Redis') as mock:
-            RedisClient(host='legacy-host', port=1)
-        mock.assert_called_once_with(host='legacy-host', port=1)
-
-    def test_clients_with_different_db_are_distinct(self):
-        with patch('redis.Redis', side_effect=lambda **kwargs: object()):
-            assert RedisClient(host='db-host', port=1, db=0) is not RedisClient(host='db-host', port=1, db=1)
+from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_key, make_task_lock_params_for_run
 
 
 class TestMakeRedisKey(unittest.TestCase):
@@ -61,15 +25,19 @@ class TestMakeTaskLockParamsForRun(unittest.TestCase):
             redis_timeout=180,
         )
 
-        result = make_task_lock_params_for_run(task_self=task_self, lock_extend_seconds=10)
+        result = make_task_lock_params_for_run(task_self=task_self)
         expected = TaskLockParams(
             redis_host='0.0.0.0',
             redis_port=12345,
             redis_timeout=180,
             redis_key='_SampleDummyTask_7e857f231830ca0fd6cf829d99f43961-run',
             should_task_lock=True,
-            raise_task_lock_exception_on_collision=True,
-            lock_extend_seconds=10,
         )
 
         self.assertEqual(result, expected)
+
+
+def test_wrap_run_with_lock_is_removed() -> None:
+    # Removed in gokart 2.0.0: the gokart worker takes the run lock for tasks with should_lock_run=True.
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module('gokart.conflict_prevention_lock.task_lock_wrappers')

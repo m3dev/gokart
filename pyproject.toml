@@ -17,7 +17,6 @@ dependencies = [
   "pandas>=3",
   "numpy",
   "pyarrow",
-  "APScheduler",
   "dill",
   "tenacity",
 ]
