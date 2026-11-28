@@ -83,27 +83,6 @@ class _LockConfiguredTask(gokart.TaskOnKart[str]):
 
 
 @pytest.mark.usefixtures('without_redis')
-def test_task_with_redis_host_and_port_raises_install_hint_at_construction() -> None:
-    # Failing here, before the worker takes the run lock, reports a missing extra where the task is created.
-    with pytest.raises(ImportError, match=r'pip install gokart\[redis\]'):
-        _LockConfiguredTask(random_id=uuid.uuid4().hex, redis_host='localhost', redis_port=6379, should_lock_run=True)
-
-
-@pytest.mark.usefixtures('without_redis')
-def test_task_with_redis_host_and_port_does_not_need_redis_without_should_lock_run(tmp_path: Path) -> None:
-    # Only the run lock uses Redis.
-    task = _LockConfiguredTask(random_id=uuid.uuid4().hex, redis_host='localhost', redis_port=6379, workspace_directory=str(tmp_path))
-    assert gokart.build(task, reset_register=False) == 'done'
-
-
-@pytest.mark.usefixtures('without_redis')
-def test_task_without_both_redis_host_and_port_does_not_need_redis() -> None:
-    # Locks are taken only when both are set, so redis is not needed otherwise.
-    _LockConfiguredTask(random_id=uuid.uuid4().hex, redis_host='localhost')
-    _LockConfiguredTask(random_id=uuid.uuid4().hex, redis_port=6379)
-
-
-@pytest.mark.usefixtures('without_redis')
 def test_build_without_redis(tmp_path: Path) -> None:
     task = _LockConfiguredTask(random_id=uuid.uuid4().hex, workspace_directory=str(tmp_path))
     assert gokart.build(task, reset_register=False) == 'done'

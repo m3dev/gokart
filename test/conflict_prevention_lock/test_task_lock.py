@@ -1,5 +1,6 @@
 import importlib
 import unittest
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -14,16 +15,13 @@ class TestMakeRedisKey(unittest.TestCase):
         self.assertEqual(result, 'fname_12345')
 
 
-class TestMakeTaskLockParamsForRun(unittest.TestCase):
-    def test_make_task_lock_params_for_run(self):
+class TestMakeTaskLockParamsForRun:
+    def test_make_task_lock_params_for_run(self, lock_config: Callable[..., None]):
         class _SampleDummyTask(gokart.TaskOnKart[Any]):
             pass
 
-        task_self = _SampleDummyTask(
-            redis_host='0.0.0.0',
-            redis_port=12345,
-            redis_timeout=180,
-        )
+        lock_config(url='redis://0.0.0.0:12345', timeout='180')
+        task_self = _SampleDummyTask()
 
         result = make_task_lock_params_for_run(task_self=task_self)
         expected = TaskLockParams(
@@ -34,7 +32,7 @@ class TestMakeTaskLockParamsForRun(unittest.TestCase):
             should_task_lock=True,
         )
 
-        self.assertEqual(result, expected)
+        assert result == expected
 
 
 def test_wrap_run_with_lock_is_removed() -> None:

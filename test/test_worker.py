@@ -2,7 +2,7 @@ import os
 import sys
 import threading
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
@@ -217,7 +217,7 @@ def redis_server() -> Iterator[fakeredis.FakeServer]:
 
 
 def _make_run_lock_task(priority: float = 0.0) -> _RunLockTask:
-    return _RunLockTask(random_id=uuid.uuid4().hex, fixed_priority=priority, redis_host='0.0.0.0', redis_port=12345, redis_timeout=180, should_lock_run=True)
+    return _RunLockTask(random_id=uuid.uuid4().hex, fixed_priority=priority, should_lock_run=True)
 
 
 def _run_lock_key(task: gokart.TaskOnKart[str]) -> str:
@@ -235,6 +235,10 @@ def _fast_retry_config(force_multiprocessing: bool = False) -> gokart_worker:
 
 
 class TestWorkerRunLock:
+    @pytest.fixture(autouse=True)
+    def _redis_lock_url(self, lock_config: Callable[..., None]) -> None:
+        lock_config(url='redis://0.0.0.0:12345', timeout='180')
+
     @pytest.mark.parametrize('fails', [pytest.param(False, id='succeeded'), pytest.param(True, id='failed')])
     def test_lock_is_released_after_task_finishes(self, monkeypatch: pytest.MonkeyPatch, redis_server: fakeredis.FakeServer, fails: bool) -> None:
         task = _make_run_lock_task()
@@ -377,7 +381,7 @@ class TestWorkerRunLock:
         monkeypatch.setattr(task, '_run', mock_run)
         with Worker(scheduler=scheduler.Scheduler(), config=_fast_retry_config()) as worker:
             assert worker.add(task)
-            # Hide redis only after construction: TaskOnKart imports it at construction when redis_host and redis_port are set,
+            # Hide redis only after construction: TaskOnKart imports it at construction when `url` of [gokart_lock] is a Redis URL,
             # so this is how an error that only occurs when the worker creates the run lock reaches _run_task.
             # A None entry in sys.modules makes `import redis` raise ImportError.
             monkeypatch.setitem(sys.modules, 'redis', None)

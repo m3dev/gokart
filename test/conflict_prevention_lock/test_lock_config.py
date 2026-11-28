@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import warnings
-from collections.abc import Iterator
 from typing import Any
 
-import luigi
-import luigi.configuration
 import pytest
 
 import gokart
@@ -20,30 +16,6 @@ from gokart.conflict_prevention_lock.task_lock import make_task_lock_params_for_
 
 class _Task(gokart.TaskOnKart[Any]):
     task_namespace = __name__
-
-
-@pytest.fixture
-def lock_config() -> Iterator[Any]:
-    config = luigi.configuration.get_config()
-    existed = config.has_section('gokart_lock')
-    if not existed:
-        config.add_section('gokart_lock')
-    previous = dict(config.items('gokart_lock'))
-
-    def _set(**values: str) -> None:
-        for name, value in values.items():
-            config.set('gokart_lock', name, value)
-
-    yield _set
-    # restore, so that a section from the developer's luigi.cfg survives the test
-    if existed:
-        for name in dict(config.items('gokart_lock')):
-            if name not in previous:
-                config.remove_option('gokart_lock', name)
-        for name, value in previous.items():
-            config.set('gokart_lock', name, value)
-    else:
-        config.remove_section('gokart_lock')
 
 
 class TestParseLockUrl:
@@ -94,66 +66,31 @@ class TestParseLockUrl:
 
 class TestResolveRedisLockSettings:
     def test_nothing_configured_disables_the_lock(self):
-        settings = resolve_redis_lock_settings(None, None, None)
+        settings = resolve_redis_lock_settings()
         assert (settings.host, settings.port, settings.timeout) == (None, None, 180)
 
     def test_url_and_timeout_are_read_from_gokart_lock_section(self, lock_config: Any):
         lock_config(url='redis://lock-host:6380', timeout='60')
-        settings = resolve_redis_lock_settings(None, None, None)
+        settings = resolve_redis_lock_settings()
         assert (settings.host, settings.port, settings.timeout) == ('lock-host', 6380, 60)
 
-    def test_db_tls_and_password_are_taken_from_the_url(self, lock_config: Any):
+    def test_db_and_tls_are_taken_from_the_url(self, lock_config: Any):
         lock_config(url='rediss://lock-host:6380/3')
-        settings = resolve_redis_lock_settings(None, None, None)
-        assert (settings.db, settings.ssl, settings.use_password) == (3, True, True)
-
-    def test_db_tls_and_password_are_not_inherited_by_an_explicit_task_host(self, lock_config: Any):
-        lock_config(url='rediss://lock-host:6380/3')
-        with pytest.warns(FutureWarning):
-            settings = resolve_redis_lock_settings('task-host', 1234, None)
-        assert (settings.db, settings.ssl, settings.use_password) == (0, False, False)
-
-    def test_explicit_task_values_take_precedence_and_warn(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380', timeout='60')
-        with pytest.warns(FutureWarning, match=r'of TaskOnKart is deprecated and will be removed in gokart 2\.0\.0') as record:
-            settings = resolve_redis_lock_settings('task-host', 1234, 90)
-        assert '[gokart_lock]' in str(record[0].message)
-        assert (settings.host, settings.port, settings.timeout) == ('task-host', 1234, 90)
-
-    @pytest.mark.parametrize(('host', 'port'), [('task-host', None), (None, 1234)])
-    def test_a_partial_task_endpoint_is_not_completed_from_the_url(self, lock_config: Any, host: str | None, port: int | None):
-        lock_config(url='redis://lock-host:6380', timeout='60')
-        with pytest.warns(FutureWarning):
-            settings = resolve_redis_lock_settings(host, port, None)
-        # both are required, as before [gokart_lock] existed, so this means "no lock"
-        assert (settings.host, settings.port) == (host, port)
-        assert settings.timeout == 60
-
-    @pytest.mark.parametrize(('host', 'port'), [('task-host', None), (None, 1234)])
-    def test_a_partial_task_endpoint_warns_that_the_configured_url_is_ignored(self, lock_config: Any, host: str | None, port: int | None):
-        lock_config(url='redis://lock-host:6380')
-        with pytest.warns(FutureWarning, match='`url` of the .gokart_lock. section is ignored'):
-            resolve_redis_lock_settings(host, port, None)
-
-    def test_a_partial_task_endpoint_without_a_url_does_not_warn_about_the_url(self, lock_config: Any):
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter('always')
-            resolve_redis_lock_settings('task-host', None, None)
-        assert not [w for w in caught if 'is ignored' in str(w.message)]
-
-    def test_no_warning_without_explicit_task_values(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380')
-        with warnings.catch_warnings():
-            warnings.simplefilter('error')
-            resolve_redis_lock_settings(None, None, None)
+        settings = resolve_redis_lock_settings()
+        assert (settings.db, settings.ssl) == (3, True)
 
 
 class TestTaskIntegration:
-    def test_run_lock_params_carry_db_tls_and_the_password_flag_but_not_the_password(self, lock_config: Any, monkeypatch: pytest.MonkeyPatch):
+    @pytest.mark.parametrize('name', ['redis_host', 'redis_port', 'redis_timeout'])
+    def test_task_level_redis_parameters_are_removed(self, name: str):
+        # Removed in gokart 2.0.0: use `url` and `timeout` of the [gokart_lock] section.
+        assert name not in dict(_Task.get_params())
+
+    def test_run_lock_params_carry_db_and_tls_but_not_the_password(self, lock_config: Any, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
         lock_config(url='rediss://lock-host:6380/3')
         params = make_task_lock_params_for_run(task_self=_Task(should_lock_run=True))
-        assert (params.redis_db, params.redis_ssl, params.redis_use_password) == (3, True, True)
+        assert (params.redis_db, params.redis_ssl) == (3, True)
         assert 'secret-value' not in repr(params)
 
     def test_run_lock_params_use_the_config(self, lock_config: Any):
@@ -161,30 +98,9 @@ class TestTaskIntegration:
         params = make_task_lock_params_for_run(task_self=_Task(should_lock_run=True))
         assert (params.redis_host, params.redis_port, params.redis_timeout, params.should_task_lock) == ('lock-host', 6380, 60, True)
 
-    def test_should_lock_run_does_not_need_task_level_redis_settings(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380')
-        _Task(should_lock_run=True)
-
     def test_should_lock_run_without_any_backend_fails(self):
         with pytest.raises(AssertionError, match='gokart_lock'):
             _Task(should_lock_run=True)
-
-    def test_should_lock_run_with_a_partial_task_endpoint_names_the_cause_even_if_a_url_is_set(self, lock_config: Any):
-        lock_config(url='redis://lock-host:6380')
-        with pytest.warns(FutureWarning), pytest.raises(AssertionError, match='redis_host and redis_port'):
-            _Task(should_lock_run=True, redis_port=6379)
-
-    def test_task_level_redis_settings_warn_exactly_once(self):
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter('always')
-            task = _Task(redis_host='localhost', redis_port=6379)
-            make_task_lock_params_for_run(task_self=task)
-        assert [str(w.message) for w in caught if issubclass(w.category, FutureWarning) and 'redis_host' in str(w.message)] != []
-        assert len([w for w in caught if issubclass(w.category, FutureWarning)]) == 1
-
-    def test_task_level_redis_timeout_alone_warns(self):
-        with pytest.warns(FutureWarning, match='redis_timeout'):
-            _Task(redis_timeout=60)
 
 
 class TestRedisConnectionKwargs:
@@ -202,18 +118,14 @@ class TestRedisConnectionKwargs:
 
     def test_password_is_read_from_the_fixed_environment_variable(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
-        assert redis_connection_kwargs('h', 1, 0, False, use_password=True)['password'] == 'secret-value'
-
-    def test_password_is_not_sent_unless_the_endpoint_comes_from_the_url(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv('GOKART_REDIS_PASSWORD', 'secret-value')
-        assert 'password' not in redis_connection_kwargs('h', 1, 0, False)
+        assert redis_connection_kwargs('h', 1, 0, False)['password'] == 'secret-value'
 
     @pytest.mark.parametrize('value', [None, ''])
     def test_unset_or_empty_password_variable_means_no_password(self, monkeypatch: pytest.MonkeyPatch, value: str | None):
         monkeypatch.delenv('GOKART_REDIS_PASSWORD', raising=False)
         if value is not None:
             monkeypatch.setenv('GOKART_REDIS_PASSWORD', value)
-        assert 'password' not in redis_connection_kwargs('h', 1, 0, False, use_password=True)
+        assert 'password' not in redis_connection_kwargs('h', 1, 0, False)
 
 
 class TestParseGcsLockUrl:
@@ -243,7 +155,7 @@ class TestObjectStorageUrlWhitespace:
 class TestGcsBackendUrl:
     def test_gs_url_leaves_the_redis_settings_empty(self, lock_config: Any):
         lock_config(url='gs://my-bucket/locks', timeout='60')
-        settings = resolve_redis_lock_settings(None, None, None)
+        settings = resolve_redis_lock_settings()
         assert (settings.host, settings.port, settings.timeout) == (None, None, 60)
 
     def test_should_lock_run_accepts_a_gs_url(self, lock_config: Any):
@@ -252,7 +164,7 @@ class TestGcsBackendUrl:
 
     def test_s3_url_leaves_the_redis_settings_empty(self, lock_config: Any):
         lock_config(url='s3://my-bucket/locks', timeout='60')
-        settings = resolve_redis_lock_settings(None, None, None)
+        settings = resolve_redis_lock_settings()
         assert (settings.host, settings.port, settings.timeout) == (None, None, 60)
 
     def test_should_lock_run_accepts_an_s3_url(self, lock_config: Any):
@@ -262,12 +174,7 @@ class TestGcsBackendUrl:
     def test_unknown_scheme_is_rejected(self, lock_config: Any):
         lock_config(url='ftp://my-bucket/locks')
         with pytest.raises(ValueError, match='Unsupported lock backend URL'):
-            resolve_redis_lock_settings(None, None, None)
-
-    def test_a_task_level_host_without_a_port_is_rejected_instead_of_silently_using_object_storage(self, lock_config: Any):
-        lock_config(url='gs://my-bucket/locks')
-        with pytest.warns(FutureWarning), pytest.raises(ValueError, match='redis_host and redis_port'):
-            resolve_redis_lock_settings('redis.internal', None, None)
+            resolve_redis_lock_settings()
 
     @pytest.mark.parametrize('timeout', ['50', '15', '10', '5'])
     def test_should_lock_run_rejects_a_timeout_that_a_slow_heartbeat_could_exceed(self, lock_config: Any, timeout: str):

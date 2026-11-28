@@ -139,22 +139,6 @@ class TaskOnKart(luigi.Task, Generic[T]):
         default=FIX_RANDOM_SEED_VALUE_NONE_MAGIC_NUMBER, description='Fix random seed method value.', significant=False
     )  # FIXME: should fix with OptionalIntParameter after newer luigi (https://github.com/spotify/luigi/pull/3079) will be released
 
-    redis_host: luigi.Parameter[str | None] = luigi.OptionalParameter(
-        default=None,
-        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Only used by the run lock of tasks with should_lock_run=True.',
-        significant=False,
-    )
-    redis_port: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
-        default=None,
-        description='Deprecated, and will be removed in gokart 2.0.0: use `url` of the [gokart_lock] section. Only used by the run lock of tasks with should_lock_run=True.',
-        significant=False,
-    )
-    redis_timeout: luigi.OptionalIntParameter = luigi.OptionalIntParameter(
-        default=None,
-        description='Deprecated, and will be removed in gokart 2.0.0: use `timeout` of the [gokart_lock] section (180 seconds by default).',
-        significant=False,
-    )
-
     fail_on_empty_dump: luigi.Parameter[bool] = ExplicitBoolParameter(default=False, description='Fail when task dumps empty DF', significant=False)
     store_index_in_feather: luigi.Parameter[bool] = ExplicitBoolParameter(
         default=True, description='Wether to store index when using feather as a output object.', significant=False
@@ -196,12 +180,11 @@ class TaskOnKart(luigi.Task, Generic[T]):
         # However, @lru_cache cannot be used as a decorator because luigi.Task employs metaclass tricks.
         self._cache_to_str_params()
 
-        # Resolved once here, so that the deprecated task-level redis_* warn once per task; the run lock reads the result.
-        self._lock_settings = resolve_redis_lock_settings(self.redis_host, self.redis_port, self.redis_timeout)
+        # Resolved here, so that an unsupported `url` fails at construction; the run lock reads the result.
+        self._lock_settings = resolve_redis_lock_settings()
         if self.should_lock_run:
             assert self._has_redis_lock() or uses_object_storage_lock(), (
-                'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section. '
-                'If `url` is set, a leftover redis_host or redis_port of the task overrides it; redis_host and redis_port are both required, or remove them.'
+                'A lock backend must be set when should_lock_run is True. Set `url` in the [gokart_lock] section.'
             )
             # Fail at construction rather than when the worker takes the run lock, possibly after its upstream tasks have run.
             if self._has_redis_lock():

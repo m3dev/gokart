@@ -13,7 +13,7 @@ Requires
 --------
 
 You need to install the ``redis`` client with ``pip install gokart[redis]``, and set up a `redis <https://redis.io/topics/quickstart>`_ server, for using this advanced feature.
-When a Redis lock backend is configured (``url`` of ``[gokart_lock]``, or the deprecated ``redis_host`` and ``redis_port``), a task with ``should_lock_run=True`` raises ``ImportError`` at construction if the ``redis`` client is not installed.
+When a Redis lock backend is configured (``url`` of ``[gokart_lock]``), a task with ``should_lock_run=True`` raises ``ImportError`` at construction if the ``redis`` client is not installed.
 The run lock can also be stored on GCS or S3 instead of Redis (see :doc:`efficient_run_on_multi_workers`).
 
 
@@ -41,7 +41,6 @@ How to use
 
     The URL has the form ``redis://host[:port][/db]``. The port defaults to 6379 and the db number to 0. Use ``rediss://`` to connect over TLS.
     Do not put a password in the URL: gokart reads it from the environment variable ``GOKART_REDIS_PASSWORD`` (no password is sent when it is unset or empty).
-    The password, db number and TLS setting apply only to the server given by ``url``, not to a host set with the deprecated ``redis_host``.
 
     .. code::
 
@@ -54,12 +53,9 @@ How to use
 
     ``timeout`` is the number of seconds after which a lock is released without extension (180 by default).
 
-    The deprecated ``redis_host``, ``redis_port`` and ``redis_timeout`` parameters of gokart.TaskOnKart (e.g. ``--redis-host=localhost --redis-port=6379``) still work.
-    When they are set, they take precedence over ``[gokart_lock]`` and emit a ``FutureWarning``. They will be removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
-    ``redis_host`` and ``redis_port`` replace the whole endpoint (both are required, and the db number, TLS and password of ``url`` are not used), while ``redis_timeout`` falls back to ``timeout``.
-    The replacement of ``--redis-host`` / ``--redis-port`` on the command line is ``--gokart-lock-url=redis://localhost:6379``.
-    If only one of ``redis_host`` and ``redis_port`` is set, a ``FutureWarning`` says that ``url`` is ignored and no Redis lock is taken.
-    ``TaskOnKart.redis_timeout`` is ``None`` unless it is set explicitly (it used to default to 180), so code that reads it should use ``timeout`` of ``[gokart_lock]`` instead.
+    The ``redis_host``, ``redis_port`` and ``redis_timeout`` parameters of gokart.TaskOnKart were removed in gokart 2.0.0 (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
+    Use ``url`` and ``timeout`` of ``[gokart_lock]`` instead; on the command line, ``--redis-host=localhost --redis-port=6379`` becomes ``--gokart-lock-url=redis://localhost:6379``.
+    These options left in the ``[TaskOnKart]`` section of a config file are ignored.
 
 3. Set ``should_lock_run`` of the tasks that should not run on several nodes at once.
 

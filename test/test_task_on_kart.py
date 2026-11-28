@@ -7,6 +7,7 @@ import pickle
 import tempfile
 import unittest
 import warnings
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any, cast
 from unittest.mock import Mock, patch
@@ -14,6 +15,7 @@ from unittest.mock import Mock, patch
 import fakeredis
 import luigi
 import pandas as pd
+import pytest
 from luigi import cmdline_parser, task_register
 from luigi.parameter import ParameterVisibility
 from luigi.util import inherits
@@ -823,38 +825,38 @@ class TaskTest(unittest.TestCase):
 
         self.assertIn(f'pandas=={pd.__version__}', module_versions)
 
+    @pytest.mark.usefixtures('_redis_lock_url')
     def test_should_lock_run_does_not_override_run(self):
         class _DummyTaskWithLock(gokart.TaskOnKart[str]):
             def run(self):
                 self.dump('hello')
 
         # The run lock is taken by the gokart worker, not by wrapping `run`. https://github.com/m3dev/gokart/issues/524
-        task = _DummyTaskWithLock(redis_host='host', redis_port=123, redis_timeout=180, should_lock_run=True, complete_check_at_run=False)
+        task = _DummyTaskWithLock(should_lock_run=True, complete_check_at_run=False)
         self.assertNotIn('run', vars(task))
 
-    def test_should_fail_lock_run_when_host_unset(self):
-        with self.assertRaises(AssertionError):
-            gokart.TaskOnKart(redis_port=123, redis_timeout=180, should_lock_run=True)
-
-    def test_should_fail_lock_run_when_port_unset(self):
-        with self.assertRaises(AssertionError):
-            gokart.TaskOnKart(redis_host='host', redis_timeout=180, should_lock_run=True)
-
+    @pytest.mark.usefixtures('_redis_lock_url')
     def test_should_lock_run_warns_that_no_lock_is_taken_without_gokart_worker(self):
         # No Redis server listens on this port: dump() must not connect to it.
-        task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
+        task = _DummyTaskWithLockRun(should_lock_run=True)
 
         with self.assertWarnsRegex(UserWarning, 'should_lock_run=True, but it is not run by the gokart worker, so no lock is taken'):
             self.assertTrue(luigi.build([task], local_scheduler=True))
 
         self.assertEqual(cast(TargetOnKart, task.output()).load(), 'hello')
 
+    @pytest.mark.usefixtures('_redis_lock_url')
     def test_should_lock_run_does_not_warn_with_gokart_worker(self):
-        task = _DummyTaskWithLockRun(redis_host='0.0.0.0', redis_port=12399, should_lock_run=True)
+        task = _DummyTaskWithLockRun(should_lock_run=True)
 
         with patch('redis.Redis', side_effect=fakeredis.FakeRedis), warnings.catch_warnings():
             warnings.filterwarnings('error', message='.*should_lock_run.*')
             self.assertEqual(gokart.build(task, reset_register=False), 'hello')
+
+
+@pytest.fixture
+def _redis_lock_url(lock_config: Callable[..., None]) -> None:
+    lock_config(url='redis://0.0.0.0:12399')
 
 
 class _DummyTaskWithLockRun(gokart.TaskOnKart[str]):
