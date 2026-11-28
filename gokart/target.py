@@ -2,22 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import os
-import re
 import shutil
 import tempfile
-import warnings
 from abc import abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
-from glob import glob
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import luigi
 
 from gokart._gcs import GCSTarget, build_task_state_labels, needs_task_state_labels
-from gokart._pandas import import_pandas
 from gokart.conflict_prevention_lock.task_lock import TaskLockParams, make_task_lock_params
 from gokart.conflict_prevention_lock.task_lock_wrappers import wrap_dump_with_lock, wrap_load_with_lock, wrap_remove_with_lock
 from gokart.file_processor import FileProcessor, make_file_processor
@@ -25,9 +21,6 @@ from gokart.object_storage import ObjectStorage
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.utils import FlattenableItems
 from gokart.zip_client_util import make_zip_client
-
-if TYPE_CHECKING:
-    import pandas as pd
 
 logger = getLogger(__name__)
 
@@ -240,87 +233,6 @@ class ModelTarget(TargetOnKart):
             yield working_directory
         finally:
             shutil.rmtree(call_directory, ignore_errors=True)
-
-
-_LARGE_DATA_FRAME_CHUNK_PATTERN = re.compile(r'data_(\d+)\.pkl')
-
-
-class _LargeDataFrameProcessor:
-    def __init__(self, max_byte: int):
-        # WHY: checked here, so that a missing pandas is reported when the target is created, not when a task dumps its output after run().
-        import_pandas()
-        self.max_byte = int(max_byte)
-        if self.max_byte <= 0:
-            raise ValueError(f'max_byte must be positive, got {max_byte}')
-
-    def save(self, df: pd.DataFrame, file_path: str) -> None:
-        dir_path = os.path.dirname(file_path)
-        os.makedirs(dir_path, exist_ok=True)
-
-        # load concatenates every data_*.pkl, so chunks left by an earlier, larger save would be mixed into this one.
-        for _, stale_path in self._chunk_paths(dir_path):
-            os.remove(stale_path)
-
-        if df.empty:
-            df.to_pickle(os.path.join(dir_path, 'data_0.pkl'))
-            return
-
-        # df.values would copy the whole frame just to read its size, and counts only pointers for object columns.
-        # deep=True overestimates plain str objects (per-object header, shared objects counted once per cell) but does
-        # not look inside containers, so chunks of object columns can be smaller or larger than max_byte.
-        # Capping at the row count avoids empty chunks.
-        n_rows = df.shape[0]
-        total_bytes = int(df.memory_usage(index=False, deep=True).sum())
-        split_size = min(total_bytes // self.max_byte + 1, n_rows)
-        logger.info(f'saving a large pdDataFrame with split_size={split_size}')
-        # Same boundaries as np.array_split: the first n_rows % split_size chunks get one extra row.
-        base, extra = divmod(n_rows, split_size)
-        start = 0
-        for i in range(split_size):
-            stop = start + base + (1 if i < extra else 0)
-            df.iloc[start:stop].to_pickle(os.path.join(dir_path, f'data_{i}.pkl'))
-            start = stop
-
-    @staticmethod
-    def _chunk_paths(dir_path: str) -> list[tuple[int, str]]:
-        # glob returns files in arbitrary order, and lexicographic order puts data_10 before data_2, so sort by chunk index.
-        chunks: list[tuple[int, str]] = []
-        for fp in glob(os.path.join(dir_path, 'data_*.pkl')):
-            m = _LARGE_DATA_FRAME_CHUNK_PATTERN.fullmatch(os.path.basename(fp))
-            if m is not None:
-                chunks.append((int(m.group(1)), fp))
-        return sorted(chunks)
-
-    @staticmethod
-    def load(file_path: str) -> pd.DataFrame:
-        pd = import_pandas()
-        dir_path = os.path.dirname(file_path)
-        return cast(pd.DataFrame, pd.concat([pd.read_pickle(fp) for _, fp in _LargeDataFrameProcessor._chunk_paths(dir_path)]))
-
-
-class LargeDataFrameProcessor(_LargeDataFrameProcessor):
-    """Save a DataFrame as several pickle files, and load them back into one DataFrame.
-
-    .. warning::
-        ``LargeDataFrameProcessor`` is deprecated and will be removed in gokart 2.0.0.
-        Dump the DataFrame to a single pickle file instead, e.g. with ``TaskOnKart.make_target('data.pkl')``.
-    """
-
-    _DEPRECATION_MESSAGE = (
-        'LargeDataFrameProcessor is deprecated and will be removed in gokart 2.0.0. '
-        "Dump the DataFrame to a single pickle file instead, e.g. with TaskOnKart.make_target('data.pkl')."
-    )
-
-    def __init__(self, max_byte: int):
-        # FutureWarning, because DeprecationWarning is hidden by default outside __main__, where tasks are usually defined.
-        warnings.warn(self._DEPRECATION_MESSAGE, FutureWarning, stacklevel=2)
-        super().__init__(max_byte)
-
-    @staticmethod
-    def load(file_path: str) -> pd.DataFrame:
-        # WHY: load is a staticmethod, so code that only reads old outputs, e.g. load_function=LargeDataFrameProcessor.load, never runs __init__.
-        warnings.warn(LargeDataFrameProcessor._DEPRECATION_MESSAGE, FutureWarning, stacklevel=2)
-        return _LargeDataFrameProcessor.load(file_path)
 
 
 def is_persistent_target(target: luigi.Target) -> bool:

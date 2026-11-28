@@ -280,13 +280,14 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(cloned_with_explicit_rerun.a)
         self.assertTrue(cloned_with_explicit_rerun.rerun)
 
-    def test_default_large_dataframe_target(self):
-        task = _DummyTaskD()
-        with self.assertWarns(FutureWarning):
-            default_large_dataframe_target = task.make_large_data_frame_target()
-        self.assertIsInstance(default_large_dataframe_target, ModelTarget)
-        target = cast(ModelTarget, default_large_dataframe_target)
-        self.assertEqual(f'_DummyTaskD_{task.task_unique_id}.zip', pathlib.Path(target._zip_client.path).name)
+    def test_make_target_dumps_and_loads_a_data_frame_as_a_single_pickle(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = _DummyTaskD(workspace_directory=tmpdir).make_target('data.pkl')
+            df = pd.DataFrame({'a': [1, 2], 'b': ['x', 'y']})
+
+            target.dump(df)
+
+            pd.testing.assert_frame_equal(target.load(), df)
 
     def test_make_target(self):
         task = _DummyTask()

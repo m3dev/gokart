@@ -6,6 +6,7 @@ import pickle
 import shutil
 import unittest
 from datetime import datetime
+from glob import glob
 from typing import Any, cast
 from unittest.mock import patch
 
@@ -25,7 +26,6 @@ from gokart.in_memory import make_in_memory_target
 from gokart.required_task_output import RequiredTaskOutput
 from gokart.target import (
     SingleFileTarget,
-    _LargeDataFrameProcessor,
     is_persistent_target,
     make_model_target,
     make_target,
@@ -43,6 +43,17 @@ def _pickle_dump(obj, path):
 def _pickle_load(path):
     with open(path, 'rb') as f:
         return pickle.load(f)
+
+
+def _save_items(items, path):
+    # One file per item next to path, so a load that shares its directory with another call would mix in that call's files.
+    for i, item in enumerate(items):
+        _pickle_dump(item, os.path.join(os.path.dirname(path), f'item_{i}.pkl'))
+
+
+def _load_items(path):
+    n_items = len(glob(os.path.join(os.path.dirname(path), 'item_*.pkl')))
+    return [_pickle_load(os.path.join(os.path.dirname(path), f'item_{i}.pkl')) for i in range(n_items)]
 
 
 class LocalTargetTest(unittest.TestCase):
@@ -303,73 +314,66 @@ class ModelTargetTest(unittest.TestCase):
 
         mock_build_task_state_labels.assert_not_called()
 
-    def _make_large_data_frame_target(self, file_path: str, load_function=None):
-        processor = _LargeDataFrameProcessor(max_byte=800)
+    def _make_multi_file_target(self, file_path: str, load_function=None):
         return make_model_target(
             file_path=file_path,
             temporary_directory=self.temporary_directory,
-            save_function=processor.save,
-            load_function=load_function or processor.load,
+            save_function=_save_items,
+            load_function=load_function or _load_items,
         )
 
-    def _dump_large_data_frame_while(self, file_path: str, df: pd.DataFrame, callback) -> None:
-        # Runs callback while the chunks of this dump are on disk, which reproduces both a concurrent dump and a dump that crashed before cleanup.
-        processor = _LargeDataFrameProcessor(max_byte=800)
-
+    def _dump_multi_file_while(self, file_path: str, items: list[int], callback) -> None:
+        # Runs callback while the files of this dump are on disk, which reproduces both a concurrent dump and a dump that crashed before cleanup.
         def save_function(obj, path):
-            processor.save(obj, path)
+            _save_items(obj, path)
             callback()
 
-        make_model_target(file_path=file_path, temporary_directory=self.temporary_directory, save_function=save_function, load_function=processor.load).dump(df)
+        make_model_target(file_path=file_path, temporary_directory=self.temporary_directory, save_function=save_function, load_function=_load_items).dump(items)
 
-    def test_large_data_frame_dump_ignores_chunks_of_another_dump(self):
+    def test_model_target_dump_ignores_files_of_another_dump(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        df = pd.DataFrame({'data': np.arange(10, dtype=np.float64)})
-        target = self._make_large_data_frame_target(file_path)
+        target = self._make_multi_file_target(file_path)
         loaded = []
 
         def dump_and_load():
-            target.dump(df)
+            target.dump([1])
             loaded.append(target.load())
 
-        self._dump_large_data_frame_while(file_path, pd.DataFrame({'data': np.arange(1200, dtype=np.float64)}), dump_and_load)
+        self._dump_multi_file_while(file_path, [2, 3, 4], dump_and_load)
 
-        pd.testing.assert_frame_equal(loaded[0], df)
+        self.assertEqual(loaded[0], [1])
 
-    def test_large_data_frame_load_ignores_chunks_of_another_dump(self):
+    def test_model_target_load_ignores_files_of_another_dump(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        df = pd.DataFrame({'data': np.arange(10, dtype=np.float64)})
-        target = self._make_large_data_frame_target(file_path)
-        target.dump(df)
+        target = self._make_multi_file_target(file_path)
+        target.dump([1])
         loaded = []
 
-        self._dump_large_data_frame_while(file_path, pd.DataFrame({'data': np.arange(1200, dtype=np.float64)}), lambda: loaded.append(target.load()))
+        self._dump_multi_file_while(file_path, [2, 3, 4], lambda: loaded.append(target.load()))
 
-        pd.testing.assert_frame_equal(loaded[0], df)
+        self.assertEqual(loaded[0], [1])
 
-    def test_large_data_frame_load_keeps_chunks_of_another_dump(self):
+    def test_model_target_load_keeps_files_of_another_dump(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        target = self._make_large_data_frame_target(file_path)
-        target.dump(pd.DataFrame({'data': np.arange(10, dtype=np.float64)}))
-        df = pd.DataFrame({'data': np.arange(1200, dtype=np.float64)})
+        target = self._make_multi_file_target(file_path)
+        target.dump([1])
 
-        self._dump_large_data_frame_while(file_path, df, target.load)
+        self._dump_multi_file_while(file_path, [2, 3, 4], target.load)
 
-        pd.testing.assert_frame_equal(target.load(), df)
+        self.assertEqual(target.load(), [2, 3, 4])
 
-    def test_large_data_frame_load_keeps_files_of_another_load(self):
+    def test_model_target_load_keeps_files_of_another_load(self):
         file_path = os.path.join(self.temporary_directory, 'test.zip')
-        df = pd.DataFrame({'data': np.arange(1200, dtype=np.float64)})
-        another_target = self._make_large_data_frame_target(file_path)
-        another_target.dump(df)
+        another_target = self._make_multi_file_target(file_path)
+        another_target.dump([1, 2, 3])
 
         def load_function(path):
             another_target.load()
-            return _LargeDataFrameProcessor.load(path)
+            return _load_items(path)
 
-        target = self._make_large_data_frame_target(file_path, load_function=load_function)
+        target = self._make_multi_file_target(file_path, load_function=load_function)
 
-        pd.testing.assert_frame_equal(target.load(), df)
+        self.assertEqual(target.load(), [1, 2, 3])
 
     @mock_aws
     def test_model_target_on_s3(self):
