@@ -108,13 +108,14 @@ class TestJsonFileProcessor:
     @pytest.mark.parametrize(
         'input_data,expected_json',
         [
-            pytest.param(pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}), '{"A":1,"B":4}\n{"A":2,"B":5}\n{"A":3,"B":6}\n', id='DataFrame'),
-            pytest.param({'A': [1, 2, 3], 'B': [4, 5, 6]}, '{"A":1,"B":4}\n{"A":2,"B":5}\n{"A":3,"B":6}\n', id='Dict'),
-            pytest.param({}, '\n', id='Empty Dict'),
+            pytest.param(pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}), '[{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}]', id='DataFrame'),
+            pytest.param({'A': [1, 2, 3], 'B': [4, 5, 6]}, '[{"A":1,"B":4},{"A":2,"B":5},{"A":3,"B":6}]', id='Dict'),
+            pytest.param({}, '[]', id='Empty Dict'),
         ],
     )
-    def test_records_orient_warns_and_keeps_ndjson(self, input_data, expected_json):
-        with pytest.warns(FutureWarning, match=r'will change to a JSON array in gokart 2\.0\.0\. Use NdjsonFileProcessor'):
+    def test_records_orient_reads_and_writes_json_array(self, input_data, expected_json):
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
             processor = JsonFileProcessor(orient='records')
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -129,18 +130,6 @@ class TestJsonFileProcessor:
 
         assert loaded_json == expected_json
         pd.testing.assert_frame_equal(pd.DataFrame(input_data), loaded_df)
-
-    def test_records_orient_warning_points_to_caller(self):
-        with pytest.warns(FutureWarning) as record:
-            JsonFileProcessor(orient='records')
-
-        assert record[0].filename == __file__
-
-    @pytest.mark.parametrize('orient', [None, 'split'])
-    def test_non_records_orient_does_not_warn(self, orient):
-        with warnings.catch_warnings():
-            warnings.simplefilter('error', FutureWarning)
-            JsonFileProcessor(orient=orient)
 
 
 class TestNdjsonFileProcessor:

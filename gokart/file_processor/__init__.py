@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import warnings
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -77,24 +76,14 @@ class JsonFileProcessor(FileProcessor):
         JSON file processor with support for both pandas and polars DataFrames.
 
         Args:
-            orient: JSON orientation. 'records' currently reads/writes newline-delimited JSON, but this is deprecated
-                and will change to a JSON array in gokart 2.0.0. Use NdjsonFileProcessor for newline-delimited JSON.
+            orient: JSON orientation. 'records' reads/writes a JSON array of records. Use NdjsonFileProcessor for newline-delimited JSON.
             dataframe_type: DataFrame library to use for load() - 'pandas', 'polars', or 'polars-lazy' (default: 'pandas')
         """
-        if orient == 'records':
-            warnings.warn(
-                "JsonFileProcessor(orient='records') reads/writes newline-delimited JSON, but this will change to a JSON array in gokart 2.0.0. "
-                'Use NdjsonFileProcessor to keep NDJSON.',
-                FutureWarning,
-                stacklevel=2,
-            )
         self._orient = orient
         self._dataframe_type = dataframe_type  # Store for tests
 
-        if orient == 'records':
-            self._impl: FileProcessor = NdjsonFileProcessor(dataframe_type=dataframe_type)
-        elif dataframe_type == 'polars-lazy':
-            self._impl = JsonFileProcessorPolars(orient=orient, lazy=True)
+        if dataframe_type == 'polars-lazy':
+            self._impl: FileProcessor = JsonFileProcessorPolars(orient=orient, lazy=True)
         elif dataframe_type == 'polars':
             self._impl = JsonFileProcessorPolars(orient=orient, lazy=False)
         else:

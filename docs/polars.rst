@@ -76,9 +76,9 @@ JsonFileProcessor
     # For pandas (default)
     processor = JsonFileProcessor(dataframe_type='pandas')
 
-.. warning::
-   ``JsonFileProcessor(orient='records')`` reads and writes newline-delimited JSON, which is deprecated: it emits a ``FutureWarning``, and in gokart 2.0.0 it reads and writes a JSON array (`#685 <https://github.com/m3dev/gokart/issues/685>`_).
-   Use ``NdjsonFileProcessor`` below to keep newline-delimited JSON.
+.. note::
+   ``JsonFileProcessor(orient='records')`` reads and writes a JSON array of records (``[{"a": 1}, {"a": 2}]``) with both pandas and Polars.
+   Before gokart 2.0.0 it read and wrote newline-delimited JSON; use ``NdjsonFileProcessor`` below (or the ``.ndjson`` extension) for newline-delimited JSON.
 
 
 NdjsonFileProcessor
