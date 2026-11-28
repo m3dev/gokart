@@ -19,6 +19,8 @@ jobs:
         include:
           - platform: macos-latest
             tox-env: "py313"
+          - platform: ubuntu-latest
+            tox-env: "without-pandas"
     steps:
     - uses: actions/checkout@v7.0.1
     - name: Set up the latest version of uv
