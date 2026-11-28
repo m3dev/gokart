@@ -13,7 +13,7 @@ Polars support is optional. Install it with:
 
     pip install gokart[polars]
 
-The extra only installs Polars itself (``polars>=2.0.0``), so a Polars installed in any other way works as well.
+The extra only installs Polars itself, so a Polars installed in any other way works as well.
 
 
 Basic Usage
@@ -214,10 +214,6 @@ CSV, Parquet and Feather files created with Polars processors can be read by pan
 **JSON orient**
 
 With the Polars backends (``dataframe_type='polars'`` / ``'polars-lazy'``), :class:`~gokart.file_processor.JsonFileProcessor` supports only ``orient=None`` and ``orient='records'``. Any other ``orient`` (``'split'``, ``'index'``, ``'columns'``, ``'values'``, ``'table'``) raises :class:`ValueError`, for both reading and writing. Previously it was silently ignored.
-
-**Minimum Polars version**
-
-Polars ``>=2.0.0`` is required.
 
 **Pandas-specific Features**
 
