@@ -64,7 +64,6 @@ User Guide
    efficient_run_on_multi_workers
    for_pandas
    polars
-   mypy_plugin
 
 API References
 --------------

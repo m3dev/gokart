@@ -100,7 +100,6 @@ Hello, world!
 We introduce type-annotations to make a gokart pipeline robust.
 Please check the following example to see how to use type-annotations on gokart.
 Type checkers that support `dataclass_transform`, such as mypy and pyright, check this example without any plugin.
-(The [mypy plugin](https://gokart.readthedocs.io/en/latest/mypy_plugin.html) is deprecated, will be removed in gokart 2.0.0 ([#685](https://github.com/m3dev/gokart/issues/685)), and does not support this style.)
 
 ```python
 import gokart

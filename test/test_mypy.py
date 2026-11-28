@@ -1,83 +1,59 @@
+import importlib
 import tempfile
 import unittest
-import warnings
 
-import pytest
 from mypy import api
 
 from test.config import PYPROJECT_TOML
 
-pytestmark = pytest.mark.filterwarnings('ignore:gokart mypy plugin is deprecated:DeprecationWarning')
 
+class TestMypyWithoutPlugin(unittest.TestCase):
+    """mypy checks parameters annotated with the parameter type through dataclass_transform, without any plugin."""
 
-class TestMyMypyPlugin(unittest.TestCase):
-    def test_plugin_is_deprecated(self):
-        with (
-            tempfile.NamedTemporaryFile(suffix='.py') as test_file,
-            self.assertWarnsRegex(DeprecationWarning, r'gokart mypy plugin is deprecated and will be removed in gokart 2\.0\.0'),
-        ):
-            api.run(['--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
+    def test_plugin_is_removed(self):
+        with self.assertRaises(ModuleNotFoundError):
+            importlib.import_module('gokart.mypy')
 
-    def test_plugin_loads_when_future_warning_is_an_error(self):
-        with tempfile.NamedTemporaryFile(suffix='.py') as test_file, warnings.catch_warnings():
-            warnings.simplefilter('error', FutureWarning)
-            stdout, stderr, exitcode = api.run(['--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
-        self.assertEqual(exitcode, 0, f'mypy failed to load the plugin:\nstdout: {stdout}\nstderr: {stderr}')
+    def _run_mypy(self, test_code: str) -> tuple[str, str, int]:
+        with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
+            test_file.write(test_code.encode('utf-8'))
+            test_file.flush()
+            return api.run(['--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
 
-    def test_plugin_no_issue(self):
+    def test_no_issue(self):
         test_code = """
 import luigi
-from luigi import Parameter
 import gokart
-import datetime
 
 
-class MyTask(gokart.TaskOnKart):
-    foo: int = luigi.IntParameter() # type: ignore
-    bar: str = luigi.Parameter() # type: ignore
-    baz: bool = gokart.ExplicitBoolParameter()
-    qux: str = Parameter()
-    # https://github.com/m3dev/gokart/issues/395
-    datetime: datetime.datetime = luigi.DateMinuteParameter(interval=10, default=datetime.datetime(2021, 1, 1))
+class MyTask(gokart.TaskOnKart[str]):
+    foo: luigi.IntParameter = luigi.IntParameter()
+    bar: luigi.Parameter = luigi.Parameter()
+    baz: gokart.ExplicitBoolParameter = gokart.ExplicitBoolParameter()
 
 
-
-# TaskOnKart parameters:
-#   - `complete_check_at_run`
-MyTask(foo=1, bar='bar', baz=False, qux='qux', complete_check_at_run=False)
+MyTask(foo=1, bar='bar', baz=False, complete_check_at_run=False)
 """
+        stdout, stderr, exitcode = self._run_mypy(test_code)
+        self.assertEqual(exitcode, 0, f'mypy error occurred:\nstdout: {stdout}\nstderr: {stderr}')
+        self.assertIn('Success: no issues found', stdout)
 
-        with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
-            test_file.write(test_code.encode('utf-8'))
-            test_file.flush()
-            stdout, stderr, exitcode = api.run(['--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
-            self.assertEqual(exitcode, 0, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
-            self.assertIn('Success: no issues found', stdout)
-
-    def test_plugin_invalid_arg(self):
+    def test_invalid_arg(self):
         test_code = """
 import luigi
 import gokart
 
 
-class MyTask(gokart.TaskOnKart):
-    foo: int = luigi.IntParameter() # type: ignore
-    bar: str = luigi.Parameter() # type: ignore
-    baz: bool = gokart.ExplicitBoolParameter()
+class MyTask(gokart.TaskOnKart[str]):
+    foo: luigi.IntParameter = luigi.IntParameter()
+    baz: gokart.ExplicitBoolParameter = gokart.ExplicitBoolParameter()
 
-# issue: foo is int
-# not issue: bar is missing, because it can be set by config file.
-# TaskOnKart parameters:
-#   - `complete_check_at_run`
+
 MyTask(foo='1', baz='not bool', complete_check_at_run='not bool')
-        """
-
-        with tempfile.NamedTemporaryFile(suffix='.py') as test_file:
-            test_file.write(test_code.encode('utf-8'))
-            test_file.flush()
-            stdout, stderr, exitcode = api.run(['--no-incremental', '--cache-dir=/dev/null', '--config-file', str(PYPROJECT_TOML), test_file.name])
-            self.assertEqual(exitcode, 1, f'mypy plugin error not occurred:\nstdout: {stdout}\nstderr: {stderr}')
-            self.assertIn('error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"  [arg-type]', stdout)
-            self.assertIn('error: Argument "baz" to "MyTask" has incompatible type "str"; expected "bool"  [arg-type]', stdout)
-            self.assertIn('error: Argument "complete_check_at_run" to "MyTask" has incompatible type "str"; expected "bool"  [arg-type]', stdout)
-            self.assertIn('Found 3 errors in 1 file (checked 1 source file)', stdout)
+"""
+        stdout, stderr, exitcode = self._run_mypy(test_code)
+        self.assertEqual(exitcode, 1, f'mypy error not occurred:\nstdout: {stdout}\nstderr: {stderr}')
+        self.assertIn('error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"  [arg-type]', stdout)
+        self.assertIn('error: Argument "baz" to "MyTask" has incompatible type "str"; expected "bool"  [arg-type]', stdout)
+        self.assertIn('error: Argument "complete_check_at_run" to "MyTask" has incompatible type "str"; expected "bool"  [arg-type]', stdout)
+        self.assertIn('Found 3 errors in 1 file (checked 1 source file)', stdout)
