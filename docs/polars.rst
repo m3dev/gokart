@@ -79,6 +79,7 @@ JsonFileProcessor
 .. note::
    ``JsonFileProcessor(orient='records')`` reads and writes a JSON array of records (``[{"a": 1}, {"a": 2}]``) with both pandas and Polars.
    Before gokart 2.0.0 it read and wrote newline-delimited JSON; use ``NdjsonFileProcessor`` below (or the ``.ndjson`` extension) for newline-delimited JSON.
+   Polars cannot scan a JSON array lazily, so ``dataframe_type='polars-lazy'`` reads the whole file before returning a ``LazyFrame``; ``NdjsonFileProcessor`` scans it lazily.
 
 
 NdjsonFileProcessor
